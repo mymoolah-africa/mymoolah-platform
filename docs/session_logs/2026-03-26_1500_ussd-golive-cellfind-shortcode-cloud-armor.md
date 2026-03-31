@@ -42,7 +42,7 @@ Cellfind (Marcella) confirmed the allocated USSD shortcode **`*120*5616#`**, pro
 - `integrations/cellfind/CELLFIND_REFERENCE.md` (MODIFIED — endpoint table, dial string)
 - `.env.codespaces` (MODIFIED — IP reference comment)
 - `docs/CHANGELOG.md` (MODIFIED — new entry)
-- `docs/agent_handover.md` (MODIFIED — current session summary)
+- `docs/AGENT_HANDOVER.md` (MODIFIED — current session summary)
 - `docs/session_logs/2026-03-26_1500_ussd-golive-cellfind-shortcode-cloud-armor.md` (CREATED)
 
 ---

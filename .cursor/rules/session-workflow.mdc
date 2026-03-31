@@ -14,7 +14,7 @@ alwaysApply: true
 - **NO WORK UNTIL THIS IS CONFIRMED**
 
 ### Step 2: Context Reading
-1. Read `docs/agent_handover.md` — onboarding checklist, current status, next priorities
+1. Read `docs/AGENT_HANDOVER.md` — onboarding checklist, current status, next priorities
 2. Read 2–3 most recent `docs/session_logs/*.md` — chat history continuity
 3. Read `docs/CHANGELOG.md` last 2 weeks — recent changes
 4. Read `docs/DATABASE_CONNECTION_GUIDE.md` — if any DB work is planned
@@ -36,11 +36,11 @@ git status   # ALWAYS check first
    - Fill in ALL sections: summary, tasks, decisions, files modified, issues, next steps, context for next agent
    - Use template: `docs/session_logs/TEMPLATE.md`
 
-2. **Update `docs/agent_handover.md`**: Latest feature, version bump, session log reference
+2. **Update `docs/AGENT_HANDOVER.md`**: Latest feature, version bump, session log reference
 
 3. **Commit and push**:
 ```bash
-git add docs/session_logs/YYYY-MM-DD_HHMM_*.md docs/agent_handover.md
+git add docs/session_logs/YYYY-MM-DD_HHMM_*.md docs/AGENT_HANDOVER.md
 git commit -m "docs: session log and handover update - [description]"
 git add .
 git commit -m "[descriptive message for code changes]"

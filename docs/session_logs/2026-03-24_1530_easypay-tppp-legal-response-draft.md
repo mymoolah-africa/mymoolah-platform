@@ -19,7 +19,7 @@ Prepared a detailed reply email for EasyPay (Nkululeko) addressing their legal t
 - [x] Read `docs/AGENT_HANDOVER.md` and relevant compliance docs (`STANDARD_BANK_TPPP_BRIEF.md`, `STANDARD_BANK_TPPP_APPLICATION_CHECKLIST_RESPONSE_FORMAL.txt`, `EasyPay_API_Integration_Guide.md`, `SECURITY.md` excerpts)
 - [x] Drafted copy-paste email for EasyPay covering: TPPP/PASA/sponsor bank, Phase 1 cash-in flow, post-settlement scope, partner compliance summary table
 - [x] User feedback: draft approved ("this is fine thanks")
-- [x] Session log, handover (`AGENT_HANDOVER.md` / `agent_handover.md`), CHANGELOG, EasyPay integration guide, PROJECT_STATUS, README, INTEGRATIONS_COMPLETE, `docs/index.md` updated
+- [x] Session log, handover (`AGENT_HANDOVER.md` / `AGENT_HANDOVER.md`), CHANGELOG, EasyPay integration guide, PROJECT_STATUS, README, INTEGRATIONS_COMPLETE, `docs/index.md` updated
 
 ---
 
@@ -34,7 +34,7 @@ Prepared a detailed reply email for EasyPay (Nkululeko) addressing their legal t
 ## Files Modified (This Session — Documentation Only)
 
 - `docs/session_logs/2026-03-24_1530_easypay-tppp-legal-response-draft.md` (this file)
-- `docs/AGENT_HANDOVER.md`, `docs/agent_handover.md`
+- `docs/AGENT_HANDOVER.md`, `docs/AGENT_HANDOVER.md`
 - `docs/CHANGELOG.md`
 - `docs/integrations/EasyPay_API_Integration_Guide.md`
 - `docs/INTEGRATIONS_COMPLETE.md`

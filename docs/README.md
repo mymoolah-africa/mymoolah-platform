@@ -27,7 +27,7 @@
 ## **PREVIOUS: Documentation + agent tooling + VAS context (March 19, 2026)**
 
 ### **📚 Docs sync**
-- Canonical docs updated: `agent_handover.md`, `CHANGELOG.md`, `PROJECT_STATUS.md`, `DEVELOPMENT_GUIDE.md`, `CURSOR_2.0_RULES_FINAL.md`, `CURSOR_SKILLS.md`, `AGENT_ROLE_TEMPLATE.md`
+- Canonical docs updated: `AGENT_HANDOVER.md`, `CHANGELOG.md`, `PROJECT_STATUS.md`, `DEVELOPMENT_GUIDE.md`, `CURSOR_2.0_RULES_FINAL.md`, `CURSOR_SKILLS.md`, `AGENT_ROLE_TEMPLATE.md`
 - **Rules vs skills**: `.cursor/rules/*.mdc` = always-on; `.agents/skills/**/SKILL.md` = deep procedures read when the task fits
 - **VAS**: Production uses precomputed `vas_best_offers` + fallback comparison; non-production lists all supplier variants — see `services/supplierComparisonService.js` / `services/bestOfferService.js`
 

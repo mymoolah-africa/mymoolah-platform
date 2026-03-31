@@ -34,7 +34,7 @@ Implemented an explicit catalog **listing** policy for multi-supplier VAS (vouch
 - `routes/overlayServices.js`
 - `scripts/refresh-vas-best-offers.js`
 - `tests/catalogDisplayPolicy.test.js` (new)
-- `docs/DEVELOPMENT_GUIDE.md`, `docs/CHANGELOG.md`, `docs/agent_handover.md`, `docs/session_logs/2026-03-20_1200_vas-catalog-display-policy.md`
+- `docs/DEVELOPMENT_GUIDE.md`, `docs/CHANGELOG.md`, `docs/AGENT_HANDOVER.md`, `docs/session_logs/2026-03-20_1200_vas-catalog-display-policy.md`
 
 ---
 

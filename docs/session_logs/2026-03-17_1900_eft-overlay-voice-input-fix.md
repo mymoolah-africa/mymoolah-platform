@@ -109,6 +109,6 @@ Two major feature areas addressed this session: (1) Complete build-out and styli
 
 ## Related Documentation
 
-- `docs/agent_handover.md` — Updated this session
+- `docs/AGENT_HANDOVER.md` — Updated this session
 - `docs/CHANGELOG.md` — Updated this session
 - Commits: `17422e9a` (disbursement fix), `042b391c` (EFT tile), `3edefc4a` (bank details + PayShap), `75a7dc77` (TopBanner), `8883cc04` (BottomNavigation), `88431a91` (bank details correction), `e558896a` (mic test fix), `65d75a6a` (Android hardening), `3fb620b6` (stale closure fix), `2ea6e08c` (full mic rewrite — current state)

@@ -21,7 +21,7 @@ Performed a comprehensive review of all SBSA PayShap API documentation, Postman 
 - [x] Refined email to Gustaf from 4 questions down to 1 focused question
 - [x] Updated session log from earlier session with proxy registration clarification
 - [x] Updated `SBSA_PAYSHAP_UAT_GUIDE.md` with proxy registration note
-- [x] Updated `agent_handover.md` with session summary
+- [x] Updated `AGENT_HANDOVER.md` with session summary
 - [x] Updated `CHANGELOG.md` with session entry
 
 ---
@@ -38,7 +38,7 @@ Performed a comprehensive review of all SBSA PayShap API documentation, Postman 
 - `docs/session_logs/2026-03-26_2100_payshap-api-review-email-refinement.md` — This session log (new)
 - `docs/session_logs/2026-03-26_1800_payshap-inbound-credit-handler.md` — Updated with proxy registration clarification
 - `docs/SBSA_PAYSHAP_UAT_GUIDE.md` — Added proxy registration note
-- `docs/agent_handover.md` — Updated latest achievement and next priorities
+- `docs/AGENT_HANDOVER.md` — Updated latest achievement and next priorities
 - `docs/CHANGELOG.md` — Added session entry
 
 ---

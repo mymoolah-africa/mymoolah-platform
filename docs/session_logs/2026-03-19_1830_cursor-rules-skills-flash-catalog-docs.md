@@ -8,7 +8,7 @@
 
 ## Session Summary
 
-Consolidated **agent tooling guidance** (`.cursor/rules/*.mdc` vs `.agents/skills/**/SKILL.md`) and captured **VAS multi-supplier catalog** behaviour from code review (`supplierComparisonService.js`, `bestOfferService.js`, `vas_best_offers`). Earlier in the day the branch received **`integrations/flash/Flash MyMoolah Product list 20260319.pdf`** (committed separately). This session ended with a **repository documentation refresh**: session log, `CHANGELOG.md`, `agent_handover.md`, `README.md`, `PROJECT_STATUS.md`, `DEVELOPMENT_GUIDE.md`, `CURSOR_2.0_RULES_FINAL.md`, `CURSOR_SKILLS.md`, and `AGENT_ROLE_TEMPLATE.md`.
+Consolidated **agent tooling guidance** (`.cursor/rules/*.mdc` vs `.agents/skills/**/SKILL.md`) and captured **VAS multi-supplier catalog** behaviour from code review (`supplierComparisonService.js`, `bestOfferService.js`, `vas_best_offers`). Earlier in the day the branch received **`integrations/flash/Flash MyMoolah Product list 20260319.pdf`** (committed separately). This session ended with a **repository documentation refresh**: session log, `CHANGELOG.md`, `AGENT_HANDOVER.md`, `README.md`, `PROJECT_STATUS.md`, `DEVELOPMENT_GUIDE.md`, `CURSOR_2.0_RULES_FINAL.md`, `CURSOR_SKILLS.md`, and `AGENT_ROLE_TEMPLATE.md`.
 
 ---
 
@@ -32,7 +32,7 @@ Consolidated **agent tooling guidance** (`.cursor/rules/*.mdc` vs `.agents/skill
 ## Files Modified
 
 - `docs/session_logs/2026-03-19_1830_cursor-rules-skills-flash-catalog-docs.md` — this log
-- `docs/agent_handover.md` — date, version, session summary, priorities
+- `docs/AGENT_HANDOVER.md` — date, version, session summary, priorities
 - `docs/CHANGELOG.md` — 2026-03-19 documentation entry
 - `docs/README.md` — last updated + latest note
 - `docs/PROJECT_STATUS.md` — last updated + latest note

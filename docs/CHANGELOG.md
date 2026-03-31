@@ -167,7 +167,7 @@ Comprehensive sweep of all SBSA PayShap API documentation to eliminate redundant
 ### Changes
 - `docs/session_logs/2026-03-26_1800_payshap-inbound-credit-handler.md` — Updated with proxy registration clarification and resolved questions
 - `docs/SBSA_PAYSHAP_UAT_GUIDE.md` — Added PayShap Proxy Registration section clarifying it is the user's responsibility
-- `docs/agent_handover.md` — Updated latest achievement, recent updates, next priorities
+- `docs/AGENT_HANDOVER.md` — Updated latest achievement, recent updates, next priorities
 - `docs/CHANGELOG.md` — This entry
 
 ---
@@ -262,7 +262,7 @@ Implemented the full USSD channel for MyMoolah via the Cellfind gateway (Phase 1
 - `docs/session_logs/2026-03-25_2100_ussd-channel-implementation.md`
 
 ### Agent Handover
-- **`docs/agent_handover.md`**: v2.34.0; USSD + cross-env migrations + RTP Pain.013 `DuePyblAmt` rule; priorities and “Next Agent Actions” updated (supersedes earlier “remove DuePyblAmt” note from the Mar 25 PM changelog entry).
+- **`docs/AGENT_HANDOVER.md`**: v2.34.0; USSD + cross-env migrations + RTP Pain.013 `DuePyblAmt` rule; priorities and “Next Agent Actions” updated (supersedes earlier “remove DuePyblAmt” note from the Mar 25 PM changelog entry).
 
 ---
 
@@ -334,7 +334,7 @@ EasyPay legal (19 Mar 2026) raised NPS/TPPP concern: multi-layered aggregation. 
 
 ### Documentation
 - **`docs/session_logs/2026-03-24_1530_easypay-tppp-legal-response-draft.md`** — Session log
-- **`docs/AGENT_HANDOVER.md`**, **`docs/agent_handover.md`** — v2.30.0; EasyPay legal follow-up in priorities; recent-updates row
+- **`docs/AGENT_HANDOVER.md`**, **`docs/AGENT_HANDOVER.md`** — v2.30.0; EasyPay legal follow-up in priorities; recent-updates row
 - **`docs/integrations/EasyPay_API_Integration_Guide.md`** — §1.4 Regulatory & commercial positioning (NPS/TPPP scope)
 - **`docs/INTEGRATIONS_COMPLETE.md`**, **`docs/PROJECT_STATUS.md`**, **`docs/README.md`**, **`docs/index.md`** — Status pointers and last-updated
 
@@ -424,7 +424,7 @@ Documentation-only session: aligned **Cursor workspace rules** (`.cursor/rules/*
 ### **Highlights**
 - **Rules vs skills**: Always-on `.mdc` for non‑negotiables; skills loaded on demand when the task matches—optional future one-liner in rules to mandate skill reads for migration/recon/Redis-class tasks.
 - **VAS**: Non-production `NODE_ENV` → all Flash + MobileMart variants visible; production → `vas_best_offers` first, `findBestDeals` fallback. Partner PDFs are not hardcoded into SKU tables.
-- **Files updated**: `docs/agent_handover.md`, `docs/README.md`, `docs/PROJECT_STATUS.md`, `docs/DEVELOPMENT_GUIDE.md`, `docs/CURSOR_2.0_RULES_FINAL.md`, `docs/CURSOR_SKILLS.md`, `docs/AGENT_ROLE_TEMPLATE.md`, `docs/CHANGELOG.md` (this entry).
+- **Files updated**: `docs/AGENT_HANDOVER.md`, `docs/README.md`, `docs/PROJECT_STATUS.md`, `docs/DEVELOPMENT_GUIDE.md`, `docs/CURSOR_2.0_RULES_FINAL.md`, `docs/CURSOR_SKILLS.md`, `docs/AGENT_ROLE_TEMPLATE.md`, `docs/CHANGELOG.md` (this entry).
 
 ### **Session Log**
 - `docs/session_logs/2026-03-19_1830_cursor-rules-skills-flash-catalog-docs.md`

@@ -22,7 +22,7 @@ MyMoolah Lead Backend & Integration Collective (Treasury Platform: Wallet, Gener
 Deliver a secure, compliant, high‑performance Treasury Platform that spans wallet services, general ledger accounting, and external integrations. Codebase is frontend source of truth; backend adapts to frontend needs. Maintain uncompromising security and produce impeccable, always‑current documentation and handovers.
 
 ## AI tooling (Cursor)
-- **Layer 1 — Rules**: `.cursor/rules/*.mdc` (always on). **Layer 2 — Skills**: `.agents/skills/**/SKILL.md` (read when task fits). **Layer 3 — Repo docs**: `docs/CURSOR_2.0_RULES_FINAL.md`, `docs/agent_handover.md`, `docs/session_logs/` for continuity. Details: `docs/CURSOR_SKILLS.md`.
+- **Layer 1 — Rules**: `.cursor/rules/*.mdc` (always on). **Layer 2 — Skills**: `.agents/skills/**/SKILL.md` (read when task fits). **Layer 3 — Repo docs**: `docs/CURSOR_2.0_RULES_FINAL.md`, `docs/AGENT_HANDOVER.md`, `docs/session_logs/` for continuity. Details: `docs/CURSOR_SKILLS.md`.
 
 ## Platform Scope
 - Wallet services (account, balances, vouchers, KYC, transactions)

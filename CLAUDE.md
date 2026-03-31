@@ -17,7 +17,7 @@ Banking-grade Treasury Platform for South Africa.
 
 ## BEFORE STARTING ANY WORK
 
-1. Read `docs/agent_handover.md` — current status and next priorities
+1. Read `docs/AGENT_HANDOVER.md` — current status and next priorities
 2. Read 2–3 most recent `docs/session_logs/*.md` — previous session context
 3. Run `git status` — commit or stash before pulling
 4. Run `git pull origin main`
@@ -88,7 +88,7 @@ Never `pm2 restart all`, never `node server.js`, never `npm start`.
 ## Session End (when work is complete — proactively)
 
 1. Create `docs/session_logs/YYYY-MM-DD_HHMM_[description].md`
-2. Update `docs/agent_handover.md`
+2. Update `docs/AGENT_HANDOVER.md`
 3. `git add . && git commit && git push origin main`
 
 ---
@@ -98,7 +98,7 @@ Never `pm2 restart all`, never `node server.js`, never `npm start`.
 | What | Where |
 |------|-------|
 | Full rules | `docs/CURSOR_2.0_RULES_FINAL.md` |
-| Current status | `docs/agent_handover.md` |
+| Current status | `docs/AGENT_HANDOVER.md` |
 | DB connection guide | `docs/DATABASE_CONNECTION_GUIDE.md` |
 | SBSA H2H | `docs/SBSA_H2H_SETUP_GUIDE.md` |
 | Changelog | `docs/CHANGELOG.md` |

@@ -13,7 +13,7 @@ Welcome to the MyMoolah Treasury Platform development guide! This platform is bu
 ### **AI agents (Cursor) — rules vs skills**
 - **Workspace rules**: `.cursor/rules/*.mdc` — always applied; non‑negotiables (workflow, git, DB helper, security).
 - **Skills**: `.agents/skills/**/SKILL.md` — read when the task matches (migrations, recon, Redis, UI patterns). See `docs/CURSOR_SKILLS.md`.
-- **Continuity**: `docs/CURSOR_2.0_RULES_FINAL.md`, `docs/agent_handover.md`, `docs/session_logs/`.
+- **Continuity**: `docs/CURSOR_2.0_RULES_FINAL.md`, `docs/AGENT_HANDOVER.md`, `docs/session_logs/`.
 
 ### **Platform Architecture**
 - **Multi-Supplier Integration**: Unified product catalog across Flash, MobileMart, dtMercury, and Peach

@@ -10,7 +10,7 @@ alwaysApply: true
 - **Production**: api-mm.mymoolah.africa | wallet.mymoolah.africa
 - **Stack**: Node.js + Express, PostgreSQL (Cloud SQL), React + Vite, GCP (Cloud Run, GCS, Secret Manager, Cloud SQL Auth Proxy)
 - **Standards**: Mojaloop-compliant, ISO 20022, POPIA, banking-grade security
-- **For current status and priorities**: always read `docs/agent_handover.md` first
+- **For current status and priorities**: always read `docs/AGENT_HANDOVER.md` first
 
 ## Environment Architecture
 
@@ -41,7 +41,7 @@ alwaysApply: true
 | Need to… | Read |
 |----------|------|
 | Understand rules & workflow | `docs/CURSOR_2.0_RULES_FINAL.md` |
-| Understand project status | `docs/agent_handover.md` |
+| Understand project status | `docs/AGENT_HANDOVER.md` |
 | See change history | `docs/CHANGELOG.md` |
 | Run DB migrations | `docs/DATABASE_CONNECTION_GUIDE.md` |
 | SBSA H2H integration | `docs/SBSA_H2H_SETUP_GUIDE.md` |
