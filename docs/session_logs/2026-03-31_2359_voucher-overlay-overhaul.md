@@ -106,16 +106,18 @@ Full audit and overhaul of the digital voucher overlay system — the last overl
 | `mymoolah-wallet-frontend/assets/ott-logo.png` | New brand logo |
 | `mymoolah-wallet-frontend/components/digital-vouchers/*` | Deleted (legacy duplicate, 4 files) |
 | `.cursor/rules/tech-debt.mdc` | Added overlay tech debt + architectural decision |
+| `scripts/sync-flash-products.js` | New — manual Flash product sync script |
 
 ---
 
 ## Next Steps for Next Agent
 
-1. **Sync vouchers to staging**: `node scripts/sync-mobilemart-products.js --vouchers-only --staging`
-2. **Sync vouchers to production**: `node scripts/sync-mobilemart-products.js --vouchers-only --production`
-3. **Deploy**: `./scripts/build-push-deploy-staging.sh` then `./scripts/build-push-deploy-production.sh`
-4. **Add more brand logos**: As André sources them — Steam, Netflix, Google Play, Roblox, etc.
-5. **Future refactor (tech debt)**: Extract airtime/electricity/biller purchase logic from overlayServices.js into service classes (~9-13 hours)
+1. **Sync MobileMart vouchers to staging**: `node scripts/sync-mobilemart-products.js --vouchers-only --staging`
+2. **Sync Flash vouchers to staging**: `node scripts/sync-flash-products.js --vouchers-only --staging`
+3. **Sync to production**: Same commands with `--production`
+4. **Deploy**: `./scripts/build-push-deploy-staging.sh` then `./scripts/build-push-deploy-production.sh`
+5. **Add more brand logos**: As André sources them — Steam, Netflix, Google Play, Roblox, etc.
+6. **Future refactor (tech debt)**: Extract airtime/electricity/biller purchase logic from overlayServices.js into service classes (~9-13 hours)
 
 ---
 
@@ -124,6 +126,7 @@ Full audit and overhaul of the digital voucher overlay system — the last overl
 The voucher overlay architecture:
 - **Catalog**: `GET /api/v1/overlay/vouchers/catalog` in `overlayServices.js` — `VOUCHER_BRAND_TABLE` maps raw names to brands, picks best supplier per brand, collapses variants into one card
 - **Purchase**: `POST /api/v1/products/purchase` via `productPurchaseService.js` (banking-grade)
-- **Sync**: Daily 02:00 cron + manual `sync-mobilemart-products.js --vouchers-only`
+- **Sync (MobileMart)**: Daily 02:00 cron + manual `node scripts/sync-mobilemart-products.js --vouchers-only`
+- **Sync (Flash)**: Daily 02:00 cron + manual `node scripts/sync-flash-products.js --vouchers-only`
 - **Frontend**: `DigitalVouchersOverlay.tsx` → `apiService.getVouchers()` → sorted, deduped cards with brand logos
 - **Brand logos**: Vite-imported PNGs from `assets/` folder, mapped by brand name in `BRAND_LOGO_MAP`
