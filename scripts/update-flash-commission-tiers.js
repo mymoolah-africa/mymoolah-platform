@@ -100,11 +100,10 @@ async function updateEnvironment(getClient, envName) {
     console.log(`  Flash supplier ID: ${flashSupplierId}`);
 
     // Check if new columns exist (migration may not have run yet)
-    const [colCheck] = await client.query(`
-      SELECT column_name FROM information_schema.columns
-      WHERE table_name = 'supplier_commission_tiers' AND column_name = 'commissionType'
-    `);
-    const hasNewColumns = colCheck.length > 0;
+    const colCheckResult = await client.query(
+      "SELECT column_name FROM information_schema.columns WHERE table_name = 'supplier_commission_tiers' AND column_name = 'commissionType'"
+    );
+    const hasNewColumns = colCheckResult.rows.length > 0;
 
     let upserted = 0;
 
