@@ -1,4 +1,5 @@
 import React from 'react';
+import vodacomLogo from '../../assets/vodacom-logo.png';
 
 interface IconProps {
   size?: number;
@@ -8,7 +9,7 @@ interface IconProps {
 export function VodacomIcon({ size = 24 }: IconProps) {
   return (
     <img
-      src="/assets/vodacom-logo.png"
+      src={vodacomLogo}
       alt="Vodacom"
       width={size}
       height={size}
