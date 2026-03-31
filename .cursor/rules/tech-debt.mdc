@@ -32,6 +32,9 @@ alwaysApply: true
 | Sub-folders in GCS for SBSA files | Mar 2026 | statements/ and payments/ separation prevents file mixing |
 | Admin user for all DDL migrations | Mar 2026 | mymoolah_app is DML only; postgres superuser required for ALTER/CREATE |
 | USSD eeziCash fixed to use Wallet.debit() + SELECT FOR UPDATE | Mar 2026 | Previous impl bypassed double-entry ledger with direct SQL; now uses Wallet model with row-level locking |
+| In-memory supplier circuit breaker (not Redis) | Mar 2026 | Acceptable for single-instance; migrate to Redis for horizontal scaling on Cloud Run |
+| Supplier failover via composite key matching (not product names) | Mar 2026 | Product names inconsistent across suppliers; deterministic keys (vasType+provider+priceType/amount) used instead |
+| Overlay route still has inline MobileMart failover alongside new CB | Mar 2026 | Old SupplierComparisonService failover in overlayServices.js coexists with new circuit breaker pre-check; consolidate in future refactor |
 
 ## Rule: When to Add Here
 

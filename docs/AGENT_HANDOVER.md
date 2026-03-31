@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-31 21:00  
-**Latest Feature**: **MobileMart Contractual Commissions + Data Product Curation** — Set MobileMart contractual rates (Vodacom/MTN 4.5%, Cell C 4.8%, Telkom 3.5% airtime/data; DStv R3.30 fixed; vouchers 1-10% per brand). Added `featured` column to `product_variants` for API-driven data product curation (~50 affordable bundles per env targeting low-income SA users). Backend filters data by `featured=true`. Catalog sync auto-re-curates after daily sweep. Both Flash and MobileMart commission infrastructure is now complete.  
-**Document Version**: 2.50.0  
-**Session logs**: `docs/session_logs/2026-03-31_2100_mobilemart-commissions-data-curation.md`, `docs/session_logs/2026-03-31_1800_flash-contractual-commission-rates.md`  
+**Last Updated**: 2026-03-31 23:00  
+**Latest Feature**: **Supplier Failover with Circuit Breaker** — Banking-grade automatic supplier failover: when primary supplier (Flash/MobileMart) fails or is down, system auto-routes to alternative supplier for the same product. Per-supplier circuit breaker (threshold 5, cooldown 5min, half-open probe). Pre-check swaps supplier before API call if circuit OPEN. Product equivalence via composite keys (vasType+provider+priceType), NOT product names. Health endpoint at `/api/v1/suppliers/circuit-breaker`. Both auth services instrument the circuit breaker. Flash catch block now attempts MobileMart failover.  
+**Document Version**: 2.51.0  
+**Session logs**: `docs/session_logs/2026-03-31_2300_supplier-failover-circuit-breaker.md`, `docs/session_logs/2026-03-31_2100_mobilemart-commissions-data-curation.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
