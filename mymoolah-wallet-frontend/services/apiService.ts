@@ -885,25 +885,27 @@ class ApiService {
 
       // ── Collapse each group into ONE card per network ─────────────────
       return Array.from(grouped.values()).map((group) => {
-        // Pick the variant with the highest commission as the representative
-        const best = group.reduce((a, b) => (b.commission > a.commission ? b : a), group[0]);
+        // Prefer MOBILEMART over FLASH (higher commission in practice).
+        // Only fall back to commission comparison if neither is MOBILEMART.
+        const mobilemart = group.find(p => p.supplierCode === 'MOBILEMART');
+        const best = mobilemart
+          || group.reduce((a, b) => (b.commission > a.commission ? b : a), group[0]);
 
         if (vasType === 'airtime') {
-          // Airtime: single variable-amount card per network
           const allMin = group.map(p => p.minAmount).filter(v => v > 0);
-          const allMax = group.map(p => p.maxAmount).filter(v => v > 0);
           const widestMin = allMin.length > 0 ? Math.min(...allMin) : best.minAmount;
-          const widestMax = allMax.length > 0 ? Math.max(...allMax) : best.maxAmount;
-          // If all variants have same min==max (fixed denominations), set max to 99900 (R999)
-          const effectiveMax = widestMax <= widestMin ? 99900 : widestMax;
+          // Airtime topup APIs accept any amount up to R999; fixed denominations
+          // in the catalog don't reflect the actual variable range.
+          const effectiveMin = Math.max(widestMin, 200);   // floor R2
+          const effectiveMax = 99900;                       // cap R999
           return {
             ...best,
             isVariable: true,
             denominations: [],
-            minAmount: widestMin,
+            minAmount: effectiveMin,
             maxAmount: effectiveMax,
-            price: widestMin / 100,
-            size: `R${(widestMin / 100).toFixed(0)}–R${(effectiveMax / 100).toFixed(0)}`,
+            price: effectiveMin / 100,
+            size: `R${(effectiveMin / 100).toFixed(0)}–R${(effectiveMax / 100).toFixed(0)}`,
             type: vasType,
             validity: 'Immediate',
             provider: best.network || best.supplierCode,
