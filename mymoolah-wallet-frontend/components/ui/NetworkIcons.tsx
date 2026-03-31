@@ -7,10 +7,12 @@ interface IconProps {
 
 export function VodacomIcon({ size = 24 }: IconProps) {
   return (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-      <circle cx="16" cy="16" r="16" fill="#E60000" />
-      <path d="M16 6C10.48 6 6 10.48 6 16s4.48 10 10 10 10-4.48 10-10S21.52 6 16 6zm0 17.5c-4.14 0-7.5-3.36-7.5-7.5S11.86 8.5 16 8.5s7.5 3.36 7.5 7.5-3.36 7.5-7.5 7.5z" fill="#fff" />
-      <circle cx="16" cy="16" r="3.5" fill="#fff" />
+    <svg width={size} height={size} viewBox="0 0 64 64" fill="none">
+      <rect width="64" height="64" rx="12" fill="#E60000" />
+      <path
+        d="M38 14a8 8 0 11-3.2 15.3C32 33 27 38 22 42c-1 .8-2.2.2-1.6-1 2.5-5 6-11 10-15.5A8 8 0 0138 14z"
+        fill="#fff"
+      />
     </svg>
   );
 }
