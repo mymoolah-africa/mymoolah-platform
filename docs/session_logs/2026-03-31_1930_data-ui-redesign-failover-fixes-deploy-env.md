@@ -69,12 +69,17 @@ Continuation of VAS product catalog work. Fixed multiple critical bugs discovere
 
 ---
 
+## Additional Fixes (after initial session log)
+- [x] Fixed `deploy-backend.sh` (the actual deploy script Andre uses) — added `MM_DEPLOYMENT_ENV=${ENVIRONMENT}`
+- [x] Removed duplicate deploy scripts (`build-push-deploy-staging.sh`, `build-push-deploy-production.sh`) — `deploy-backend.sh` is the only backend deploy script
+- [x] Standardized all 22 lowercase `agent_handover.md` references to `AGENT_HANDOVER.md` across 13 files
+- [x] Vodacom logo: switched from hand-drawn SVG to real PNG brand asset imported as Vite module
+
 ## Next Steps
-- [ ] Andre to redeploy backend staging (20260331_v9) — includes failover constructor fix
+- [ ] Work on electricity overlay (Andre's next priority — new session)
 - [ ] Test failover: attempt purchase of product that MobileMart can't source, verify Flash takes over
 - [ ] Add real PNG logos for MTN, CellC, and Telkom (same approach as Vodacom)
-- [ ] Work on electricity overlay (Andre's next priority)
-- [ ] For production: add featured filtering to the best-offers cache path or ensure `MM_DEPLOYMENT_ENV=production` uses the correct catalog display
+- [ ] For production: add featured filtering to the best-offers cache path
 
 ---
 
