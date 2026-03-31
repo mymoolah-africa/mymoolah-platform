@@ -1,20 +1,28 @@
 #!/usr/bin/env node
 
 /**
- * Sync MobileMart Production Products to Staging Database
- * Uses db-connection-helper.js for Staging database access
+ * Sync MobileMart Production Products to a target database
+ * Uses db-connection-helper.js for database access
  * Uses Secret Manager for MobileMart production credentials
  * 
- * Usage: node scripts/sync-mobilemart-production-to-staging.js
+ * Usage:
+ *   node scripts/sync-mobilemart-production-to-staging.js --staging                (default target)
+ *   node scripts/sync-mobilemart-production-to-staging.js --production
+ *   node scripts/sync-mobilemart-production-to-staging.js --uat
+ *   node scripts/sync-mobilemart-production-to-staging.js --staging --billers-only (only bill-payment)
+ * 
+ * Flags:
+ *   --staging | --production | --uat   Target database (default: staging)
+ *   --billers-only                     Sync only bill-payment products (skip airtime/data/utility/voucher)
  * 
  * This script:
- * 1. Fetches all products from MobileMart Production API
- * 2. Syncs them to Staging database (mymoolah_staging)
+ * 1. Fetches products from MobileMart Production API
+ * 2. Syncs them to the chosen target database
  * 3. Maintains supplier comparison ranking (commission → price → Flash preference)
  */
 
 const { execSync } = require('child_process');
-const { getStagingClient, closeAll } = require('./db-connection-helper');
+const { getUATClient, getStagingClient, getProductionClient, closeAll } = require('./db-connection-helper');
 const MobileMartAuthService = require('../services/mobilemartAuthService');
 
 // VAS types to sync
@@ -245,7 +253,7 @@ class MobileMartStagingSync {
           mmProduct.productName,
           normalizedType,
           mmProduct.merchantProductId.toString(),
-          mmProduct.fixedAmount ? [Math.round(mmProduct.amount * 100)] : [],
+          JSON.stringify(mmProduct.fixedAmount ? [Math.round(mmProduct.amount * 100)] : []),
           this.safeStringify({ source: 'mobilemart', synced: true, synced_from: 'production_api' })
         ]);
         productId = insertResult.rows[0].id;
@@ -448,13 +456,52 @@ class MobileMartStagingSync {
   }
 }
 
+function parseArgs() {
+  const args = process.argv.slice(2);
+  const billersOnly = args.includes('--billers-only');
+  const envFlags = args.filter(a => a.startsWith('--') && a !== '--billers-only');
+  let targetEnv = 'staging';
+  if (envFlags.length) {
+    const env = envFlags[0].replace('--', '').toLowerCase();
+    if (!['staging', 'production', 'uat'].includes(env)) {
+      console.error(`\n❌ Invalid target: ${envFlags[0]}`);
+      console.error('   Valid targets: --staging, --production, --uat');
+      console.error('   Optional:     --billers-only\n');
+      process.exit(1);
+    }
+    targetEnv = env;
+  }
+  return { targetEnv, billersOnly };
+}
+
+function getClientForEnv(env) {
+  switch (env) {
+    case 'uat':        return getUATClient();
+    case 'production': return getProductionClient();
+    default:           return getStagingClient();
+  }
+}
+
+const ENV_PORTS = { uat: 6543, staging: 6544, production: 6545 };
+
 async function main() {
-  console.log('\n🚀 MobileMart Production → Staging Sync Starting...\n');
+  const { targetEnv, billersOnly } = parseArgs();
+  const envLabel = targetEnv.charAt(0).toUpperCase() + targetEnv.slice(1);
+  const vasTypes = billersOnly ? ['bill-payment'] : VAS_TYPES;
+
+  console.log(`\n🚀 MobileMart Production API → ${envLabel} DB Sync Starting...`);
+  console.log(`   VAS types: ${vasTypes.join(', ')}${billersOnly ? ' (--billers-only)' : ' (all)'}\n`);
   
+  if (targetEnv === 'production') {
+    console.log('⚠️  WARNING: You are syncing to the PRODUCTION database.');
+    console.log('   Press Ctrl+C within 5 seconds to abort...\n');
+    await new Promise(r => setTimeout(r, 5000));
+    console.log('   Proceeding with production sync.\n');
+  }
+
   let client;
   
   try {
-    // Get MobileMart production credentials from Secret Manager
     console.log('🔐 Loading MobileMart production credentials from Secret Manager...');
     
     const clientId = execSync(
@@ -474,20 +521,17 @@ async function main() {
     
     console.log(`✅ Credentials loaded (Client ID: ${clientId})\n`);
     
-    // Set production environment
     process.env.MOBILEMART_CLIENT_ID = clientId;
     process.env.MOBILEMART_CLIENT_SECRET = clientSecret;
     process.env.MOBILEMART_API_URL = apiUrl;
     process.env.MOBILEMART_TOKEN_URL = `${apiUrl}/connect/token`;
     process.env.MOBILEMART_SCOPE = 'api';
     
-    // Initialize auth service
     const authService = new MobileMartAuthService();
     
-    // Connect to Staging database
-    console.log('📡 Connecting to Staging database...');
-    client = await getStagingClient();
-    console.log('✅ Connected to Staging\n');
+    console.log(`📡 Connecting to ${envLabel} database (port ${ENV_PORTS[targetEnv]})...`);
+    client = await getClientForEnv(targetEnv);
+    console.log(`✅ Connected to ${envLabel}\n`);
     
     // Get or create MobileMart supplier
     console.log('🏢 Finding MobileMart supplier...');
@@ -512,8 +556,7 @@ async function main() {
     // Initialize sync service
     const syncService = new MobileMartStagingSync(client, authService);
     
-    // Sync all VAS types
-    for (const vasType of VAS_TYPES) {
+    for (const vasType of vasTypes) {
       await syncService.syncVasType(vasType, supplier);
     }
     
@@ -526,7 +569,7 @@ async function main() {
     console.error('\n❌ SYNC FAILED:', error.message);
     console.error('\n💡 TROUBLESHOOTING:');
     console.error('   1. Ensure you are in Codespaces');
-    console.error('   2. Check Cloud SQL Auth Proxy is running (port 6544)');
+    console.error(`   2. Check Cloud SQL Auth Proxy is running (port ${ENV_PORTS[targetEnv]})`);
     console.error('   3. Verify gcloud authentication: gcloud auth list');
     console.error('   4. Check Secret Manager access\n');
     process.exit(1);
