@@ -388,12 +388,11 @@ export const billPaymentsService = {
 // UTILITY FUNCTIONS
 // ========================================
 
-export const generateIdempotencyKey = (): string => {
-  // Banking-grade idempotency key generation
+export const generateIdempotencyKey = (userId?: string | number): string => {
   const timestamp = Date.now();
   const random = Math.random().toString(36).substr(2, 9);
-  const userId = 'user'; // In real app, get from auth context
-  return `overlay_${userId}_${timestamp}_${random}`;
+  const uid = userId || 'anon';
+  return `overlay_${uid}_${timestamp}_${random}`;
 };
 
 export const formatCurrency = (amount: number): string => {

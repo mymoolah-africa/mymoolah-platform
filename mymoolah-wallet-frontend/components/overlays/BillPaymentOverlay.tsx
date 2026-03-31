@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Search, Building, Tv, GraduationCap, MapPin, Phone, CreditCard, CheckCircle, Copy, Share } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -17,7 +18,6 @@ import {
   formatCurrency,
   type Beneficiary,
   type Biller,
-  type BillCategory,
   type PurchaseResult
 } from '../../services/overlayService';
 
@@ -55,16 +55,15 @@ function billerMatches(beneficiaryBillerName: string | undefined, selectedBiller
 
 export function BillPaymentOverlay() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState<Step>('search');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isSearching, setIsSearching] = useState(false);
   const [selectedBiller, setSelectedBiller] = useState<Biller | null>(null);
   const [selectedBeneficiary, setBeneficiary] = useState<BillBeneficiary | null>(null);
   const [amount, setAmount] = useState<string>('');
-  const [billers, setBillers] = useState<Biller[]>([]);
   const [billBeneficiaries, setBillBeneficiaries] = useState<BillBeneficiary[]>([]);
   const [searchResults, setSearchResults] = useState<Biller[]>([]);
-  const [categories, setCategories] = useState<BillCategory[]>([]);
   const [loadingState, setLoadingState] = useState<LoadingState>('idle');
   const [showSuccess, setShowSuccess] = useState(false);
   const [transactionRef, setTransactionRef] = useState<string>('');
@@ -72,7 +71,9 @@ export function BillPaymentOverlay() {
   const [errorModalTitle, setErrorModalTitle] = useState<string>('Payment Failed');
   const [errorModalMessage, setErrorModalMessage] = useState<string>('');
   const [showBeneficiaryModal, setShowBeneficiaryModal] = useState(false);
+  const [editingBeneficiary, setEditingBeneficiary] = useState<BillBeneficiary | null>(null);
   const [beneficiaryIsMyMoolahUser, setBeneficiaryIsMyMoolahUser] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // Load initial data on mount
   useEffect(() => {
@@ -83,19 +84,14 @@ export function BillPaymentOverlay() {
     try {
       setLoadingState('loading');
       
-      // Load bill beneficiaries
       const beneficiaries = await beneficiaryService.getBeneficiaries('biller');
       setBillBeneficiaries(beneficiaries as BillBeneficiary[]);
-      
-      // Load categories
-      const categoriesData = await billPaymentsService.getCategories();
-      setCategories(categoriesData);
       
       setLoadingState('idle');
     } catch (err: any) {
       console.error('Failed to load initial data:', err);
       setErrorModalTitle('Failed to load');
-      setErrorModalMessage(err?.response?.data?.message || err?.message || 'Failed to load bill payment data. Please try again.');
+      setErrorModalMessage(err?.response?.message || err?.response?.error || err?.message || 'Failed to load bill payment data. Please try again.');
       setShowErrorModal(true);
       setLoadingState('error');
     }
@@ -166,7 +162,7 @@ export function BillPaymentOverlay() {
     try {
       setLoadingState('loading');
       
-      const idempotencyKey = generateIdempotencyKey();
+      const idempotencyKey = generateIdempotencyKey(user?.id);
       
       const result = await billPaymentsService.payBill({
         beneficiaryId: selectedBeneficiary.id,
@@ -181,8 +177,9 @@ export function BillPaymentOverlay() {
     } catch (err: any) {
       console.error('Bill payment failed:', err);
       setErrorModalTitle('Payment Failed');
-      setErrorModalMessage(err?.response?.message || err?.response?.error || err?.message || 'Bill payment failed. Please try again.');
-      setCurrentStep('amount'); // Close confirm sheet so only error modal is visible (match AirtimeDataOverlay)
+      const msg = err?.response?.message || err?.response?.error || err?.message || 'Bill payment failed. Please try again.';
+      setErrorModalMessage(msg);
+      setCurrentStep('amount');
       setShowErrorModal(true);
       setLoadingState('error');
     }
@@ -205,9 +202,9 @@ export function BillPaymentOverlay() {
     setShowBeneficiaryModal(false);
   };
 
-  // For now, edit just logs; accept any beneficiary shape coming from BeneficiaryList
   const handleEditBeneficiary = (beneficiary: any): void => {
-    console.log('Edit bill account:', beneficiary);
+    setEditingBeneficiary(beneficiary as BillBeneficiary);
+    setShowBeneficiaryModal(true);
   };
 
   const getSummaryRows = () => {
@@ -376,6 +373,12 @@ export function BillPaymentOverlay() {
               <div className="flex gap-3">
                 <Button
                   variant="outline"
+                  onClick={() => {
+                    navigator.clipboard.writeText(transactionRef).then(() => {
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                    }).catch(() => {});
+                  }}
                   style={{
                     flex: '1',
                     fontFamily: 'Montserrat, sans-serif',
@@ -386,11 +389,26 @@ export function BillPaymentOverlay() {
                   }}
                 >
                   <Copy style={{ width: '16px', height: '16px', marginRight: '8px' }} />
-                  Copy
+                  {copied ? 'Copied' : 'Copy'}
                 </Button>
                 
                 <Button
                   variant="outline"
+                  onClick={() => {
+                    if (navigator.share) {
+                      navigator.share({
+                        title: 'MyMoolah Bill Payment',
+                        text: `Bill payment ref: ${transactionRef}\nAmount: ${formatCurrency(parseFloat(amount))}\nBiller: ${selectedBeneficiary?.metadata?.billerName || 'Unknown'}`
+                      }).catch(() => {});
+                    } else {
+                      navigator.clipboard.writeText(
+                        `Bill payment ref: ${transactionRef}\nAmount: ${formatCurrency(parseFloat(amount))}\nBiller: ${selectedBeneficiary?.metadata?.billerName || 'Unknown'}`
+                      ).then(() => {
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 2000);
+                      }).catch(() => {});
+                    }
+                  }}
                   style={{
                     flex: '1',
                     fontFamily: 'Montserrat, sans-serif',
@@ -818,10 +836,11 @@ export function BillPaymentOverlay() {
       {/* Beneficiary Modal - pass selected biller name so new recipient appears in filtered list */}
       <BeneficiaryModal
         isOpen={showBeneficiaryModal}
-        onClose={() => setShowBeneficiaryModal(false)}
+        onClose={() => { setShowBeneficiaryModal(false); setEditingBeneficiary(null); }}
         type="biller"
         initialBillerName={selectedBiller?.name}
-        onSuccess={handleBeneficiaryCreated}
+        editBeneficiary={editingBeneficiary || undefined}
+        onSuccess={(updated) => { handleBeneficiaryCreated(updated); setEditingBeneficiary(null); }}
       />
 
       {/* Error Modal - plain explanation when payment or load fails */}

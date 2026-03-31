@@ -311,13 +311,14 @@ class BeneficiaryService {
   }
 
   /**
-   * Delete beneficiary (legacy method for overlay service)
-   * Supports both number and string IDs for backward compatibility
+   * Delete beneficiary by removing all of its service accounts.
+   * Banking-grade: the beneficiary record itself is preserved (audit trail).
    */
   async deleteBeneficiary(beneficiaryId: number | string): Promise<void> {
-    // This would require a DELETE endpoint on the backend
-    // For now, we'll just return success
-    return Promise.resolve();
+    await this.request(
+      `/api/v1/unified-beneficiaries/${beneficiaryId}/services/biller`,
+      { method: 'DELETE' }
+    );
   }
 
   /**

@@ -229,7 +229,7 @@ class MobileMartController {
             // Validate required fields based on VAS type
             const normalizedVasType = this.normalizeVasType(vasType);
             
-            if (!merchantProductId) {
+            if (!merchantProductId && normalizedVasType !== 'bill-payment') {
                 return res.status(400).json({
                     success: false,
                     error: 'merchantProductId is required'

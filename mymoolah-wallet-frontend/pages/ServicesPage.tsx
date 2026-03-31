@@ -149,8 +149,8 @@ export function ServicesPage() {
     setLoadingService(service.id);
     
     try {
-      // Check KYC requirements for airtime purchases
-      if (requiresKYC('airtime')) {
+      const kycType = service.type === 'bill-payment' ? 'bill_payment' : 'airtime';
+      if (requiresKYC(kycType)) {
         navigate('/kyc/documents?returnTo=/services');
         return;
       }

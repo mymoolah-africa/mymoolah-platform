@@ -3059,6 +3059,53 @@ router.post('/bills/pay', auth, async (req, res) => {
       });
     }
 
+    const numericAmount = Number(amount);
+    if (isNaN(numericAmount) || numericAmount < 1 || numericAmount > 100000) {
+      return res.status(400).json({
+        success: false,
+        error: 'Amount must be between R1 and R100,000'
+      });
+    }
+
+    if (!/^\d+$/.test(String(beneficiaryId))) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid beneficiary ID format'
+      });
+    }
+
+    if (!/^[a-zA-Z0-9_-]{10,100}$/.test(String(idempotencyKey))) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid idempotency key format'
+      });
+    }
+
+    // Banking-grade idempotency: check for duplicate submission
+    const { VasTransaction, Transaction } = require('../models');
+    const existingTransaction = await VasTransaction.findOne({
+      where: { reference: idempotencyKey }
+    });
+
+    if (existingTransaction) {
+      let existingLedger = null;
+      if (existingTransaction.metadata?.walletTransactionId) {
+        existingLedger = await Transaction.findOne({
+          where: { transactionId: existingTransaction.metadata.walletTransactionId }
+        });
+      }
+      return res.json({
+        success: true,
+        data: {
+          transactionId: existingLedger?.transactionId || existingTransaction.id,
+          status: existingLedger?.status || existingTransaction.status,
+          reference: idempotencyKey,
+          message: 'Transaction already processed',
+          beneficiaryIsMyMoolahUser: Boolean(existingTransaction.metadata?.beneficiaryUserId)
+        }
+      });
+    }
+
     // Get beneficiary details
     const { Beneficiary } = require('../models');
     const beneficiary = await Beneficiary.findOne({
@@ -3147,39 +3194,42 @@ router.post('/bills/pay', auth, async (req, res) => {
         const MobileMartAuthService = require('../services/mobilemartAuthService');
         const mobileMartService = new MobileMartAuthService();
 
-        // Step 1: Get bill payment products to find merchantProductId
-        console.log('📞 MobileMart: Getting bill payment products...');
-        const productsResponse = await mobileMartService.makeAuthenticatedRequest(
-          'GET',
-          '/bill-payment/products'
-        );
-        const products = productsResponse.products || productsResponse || [];
-        
-        // Match product to biller - PRODUCT name must contain biller identifier (never match on biller-only)
-        const billerLower = billerName.toLowerCase();
-        const firstWord = billerLower.replace(/[^a-z0-9]+.*$/, ''); // e.g. "pepkor" from "Pepkor Trading (Pty) Ltd"
-        const shortName = firstWord.length >= 3 ? firstWord.slice(0, 3) : firstWord; // e.g. "pep"
-        const matchProduct = (p) => {
-          const pn = (p.productName || p.contentCreator || '').toLowerCase();
-          return pn.includes(billerLower) || billerLower.includes(pn) ||
-            pn.includes(firstWord) ||
-            (shortName.length >= 3 && pn.includes(shortName)); // product must contain "pep" etc
-        };
-        let billProduct = products.find(matchProduct);
-
-        if (!billProduct || !billProduct.merchantProductId) {
-          throw new Error(
-            products.length === 0
-              ? 'No bill payment products available from MobileMart'
-              : `No MobileMart product found for biller "${billerName}". Available billers may not include this one - try DSTV, Pay@, or check if this biller is supported by Flash instead.`
+        // Step 1: Resolve merchantProductId from synced catalog first (fast), then live API fallback
+        let merchantProductId = selectedVariant?.supplierProductId || null;
+        if (!merchantProductId) {
+          console.log('📞 MobileMart: supplierProductId not in catalog, fetching products from API...');
+          const productsResponse = await mobileMartService.makeAuthenticatedRequest(
+            'GET',
+            '/bill-payment/products'
           );
+          const products = productsResponse.products || productsResponse || [];
+
+          const billerLower = billerName.toLowerCase();
+          const firstWord = billerLower.replace(/[^a-z0-9]+.*$/, '');
+          const shortName = firstWord.length >= 3 ? firstWord.slice(0, 3) : firstWord;
+          const matchProduct = (p) => {
+            const pn = (p.productName || p.contentCreator || '').toLowerCase();
+            return pn.includes(billerLower) || billerLower.includes(pn) ||
+              pn.includes(firstWord) ||
+              (shortName.length >= 3 && pn.includes(shortName));
+          };
+          const billProduct = products.find(matchProduct);
+
+          if (!billProduct || !billProduct.merchantProductId) {
+            throw new Error(
+              products.length === 0
+                ? 'No bill payment products available from MobileMart'
+                : `No MobileMart product found for biller "${billerName}". Available billers may not include this one.`
+            );
+          }
+          merchantProductId = billProduct.merchantProductId;
         }
-        console.log(`✅ Found bill payment product: ${billProduct.productName || billProduct.contentCreator} (${billProduct.merchantProductId})`);
+        console.log(`✅ Resolved merchantProductId: ${merchantProductId} for biller: ${billerName}`);
 
         // Step 2: Prevend - validate account and get prevendTransactionId
         const prevendRequestId = `BILLPRE_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
         const prevendParams = new URLSearchParams({
-          merchantProductId: billProduct.merchantProductId,
+          merchantProductId,
           requestId: prevendRequestId,
           accountNumber: accountNumber,
           amount: amount.toString()
@@ -3252,10 +3302,32 @@ router.post('/bills/pay', auth, async (req, res) => {
         });
       }
     } else {
-      // UAT/SIMULATION: Use fake receipt for UI testing
-      billPaymentReceipt = `RECEIPT_${Date.now()}`;
-      mobileMartTransactionId = null;
-      mobileMartResponse = null;
+      // MobileMart not live -- guard against real money movement
+      const deploymentEnv = (process.env.MM_DEPLOYMENT_ENV || '').toLowerCase();
+      if (deploymentEnv === 'uat' || deploymentEnv === 'development') {
+        // UAT only: return simulated response for UX testing without wallet debit
+        console.log(`[BILL-SIM] UAT simulation for ${billerName}, account ${accountNumber}, amount ${amount}`);
+        return res.json({
+          success: true,
+          data: {
+            transactionId: `SIM-${Date.now()}`,
+            status: 'simulated',
+            reference: idempotencyKey,
+            token: null,
+            receiptUrl: null,
+            beneficiaryIsMyMoolahUser: false,
+            simulation: true,
+            message: 'Simulated bill payment (UAT only — no wallet debit)'
+          }
+        });
+      }
+      // Staging / Production: hard block — downstream settlement cannot happen
+      return res.status(503).json({
+        success: false,
+        error: 'Bill payment service unavailable',
+        code: 'SUPPLIER_NOT_CONFIGURED',
+        message: 'MobileMart bill payment integration is not enabled for this environment. Contact support.'
+      });
     }
 
     // Create bill payment transaction in database
