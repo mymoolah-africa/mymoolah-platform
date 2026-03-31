@@ -852,87 +852,80 @@ class ApiService {
           (Array.isArray(p.denominations)     && p.denominations.length > 0     ? p.denominations     : null) ||
           [];
 
-        const isVariable = vasType === 'airtime'
-          ? true
-          : (explicitDenominations.length === 0 && minAmount < maxAmount);
-
-        // Group key: network label + supplier (keeps Flash MTN separate from MobileMart MTN)
         const networkLabel = enriched ? enriched.label : rawName;
-        const brandKey = `${networkLabel.toLowerCase().trim()}::${supplierCode}`;
 
         return {
           id: (p.id || p.variantId || p.supplierProductId || rawName).toString(),
           productId: p.productId,
           variantId: p.id || p.variantId,
           rawName,
-          name: enriched ? enriched.label : rawName,
+          name: networkLabel,
           description: enriched ? enriched.description : (p.description || rawName),
           icon: enriched ? enriched.icon : (vasType === 'airtime' ? '📱' : '📶'),
           network: enriched ? enriched.network : '',
-          brandKey,
+          networkKey: networkLabel.toLowerCase().trim(),
           supplierCode,
           minAmount,
           maxAmount,
-          isVariable,
           denominations: explicitDenominations,
           vasType,
           isBestDeal: p.isBestDeal || false,
           isPopular: p.isPopular || false,
-          commission: p.commission || 0,
+          commission: parseFloat(p.commission) || 0,
           supplierProductId: p.supplierProductId,
         };
       });
 
-      // ── Group by brandKey ────────────────────────────────────────────────
+      // ── Group by NETWORK only (merge all suppliers into one card per network)
       const grouped = new Map<string, typeof normalised>();
       for (const p of normalised) {
-        if (!grouped.has(p.brandKey)) grouped.set(p.brandKey, []);
-        grouped.get(p.brandKey)!.push(p);
+        if (!grouped.has(p.networkKey)) grouped.set(p.networkKey, []);
+        grouped.get(p.networkKey)!.push(p);
       }
 
-      // ── Collapse each group ──────────────────────────────────────────────
+      // ── Collapse each group into ONE card per network ─────────────────
       return Array.from(grouped.values()).map((group) => {
-        const variableVariant = group.find(p => p.isVariable);
-        if (variableVariant) {
-          // For variable products, use the widest min/max range from ALL group members
+        // Pick the variant with the highest commission as the representative
+        const best = group.reduce((a, b) => (b.commission > a.commission ? b : a), group[0]);
+
+        if (vasType === 'airtime') {
+          // Airtime: single variable-amount card per network
           const allMin = group.map(p => p.minAmount).filter(v => v > 0);
           const allMax = group.map(p => p.maxAmount).filter(v => v > 0);
-          const widestMin = allMin.length > 0 ? Math.min(...allMin) : variableVariant.minAmount;
-          const widestMax = allMax.length > 0 ? Math.max(...allMax) : variableVariant.maxAmount;
+          const widestMin = allMin.length > 0 ? Math.min(...allMin) : best.minAmount;
+          const widestMax = allMax.length > 0 ? Math.max(...allMax) : best.maxAmount;
+          // If all variants have same min==max (fixed denominations), set max to 99900 (R999)
+          const effectiveMax = widestMax <= widestMin ? 99900 : widestMax;
           return {
-            ...variableVariant,
+            ...best,
             isVariable: true,
             denominations: [],
             minAmount: widestMin,
-            maxAmount: widestMax,
+            maxAmount: effectiveMax,
             price: widestMin / 100,
-            size: `R${(widestMin / 100).toFixed(0)}–R${(widestMax / 100).toFixed(0)}`,
+            size: `R${(widestMin / 100).toFixed(0)}–R${(effectiveMax / 100).toFixed(0)}`,
             type: vasType,
-            validity: vasType === 'airtime' ? 'Immediate' : '30 days',
-            provider: variableVariant.network || variableVariant.supplierCode,
+            validity: 'Immediate',
+            provider: best.network || best.supplierCode,
           };
         }
 
-        const base = group[0];
-        // allDenoms stays in cents (used for denomination buttons and purchase API)
+        // Data: bundle card with all unique denominations merged across suppliers
         const allDenoms = Array.from(
           new Set(group.flatMap(p => p.denominations.length > 0 ? p.denominations : [p.minAmount]))
-        ).sort((a, b) => a - b);
+        ).filter(v => v > 0).sort((a, b) => a - b);
 
         return {
-          ...base,
+          ...best,
           isVariable: false,
-          denominations: allDenoms,   // cents — used for denomination picker & purchase
-          minAmount: Math.min(...allDenoms),
-          maxAmount: Math.max(...allDenoms),
-          // price in rands (formatCurrency expects rands); shows lowest denom on card
-          price: allDenoms[0] / 100,
-          size: allDenoms.length === 1
-            ? `R${(allDenoms[0] / 100).toFixed(0)}`
-            : `R${(allDenoms[0] / 100).toFixed(0)}–R${(allDenoms[allDenoms.length - 1] / 100).toFixed(0)}`,
+          denominations: allDenoms,
+          minAmount: allDenoms.length > 0 ? Math.min(...allDenoms) : best.minAmount,
+          maxAmount: allDenoms.length > 0 ? Math.max(...allDenoms) : best.maxAmount,
+          price: allDenoms.length > 0 ? allDenoms[0] / 100 : best.minAmount / 100,
+          size: `${allDenoms.length} bundles available`,
           type: vasType,
-          validity: vasType === 'airtime' ? 'Immediate' : '30 days',
-          provider: base.network || base.supplierCode,
+          validity: '30 days',
+          provider: best.network || best.supplierCode,
         };
       });
     };
