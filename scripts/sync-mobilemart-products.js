@@ -6,10 +6,10 @@
  * Uses Secret Manager for MobileMart production credentials
  * 
  * Usage:
- *   node scripts/sync-mobilemart-production-to-staging.js --staging                (default target)
- *   node scripts/sync-mobilemart-production-to-staging.js --production
- *   node scripts/sync-mobilemart-production-to-staging.js --uat
- *   node scripts/sync-mobilemart-production-to-staging.js --staging --billers-only (only bill-payment)
+ *   node scripts/sync-mobilemart-products.js --staging                (default target)
+ *   node scripts/sync-mobilemart-products.js --production
+ *   node scripts/sync-mobilemart-products.js --uat
+ *   node scripts/sync-mobilemart-products.js --staging --billers-only (only bill-payment)
  * 
  * Flags:
  *   --staging | --production | --uat   Target database (default: staging)
