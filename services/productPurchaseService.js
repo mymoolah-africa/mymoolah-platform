@@ -544,13 +544,14 @@ class ProductPurchaseService {
     const supplierCode = product.supplier.code;
     const fees = await supplierPricingService.getFees(supplierCode, serviceType);
 
-    // Calculate commission
-    const commissionRate = await supplierPricingService.getCommissionRatePct(
+    // Calculate commission (supports both percentage and fixed-amount)
+    const commissionInfo = await supplierPricingService.getCommissionInfo(
       supplierCode,
       serviceType,
       product.id
     );
-    const commissionCents = supplierPricingService.computeCommission(denomination, commissionRate);
+    const commissionRate = commissionInfo.ratePct;
+    const commissionCents = supplierPricingService.computeCommissionFromInfo(denomination, commissionInfo);
     const netRevenueCents = denomination - commissionCents;
 
     // Calculate total amount (denomination + any additional fees)

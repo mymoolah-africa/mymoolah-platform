@@ -352,6 +352,63 @@ class CatalogSynchronizationService {
   }
 
   /**
+   * Resolve Flash contractual commission for a product.
+   * Returns { commission, fixedFee, commissionType, pricingRate }.
+   */
+  getFlashContractualCommission(vasType, provider, productName) {
+    const p = (provider || '').toLowerCase();
+    const n = (productName || '').toLowerCase();
+
+    // Fixed-amount commissions
+    if (n.includes('flash token'))                      return { commission: 0, fixedFee: 300, commissionType: 'fixed_amount', pricingRate: 0 };
+    if (n.includes('dstv') || p.includes('dstv'))       return { commission: 0, fixedFee: 300, commissionType: 'fixed_amount', pricingRate: 0 };
+    if (n.includes('municipality') || n.includes('metro') || p.includes('municipality'))
+      return { commission: 0, fixedFee: 200, commissionType: 'fixed_amount', pricingRate: 0 };
+
+    // Cellular (airtime + data): 3%
+    if (vasType === 'airtime' || vasType === 'data')    return { commission: 3.00, fixedFee: 0, commissionType: 'percentage', pricingRate: 3.00 };
+
+    // Electricity: 0.85%
+    if (vasType === 'electricity')                      return { commission: 0.85, fixedFee: 0, commissionType: 'percentage', pricingRate: 0.85 };
+
+    // Gift voucher product-specific rates
+    const giftRates = {
+      'amazon': 2.80, 'apple': 4.50, 'bettabets': 4.10, 'betway': 3.00,
+      'blu': 3.00, 'bolt': 3.50, 'easybet': 4.10, 'easyload': 3.50,
+      'ea fc mobile': 4.80, 'free fire': 3.50, 'gbets': 3.50, 'google play': 3.10,
+      'gold rush': 3.50, 'hollywoodbets': 3.00, 'lottostar': 3.50, 'netflix': 3.25,
+      'ott': 3.00, 'playstation': 3.50, 'pubg': 7.00, 'razer gold': 3.50,
+      'roblox': 6.00, 'showmax': 3.10, 'steam': 3.50, 'supabets': 3.80,
+      'takealot': 2.40, 'uber': 2.80, 'uber eats': 2.80,
+      'world sports betting': 3.50, 'yesplay': 3.00,
+    };
+    for (const [key, rate] of Object.entries(giftRates)) {
+      if (p.includes(key) || n.includes(key)) return { commission: rate, fixedFee: 0, commissionType: 'percentage', pricingRate: rate };
+    }
+
+    // Flash Pay bill_payment rates
+    const billRates = {
+      'nyaradzo': 4.10, 'ackermans': 2.50, 'pep': 2.50, 'talk360': 6.00,
+      'intercape': 5.00, 'ria sikhona': 0.40,
+    };
+    if (vasType === 'bill_payment') {
+      for (const [key, rate] of Object.entries(billRates)) {
+        if (p.includes(key) || n.includes(key)) return { commission: rate, fixedFee: 0, commissionType: 'percentage', pricingRate: rate };
+      }
+      return { commission: 2.50, fixedFee: 0, commissionType: 'percentage', pricingRate: 2.50 };
+    }
+
+    // 1Voucher / FNB Voucher: 1%
+    if (n.includes('1voucher') || n.includes('fnb voucher') || p.includes('1voucher'))
+      return { commission: 1.00, fixedFee: 0, commissionType: 'percentage', pricingRate: 1.00 };
+
+    // Default for vouchers
+    if (vasType === 'voucher')                          return { commission: 3.50, fixedFee: 0, commissionType: 'percentage', pricingRate: 3.50 };
+
+    return { commission: 2.50, fixedFee: 0, commissionType: 'percentage', pricingRate: 2.50 };
+  }
+
+  /**
    * Sync a single Flash product (raw API object) to the database.
    * Field names match actual Flash aggregation/4.0 API response:
    *   productCode, productName, minimumAmount, maximumAmount,
@@ -411,15 +468,18 @@ class CatalogSynchronizationService {
         }, { transaction: tx });
       }
 
+      const commInfo = this.getFlashContractualCommission(vasType, provider, productName);
+
       const variantData = {
         productId: baseProduct.id, supplierId: supplier.id, supplierProductId: productCode,
         vasType, transactionType: txType, networkType: 'local', provider,
         priceType, minAmount, maxAmount,
         predefinedAmounts: denominations.length > 0 ? denominations : null,
-        commission: 2.50, fixedFee: 0,
+        commission: commInfo.commission, fixedFee: commInfo.fixedFee,
+        commissionType: commInfo.commissionType,
         isPromotional: false, promotionalDiscount: null,
         denominations: denominations.length > 0 ? denominations : [],
-        pricing: { defaultCommissionRate: 2.50, fixedAmount: denominations.length > 0 },
+        pricing: { defaultCommissionRate: commInfo.pricingRate, fixedAmount: denominations.length > 0 },
         constraints: { minAmount, maxAmount },
         status: isActive ? 'active' : 'inactive',
         priority: 1, isPreferred: true, sortOrder: 0,
@@ -586,8 +646,8 @@ class CatalogSynchronizationService {
       maxAmount: maxAmount,
       predefinedAmounts: hasFixedAmount && typeof baseAmountCents === 'number' ? [baseAmountCents] : null,
       
-      // Commission and fees (MobileMart typically 2-3%)
-      commission: 2.5, // Default commission
+      // TODO: Replace with MobileMart contractual rates when agreement is available
+      commission: 2.5,
       fixedFee: 0,
       
       // Promotional

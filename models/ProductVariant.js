@@ -202,6 +202,12 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: 0
     },
+    commissionType: {
+      type: DataTypes.ENUM('percentage', 'fixed_amount'),
+      allowNull: false,
+      defaultValue: 'percentage',
+      comment: 'Commission type: percentage (use commission column) or fixed_amount (use fixedFee column)',
+    },
     // Promotional flags
     isPromotional: {
       type: DataTypes.BOOLEAN,

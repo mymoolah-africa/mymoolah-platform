@@ -1207,8 +1207,9 @@ class FlashController {
             console.log('📤 eezi-voucher purchase:', { reference, amountInt, productCode });
 
             // ── Commission & fees ──
-            const commissionRatePct = await supplierPricing.getCommissionRatePct('FLASH', 'eezi_voucher');
-            const commissionCents = supplierPricing.computeCommission(faceValueCents, commissionRatePct);
+            const commissionInfo = await supplierPricing.getCommissionInfo('FLASH', 'eezi_voucher');
+            const commissionRatePct = commissionInfo.ratePct;
+            const commissionCents = supplierPricing.computeCommissionFromInfo(faceValueCents, commissionInfo);
             const { fees } = await supplierPricing.getFees('FLASH', 'eezi_voucher');
             const generationFeeCents = Number(fees['token_generation'] || 0);
             const redemptionFeeCents = Number(fees['token_redemption'] || 0);

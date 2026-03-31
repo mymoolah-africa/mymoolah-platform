@@ -10,30 +10,28 @@ const LEDGER_ACCOUNT_VAT_CONTROL = process.env.LEDGER_ACCOUNT_VAT_CONTROL || nul
 
 /**
  * Calculate commission in cents for a supplier/serviceType given an amount.
- * Returns null if no rate or rate is zero/invalid.
+ * Supports both percentage-based and fixed-amount commissions.
+ * Returns null if no rate/amount or rate is zero/invalid.
  */
 async function calculateCommissionCents({ supplierCode, serviceType, amountInCents, productId = null }) {
   const normalizedSupplierCode = (supplierCode || '').toUpperCase();
   if (!normalizedSupplierCode || !amountInCents) return null;
 
-  const commissionRatePct = await supplierPricingService.getCommissionRatePct(
+  const commissionInfo = await supplierPricingService.getCommissionInfo(
     normalizedSupplierCode,
     serviceType,
     productId
   );
 
-  if (!commissionRatePct || Number(commissionRatePct) <= 0) {
-    return null;
-  }
+  if (!commissionInfo) return null;
 
-  const commissionCents = supplierPricingService.computeCommission(amountInCents, commissionRatePct);
-  if (!commissionCents) {
-    return null;
-  }
+  const commissionCents = supplierPricingService.computeCommissionFromInfo(amountInCents, commissionInfo);
+  if (!commissionCents || commissionCents <= 0) return null;
 
   return {
     commissionCents,
-    commissionRatePct: Number(commissionRatePct)
+    commissionRatePct: Number(commissionInfo.ratePct),
+    commissionType: commissionInfo.type,
   };
 }
 
