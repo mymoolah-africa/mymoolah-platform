@@ -6,10 +6,9 @@ interface VoucherSearchProps {
   searchQuery: string;
   onSearch: (query: string) => void;
   onClear: () => void;
-  suggestions?: string[];
 }
 
-export function VoucherSearch({ searchQuery, onSearch, onClear, suggestions = [] }: VoucherSearchProps) {
+export function VoucherSearch({ searchQuery, onSearch, onClear }: VoucherSearchProps) {
   return (
     <div className="mb-6">
       <div className="relative">
@@ -44,26 +43,6 @@ export function VoucherSearch({ searchQuery, onSearch, onClear, suggestions = []
           </button>
         )}
       </div>
-
-      {!searchQuery && suggestions.length > 0 && (
-        <div className="mt-3">
-          <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', fontWeight: '500', color: '#6b7280', marginBottom: '8px' }}>
-            Popular:
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {suggestions.map((s) => (
-              <button
-                key={s}
-                onClick={() => onSearch(s)}
-                className="px-3 py-1 bg-gray-100 rounded-full hover:bg-green-50 hover:text-green-700 transition-all duration-200"
-                style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '11px', fontWeight: '500', color: '#6b7280' }}
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

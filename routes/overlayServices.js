@@ -3563,106 +3563,88 @@ router.post('/bills/pay', auth, async (req, res) => {
 // DIGITAL VOUCHERS OVERLAY ENDPOINTS
 // ========================================
 
-const VOUCHER_CATEGORY_MAP = {
-  gaming:       ['gaming', 'game', 'playstation', 'psn', 'xbox', 'nintendo', 'steam', 'roblox', 'pubg', 'free fire', 'razer', 'fifa', 'ea sports'],
-  entertainment:['entertainment', 'netflix', 'showmax', 'dstv', 'multichoice', 'spotify', 'apple music', 'itunes', 'ott', 'streaming', 'media'],
-  betting:      ['betting', 'bet', 'hollywood', 'betway', 'supabets', 'lottostar', 'lottoland', 'flybet', 'yesplay'],
-  shopping:     ['shopping', 'retail', 'makro', 'pick n pay', 'takealot', 'amazon', '1voucher', 'blu voucher', 'ringas', 'bok squad', 'cycle lab', 'pro shop'],
-  transport:    ['transport', 'uber', 'bolt', 'intercape'],
-  lifestyle:    ['lifestyle', 'beauty', 'sorbet', 'ticketmaster', 'ticket']
-};
+/**
+ * Brand recognition table — maps raw supplier product names to canonical brands.
+ * Order matters: first match wins. More specific patterns must come before generic ones.
+ */
+const VOUCHER_BRAND_TABLE = [
+  // Streaming / entertainment
+  { match: /netflix/i,                          brand: 'Netflix',          icon: '🎭', category: 'entertainment', desc: 'Netflix streaming — top up your Netflix account' },
+  { match: /dstv/i,                             brand: 'DStv',             icon: '📺', category: 'entertainment', desc: 'DStv subscription payment' },
+  { match: /showmax/i,                          brand: 'Showmax',          icon: '🎬', category: 'entertainment', desc: 'Showmax streaming gift card' },
+  { match: /spotify/i,                          brand: 'Spotify',          icon: '🎵', category: 'entertainment', desc: 'Spotify music gift card' },
+  { match: /apple\s*music/i,                    brand: 'Apple Music',      icon: '🎵', category: 'entertainment', desc: 'Apple Music gift card' },
+  { match: /itunes/i,                           brand: 'iTunes',           icon: '🍎', category: 'entertainment', desc: 'iTunes / Apple gift card' },
+  { match: /ott/i,                              brand: 'OTT Voucher',      icon: '🎬', category: 'entertainment', desc: 'OTT streaming voucher' },
+  { match: /talk\s*360/i,                       brand: 'Talk360',          icon: '📞', category: 'entertainment', desc: 'Talk360 international calling credit' },
 
-function mapVoucherCategory(rawCategory, productName) {
-  const combined = `${rawCategory || ''} ${productName || ''}`.toLowerCase().replace(/[^a-z0-9 ]/g, ' ');
-  for (const [categoryId, keywords] of Object.entries(VOUCHER_CATEGORY_MAP)) {
-    if (keywords.some(kw => combined.includes(kw))) return categoryId;
-  }
-  return 'other';
-}
+  // Gaming — specific game currencies BEFORE generic gaming
+  { match: /free\s*fire|diamond/i,              brand: 'Free Fire',        icon: '💎', category: 'gaming', desc: 'Free Fire Diamonds — in-game currency' },
+  { match: /pubg|battleground|\buc\b/i,         brand: 'PUBG Mobile',      icon: '🎮', category: 'gaming', desc: 'PUBG Mobile UC — in-game currency' },
+  { match: /roblox/i,                           brand: 'Roblox',           icon: '🟥', category: 'gaming', desc: 'Roblox gift card — buy Robux' },
+  { match: /steam/i,                            brand: 'Steam',            icon: '🎮', category: 'gaming', desc: 'Steam Wallet gift card' },
+  { match: /playstation|psn/i,                  brand: 'PlayStation',      icon: '🎮', category: 'gaming', desc: 'PlayStation Store gift card' },
+  { match: /xbox/i,                             brand: 'Xbox',             icon: '🎮', category: 'gaming', desc: 'Xbox gift card' },
+  { match: /nintendo/i,                         brand: 'Nintendo',         icon: '🎮', category: 'gaming', desc: 'Nintendo eShop gift card' },
+  { match: /razer\s*gold/i,                     brand: 'Razer Gold',       icon: '🎮', category: 'gaming', desc: 'Razer Gold gaming credits' },
+  { match: /fifa|ea\s*sport/i,                  brand: 'EA Sports FC',     icon: '⚽', category: 'gaming', desc: 'EA Sports FC gift card' },
+  { match: /google\s*play/i,                    brand: 'Google Play',      icon: '📱', category: 'gaming', desc: 'Google Play gift card' },
 
-const VOUCHER_ICON_MAP = [
-  { match: /netflix/i,                   icon: '🎭' },
-  { match: /dstv/i,                      icon: '📺' },
-  { match: /showmax/i,                   icon: '🎬' },
-  { match: /spotify|apple\s*music/i,     icon: '🎵' },
-  { match: /itunes|apple/i,             icon: '🍎' },
-  { match: /ott/i,                       icon: '🎬' },
-  { match: /pubg|battleground|free\s*fire/i, icon: '🎮' },
-  { match: /roblox/i,                    icon: '🟥' },
-  { match: /steam|playstation|psn|xbox|nintendo|razer|fifa|ea\s*sport/i, icon: '🎮' },
-  { match: /google\s*play/i,            icon: '📱' },
-  { match: /hollywoodbets|hollywood/i,   icon: '🎰' },
-  { match: /betway/i,                    icon: '🎯' },
-  { match: /supabets|lottostar|lottoland|flybet|yesplay/i, icon: '🎲' },
-  { match: /uber/i,                      icon: '🚗' },
-  { match: /bolt/i,                      icon: '⚡' },
-  { match: /intercape/i,                 icon: '🚌' },
-  { match: /amazon|takealot/i,          icon: '🛍️' },
-  { match: /1voucher/i,                  icon: '🛒' },
-  { match: /blu\s*voucher|ringas/i,     icon: '💳' },
-  { match: /mmvoucher|mymoolah/i,       icon: '💰' },
-  { match: /sorbet/i,                    icon: '💆' },
-  { match: /ticketmaster/i,             icon: '🎫' },
-  { match: /makro|pick\s*n\s*pay/i,     icon: '🏪' },
-  { match: /bok\s*squad|pro\s*shop/i,   icon: '🏉' },
-  { match: /cycle\s*lab/i,              icon: '🚲' },
+  // Apple credit (must come AFTER itunes/apple music)
+  { match: /\$\d+\s*credit|apple.*credit/i,     brand: 'Apple Credit',     icon: '🍎', category: 'entertainment', desc: 'Apple App Store / iTunes credit' },
+
+  // Betting
+  { match: /hollywoodbets|hollywood\s*bets/i,   brand: 'Hollywood Bets',   icon: '🎰', category: 'betting', desc: 'Hollywood Bets voucher' },
+  { match: /betway/i,                           brand: 'Betway',           icon: '🎯', category: 'betting', desc: 'Betway betting voucher' },
+  { match: /supabets/i,                         brand: 'Supabets',         icon: '🎲', category: 'betting', desc: 'Supabets betting voucher' },
+  { match: /yesplay/i,                          brand: 'YesPlay',          icon: '🎲', category: 'betting', desc: 'YesPlay betting voucher' },
+  { match: /lottostar/i,                        brand: 'LottoStar',        icon: '🎲', category: 'betting', desc: 'LottoStar betting voucher' },
+  { match: /lottoland/i,                        brand: 'Lottoland',        icon: '🎲', category: 'betting', desc: 'Lottoland betting voucher' },
+  { match: /flybet/i,                           brand: 'Flybet',           icon: '🎲', category: 'betting', desc: 'Flybet betting voucher' },
+
+  // Transport
+  { match: /intercape/i,                        brand: 'Intercape',        icon: '🚌', category: 'transport', desc: 'Intercape bus ticket voucher' },
+  { match: /uber/i,                             brand: 'Uber',             icon: '🚗', category: 'transport', desc: 'Uber gift card' },
+  { match: /bolt/i,                             brand: 'Bolt',             icon: '⚡', category: 'transport', desc: 'Bolt gift card' },
+
+  // Shopping / retail
+  { match: /amazon/i,                           brand: 'Amazon',           icon: '🛍️', category: 'shopping', desc: 'Amazon gift card' },
+  { match: /takealot/i,                         brand: 'Takealot',         icon: '🛍️', category: 'shopping', desc: 'Takealot gift card' },
+  { match: /1voucher/i,                         brand: '1Voucher',         icon: '🛒', category: 'shopping', desc: '1Voucher — accepted at thousands of online stores' },
+  { match: /blu\s*voucher/i,                    brand: 'Blu Voucher',      icon: '💳', category: 'shopping', desc: 'Blu Voucher' },
+  { match: /ringas/i,                           brand: 'Ringas',           icon: '💳', category: 'shopping', desc: 'Ringas voucher' },
+  { match: /makro/i,                            brand: 'Makro',            icon: '🏪', category: 'shopping', desc: 'Makro gift card' },
+  { match: /pick\s*n\s*pay/i,                   brand: 'Pick n Pay',       icon: '🏪', category: 'shopping', desc: 'Pick n Pay gift card' },
+  { match: /bok\s*squad/i,                      brand: 'Bok Squad',        icon: '🏉', category: 'shopping', desc: 'Bok Squad gift card' },
+  { match: /pro\s*shop/i,                       brand: 'Pro Shop',         icon: '🏉', category: 'shopping', desc: 'Pro Shop gift card' },
+  { match: /cycle\s*lab/i,                      brand: 'Cycle Lab',        icon: '🚲', category: 'shopping', desc: 'Cycle Lab gift card' },
+  { match: /tenacity/i,                         brand: 'Tenacity',         icon: '🏪', category: 'shopping', desc: 'Tenacity retail voucher' },
+
+  // Lifestyle
+  { match: /sorbet/i,                           brand: 'Sorbet',           icon: '💆', category: 'lifestyle', desc: 'Sorbet beauty voucher' },
+  { match: /ticketmaster/i,                     brand: 'Ticketmaster',     icon: '🎫', category: 'lifestyle', desc: 'Ticketmaster event tickets' },
+
+  // MyMoolah
+  { match: /mmvoucher|mm\s*voucher|mymoolah/i,  brand: 'MyMoolah Voucher', icon: '💰', category: 'other', desc: 'MyMoolah digital voucher' },
+  { match: /flash\s*token/i,                    brand: 'Flash Token',      icon: '💰', category: 'other', desc: 'Flash Token cash voucher' },
 ];
 
-function getVoucherIcon(productName) {
-  if (!productName) return '🎁';
-  for (const entry of VOUCHER_ICON_MAP) {
-    if (entry.match.test(productName)) return entry.icon;
-  }
-  return '🎁';
-}
-
-function cleanVoucherDisplayName(rawName) {
-  if (!rawName) return 'Voucher';
-  return rawName
-    .replace(/\s+Voucher$/i, '')
-    .replace(/\s+Gift\s+Card$/i, '')
-    .replace(/\s+Token$/i, '')
-    .replace(/\s+R\d+\s*[-–]\s*R\d+\s*$/i, '')
-    .replace(/^R\d+\s*[-–]\s*R\d+\s+/i, '')
-    .replace(/\s+R\d+$/i, '')
-    .replace(/^R\d+\s+/i, '')
-    .replace(/\(\d+\s*months?\)/i, '')
-    .replace('HollywoodBets', 'Hollywood Bets')
-    .trim() || rawName;
-}
-
 /**
- * Keep one variant per voucher brand (by product name),
- * preferring higher commission; tie-break prefers FLASH over other suppliers.
+ * Recognise a raw supplier product name and return canonical brand info.
+ * Returns null if the product name doesn't match any known brand — such
+ * products are EXCLUDED from the catalog (they're unrecognisable junk).
  */
-function filterVoucherVariantsForCatalog(variants) {
-  if (!Array.isArray(variants) || variants.length === 0) return variants;
-  const byBrand = new Map();
-  for (const variant of variants) {
-    const brandName = cleanVoucherDisplayName(variant.product?.name || variant.provider || 'Unknown');
-    const key = brandName.toLowerCase().trim();
-    const comm = parseFloat(variant.commission) || 0;
-    const prev = byBrand.get(key);
-    if (!prev) {
-      byBrand.set(key, { variant, brandName, commission: comm });
-      continue;
-    }
-    if (comm > prev.commission) {
-      byBrand.set(key, { variant, brandName, commission: comm });
-    } else if (comm === prev.commission) {
-      const pCode = (prev.variant.supplier?.code || '').toUpperCase();
-      const vCode = (variant.supplier?.code || '').toUpperCase();
-      if (vCode === 'FLASH' && pCode !== 'FLASH') {
-        byBrand.set(key, { variant, brandName, commission: comm });
-      }
-    }
+function recogniseVoucherBrand(rawName) {
+  if (!rawName) return null;
+  for (const entry of VOUCHER_BRAND_TABLE) {
+    if (entry.match.test(rawName)) return entry;
   }
-  return Array.from(byBrand.values());
+  return null;
 }
 
 /**
  * @route   GET /api/v1/overlay/vouchers/catalog
- * @desc    Get voucher catalog — deduped by brand (highest commission wins), sorted A-Z
+ * @desc    Get voucher catalog — grouped by brand, deduped (highest commission), sorted A-Z
  * @access  Private
  * @query   { q, category }
  */
@@ -3690,77 +3672,115 @@ router.get('/vouchers/catalog', auth, async (req, res) => {
       order: [['commission', 'DESC'], ['priority', 'ASC']]
     });
 
-    const deduped = filterVoucherVariantsForCatalog(voucherVariants);
+    // Phase 1: Group ALL variants by recognised brand (cross-supplier)
+    // Each brand accumulates variants from Flash AND MobileMart
+    const brandGroups = new Map();
 
-    const voucherMap = new Map();
+    for (const variant of voucherVariants) {
+      const rawName = variant.product?.name || variant.provider || '';
+      const recognised = recogniseVoucherBrand(rawName);
+      if (!recognised) continue; // skip unrecognised products
 
-    for (const { variant, brandName } of deduped) {
-      const key = brandName.toLowerCase().trim();
-      const rawName = variant.product?.name || variant.provider || 'Unknown';
-      const displayName = cleanVoucherDisplayName(rawName);
-      const rawCategory = variant.metadata?.category || variant.metadata?.mobilemart_content_creator || variant.provider || '';
-      const voucherCategory = mapVoucherCategory(rawCategory, displayName);
-
-      const minAmt = variant.minAmount ? parseFloat(variant.minAmount) : 0;
-      const maxAmt = variant.maxAmount ? parseFloat(variant.maxAmount) : minAmt;
-
-      let denominations = [];
-      if (Array.isArray(variant.denominations) && variant.denominations.length > 0) {
-        denominations = variant.denominations.map(d => typeof d === 'number' ? d : parseFloat(d)).filter(d => !isNaN(d));
-      } else if (variant.product?.denominations) {
-        const pd = variant.product.denominations;
-        if (Array.isArray(pd)) {
-          denominations = pd.map(d => typeof d === 'number' ? d : parseFloat(d)).filter(d => !isNaN(d));
-        }
-      }
-
-      const isVariable = denominations.length === 0 && minAmt > 0 && maxAmt > minAmt;
-
-      if (voucherMap.has(key)) {
-        const existing = voucherMap.get(key);
-        if (isVariable && !existing.isVariable) {
-          existing.isVariable = true;
-          existing.minAmount = minAmt;
-          existing.maxAmount = maxAmt;
-          existing.productId = variant.product?.id;
-          existing.variantId = variant.id;
-          existing.supplierCode = variant.supplier?.code;
-          existing.commission = parseFloat(variant.commission) || 0;
-          existing.denominations = [];
-        } else if (!isVariable && !existing.isVariable) {
-          const newDenoms = denominations.length > 0 ? denominations : (minAmt > 0 ? [minAmt] : []);
-          existing.denominations = Array.from(new Set([...existing.denominations, ...newDenoms])).sort((a, b) => a - b);
-          if (existing.denominations.length > 0) {
-            existing.minAmount = Math.min(...existing.denominations);
-            existing.maxAmount = Math.max(...existing.denominations);
-          }
-        }
-      } else {
-        voucherMap.set(key, {
-          id: `voucher-${variant.id}`,
-          productId: variant.product?.id,
-          variantId: variant.id,
-          name: displayName,
-          brand: displayName,
-          category: voucherCategory,
-          icon: getVoucherIcon(displayName),
-          description: `${displayName} digital voucher`,
-          supplierCode: variant.supplier?.code,
-          commission: parseFloat(variant.commission) || 0,
-          minAmount: minAmt,
-          maxAmount: maxAmt,
-          isVariable,
-          denominations: isVariable ? [] : (denominations.length > 0 ? denominations : (minAmt > 0 ? [minAmt] : [])),
-          available: true
+      const brandKey = recognised.brand.toLowerCase();
+      if (!brandGroups.has(brandKey)) {
+        brandGroups.set(brandKey, {
+          brand: recognised.brand,
+          icon: recognised.icon,
+          category: recognised.category,
+          description: recognised.desc,
+          variants: []
         });
       }
+      brandGroups.get(brandKey).variants.push(variant);
     }
 
-    let vouchers = Array.from(voucherMap.values());
+    // Phase 2: For each brand, pick the best supplier (highest commission),
+    // then collapse that supplier's variants into one catalog card
+    const vouchers = [];
+
+    for (const [, group] of brandGroups) {
+      // Find best commission across all variants of this brand
+      let bestComm = -1;
+      let bestSupplier = '';
+      for (const v of group.variants) {
+        const c = parseFloat(v.commission) || 0;
+        const sup = (v.supplier?.code || '').toUpperCase();
+        if (c > bestComm || (c === bestComm && sup === 'FLASH' && bestSupplier !== 'FLASH')) {
+          bestComm = c;
+          bestSupplier = sup;
+        }
+      }
+
+      // Keep only variants from the winning supplier
+      const winnerVariants = group.variants.filter(
+        v => (v.supplier?.code || '').toUpperCase() === bestSupplier
+      );
+      if (winnerVariants.length === 0) continue;
+
+      // Detect variable vs fixed
+      let hasVariable = false;
+      let variableVariant = null;
+      const allDenoms = [];
+
+      for (const v of winnerVariants) {
+        const minAmt = v.minAmount ? parseFloat(v.minAmount) : 0;
+        const maxAmt = v.maxAmount ? parseFloat(v.maxAmount) : minAmt;
+        const isVar = minAmt > 0 && maxAmt > minAmt &&
+          (!Array.isArray(v.denominations) || v.denominations.length === 0);
+
+        if (isVar) {
+          hasVariable = true;
+          if (!variableVariant || minAmt < (parseFloat(variableVariant.minAmount) || 0)) {
+            variableVariant = v;
+          }
+        } else {
+          // Collect fixed denominations
+          if (Array.isArray(v.denominations) && v.denominations.length > 0) {
+            v.denominations.forEach(d => {
+              const n = typeof d === 'number' ? d : parseFloat(d);
+              if (!isNaN(n)) allDenoms.push(n);
+            });
+          } else if (minAmt > 0) {
+            allDenoms.push(minAmt);
+          }
+        }
+      }
+
+      // Build the card
+      const representative = variableVariant || winnerVariants[0];
+      const uniqueDenoms = Array.from(new Set(allDenoms)).sort((a, b) => a - b);
+      const minAmt = variableVariant
+        ? parseFloat(variableVariant.minAmount) || 0
+        : (uniqueDenoms.length > 0 ? Math.min(...uniqueDenoms) : 0);
+      const maxAmt = variableVariant
+        ? parseFloat(variableVariant.maxAmount) || 0
+        : (uniqueDenoms.length > 0 ? Math.max(...uniqueDenoms) : 0);
+
+      vouchers.push({
+        id: `voucher-${representative.id}`,
+        productId: representative.product?.id,
+        variantId: representative.id,
+        name: group.brand,
+        brand: group.brand,
+        category: group.category,
+        icon: group.icon,
+        description: group.description,
+        supplierCode: bestSupplier,
+        commission: bestComm,
+        minAmount: minAmt,
+        maxAmount: maxAmt,
+        isVariable: hasVariable,
+        denominations: hasVariable ? [] : uniqueDenoms,
+        available: true
+      });
+    }
+
+    // Phase 3: Filter and sort
+    let result = vouchers;
 
     if (q) {
       const searchLower = q.toLowerCase();
-      vouchers = vouchers.filter(v =>
+      result = result.filter(v =>
         v.name.toLowerCase().includes(searchLower) ||
         v.category.toLowerCase().includes(searchLower) ||
         v.description.toLowerCase().includes(searchLower)
@@ -3768,12 +3788,12 @@ router.get('/vouchers/catalog', auth, async (req, res) => {
     }
 
     if (category) {
-      vouchers = vouchers.filter(v => v.category === category);
+      result = result.filter(v => v.category === category);
     }
 
-    vouchers.sort((a, b) => a.name.localeCompare(b.name));
+    result.sort((a, b) => a.name.localeCompare(b.name));
 
-    const categorySet = new Set(vouchers.map(v => v.category).filter(c => c !== 'other'));
+    const categorySet = new Set(result.map(v => v.category));
     const categories = Array.from(categorySet).sort().map(c => ({
       id: c,
       name: c.charAt(0).toUpperCase() + c.slice(1)
@@ -3782,9 +3802,9 @@ router.get('/vouchers/catalog', auth, async (req, res) => {
     res.json({
       success: true,
       data: {
-        vouchers,
+        vouchers: result,
         categories,
-        total: vouchers.length
+        total: result.length
       }
     });
 

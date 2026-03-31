@@ -44,9 +44,6 @@ export function DigitalVouchersOverlay() {
   const [favorites, setFavorites] = useState<string[]>([]);
 
   useEffect(() => {
-    const stored = typeof window !== 'undefined' ? localStorage.getItem(favoritesKey) : null;
-    const favs = stored ? (JSON.parse(stored) as string[]) : [];
-    setFavorites(Array.isArray(favs) ? favs : []);
     loadVouchers();
   }, [favoritesKey]);
 
@@ -74,6 +71,17 @@ export function DigitalVouchersOverlay() {
       }));
       setVouchers(loaded);
       setFilteredVouchers(loaded);
+
+      // Load favorites and prune stale IDs that no longer match any voucher
+      const loadedIds = new Set(loaded.map(v => v.id));
+      const stored = typeof window !== 'undefined' ? localStorage.getItem(favoritesKey) : null;
+      let favs: string[] = [];
+      try { favs = stored ? JSON.parse(stored) : []; } catch { favs = []; }
+      const pruned = Array.isArray(favs) ? favs.filter(id => loadedIds.has(id)) : [];
+      setFavorites(pruned);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(favoritesKey, JSON.stringify(pruned));
+      }
     } catch {
       setError('Failed to load vouchers. Please try again.');
     } finally {
@@ -122,10 +130,6 @@ export function DigitalVouchersOverlay() {
   const favoriteVouchers = filteredVouchers.filter(v => isFav(v.id));
   const otherVouchers = filteredVouchers.filter(v => !isFav(v.id));
 
-  const popularBrands = useMemo(() => {
-    return vouchers.slice(0, 5).map(v => v.name);
-  }, [vouchers]);
-
   return (
     <div style={{
       backgroundColor: '#ffffff',
@@ -154,7 +158,6 @@ export function DigitalVouchersOverlay() {
         searchQuery={searchQuery}
         onSearch={handleSearch}
         onClear={() => { setSearchQuery(''); setFilteredVouchers(vouchers); }}
-        suggestions={popularBrands}
       />
 
       {error && (
