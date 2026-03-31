@@ -9,6 +9,7 @@
  */
 
 const axios = require('axios');
+const circuitBreaker = require('./supplierCircuitBreaker');
 
 class MobileMartAuthService {
     constructor() {
@@ -238,6 +239,7 @@ class MobileMartAuthService {
                 throw new Error(`MobileMart API Error: ${response.data.errorMessage || 'Unknown error'} (Code: ${response.data.errorCode})`);
             }
 
+            circuitBreaker.recordSuccess('MOBILEMART');
             return response.data;
 
         } catch (error) {
@@ -302,13 +304,20 @@ class MobileMartAuthService {
                         throw new Error(`MobileMart API Error: ${retryResponse.data.errorMessage || 'Unknown error'} (Code: ${retryResponse.data.errorCode})`);
                     }
 
+                    circuitBreaker.recordSuccess('MOBILEMART');
                     return retryResponse.data;
 
                 } catch (retryError) {
+                    if (circuitBreaker.constructor.isTransientError(retryError)) {
+                        circuitBreaker.recordFailure('MOBILEMART');
+                    }
                     throw new Error(`MobileMart API request failed after token refresh: ${retryError.message}`);
                 }
             }
             
+            if (circuitBreaker.constructor.isTransientError(error)) {
+                circuitBreaker.recordFailure('MOBILEMART');
+            }
             throw error;
         }
     }

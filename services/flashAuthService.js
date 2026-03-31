@@ -10,6 +10,7 @@
 
 const axios = require('axios');
 const crypto = require('crypto');
+const circuitBreaker = require('./supplierCircuitBreaker');
 
 class FlashAuthService {
     constructor() {
@@ -192,6 +193,7 @@ class FlashAuthService {
             if (cacheKey) {
                 this.referenceCache.set(cacheKey, { payload: response.data, expiry: Date.now() + this.referenceTtlMs });
             }
+            circuitBreaker.recordSuccess('FLASH');
             return response.data;
 
         } catch (error) {
@@ -238,13 +240,20 @@ class FlashAuthService {
                     if (cacheKey) {
                         this.referenceCache.set(cacheKey, { payload: retryResponse.data, expiry: Date.now() + this.referenceTtlMs });
                     }
+                    circuitBreaker.recordSuccess('FLASH');
                     return retryResponse.data;
 
                 } catch (retryError) {
+                    if (circuitBreaker.constructor.isTransientError(retryError)) {
+                        circuitBreaker.recordFailure('FLASH');
+                    }
                     throw new Error(`Flash API request failed after token refresh: ${retryError.message}`);
                 }
             }
             
+            if (circuitBreaker.constructor.isTransientError(error)) {
+                circuitBreaker.recordFailure('FLASH');
+            }
             throw error;
         }
     }

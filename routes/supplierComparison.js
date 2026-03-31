@@ -10,6 +10,7 @@
 const express = require('express');
 const router = express.Router();
 const SupplierComparisonService = require('../services/supplierComparisonService');
+const circuitBreaker = require('../services/supplierCircuitBreaker');
 
 // Initialize Supplier Comparison Service
 const comparisonService = new SupplierComparisonService();
@@ -28,7 +29,10 @@ router.get('/health', async (req, res) => {
         const health = await comparisonService.healthCheck();
         res.json({
             success: true,
-            data: health
+            data: {
+                ...health,
+                circuitBreaker: circuitBreaker.getStatus()
+            }
         });
     } catch (error) {
         console.error('❌ Supplier Comparison: Health check error:', error.message);
@@ -38,6 +42,34 @@ router.get('/health', async (req, res) => {
             message: error.message
         });
     }
+});
+
+/**
+ * @route   GET /api/v1/suppliers/circuit-breaker
+ * @desc    Get circuit breaker status for all suppliers
+ * @access  Public
+ */
+router.get('/circuit-breaker', (req, res) => {
+    res.json({
+        success: true,
+        data: circuitBreaker.getStatus(),
+        timestamp: new Date().toISOString()
+    });
+});
+
+/**
+ * @route   POST /api/v1/suppliers/circuit-breaker/reset/:supplierCode
+ * @desc    Manually reset a supplier's circuit breaker (admin)
+ * @access  Should be admin-restricted in production
+ */
+router.post('/circuit-breaker/reset/:supplierCode', (req, res) => {
+    const { supplierCode } = req.params;
+    circuitBreaker.reset(supplierCode.toUpperCase());
+    res.json({
+        success: true,
+        message: `Circuit breaker reset for ${supplierCode.toUpperCase()}`,
+        data: circuitBreaker.getStatus()
+    });
 });
 
 // ========================================

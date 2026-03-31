@@ -12,6 +12,7 @@ const {
 const { Op } = require('sequelize');
 const supplierPricingService = require('./supplierPricingService');
 const commissionVatService = require('./commissionVatService');
+const circuitBreaker = require('./supplierCircuitBreaker');
 const crypto = require('crypto');
 
 const VOUCHER_CODE_KEY = process.env.VOUCHER_CODE_KEY || process.env.VOUCHER_PIN_KEY || null;
@@ -587,22 +588,42 @@ class ProductPurchaseService {
    */
   async processWithSupplier(product, denomination, recipient, supplierTransaction, transaction) {
     const supplierCode = product.supplier.code;
-    
+
+    // Circuit breaker pre-check
+    if (circuitBreaker.isOpen(supplierCode)) {
+      console.warn(`[ProductPurchaseService] ${supplierCode} circuit is OPEN — skipping`);
+      return {
+        success: false,
+        error: `Supplier ${supplierCode} is temporarily unavailable`,
+        circuitBreakerOpen: true
+      };
+    }
+
+    circuitBreaker.registerProbe(supplierCode);
+
     try {
-      // Route to appropriate supplier service
+      let result;
       switch (supplierCode) {
         case 'FLASH':
-          return await this.processWithFlash(product, denomination, recipient, supplierTransaction, transaction);
-        
+          result = await this.processWithFlash(product, denomination, recipient, supplierTransaction, transaction);
+          break;
         case 'MOBILEMART':
-          return await this.processWithMobileMart(product, denomination, recipient, supplierTransaction, transaction);
-        
-        // Add other suppliers here
+          result = await this.processWithMobileMart(product, denomination, recipient, supplierTransaction, transaction);
+          break;
         default:
           throw new Error(`Unsupported supplier: ${supplierCode}`);
       }
+
+      if (result && result.success !== false) {
+        circuitBreaker.recordSuccess(supplierCode);
+      }
+      return result;
     } catch (error) {
       console.error(`Supplier processing error for ${supplierCode}:`, error);
+
+      if (circuitBreaker.constructor.isTransientError(error)) {
+        circuitBreaker.recordFailure(supplierCode);
+      }
       
       // Update retry count and schedule retry if applicable
       if (supplierTransaction.retryCount < this.maxRetries) {

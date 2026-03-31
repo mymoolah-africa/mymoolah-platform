@@ -923,7 +923,56 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
       
       // Declare normalizedMobileNumber outside try block so it's available in catch block for error reporting
       let normalizedMobileNumber = null;
-      
+
+      // ─── Circuit Breaker Pre-Check ───────────────────────────────────────
+      // If the primary supplier's circuit is OPEN (known to be down), proactively
+      // swap to an alternative variant before wasting time on the API call.
+      const supplierCircuitBreaker = require('../services/supplierCircuitBreaker');
+      const supplierFailoverSvc = require('../services/supplierFailoverService');
+      let failoverUsed = false;
+      const originalSupplier = supplier;
+
+      if (productVariant && supplierCircuitBreaker.isOpen(supplier)) {
+        console.log(`[CircuitBreaker] ${supplier} circuit OPEN — proactively finding alternative`);
+        const alternatives = await supplierFailoverSvc.findAlternativeVariants(productVariant, amountInCentsValue);
+        const viableAlt = alternatives.find(a => {
+          const altCode = a.supplier?.code;
+          if (!altCode) return false;
+          if (altCode === 'FLASH' && process.env.FLASH_LIVE_INTEGRATION !== 'true') return false;
+          if (altCode === 'MOBILEMART' && process.env.MOBILEMART_LIVE_INTEGRATION !== 'true') return false;
+          return !supplierCircuitBreaker.isOpen(altCode);
+        });
+
+        if (viableAlt) {
+          const altCode = viableAlt.supplier.code;
+          console.log(`[CircuitBreaker] Switching from ${supplier} → ${altCode} (variant ${viableAlt.id})`);
+          supplier = altCode;
+          productCode = viableAlt.supplierProductId;
+          productVariant = viableAlt;
+          type = viableAlt.product?.type || type;
+          failoverUsed = true;
+
+          vasProduct = {
+            id: viableAlt.id,
+            supplierId: altCode,
+            supplierProductId: viableAlt.supplierProductId,
+            vasType: viableAlt.product?.type || type,
+            transactionType: viableAlt.transactionType || 'topup',
+            provider: viableAlt.provider,
+            minAmount: viableAlt.minAmount,
+            maxAmount: viableAlt.maxAmount,
+            commission: viableAlt.commission,
+            fixedFee: viableAlt.fixedFee,
+            isActive: true,
+            metadata: viableAlt.metadata,
+            productName: viableAlt.product?.name,
+            isVirtual: true
+          };
+        } else {
+          console.warn(`[CircuitBreaker] No viable alternative for ${supplier} — proceeding despite OPEN circuit`);
+        }
+      }
+
       if (supplier === 'MOBILEMART' && process.env.MOBILEMART_LIVE_INTEGRATION === 'true') {
         try {
           console.log('📞 Calling MobileMart API to fulfill purchase (BEFORE creating transaction)...');
@@ -1479,21 +1528,115 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
 
         } catch (flashError) {
           console.error(`❌ Flash API fulfillment failed: ${flashError.message}`);
-          if (transaction && !transaction.finished) await transaction.rollback();
-          return res.status(502).json({
-            success: false,
-            error: flashError.message || 'Flash purchase fulfillment failed',
-            message: 'Top-up could not be processed. Please try again.',
-            errorCode: 'FLASH_FULFILLMENT_FAILED',
-            ...(process.env.NODE_ENV !== 'production' ? {
-              debug: {
-                productCode,
-                mobileNumber: normalizedMobileNumber,
-                network: beneficiary.metadata?.network || null,
-                flashError: flashError.flashError || null
+
+          // Log availability issue
+          const flashAvailLogger = require('../services/productAvailabilityLogger');
+          await flashAvailLogger.logAvailabilityIssue({
+            variantId: variantId || null,
+            supplierCode: 'FLASH',
+            productName: productVariant?.product?.name || productCode || 'Unknown',
+            productType: type,
+            errorCode: flashError.flashError?.code?.toString() || flashError.code || null,
+            errorMessage: flashError.message,
+            userId: req.user?.id || null,
+            beneficiaryId: beneficiary?.id || null,
+            amountInCents: amountInCentsValue || null,
+            alternativeUsed: false,
+            metadata: { network: beneficiary.metadata?.network || null }
+          }).catch(() => {});
+
+          // ─── Flash Failover: try MobileMart for pinless airtime/data ──────
+          const flashFailoverEnabled = process.env.VAS_FAILOVER_ENABLED !== 'false';
+          if (flashFailoverEnabled && productVariant && process.env.MOBILEMART_LIVE_INTEGRATION === 'true') {
+            console.log('[SupplierFailover] Flash failed — attempting MobileMart failover...');
+            const altVariants = await supplierFailoverSvc.findAlternativeVariants(productVariant, amountInCentsValue);
+            const mmAlt = altVariants.find(a => a.supplier?.code === 'MOBILEMART' && !supplierCircuitBreaker.isOpen('MOBILEMART'));
+
+            if (mmAlt) {
+              try {
+                const MobileMartAuthServiceFO = require('../services/mobilemartAuthService');
+                const mmAuthFO = new MobileMartAuthServiceFO();
+                const mmType = mmAlt.product?.type || type;
+                const mmEndpointFO = `/${mmType}/pinless`;
+
+                // Normalize mobile number for MobileMart
+                const rawDigitsFO = String(beneficiary.identifier || '').trim().replace(/\D/g, '');
+                const isUATfo = mmAuthFO.baseUrl && mmAuthFO.baseUrl.includes('uat.fulcrumswitch.com');
+                let mmMobileFO;
+                if (isUATfo) {
+                  mmMobileFO = rawDigitsFO.startsWith('27') && rawDigitsFO.length === 11
+                    ? `0${rawDigitsFO.slice(2)}` : rawDigitsFO.startsWith('0') && rawDigitsFO.length === 10
+                    ? rawDigitsFO : rawDigitsFO.length === 9 ? `0${rawDigitsFO}` : rawDigitsFO;
+                } else {
+                  mmMobileFO = rawDigitsFO.startsWith('0') && rawDigitsFO.length === 10
+                    ? `27${rawDigitsFO.slice(1)}` : rawDigitsFO.startsWith('27') && rawDigitsFO.length === 11
+                    ? rawDigitsFO : rawDigitsFO.length === 9 ? `27${rawDigitsFO}` : rawDigitsFO;
+                }
+
+                const mmPayloadFO = {
+                  requestId: idempotencyKey,
+                  merchantProductId: mmAlt.supplierProductId,
+                  tenderType: 'CreditCard',
+                  mobileNumber: mmMobileFO
+                };
+                if (mmType === 'airtime' && amountInCentsValue) {
+                  mmPayloadFO.amount = amountInCentsValue / 100;
+                }
+
+                console.log(`[SupplierFailover] Trying MobileMart variant ${mmAlt.id}: ${mmEndpointFO}`);
+                supplierFulfillmentResult = await mmAuthFO.makeAuthenticatedRequest('POST', mmEndpointFO, mmPayloadFO);
+
+                // Failover succeeded — update tracking variables
+                supplier = 'MOBILEMART';
+                productCode = mmAlt.supplierProductId;
+                type = mmType;
+                failoverUsed = true;
+                normalizedMobileNumber = mmMobileFO;
+
+                vasProduct = {
+                  id: mmAlt.id, supplierId: 'MOBILEMART', supplierProductId: mmAlt.supplierProductId,
+                  vasType: mmType, transactionType: mmAlt.transactionType || 'topup', provider: mmAlt.provider,
+                  minAmount: mmAlt.minAmount, maxAmount: mmAlt.maxAmount, commission: mmAlt.commission,
+                  fixedFee: mmAlt.fixedFee, isActive: true, metadata: mmAlt.metadata,
+                  productName: mmAlt.product?.name, isVirtual: true
+                };
+
+                await flashAvailLogger.logAvailabilityIssue({
+                  variantId: variantId || null, supplierCode: 'FLASH',
+                  productName: productVariant?.product?.name || 'Unknown', productType: type,
+                  errorCode: flashError.flashError?.code?.toString() || null, errorMessage: flashError.message,
+                  userId: req.user?.id || null, beneficiaryId: beneficiary?.id || null,
+                  amountInCents: amountInCentsValue, alternativeUsed: true,
+                  alternativeSupplierCode: 'MOBILEMART', alternativeVariantId: mmAlt.id,
+                  metadata: { network: beneficiary.metadata?.network || null }
+                }).catch(() => {});
+
+                console.log(`[SupplierFailover] MobileMart failover succeeded for Flash failure`);
+              } catch (mmFoError) {
+                console.error(`[SupplierFailover] MobileMart failover also failed: ${mmFoError.message}`);
               }
-            } : {})
-          });
+            }
+          }
+
+          // If failover did not succeed, return error
+          if (!supplierFulfillmentResult) {
+            if (transaction && !transaction.finished) await transaction.rollback();
+            return res.status(502).json({
+              success: false,
+              error: flashError.message || 'Flash purchase fulfillment failed',
+              message: 'Top-up could not be processed. Please try again.',
+              errorCode: 'FLASH_FULFILLMENT_FAILED',
+              ...(process.env.NODE_ENV !== 'production' ? {
+                debug: {
+                  productCode,
+                  mobileNumber: normalizedMobileNumber,
+                  network: beneficiary.metadata?.network || null,
+                  flashError: flashError.flashError || null,
+                  failoverAttempted: flashFailoverEnabled
+                }
+              } : {})
+            });
+          }
         }
 
       } else if (supplier === 'FLASH' && process.env.FLASH_LIVE_INTEGRATION !== 'true') {
@@ -1790,7 +1933,8 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
         status: 'completed',
         reference: idempotencyKey,
         beneficiaryIsMyMoolahUser: beneficiaryIsMyMoolahUser,
-        walletBalance: updatedWalletBalance
+        walletBalance: updatedWalletBalance,
+        ...(failoverUsed ? { failoverUsed: true, fulfilledBy: supplier, originalSupplier } : {})
       }
     });
 
