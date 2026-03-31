@@ -261,8 +261,7 @@ export const getLaunchStats = () => APP_CONFIG.LAUNCH_STATS;
  * ✓ Special character
  * 
  * REAL BACKEND TESTING:
- * ✓ Register: "Andre Botes" / "andre@mymoolah.africa" / "0825571055" → API CALL
- * ✓ Register: "John Doe" / "john@test.com" / "27821234567" → API CALL
+ * ✓ Register: Use valid name / email / phone → API CALL
  * ✓ Login: Real users created in database → API CALL
  */
 

@@ -695,14 +695,14 @@ CRITICAL: Verify ID digits carefully (6↔5, 0↔O, 1↔I, 8↔B).
 
 Return JSON only:
 {
-  "idNumber": "9201165204087",
-  "surname": "BOTES",
-  "forenames": "HENDRIK DANIEL",
-  "fullName": "HENDRIK DANIEL BOTES",
-  "dateOfBirth": "1992-01-16",
-  "dateIssued": "2008-04-03",
-  "validFrom": "2020-01-15",
-  "expiryDate": "2030-01-15",
+  "idNumber": "9001015800088",
+  "surname": "SMITH",
+  "forenames": "JOHN PETER",
+  "fullName": "JOHN PETER SMITH",
+  "dateOfBirth": "1990-01-01",
+  "dateIssued": "2010-05-20",
+  "validFrom": "2020-06-01",
+  "expiryDate": "2030-06-01",
   "countryOfBirth": "SOUTH AFRICA"
 }`
       : "Extract the following information from this South African proof of address document: Street address, City, Postal code, Province. Return as JSON format.";
@@ -1443,54 +1443,31 @@ Return JSON only:
         }
       }
       
-      // TEMPORARY TESTING EXCEPTION: User ID 1 can test passports without ID matching
-      // ID validation is ACTIVE for: SA ID cards, old ID books, SA driver's licenses
-      // ID validation is SKIPPED for: Passports only
-      const isTestingUser = userId === 1;
-      const isPassport = documentType === 'passport';
-      const skipIdMatching = isTestingUser && isPassport;
-      
       // CRITICAL CHECK 1: ID Number must match exactly
       // Applies to: SA ID, Passport, Driver's License, Temporary ID Certificate
-      // EXCEPTION: User ID 1 (testing) - skip ID number matching ONLY for passports
-      // For SA ID cards, old ID books, and SA driver's licenses, ID validation is ACTIVE for user ID 1
-      if (skipIdMatching) {
-        console.log('🧪 TESTING MODE: User ID 1 - skipping ID number matching validation for passport');
-        // For testing user with passport, only check that document has a passport number (format validation happens later)
-        if (!docIdForMatch) {
-          validation.issues.push('ID/Passport/License number not found on document');
+      if (registeredId && docIdForMatch) {
+        if (registeredId !== docIdForMatch) {
+          console.warn('⚠️  ID/Passport number mismatch:', {
+            registered: registeredId,
+            document: docIdForMatch
+          });
+          validation.issues.push(`ID/Passport/License number mismatch: Document shows "${ocrResults.idNumber || ocrResults.licenseNumber}" but registration shows "${user.idNumber}"`);
           return validation;
         } else {
-          console.log('✅ Testing mode: Document has Passport number (format will be validated)');
+          console.log('✅ ID/Passport number matches');
         }
-      } else {
-        // Normal validation: ID number must match exactly
-        // This applies to: SA ID, Driver's License, Temporary ID, and Passports (for non-testing users)
-        if (registeredId && docIdForMatch) {
-          if (registeredId !== docIdForMatch) {
-            console.warn('⚠️  ID/Passport number mismatch:', {
-              registered: registeredId,
-              document: docIdForMatch
-            });
-            validation.issues.push(`ID/Passport/License number mismatch: Document shows "${ocrResults.idNumber || ocrResults.licenseNumber}" but registration shows "${user.idNumber}"`);
-            // ID mismatch is critical - fail immediately
-            return validation;
-          } else {
-            console.log('✅ ID/Passport number matches');
-          }
-        } else if (!docIdForMatch) {
-          validation.issues.push('ID/Passport/License number not found on document');
-          return validation;
-        }
+      } else if (!docIdForMatch) {
+        validation.issues.push('ID/Passport/License number not found on document');
+        return validation;
       }
 
       // CRITICAL CHECK 2: Surname must match exactly
-      // For driver's license: name is in CAPS format "INITIALS SURNAME" (e.g., "A BOTES")
+      // For driver's license: name is in CAPS format "INITIALS SURNAME" (e.g., "A SMITH")
       // Extract surname from full name if it's in driver's license format
       let docSurname = ocrResults.surname || '';
       let { first: docFirst, last: docLast } = splitFullName(fullName);
       
-      // Handle driver's license name format: "INITIALS SURNAME" (e.g., "RZ BOTES" where "RZ" are initials, "BOTES" is surname)
+      // Handle driver's license name format: "INITIALS SURNAME" (e.g., "JP SMITH" where "JP" are initials, "SMITH" is surname)
       // ALWAYS extract last word from fullName for driver's licenses (Tesseract may extract initials as surname)
       if (documentType === 'sa_driving_license' && fullName) {
         // Full name is usually "INITIALS SURNAME" in CAPS

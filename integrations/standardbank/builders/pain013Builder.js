@@ -59,11 +59,11 @@ function normaliseMobile(raw) {
   const digits = raw.replace(/\D/g, '');
   let nineDigits;
   if (digits.startsWith('27') && digits.length === 11) {
-    nineDigits = digits.slice(2); // 27825571055 → 825571055
+    nineDigits = digits.slice(2); // 27XXXXXXXXX → XXXXXXXXX
   } else if (digits.startsWith('0') && digits.length === 10) {
-    nineDigits = digits.slice(1); // 0825571055 → 825571055
+    nineDigits = digits.slice(1); // 0XXXXXXXXX → XXXXXXXXX
   } else if (digits.startsWith('27') && digits.length === 10) {
-    nineDigits = digits.slice(2); // 27825571055 (typo 10) → 825571055
+    nineDigits = digits.slice(2); // 27XXXXXXXX (10 digits) → XXXXXXXX
   } else if (digits.length === 9 && digits.startsWith('8')) {
     nineDigits = digits;
   } else {

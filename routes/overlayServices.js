@@ -882,7 +882,7 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
           // - UAT: LOCAL FORMAT (10 digits starting with 0) - e.g., 0720012345
           // - Production: INTERNATIONAL FORMAT WITHOUT + (11 digits starting with 27) - e.g., 27829802807
           // 
-          // ACCEPTS ALL 3 INPUT FORMATS: 0XXXXXXXXX, +27XXXXXXXXX, 27825571055
+          // ACCEPTS ALL 3 INPUT FORMATS: 0XXXXXXXXX, +27XXXXXXXXX, 27XXXXXXXXX
           // Strips ALL spaces: before, in between, and after the number
           // Works for ALL networks: Vodacom, MTN, CellC, Telkom
           try {
@@ -904,7 +904,7 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
                 // Already in local format (0XXXXXXXXX) - use as-is
                 normalizedMobileNumber = digits;
               } else if (digits.startsWith('27') && digits.length === 11) {
-                // International format (+27XXXXXXXXX or 27825571055) - convert to local
+                // International format (+27XXXXXXXXX or 27XXXXXXXXX) - convert to local
                 normalizedMobileNumber = `0${digits.slice(2)}`; // Remove '27', add '0'
               } else if (digits.length === 9) {
                 // Missing leading 0 (XXXXXXXXX) - add it
@@ -928,10 +928,10 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
               // Production: MobileMart REQUIRES INTERNATIONAL FORMAT WITHOUT + (11 digits starting with 27)
               // Examples: 27829802807, 27830012300, 27840012300, 27850012345
               if (digits.startsWith('27') && digits.length === 11) {
-                // Already in international format (27825571055) - use as-is (no + prefix)
+                // Already in international format (27XXXXXXXXX) - use as-is (no + prefix)
                 normalizedMobileNumber = digits;
               } else if (digits.startsWith('0') && digits.length === 10) {
-                // Local format (0825571055) - convert to international
+                // Local format (0XXXXXXXXX) - convert to international
                 normalizedMobileNumber = `27${digits.slice(1)}`; // Remove '0', add '27'
               } else if (digits.length === 9) {
                 // Missing leading 0 or 27 (XXXXXXXXX) - assume local format and add 27

@@ -10,7 +10,7 @@ import { Card, CardContent } from '../components/ui/card';
 const AdminLoginSimple = () => {
   const navigate = useNavigate();
   const [credentials, setCredentials] = useState({
-    email: 'admin@mymoolah.africa',
+    email: '',
     password: '',
     rememberMe: false
   });
@@ -28,10 +28,17 @@ const AdminLoginSimple = () => {
     setError(null);
 
     try {
-      // Demo login for now
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      if (credentials.email === 'admin@mymoolah.africa' && credentials.password.length >= 8) {
+      const adminEmail = import.meta.env.VITE_ADMIN_EMAIL;
+      const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD;
+
+      if (!adminEmail || !adminPassword) {
+        setError('Admin portal not configured. Contact system administrator.');
+        return;
+      }
+
+      if (credentials.email === adminEmail && credentials.password === adminPassword) {
         localStorage.setItem('portal_token', 'demo_token');
         localStorage.setItem('portal_user', JSON.stringify({
           id: 'admin-001',

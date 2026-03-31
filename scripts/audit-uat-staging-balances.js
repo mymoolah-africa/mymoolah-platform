@@ -2,14 +2,20 @@
 /**
  * Audit UAT vs Staging Balance Discrepancy
  * 
- * Compares transactions and balance calculations between UAT and Staging
- * to identify the R15.00 difference for user ID 1 (Andre Botes)
+ * Compares transactions and balance calculations between UAT and Staging for a given user.
+ *
+ * Usage: node scripts/audit-uat-staging-balances.js <user_id>
  */
 
 require('dotenv').config();
 const { Sequelize, QueryTypes } = require('sequelize');
 
-const USER_ID = 1; // Andre Botes
+const USER_ID = parseInt(process.argv[2], 10);
+if (!USER_ID || Number.isNaN(USER_ID)) {
+  console.log('Usage: node scripts/audit-uat-staging-balances.js <user_id>');
+  console.log('Example: node scripts/audit-uat-staging-balances.js 1');
+  process.exit(1);
+}
 
 function getSequelize(url, label) {
   if (!url) {
@@ -184,9 +190,8 @@ async function compareTransactions(uatTxs, stagingTxs) {
 async function main() {
   console.log('🔍 Auditing UAT vs Staging Balance Discrepancy');
   console.log('═══════════════════════════════════════════════\n');
-  console.log(`User ID: ${USER_ID} (Andre Botes)`);
-  console.log(`Expected: UAT = R27,500.00, Staging = R27,515.00`);
-  console.log(`Discrepancy: R15.00\n`);
+  console.log(`User ID: ${USER_ID}`);
+  console.log('(Compare stored vs calculated balances and transaction lists between UAT and Staging.)\n');
 
   const uatUrl = process.env.UAT_DATABASE_URL || process.env.DATABASE_URL;
   const stagingUrl = process.env.STAGING_DATABASE_URL;

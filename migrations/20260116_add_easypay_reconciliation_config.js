@@ -129,7 +129,7 @@ module.exports = {
             "method": "not_applicable",
             "note": "EasyPay reconciliation does not include commission - fees handled separately"
           }'::jsonb,
-          ARRAY['finance@mymoolah.africa', 'andre@mymoolah.africa'],
+          ARRAY['finance@mymoolah.africa'],
           1000.00,
           TRUE
         )

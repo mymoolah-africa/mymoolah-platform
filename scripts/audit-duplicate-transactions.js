@@ -1,16 +1,21 @@
 #!/usr/bin/env node
 /**
  * Audit script to check for duplicate transactions
- * Usage: node scripts/audit-duplicate-transactions.js [DATABASE_URL]
+ * Usage: node scripts/audit-duplicate-transactions.js <DATABASE_URL> <phone1> <phone2>
+ * Or: DATABASE_URL=... node scripts/audit-duplicate-transactions.js <phone1> <phone2>
  */
 
 const { Sequelize } = require('sequelize');
 require('dotenv').config();
 
-const DATABASE_URL = process.argv[2] || process.env.DATABASE_URL;
+const DATABASE_URL = process.env.DATABASE_URL || process.argv[2];
+const PHONE1 = process.env.DATABASE_URL ? process.argv[2] : process.argv[3];
+const PHONE2 = process.env.DATABASE_URL ? process.argv[3] : process.argv[4];
 
-if (!DATABASE_URL) {
-  console.error('❌ DATABASE_URL not provided. Usage: node scripts/audit-duplicate-transactions.js [DATABASE_URL]');
+if (!DATABASE_URL || !PHONE1 || !PHONE2) {
+  console.error('❌ Missing arguments.');
+  console.error('Usage: node scripts/audit-duplicate-transactions.js <DATABASE_URL> <phone1> <phone2>');
+  console.error('   Or: DATABASE_URL=postgres://... node scripts/audit-duplicate-transactions.js <phone1> <phone2>');
   process.exit(1);
 }
 
@@ -28,16 +33,16 @@ async function auditTransactions() {
     const [user1] = await sequelize.query(`
       SELECT id, "firstName", "lastName", "phoneNumber" 
       FROM "Users" 
-      WHERE "phoneNumber" = '0825571055'
+      WHERE "phoneNumber" = :phone
       LIMIT 1
-    `);
+    `, { replacements: { phone: PHONE1 } });
     
     const [user2] = await sequelize.query(`
       SELECT id, "firstName", "lastName", "phoneNumber" 
       FROM "Users" 
-      WHERE "phoneNumber" = '0784560585'
+      WHERE "phoneNumber" = :phone
       LIMIT 1
-    `);
+    `, { replacements: { phone: PHONE2 } });
 
     if (!user1[0] || !user2[0]) {
       console.log('❌ Users not found');
@@ -47,7 +52,7 @@ async function auditTransactions() {
     const userId1 = user1[0].id;
     const userId2 = user2[0].id;
 
-    console.log('=== USER 1: Andre Botes (0825571055) ===');
+    console.log(`=== USER 1 (${PHONE1}) ===`);
     console.log(`User ID: ${userId1}`);
     
     const [wallet1] = await sequelize.query(`
@@ -80,7 +85,7 @@ async function auditTransactions() {
       console.log(`  - ID: ${tx.id}, TXN ID: ${tx.transactionId}, Type: ${tx.type}, Amount: R ${parseFloat(tx.amount).toFixed(2)}, Desc: ${tx.description}, Created: ${date}`);
     });
 
-    console.log('\n=== USER 2: Leonie Botes (0784560585) ===');
+    console.log(`\n=== USER 2 (${PHONE2}) ===`);
     console.log(`User ID: ${userId2}`);
     
     const [wallet2] = await sequelize.query(`
@@ -203,8 +208,8 @@ async function auditTransactions() {
       }
     });
     
-    console.log(`User 1 (Andre) - Database Balance: R ${parseFloat(wallet1[0]?.balance || 0).toFixed(2)}`);
-    console.log(`User 1 (Andre) - Calculated from Transactions: R ${calculatedBalance1.toFixed(2)}`);
+    console.log(`User 1 - Database Balance: R ${parseFloat(wallet1[0]?.balance || 0).toFixed(2)}`);
+    console.log(`User 1 - Calculated from Transactions: R ${calculatedBalance1.toFixed(2)}`);
     console.log(`Difference: R ${Math.abs(parseFloat(wallet1[0]?.balance || 0) - calculatedBalance1).toFixed(2)}`);
     
     // Calculate expected balance for user 2 from all transactions
@@ -225,8 +230,8 @@ async function auditTransactions() {
       }
     });
     
-    console.log(`\nUser 2 (Leonie) - Database Balance: R ${parseFloat(wallet2[0]?.balance || 0).toFixed(2)}`);
-    console.log(`User 2 (Leonie) - Calculated from Transactions: R ${calculatedBalance2.toFixed(2)}`);
+    console.log(`\nUser 2 - Database Balance: R ${parseFloat(wallet2[0]?.balance || 0).toFixed(2)}`);
+    console.log(`User 2 - Calculated from Transactions: R ${calculatedBalance2.toFixed(2)}`);
     console.log(`Difference: R ${Math.abs(parseFloat(wallet2[0]?.balance || 0) - calculatedBalance2).toFixed(2)}`);
 
     await sequelize.close();

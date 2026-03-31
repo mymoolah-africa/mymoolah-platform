@@ -15,6 +15,21 @@ const { User, Referral, ReferralChain, UserReferralStats, sequelize } = require(
 const crypto = require('crypto');
 const { Op } = require('sequelize');
 
+const referralUserIds = process.argv.slice(2, 8).map((s) => parseInt(s, 10));
+if (
+  referralUserIds.length !== 6 ||
+  referralUserIds.some((id) => !Number.isInteger(id) || id < 1)
+) {
+  console.log(
+    'Usage: node scripts/seed-test-referrals.js <userId_andre> <userId_leonie> <userId_andreJr> <userId_hd> <userId_neil> <userId_denise>'
+  );
+  console.log(
+    'Example: node scripts/seed-test-referrals.js 1 2 4 6 7 8'
+  );
+  process.exit(1);
+}
+const [idAndre, idLeonie, idAndreJr, idHd, idNeil, idDenise] = referralUserIds;
+
 // Generate a unique referral code
 function generateReferralCode(name) {
   const prefix = name.split(' ')[0].toUpperCase().slice(0, 4);
@@ -65,12 +80,12 @@ async function seedTestReferrals() {
     console.log('📋 Finding specific users...');
     
     // More flexible search
-    const andre = await User.findOne({ where: { id: 1 }, transaction }); // Andre Botes
-    const leonie = await User.findOne({ where: { id: 2 }, transaction }); // Leonie Botes
-    const andreJr = await User.findOne({ where: { id: 4 }, transaction }); // Andre Jr Botes
-    const hd = await User.findOne({ where: { id: 6 }, transaction }); // Hendrik Daniel Botes
-    const neil = await User.findOne({ where: { id: 7 }, transaction }); // Neil Botes
-    const denise = await User.findOne({ where: { id: 8 }, transaction }); // Denise Botes
+    const andre = await User.findOne({ where: { id: idAndre }, transaction });
+    const leonie = await User.findOne({ where: { id: idLeonie }, transaction });
+    const andreJr = await User.findOne({ where: { id: idAndreJr }, transaction });
+    const hd = await User.findOne({ where: { id: idHd }, transaction });
+    const neil = await User.findOne({ where: { id: idNeil }, transaction });
+    const denise = await User.findOne({ where: { id: idDenise }, transaction });
 
     // Helper to get full name
     const getFullName = (user) => user ? `${user.firstName} ${user.lastName}` : null;
@@ -91,7 +106,7 @@ async function seedTestReferrals() {
 
     if (missingUsers.length > 0) {
       console.log('\n⚠️  Some users not found: ' + missingUsers.join(', '));
-      console.log('Please adjust the user IDs in the script to match your database.');
+      console.log('Please pass the correct six user IDs as CLI arguments (see Usage).');
       
       await transaction.rollback();
       console.log('\n❌ Please check user IDs and try again.');

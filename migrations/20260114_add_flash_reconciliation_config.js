@@ -127,7 +127,7 @@ module.exports = {
             "vat_inclusive": true,
             "vat_rate": 0.15
           }'::jsonb,
-          ARRAY['finance@mymoolah.africa', 'andre@mymoolah.africa'],
+          ARRAY['finance@mymoolah.africa'],
           1000.00,
           TRUE
         )

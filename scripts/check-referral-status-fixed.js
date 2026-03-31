@@ -1,5 +1,13 @@
 const { getUATClient, closeAll } = require('./db-connection-helper');
 
+const phone1 = process.argv[2];
+const phone2 = process.argv[3];
+if (!phone1 || !phone2) {
+  console.log('Usage: node scripts/check-referral-status-fixed.js <phone1> <phone2>');
+  console.log('Example: node scripts/check-referral-status-fixed.js +27825571055 +27784560585');
+  process.exit(1);
+}
+
 async function checkReferralStatus() {
   let client;
   
@@ -11,34 +19,34 @@ async function checkReferralStatus() {
     const andreResult = await client.query(`
       SELECT id, "firstName", "lastName", "phoneNumber", "accountNumber"
       FROM users 
-      WHERE "phoneNumber" = '+27825571055'
-    `);
+      WHERE "phoneNumber" = $1
+    `, [phone1]);
     
     const leonieResult = await client.query(`
       SELECT id, "firstName", "lastName", "phoneNumber", "accountNumber"
       FROM users 
-      WHERE "phoneNumber" IN ('+27784560585', '0784560585')
-    `);
+      WHERE "phoneNumber" = $1 OR "phoneNumber" = $2
+    `, [phone2, phone2.replace(/^\+27/, '0')]);
     
     console.log('👤 USERS:');
-    console.log('Andre:', andreResult.rows[0] || 'NOT FOUND');
-    console.log('Leonie:', leonieResult.rows[0] || 'NOT FOUND');
+    console.log('User 1:', andreResult.rows[0] || 'NOT FOUND');
+    console.log('User 2:', leonieResult.rows[0] || 'NOT FOUND');
     console.log('');
 
     if (!andreResult.rows[0]) {
-      console.log('❌ Andre not found');
+      console.log('❌ User 1 not found');
       return;
     }
     if (!leonieResult.rows[0]) {
-      console.log('❌ Leonie not found');
+      console.log('❌ User 2 not found');
       return;
     }
 
     const andreId = andreResult.rows[0].id;
     const leonieId = leonieResult.rows[0].id;
     
-    console.log(`Andre ID: ${andreId}`);
-    console.log(`Leonie ID: ${leonieId}\n`);
+    console.log(`User 1 ID: ${andreId}`);
+    console.log(`User 2 ID: ${leonieId}\n`);
 
     // 2. Check referral relationship
     const referralResult = await client.query(`
@@ -47,7 +55,7 @@ async function checkReferralStatus() {
       WHERE referrer_user_id = $1 AND referee_user_id = $2
     `, [andreId, leonieId]);
     
-    console.log('🔗 REFERRAL RELATIONSHIP (Andre → Leonie):');
+    console.log('🔗 REFERRAL RELATIONSHIP (User 1 → User 2):');
     if (referralResult.rows[0]) {
       console.log(`✅ FOUND:`);
       console.log(`   - ID: ${referralResult.rows[0].id}`);
@@ -66,7 +74,7 @@ async function checkReferralStatus() {
       WHERE user_id = $1
     `, [leonieId]);
     
-    console.log('⛓️ REFERRAL CHAIN (Leonie):');
+    console.log('⛓️ REFERRAL CHAIN (User 2):');
     if (chainResult.rows[0]) {
       console.log(`✅ FOUND:`);
       console.log(`   - Chain Depth: ${chainResult.rows[0].chain_depth}`);
@@ -74,7 +82,7 @@ async function checkReferralStatus() {
       console.log(`   - L2: ${chainResult.rows[0].level2_user_id || 'none'}`);
       console.log(`   - L3: ${chainResult.rows[0].level3_user_id || 'none'}`);
     } else {
-      console.log('❌ NO CHAIN FOUND - This is the problem! Leonie has no referral chain.');
+      console.log('❌ NO CHAIN FOUND - This is the problem! User 2 has no referral chain.');
     }
     console.log('');
 
@@ -88,7 +96,7 @@ async function checkReferralStatus() {
       LIMIT 10
     `, [leonieId]);
     
-    console.log('💳 LEONIE\'S RECENT TRANSACTIONS:');
+    console.log('💳 USER 2\'S RECENT TRANSACTIONS:');
     if (txnResult.rows.length === 0) {
       console.log('❌ NO TRANSACTIONS FOUND');
     } else {
@@ -109,7 +117,7 @@ async function checkReferralStatus() {
       LIMIT 5
     `, [leonieId]);
     
-    console.log('📱 LEONIE\'S VAS TRANSACTIONS (with commission):');
+    console.log('📱 USER 2\'S VAS TRANSACTIONS (with commission):');
     if (vasResult.rows.length === 0) {
       console.log('❌ NO VAS TRANSACTIONS FOUND');
     } else {
@@ -143,16 +151,16 @@ async function checkReferralStatus() {
     }
     console.log('');
 
-    // 7. Check Andre's referral earnings specifically
+    // 7. Check User 1's referral earnings specifically
     const andreEarningsResult = await client.query(`
       SELECT * FROM referral_earnings 
       WHERE earner_user_id = $1
       ORDER BY created_at DESC
     `, [andreId]);
     
-    console.log('💰 ANDRE\'S REFERRAL EARNINGS:');
+    console.log('💰 USER 1\'S REFERRAL EARNINGS:');
     if (andreEarningsResult.rows.length === 0) {
-      console.log('❌ NO EARNINGS FOR ANDRE');
+      console.log('❌ NO EARNINGS FOR USER 1');
     } else {
       andreEarningsResult.rows.forEach(e => {
         console.log(`- Amount: R${e.earned_amount_cents/100}, From: User ${e.source_user_id}, Txn: ${e.transaction_id}, Level: ${e.level}, Status: ${e.status}`);
@@ -160,13 +168,13 @@ async function checkReferralStatus() {
     }
     console.log('');
 
-    // 8. Check Andre's referral stats
+    // 8. Check User 1's referral stats
     const statsResult = await client.query(`
       SELECT * FROM user_referral_stats 
       WHERE user_id = $1
     `, [andreId]);
     
-    console.log('📊 ANDRE\'S REFERRAL STATS:');
+    console.log('📊 USER 1\'S REFERRAL STATS:');
     if (statsResult.rows[0]) {
       const stats = statsResult.rows[0];
       console.log(`✅ FOUND:`);
@@ -186,21 +194,21 @@ async function checkReferralStatus() {
     console.log('═══════════════════════════════════════');
     
     if (!chainResult.rows[0]) {
-      console.log('🔴 PROBLEM: Leonie has NO referral chain');
+      console.log('🔴 PROBLEM: User 2 has NO referral chain');
       console.log('   → Referral relationship exists but chain was never built');
       console.log('   → This prevents ANY referral earnings from being calculated');
       console.log('');
       console.log('🔧 SOLUTION: Build referral chain for Leonie');
-      console.log('   → Use referralService.buildReferralChain(leonieId)');
+      console.log('   → Use referralService.buildReferralChain(user2Id)');
       console.log('   → Or run migration to build chains for all users');
     } else if (allEarningsResult.rows.length === 0) {
       console.log('🔴 PROBLEM: Zero earnings in entire system');
       console.log('   → Code fix (reload) is applied but needs testing');
       console.log('   → Make a new test purchase to verify fix works');
     } else if (andreEarningsResult.rows.length === 0) {
-      console.log('🟡 PROBLEM: Earnings exist but none for Andre');
-      console.log('   → Check if Leonie\'s transactions have commission metadata');
-      console.log('   → Verify Leonie\'s chain points to Andre');
+      console.log('🟡 PROBLEM: Earnings exist but none for User 1');
+      console.log('   → Check if User 2\'s transactions have commission metadata');
+      console.log('   → Verify User 2\'s chain points to User 1');
     } else {
       console.log('✅ System working correctly');
     }

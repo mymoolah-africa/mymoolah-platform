@@ -687,7 +687,7 @@ module.exports = {
           300,
           'commission',
           '{"method": "from_file", "field": "commission", "vat_inclusive": true, "vat_rate": 0.15}',
-          ARRAY['finance@mymoolah.africa', 'andre@mymoolah.africa'],
+          ARRAY['finance@mymoolah.africa'],
           1000.00
         )
       `, { transaction });

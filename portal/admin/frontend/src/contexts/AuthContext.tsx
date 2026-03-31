@@ -61,18 +61,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setIsLoading(true);
       
-      // Demo login for now - replace with actual API call
-      if (email === 'admin@mymoolah.africa' && password === 'Admin123!') {
+      const adminEmail = process.env.REACT_APP_ADMIN_EMAIL || import.meta.env.VITE_ADMIN_EMAIL;
+      const adminPassword = process.env.REACT_APP_ADMIN_PASSWORD || import.meta.env.VITE_ADMIN_PASSWORD;
+
+      if (!adminEmail || !adminPassword) {
+        console.error('Admin credentials not configured in environment variables');
+        return false;
+      }
+
+      if (email === adminEmail && password === adminPassword) {
         const userData: AuthUser = {
           id: 'admin-001',
           name: 'Admin User',
-          email: 'admin@mymoolah.africa',
+          email: adminEmail,
           role: 'admin',
           permissions: ['read', 'write', 'admin'],
           lastLogin: new Date().toISOString()
         };
 
-        // Store in localStorage
         localStorage.setItem('portal_token', 'demo-token-123');
         localStorage.setItem('portal_user', JSON.stringify(userData));
         

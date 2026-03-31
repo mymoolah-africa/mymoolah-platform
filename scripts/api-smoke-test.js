@@ -1,12 +1,18 @@
 #!/usr/bin/env node
 /*
   MyMoolah API smoke test – runs against a running local backend on http://localhost:3001
-  Usage: node scripts/api-smoke-test.js "<MOBILE>" "<PASSWORD>"
+  Usage: SMOKE_TEST_PHONE=+27... node scripts/api-smoke-test.js
+  Or: node scripts/api-smoke-test.js "<MOBILE>" "<PASSWORD>"
 */
 const fetch = require('node-fetch');
 
 const BASE = process.env.API_BASE || 'http://localhost:3001';
-const PHONE = process.env.MM_PHONE || process.argv[2] || '+27825571055';
+const PHONE = process.env.SMOKE_TEST_PHONE || process.argv[2];
+if (!PHONE) {
+  console.log('Usage: SMOKE_TEST_PHONE=+27... node scripts/api-smoke-test.js');
+  console.log('   Or: node scripts/api-smoke-test.js "<MOBILE>" "<PASSWORD>"');
+  process.exit(1);
+}
 const PASS = process.env.MM_PASS || process.argv[3] || 'Password123!';
 
 function log(ok, name, details='') {

@@ -162,7 +162,14 @@ async function testPaymentProcessing(zapperService) {
     const dbUrl = process.env.DATABASE_URL || '';
     if (dbUrl.includes('127.0.0.1:6543') || dbUrl.includes('localhost:6543')) {
       // Using proxy - connection should work
-      testUser = await User.findOne({ where: { phoneNumber: '0825571055' } });
+      const testPhone = process.env.TEST_PHONE || process.argv[2];
+      if (!testPhone) {
+        console.log('Usage: TEST_PHONE=082... node scripts/test-zapper-uat-complete.js');
+        console.log('   Or: node scripts/test-zapper-uat-complete.js 082...');
+        logTest('Payment Processing Setup', 'skip', 'TEST_PHONE or CLI arg required for payment tests');
+        return;
+      }
+      testUser = await User.findOne({ where: { phoneNumber: testPhone } });
       if (!testUser) {
         logTest('Payment Processing Setup', 'skip', 'Test user not found - skipping payment tests');
         return;

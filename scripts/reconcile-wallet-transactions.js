@@ -7,19 +7,27 @@
  * 2. Verify wallet balance calculations
  * 3. Identify any discrepancies
  * 
- * Usage: node scripts/reconcile-wallet-transactions.js [DATABASE_URL] [user1_phone] [user2_phone]
- * Example: node scripts/reconcile-wallet-transactions.js "postgres://..." "0825571055" "0784560585"
+ * Usage: node scripts/reconcile-wallet-transactions.js [DATABASE_URL] <user1_phone> <user2_phone>
+ * Example: node scripts/reconcile-wallet-transactions.js "postgres://..." "0821234567" "0827654321"
  */
 
 const { Sequelize } = require('sequelize');
 require('dotenv').config();
 
-const DATABASE_URL = process.argv[2] || process.env.DATABASE_URL;
-const USER1_PHONE = process.argv[3] || '0825571055';
-const USER2_PHONE = process.argv[4] || '0784560585';
+const DATABASE_URL = process.env.DATABASE_URL || process.argv[2];
+const USER1_PHONE = process.env.DATABASE_URL ? process.argv[2] : process.argv[3];
+const USER2_PHONE = process.env.DATABASE_URL ? process.argv[3] : process.argv[4];
 
 if (!DATABASE_URL) {
-  console.error('❌ DATABASE_URL not provided. Usage: node scripts/reconcile-wallet-transactions.js [DATABASE_URL] [user1_phone] [user2_phone]');
+  console.error('❌ DATABASE_URL not provided. Usage: node scripts/reconcile-wallet-transactions.js <DATABASE_URL> <user1_phone> <user2_phone>');
+  console.error('   Or: DATABASE_URL=postgres://... node scripts/reconcile-wallet-transactions.js <user1_phone> <user2_phone>');
+  process.exit(1);
+}
+
+if (!USER1_PHONE || !USER2_PHONE) {
+  console.error('❌ user1_phone and user2_phone are required.');
+  console.error('Usage: node scripts/reconcile-wallet-transactions.js <DATABASE_URL> <user1_phone> <user2_phone>');
+  console.error('   Or: DATABASE_URL=postgres://... node scripts/reconcile-wallet-transactions.js <user1_phone> <user2_phone>');
   process.exit(1);
 }
 
