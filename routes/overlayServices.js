@@ -2841,6 +2841,24 @@ router.post('/electricity/purchase', auth, async (req, res) => {
 // BILL PAYMENTS OVERLAY ENDPOINTS
 // ========================================
 
+const BILLER_CATEGORY_MAP = {
+  insurance:    ['insurance', 'insure', 'life', 'assurance', 'underwriter'],
+  entertainment:['entertainment', 'dstv', 'multichoice', 'netflix', 'showmax', 'gaming', 'streaming', 'media', 'betting'],
+  education:    ['education', 'school', 'university', 'college', 'academy', 'training', 'tuition', 'bursary'],
+  municipal:    ['municipal', 'municipality', 'council', 'metro', 'water', 'rates', 'city of', 'district'],
+  telecoms:     ['telecoms', 'telecom', 'telkom', 'vodacom', 'mtn', 'cell c', 'cellc', 'rain', 'fibre', 'broadband', 'internet'],
+  retail:       ['retail', 'credit', 'store', 'clothing', 'furniture', 'pepkor', 'pep', 'ackermans', 'edgars', 'jet', 'foschini', 'mrp', 'truworths', 'woolworths']
+};
+
+function mapBillerCategory(rawCategory) {
+  if (!rawCategory) return 'other';
+  const lower = rawCategory.toLowerCase().replace(/[^a-z0-9 ]/g, ' ');
+  for (const [categoryId, keywords] of Object.entries(BILLER_CATEGORY_MAP)) {
+    if (keywords.some(kw => lower.includes(kw))) return categoryId;
+  }
+  return 'other';
+}
+
 /**
  * @route   GET /api/v1/overlay/bills/search
  * @desc    Search for billers
@@ -2886,12 +2904,14 @@ router.get('/bills/search', auth, async (req, res) => {
     const billerMap = new Map();
     
     billPaymentVariants.forEach(variant => {
-      // FIX: Use product.name (actual company name) instead of provider field
-      // Provider field may contain generic categories like "retail", "attorneyandcollectionservices"
       const billerName = variant.product?.name || variant.provider || 'Unknown Biller';
-      const billerCategory = variant.metadata?.category || 
-                             variant.metadata?.billerCategory || 
-                             'other';
+      const billerCategory = mapBillerCategory(
+        variant.metadata?.category ||
+        variant.metadata?.billerCategory ||
+        variant.metadata?.mobilemart_content_creator ||
+        variant.provider ||
+        'other'
+      );
       
       const baseSlug = billerName.toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
@@ -2990,17 +3010,16 @@ router.get('/bills/categories', auth, async (req, res) => {
     const categoryMap = new Map();
     
     billPaymentVariants.forEach(variant => {
-      const categoryId = variant.metadata?.category || 
-                         variant.metadata?.billerCategory || 
-                         'other';
+      const categoryId = mapBillerCategory(
+        variant.metadata?.category ||
+        variant.metadata?.billerCategory ||
+        variant.metadata?.mobilemart_content_creator ||
+        variant.provider ||
+        'other'
+      );
       
-      if (categoryId && !categoryMap.has(categoryId)) {
-        // Create a display name from category ID (capitalize first letter of each word)
-        const categoryName = categoryId
-          .split(/[-_]/)
-          .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-          .join(' ');
-        
+      if (categoryId && categoryId !== 'other' && !categoryMap.has(categoryId)) {
+        const categoryName = categoryId.charAt(0).toUpperCase() + categoryId.slice(1);
         categoryMap.set(categoryId, {
           id: categoryId,
           name: categoryName

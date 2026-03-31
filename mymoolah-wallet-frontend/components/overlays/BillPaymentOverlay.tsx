@@ -74,6 +74,7 @@ export function BillPaymentOverlay() {
   const [editingBeneficiary, setEditingBeneficiary] = useState<BillBeneficiary | null>(null);
   const [beneficiaryIsMyMoolahUser, setBeneficiaryIsMyMoolahUser] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   // Load initial data on mount
   useEffect(() => {
@@ -100,10 +101,12 @@ export function BillPaymentOverlay() {
   // Search functionality
   useEffect(() => {
     if (searchQuery.trim().length < 2) {
-      setSearchResults([]);
+      if (!selectedCategory) setSearchResults([]);
       setIsSearching(false);
       return;
     }
+
+    setSelectedCategory(null);
 
     const searchBillers = async () => {
       try {
@@ -124,9 +127,10 @@ export function BillPaymentOverlay() {
   const handleCategoryClick = async (categoryId: string) => {
     try {
       setIsSearching(true);
+      setSelectedCategory(categoryId);
+      setSearchQuery('');
       const results = await billPaymentsService.searchBillers(undefined, categoryId);
       setSearchResults(results);
-      setSearchQuery('');
       setIsSearching(false);
     } catch (err) {
       console.error('Category search failed:', err);
@@ -607,18 +611,25 @@ export function BillPaymentOverlay() {
               )}
 
               {/* Empty Search State */}
-              {searchQuery.length >= 2 && searchResults.length === 0 && !isSearching && (
+              {(searchQuery.length >= 2 || selectedCategory) && searchResults.length === 0 && !isSearching && (
                 <div className="text-center py-6 mb-4">
                   <div style={{ width: '48px', height: '48px', backgroundColor: '#f3f4f6', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
                     <Search style={{ width: '20px', height: '20px', color: '#6b7280' }} />
                   </div>
                   <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '14px', color: '#6b7280', marginBottom: '8px' }}>No billers found</p>
-                  <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#6b7280' }}>Try a different search or browse categories below</p>
+                  <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#6b7280' }}>
+                    {selectedCategory ? 'No billers in this category yet' : 'Try a different search or browse categories below'}
+                  </p>
+                  {selectedCategory && (
+                    <Button variant="outline" size="sm" style={{ marginTop: '8px', borderRadius: '12px' }} onClick={() => { setSelectedCategory(null); setSearchResults([]); }}>
+                      Back to categories
+                    </Button>
+                  )}
                 </div>
               )}
 
-              {/* Categories - show when no search results or no search */}
-              {(searchResults.length === 0 || searchQuery.length < 2) && (
+              {/* Categories - show when no category is selected and no active text search */}
+              {!selectedCategory && searchResults.length === 0 && searchQuery.length < 2 && (
                 <>
                   <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#6b7280', marginBottom: '12px' }}>Browse by category</p>
                   <div className="grid grid-cols-2 gap-3">
