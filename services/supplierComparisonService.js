@@ -269,6 +269,7 @@ class SupplierComparisonService {
             vasType: pv.vasType,
             transactionType: pv.transactionType,
             provider: pv.provider,
+            priceType: pv.priceType || null,
             minAmount,
             maxAmount,
             predefinedAmounts: predefinedAmounts || pv.predefinedAmounts,

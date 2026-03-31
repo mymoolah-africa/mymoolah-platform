@@ -227,6 +227,8 @@ router.get('/airtime-data/catalog', auth, async (req, res) => {
           vasType: pv.vasType,
           transactionType: pv.transactionType || 'topup',
           provider: pv.provider,
+          supplierCode: pv.supplier?.code || 'UNKNOWN',
+          priceType: pv.priceType || null,
           networkType: pv.networkType || 'local',
           predefinedAmounts: pv.predefinedAmounts || pv.denominations || [],
           minAmount: pv.minAmount || 0,
@@ -298,6 +300,7 @@ router.get('/airtime-data/catalog', auth, async (req, res) => {
               validity: 'Immediate',
               isBestDeal: product.priority === 1,
               supplier: product.supplierId,
+              supplierCode: product.supplierCode || product.supplierId,
               description: product.metadata?.description || '',
               commission: product.commission,
               fixedFee: product.fixedFee
@@ -333,6 +336,7 @@ router.get('/airtime-data/catalog', auth, async (req, res) => {
               validity: '30 days',
               isBestDeal: product.priority === 1,
               supplier: product.supplierId,
+              supplierCode: product.supplierCode || product.supplierId,
               description: product.metadata?.description || '',
               commission: product.commission,
               fixedFee: product.fixedFee

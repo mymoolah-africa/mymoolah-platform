@@ -852,7 +852,9 @@ class ApiService {
           (Array.isArray(p.denominations)     && p.denominations.length > 0     ? p.denominations     : null) ||
           [];
 
-        const isVariable = explicitDenominations.length === 0 && minAmount < maxAmount;
+        const isVariable = vasType === 'airtime'
+          ? true
+          : (explicitDenominations.length === 0 && minAmount < maxAmount);
 
         // Group key: network label + supplier (keeps Flash MTN separate from MobileMart MTN)
         const networkLabel = enriched ? enriched.label : rawName;
@@ -892,13 +894,19 @@ class ApiService {
       return Array.from(grouped.values()).map((group) => {
         const variableVariant = group.find(p => p.isVariable);
         if (variableVariant) {
+          // For variable products, use the widest min/max range from ALL group members
+          const allMin = group.map(p => p.minAmount).filter(v => v > 0);
+          const allMax = group.map(p => p.maxAmount).filter(v => v > 0);
+          const widestMin = allMin.length > 0 ? Math.min(...allMin) : variableVariant.minAmount;
+          const widestMax = allMax.length > 0 ? Math.max(...allMax) : variableVariant.maxAmount;
           return {
             ...variableVariant,
             isVariable: true,
             denominations: [],
-            // price in rands (formatCurrency expects rands)
-            price: variableVariant.minAmount / 100,
-            size: `R${(variableVariant.minAmount / 100).toFixed(0)}–R${(variableVariant.maxAmount / 100).toFixed(0)}`,
+            minAmount: widestMin,
+            maxAmount: widestMax,
+            price: widestMin / 100,
+            size: `R${(widestMin / 100).toFixed(0)}–R${(widestMax / 100).toFixed(0)}`,
             type: vasType,
             validity: vasType === 'airtime' ? 'Immediate' : '30 days',
             provider: variableVariant.network || variableVariant.supplierCode,

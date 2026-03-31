@@ -16,7 +16,9 @@ COPY . .
 # Build the application
 # VITE_API_BASE_URL will be set at build time
 ARG VITE_API_BASE_URL
+ARG VITE_NODE_ENV
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
+ENV VITE_NODE_ENV=${VITE_NODE_ENV}
 
 # BUILD_COMMAND defaults to "build" but can be overridden (e.g., "build:staging" to skip TypeScript)
 ARG BUILD_COMMAND=build

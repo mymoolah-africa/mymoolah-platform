@@ -113,6 +113,8 @@ steps:
       - '--build-arg'
       - 'VITE_API_BASE_URL=${BACKEND_URL}'
       - '--build-arg'
+      - 'VITE_NODE_ENV=${ENVIRONMENT}'
+      - '--build-arg'
       - 'BUILD_COMMAND=${BUILD_COMMAND}'
       - '-t'
       - '${IMAGE_NAME}'
