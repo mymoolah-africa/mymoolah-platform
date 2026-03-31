@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-31 22:00  
-**Latest Feature**: **Voucher Top-Up Wallet Deposit** — Users can redeem a 1Voucher, FNB Voucher, or Flash Pay reference to deposit funds into their wallet. Flash charges 4% fee (excl VAT, no MyMoolah markup). Full backend flow: Flash API call, wallet credit, fee deduction, ledger posting, audit trail. Frontend: TopupVoucherOverlay with type selection, PIN entry, fee display. Migration + commission tiers applied to UAT. Also cleaned up stale eeziCash fee attribution.  
-**Document Version**: 2.54.0  
-**Session logs**: `docs/session_logs/2026-03-31_2200_voucher-topup-eezicash-cleanup.md`  
+**Last Updated**: 2026-03-31 23:00  
+**Latest Feature**: **Biller Payments Hardening** — Full 12-item security/functional/UX audit executed on bill payments. Banking-grade idempotency, simulation hard-block (503 in staging/prod, no-debit sim in UAT), input validation, MobileMart catalog-first product lookup, beneficiary edit/delete wiring, Copy/Share success buttons, KYC gate fix.  
+**Document Version**: 2.55.0  
+**Session logs**: `docs/session_logs/2026-03-31_2300_biller-payments-hardening.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
