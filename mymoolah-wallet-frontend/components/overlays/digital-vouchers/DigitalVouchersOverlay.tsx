@@ -1,27 +1,28 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../../components/ui/button';
-import { ArrowLeft, X, Star } from 'lucide-react';
+import { ArrowLeft, Star } from 'lucide-react';
 import { VoucherCard } from './VoucherCard';
 import { VoucherSearch } from './VoucherSearch';
 import { ProductDetailModal } from './ProductDetailModal';
 import { apiService } from '../../../services/apiService';
 import { useAuth } from '../../../contexts/AuthContext';
 
-interface Voucher {
+export interface Voucher {
   id: string;
-  productId?: number; // Actual product ID for purchase
-  variantId?: number; // Variant ID for reference
+  productId?: number;
+  variantId?: number;
   name: string;
   brand: string;
-  category: 'Gaming' | 'Entertainment' | 'Transport' | 'Shopping' | 'MyMoolah';
+  category: string;
   minAmount: number;
   maxAmount: number;
+  isVariable: boolean;
   icon: string;
   description: string;
-  supplierCode?: string; // Supplier code
+  supplierCode?: string;
+  commission?: number;
   available: boolean;
-  featured: boolean;
   denominations: number[];
 }
 
@@ -42,158 +43,88 @@ export function DigitalVouchersOverlay() {
   const [showModal, setShowModal] = useState(false);
   const [favorites, setFavorites] = useState<string[]>([]);
 
-  // Load vouchers on component mount
   useEffect(() => {
-    const init = async () => {
-      const favs = loadFavorites();
-      await loadVouchers(favs);
-    };
-    init();
+    const stored = typeof window !== 'undefined' ? localStorage.getItem(favoritesKey) : null;
+    const favs = stored ? (JSON.parse(stored) as string[]) : [];
+    setFavorites(Array.isArray(favs) ? favs : []);
+    loadVouchers();
   }, [favoritesKey]);
 
-  const applyFavorites = (voucherList: Voucher[], favs: string[]) => {
-    const favSet = new Set(favs || []);
-    return voucherList.map(v => ({ ...v, featured: favSet.has(v.id) }));
-  };
-
-  // Load vouchers from backend
-  const loadVouchers = async (currentFavorites: string[] = favorites) => {
+  const loadVouchers = async () => {
     try {
-      console.log('🔍 Starting to load vouchers...');
       setIsLoading(true);
       setError(null);
-      
-      // Fetch vouchers from backend
-      console.log('📡 Calling apiService.getVouchers()...');
       const response = await apiService.getVouchers();
-      console.log('📦 API Response received:', response);
-      
-      // Transform backend vouchers
-      const transformedVouchers: Voucher[] = response.vouchers.map((voucher: any) => ({
-        id: voucher.id.toString(),
-        productId: voucher.productId, // Actual product ID for purchase
-        variantId: voucher.variantId, // Variant ID for reference
-        name: voucher.name,
-        brand: voucher.brand,
-        category: voucher.category,
-        minAmount: voucher.minAmount,
-        maxAmount: voucher.maxAmount,
-        icon: voucher.icon || '🎁',
-        description: voucher.description,
-        supplierCode: voucher.supplierCode, // Supplier code
-        available: true, // Make all vouchers available
-        featured: false, // Will be set based on favorites
-        denominations: voucher.denominations || []
+      const loaded: Voucher[] = (response.vouchers || []).map((v: any) => ({
+        id: (v.id || '').toString(),
+        productId: v.productId,
+        variantId: v.variantId,
+        name: v.name || 'Voucher',
+        brand: v.brand || v.name || 'Voucher',
+        category: v.category || 'other',
+        minAmount: v.minAmount || 0,
+        maxAmount: v.maxAmount || 0,
+        isVariable: !!v.isVariable,
+        icon: v.icon || '🎁',
+        description: v.description || '',
+        supplierCode: v.supplierCode,
+        commission: v.commission,
+        available: v.available !== false,
+        denominations: Array.isArray(v.denominations) ? v.denominations : []
       }));
-      
-      console.log('🔄 Transformed vouchers:', transformedVouchers.length);
-      
-      const withFavorites = applyFavorites(transformedVouchers, currentFavorites);
-      setVouchers(withFavorites);
-      setFilteredVouchers(withFavorites);
-      console.log('✅ Vouchers loaded successfully');
-    } catch (err) {
-      console.error('❌ Error loading vouchers:', err);
+      setVouchers(loaded);
+      setFilteredVouchers(loaded);
+    } catch {
       setError('Failed to load vouchers. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Load user favorites (local, per-user)
-  const loadFavorites = () => {
-    try {
-      const stored = typeof window !== 'undefined' ? localStorage.getItem(favoritesKey) : null;
-      const favs = stored ? JSON.parse(stored) : [];
-      setFavorites(Array.isArray(favs) ? favs : []);
-      return Array.isArray(favs) ? favs : [];
-    } catch (e) {
-      console.warn('Could not load favorites, resetting.');
-      setFavorites([]);
-      return [];
-    }
-  };
-
-  // Handle favorite toggle
-  const handleFavoriteToggle = async (voucherId: string, isFavorite: boolean) => {
+  const handleFavoriteToggle = (voucherId: string, isFavorite: boolean) => {
     const favSet = new Set(favorites);
-
     if (isFavorite && !favSet.has(voucherId) && favSet.size >= 12) {
-      // Max 12 favorites for clean UX
       setError('You can save up to 12 favorites');
       setTimeout(() => setError(null), 2500);
       return;
     }
-
-    if (isFavorite) {
-      favSet.add(voucherId);
-    } else {
-      favSet.delete(voucherId);
-    }
-
+    if (isFavorite) favSet.add(voucherId);
+    else favSet.delete(voucherId);
     const updated = Array.from(favSet);
     setFavorites(updated);
     if (typeof window !== 'undefined') {
       localStorage.setItem(favoritesKey, JSON.stringify(updated));
     }
-
-    const updatedVouchers = applyFavorites(vouchers, updated);
-    setVouchers(updatedVouchers);
-    setFilteredVouchers(applyFavorites(filteredVouchers, updated));
   };
 
-  // Get count of favorite vouchers
-  const getFavoriteCount = (voucherList: Voucher[]) => {
-    return favorites.length;
-  };
-
-  // Handle search
   const handleSearch = (query: string) => {
     setSearchQuery(query);
-    
     if (!query.trim()) {
       setFilteredVouchers(vouchers);
       return;
     }
-    
-    const filtered = vouchers.filter(voucher =>
-      voucher.name.toLowerCase().includes(query.toLowerCase()) ||
-      voucher.brand.toLowerCase().includes(query.toLowerCase()) ||
-      voucher.category.toLowerCase().includes(query.toLowerCase()) ||
-      voucher.description.toLowerCase().includes(query.toLowerCase())
+    const q = query.toLowerCase();
+    setFilteredVouchers(
+      vouchers.filter(v =>
+        v.name.toLowerCase().includes(q) ||
+        v.category.toLowerCase().includes(q) ||
+        v.description.toLowerCase().includes(q)
+      )
     );
-    
-    setFilteredVouchers(filtered);
   };
 
-  // Handle voucher selection
   const handleVoucherSelect = (voucher: Voucher) => {
     setSelectedVoucher(voucher);
     setShowModal(true);
   };
 
-  // Handle modal close
-  const handleModalClose = () => {
-    setShowModal(false);
-    setSelectedVoucher(null);
-  };
+  const isFav = (id: string) => favorites.includes(id);
+  const favoriteVouchers = filteredVouchers.filter(v => isFav(v.id));
+  const otherVouchers = filteredVouchers.filter(v => !isFav(v.id));
 
-  // Clear search
-  const clearSearch = () => {
-    setSearchQuery('');
-    setFilteredVouchers(vouchers);
-  };
-
-  // Handle back navigation
-  const handleBack = () => {
-    navigate('/transact');
-  };
-
-  // Get favorite vouchers (max 12)
-  const favoriteVouchers = vouchers.filter(v => v.featured).slice(0, 12);
-  
-  // Get other vouchers (non-favorites)
-  const otherVouchers = filteredVouchers.filter(v => !v.featured);
+  const popularBrands = useMemo(() => {
+    return vouchers.slice(0, 5).map(v => v.name);
+  }, [vouchers]);
 
   return (
     <div style={{
@@ -201,195 +132,113 @@ export function DigitalVouchersOverlay() {
       minHeight: '100vh',
       fontFamily: 'Montserrat, sans-serif',
       padding: 'var(--mobile-padding)',
-      paddingBottom: '110px' // keep clear of bottom nav
+      paddingBottom: '110px'
     }}>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <Button
           variant="ghost"
-          onClick={handleBack}
-          style={{
-            fontFamily: 'Montserrat, sans-serif',
-            fontSize: '16px',
-            fontWeight: '500',
-            color: '#374151',
-            padding: '8px',
-            borderRadius: '8px'
-          }}
+          onClick={() => navigate('/transact')}
+          style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '16px', fontWeight: '500', color: '#374151', padding: '8px', borderRadius: '8px' }}
         >
           <ArrowLeft className="w-5 h-5 mr-2" />
           Back
         </Button>
-        
-        <h1 style={{
-          fontFamily: 'Montserrat, sans-serif',
-          fontSize: '20px',
-          fontWeight: '600',
-          color: '#1f2937'
-        }}>
+        <h1 style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '20px', fontWeight: '600', color: '#1f2937' }}>
           Digital Vouchers
         </h1>
-        
-        <div style={{ width: '40px' }} /> {/* Spacer for centering */}
+        <div style={{ width: '40px' }} />
       </div>
 
-      {/* Search Bar */}
       <VoucherSearch
         searchQuery={searchQuery}
         onSearch={handleSearch}
-        onClear={clearSearch}
+        onClear={() => { setSearchQuery(''); setFilteredVouchers(vouchers); }}
+        suggestions={popularBrands}
       />
 
-      {/* Error State */}
       {error && (
-        <div className="text-center py-8">
-          <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
-            <X className="w-8 h-8 text-red-600" />
-          </div>
-          <h3 style={{
-            fontFamily: 'Montserrat, sans-serif',
-            fontSize: '16px',
-            fontWeight: '600',
-            color: '#1f2937',
-            marginBottom: '8px'
-          }}>
-            Error Loading Vouchers
-          </h3>
-          <p style={{
-            fontFamily: 'Montserrat, sans-serif',
-            fontSize: '14px',
-            color: '#6b7280',
-            marginBottom: '16px'
-          }}>
-            {error}
-          </p>
-          <Button
-            onClick={() => loadVouchers()}
-            style={{
-              fontFamily: 'Montserrat, sans-serif',
-              fontSize: '14px',
-              fontWeight: '500',
-              borderRadius: '12px',
-              minHeight: '44px',
-              backgroundColor: '#86BE41'
-            }}
-          >
-            Try Again
-          </Button>
+        <div className="rounded-lg bg-red-50 border border-red-200 p-3 mb-4 text-center">
+          <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '13px', color: '#dc2626' }}>{error}</p>
         </div>
       )}
 
-      {/* Loading State */}
       {isLoading && (
         <div className="text-center py-8">
-          <div className="w-16 h-16 mx-auto mb-4 bg-blue-100 rounded-full flex items-center justify-center">
-            <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-          </div>
-          <p style={{
-            fontFamily: 'Montserrat, sans-serif',
-            fontSize: '14px',
-            color: '#6b7280'
-          }}>
+          <div className="w-12 h-12 mx-auto mb-4 border-4 border-gray-200 border-t-[#86BE41] rounded-full animate-spin" />
+          <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '14px', color: '#6b7280' }}>
             Loading vouchers...
           </p>
         </div>
       )}
 
-      {/* Favorite Vouchers Section */}
-      {!isLoading && !error && favorites.length > 0 && (
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
+      {/* Favorites */}
+      {!isLoading && favoriteVouchers.length > 0 && (
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-3">
             <div className="flex items-center">
-              <Star className="w-5 h-5 text-yellow-500 mr-2" />
-              <h2 style={{
-                fontFamily: 'Montserrat, sans-serif',
-                fontSize: '18px',
-                fontWeight: '600',
-                color: '#1f2937'
-              }}>
-                Favorite Vouchers
+              <Star className="w-4 h-4 text-yellow-500 mr-2" />
+              <h2 style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>
+                Favorites
               </h2>
             </div>
-            <span style={{
-              fontFamily: 'Montserrat, sans-serif',
-              fontSize: '14px',
-              color: '#6b7280'
-            }}>
+            <span style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#6b7280' }}>
               {favorites.length}/12
             </span>
           </div>
-          <div className="grid grid-cols-3 gap-4">
-                                    {favoriteVouchers.map((voucher) => (
-                          <VoucherCard
-                            key={voucher.id}
-                            voucher={voucher}
-                            onSelect={() => handleVoucherSelect(voucher)}
-                            showFavoriteStar={true}
-                            onToggleFavorite={(isFavorite) => handleFavoriteToggle(voucher.id, isFavorite)}
-                          />
-                        ))}
+          <div className="grid grid-cols-3 gap-3">
+            {favoriteVouchers.map(v => (
+              <VoucherCard
+                key={v.id}
+                voucher={v}
+                isFavorite={true}
+                onSelect={() => handleVoucherSelect(v)}
+                onToggleFavorite={(fav) => handleFavoriteToggle(v.id, fav)}
+              />
+            ))}
           </div>
         </div>
       )}
 
-      {/* All Vouchers Section */}
-      {!isLoading && !error && otherVouchers.length > 0 && (
+      {/* All Vouchers */}
+      {!isLoading && otherVouchers.length > 0 && (
         <div className="mb-6">
-          <h2 style={{
-            fontFamily: 'Montserrat, sans-serif',
-            fontSize: '18px',
-            fontWeight: '600',
-            color: '#1f2937',
-            marginBottom: '16px'
-          }}>
-            All Vouchers
+          <h2 style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '16px', fontWeight: '600', color: '#1f2937', marginBottom: '12px' }}>
+            {searchQuery ? 'Search Results' : 'All Vouchers'}
           </h2>
-          <div className="grid grid-cols-3 gap-4">
-                                    {otherVouchers.map((voucher) => (
-                          <VoucherCard
-                            key={voucher.id}
-                            voucher={voucher}
-                            onSelect={() => handleVoucherSelect(voucher)}
-                            showFavoriteStar={true}
-                            disabled={favorites.length >= 12 && !voucher.featured}
-                            onToggleFavorite={(isFavorite) => handleFavoriteToggle(voucher.id, isFavorite)}
-                          />
-                        ))}
+          <div className="grid grid-cols-3 gap-3">
+            {otherVouchers.map(v => (
+              <VoucherCard
+                key={v.id}
+                voucher={v}
+                isFavorite={false}
+                canFavorite={favorites.length < 12}
+                onSelect={() => handleVoucherSelect(v)}
+                onToggleFavorite={(fav) => handleFavoriteToggle(v.id, fav)}
+              />
+            ))}
           </div>
         </div>
       )}
 
-      {/* No Results */}
+      {/* Empty State */}
       {!isLoading && !error && filteredVouchers.length === 0 && (
-        <div className="text-center py-8">
-          <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-            <X className="w-8 h-8 text-gray-400" />
-          </div>
-          <h3 style={{
-            fontFamily: 'Montserrat, sans-serif',
-            fontSize: '16px',
-            fontWeight: '600',
-            color: '#1f2937',
-            marginBottom: '8px'
-          }}>
+        <div className="text-center py-12">
+          <div className="text-4xl mb-3">🔍</div>
+          <h3 style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '16px', fontWeight: '600', color: '#1f2937', marginBottom: '8px' }}>
             No vouchers found
           </h3>
-          <p style={{
-            fontFamily: 'Montserrat, sans-serif',
-            fontSize: '14px',
-            color: '#6b7280'
-          }}>
-            Try adjusting your search
+          <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '14px', color: '#6b7280' }}>
+            {searchQuery ? 'Try a different search term' : 'Vouchers will appear here once available'}
           </p>
         </div>
       )}
 
-      {/* Product Detail Modal */}
       {showModal && selectedVoucher && (
         <ProductDetailModal
           voucher={selectedVoucher}
           isOpen={showModal}
-          onClose={handleModalClose}
+          onClose={() => { setShowModal(false); setSelectedVoucher(null); }}
         />
       )}
     </div>

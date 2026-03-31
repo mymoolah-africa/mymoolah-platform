@@ -9,11 +9,13 @@
  *   node scripts/sync-mobilemart-products.js --staging                (default target)
  *   node scripts/sync-mobilemart-products.js --production
  *   node scripts/sync-mobilemart-products.js --uat
- *   node scripts/sync-mobilemart-products.js --staging --billers-only (only bill-payment)
+ *   node scripts/sync-mobilemart-products.js --staging --billers-only  (only bill-payment)
+ *   node scripts/sync-mobilemart-products.js --staging --vouchers-only (only voucher)
  * 
  * Flags:
  *   --staging | --production | --uat   Target database (default: staging)
  *   --billers-only                     Sync only bill-payment products (skip airtime/data/utility/voucher)
+ *   --vouchers-only                    Sync only voucher products (skip airtime/data/utility/bill-payment)
  * 
  * This script:
  * 1. Fetches products from MobileMart Production API
@@ -528,19 +530,21 @@ class MobileMartStagingSync {
 function parseArgs() {
   const args = process.argv.slice(2);
   const billersOnly = args.includes('--billers-only');
-  const envFlags = args.filter(a => a.startsWith('--') && a !== '--billers-only');
+  const vouchersOnly = args.includes('--vouchers-only');
+  const filterFlags = ['--billers-only', '--vouchers-only'];
+  const envFlags = args.filter(a => a.startsWith('--') && !filterFlags.includes(a));
   let targetEnv = 'staging';
   if (envFlags.length) {
     const env = envFlags[0].replace('--', '').toLowerCase();
     if (!['staging', 'production', 'uat'].includes(env)) {
       console.error(`\n❌ Invalid target: ${envFlags[0]}`);
       console.error('   Valid targets: --staging, --production, --uat');
-      console.error('   Optional:     --billers-only\n');
+      console.error('   Optional:     --billers-only, --vouchers-only\n');
       process.exit(1);
     }
     targetEnv = env;
   }
-  return { targetEnv, billersOnly };
+  return { targetEnv, billersOnly, vouchersOnly };
 }
 
 function getClientForEnv(env) {
@@ -554,12 +558,13 @@ function getClientForEnv(env) {
 const ENV_PORTS = { uat: 6543, staging: 6544, production: 6545 };
 
 async function main() {
-  const { targetEnv, billersOnly } = parseArgs();
+  const { targetEnv, billersOnly, vouchersOnly } = parseArgs();
   const envLabel = targetEnv.charAt(0).toUpperCase() + targetEnv.slice(1);
-  const vasTypes = billersOnly ? ['bill-payment'] : VAS_TYPES;
+  const vasTypes = billersOnly ? ['bill-payment'] : vouchersOnly ? ['voucher'] : VAS_TYPES;
+  const filterLabel = billersOnly ? ' (--billers-only)' : vouchersOnly ? ' (--vouchers-only)' : ' (all)';
 
   console.log(`\n🚀 MobileMart Production API → ${envLabel} DB Sync Starting...`);
-  console.log(`   VAS types: ${vasTypes.join(', ')}${billersOnly ? ' (--billers-only)' : ' (all)'}\n`);
+  console.log(`   VAS types: ${vasTypes.join(', ')}${filterLabel}\n`);
   
   if (targetEnv === 'production') {
     console.log('⚠️  WARNING: You are syncing to the PRODUCTION database.');

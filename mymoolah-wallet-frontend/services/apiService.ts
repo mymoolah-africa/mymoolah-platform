@@ -566,229 +566,26 @@ class ApiService {
     return { pin, ref };
   }
 
-  // Voucher API Methods (uses supplier comparison best-deals for deduped variants)
-  async getVouchers(): Promise<{ vouchers: any[] }> {
+  async getVouchers(query?: string, category?: string): Promise<{ vouchers: any[]; categories?: any[]; total?: number }> {
     try {
-      // Use comparison engine to dedupe and pick best supplier per product
-      const comparison = await this.compareSuppliers('voucher');
-      const sourceList =
-        (comparison?.bestDeals && comparison.bestDeals.length > 0)
-          ? comparison.bestDeals
-          : (comparison?.products || []);
-
-      // ── Product enrichment table ─────────────────────────────────────────────
-      // Maps raw supplier product name keywords → human-readable display info.
-      // Matched case-insensitively against the raw product name.
-      interface ProductMeta { label: string; description: string; icon: string; category: string; }
-      const PRODUCT_META: Array<{ match: RegExp; meta: ProductMeta }> = [
-        // ── Streaming / entertainment ─────────────────────────────────────────
-        { match: /netflix/i,          meta: { label: 'Netflix',           description: 'Netflix streaming gift card — top up your Netflix account',               icon: '🎭', category: 'Entertainment' } },
-        { match: /dstv/i,             meta: { label: 'DStv',              description: 'DStv subscription payment — pay your DStv account',                       icon: '📺', category: 'Entertainment' } },
-        { match: /showmax/i,          meta: { label: 'Showmax',           description: 'Showmax streaming gift card',                                              icon: '🎬', category: 'Entertainment' } },
-        { match: /spotify/i,          meta: { label: 'Spotify',           description: 'Spotify music gift card — top up your Spotify Premium',                   icon: '🎵', category: 'Entertainment' } },
-        { match: /apple\s*music/i,    meta: { label: 'Apple Music',       description: 'Apple Music gift card — top up your Apple Music subscription',            icon: '🎵', category: 'Entertainment' } },
-        { match: /itunes/i,           meta: { label: 'iTunes',            description: 'iTunes / Apple gift card — use on App Store, Apple Music, iCloud',        icon: '🍎', category: 'Entertainment' } },
-        // Apple credit ($10/$30) — must come AFTER itunes/apple music checks
-        { match: /\$\d+\s*credit/i,   meta: { label: 'Apple Credit',      description: 'Apple App Store / iTunes credit — use for apps, music, movies & more',   icon: '🍎', category: 'Entertainment' } },
-        { match: /ott/i,              meta: { label: 'OTT Voucher',       description: 'OTT streaming voucher — use on supported streaming platforms',            icon: '🎬', category: 'Entertainment' } },
-
-        // ── Gaming ────────────────────────────────────────────────────────────
-        { match: /pubg|battleground/i,meta: { label: 'PUBG Mobile',       description: 'PUBG Mobile UC (Unknown Cash) — in-game currency for PUBG Mobile',       icon: '🎮', category: 'Gaming' } },
-        { match: /\buc\b/i,           meta: { label: 'PUBG Mobile UC',    description: 'PUBG Mobile UC (Unknown Cash) — in-game currency for PUBG Mobile',       icon: '🎮', category: 'Gaming' } },
-        { match: /free\s*fire|diamond/i, meta: { label: 'Free Fire',      description: 'Free Fire Diamonds — in-game currency for Garena Free Fire',             icon: '💎', category: 'Gaming' } },
-        { match: /roblox/i,           meta: { label: 'Roblox',            description: 'Roblox gift card — buy Robux or a Roblox Premium subscription',          icon: '🟥', category: 'Gaming' } },
-        { match: /steam/i,            meta: { label: 'Steam',             description: 'Steam Wallet gift card — add funds to your Steam account',                icon: '🎮', category: 'Gaming' } },
-        { match: /playstation|psn/i,  meta: { label: 'PlayStation',       description: 'PlayStation Store gift card — buy games, DLC & PS Plus',                 icon: '🎮', category: 'Gaming' } },
-        { match: /xbox/i,             meta: { label: 'Xbox',              description: 'Xbox gift card — buy games, add-ons & Xbox Game Pass',                   icon: '🎮', category: 'Gaming' } },
-        { match: /nintendo/i,         meta: { label: 'Nintendo',          description: 'Nintendo eShop gift card — buy games & DLC on Nintendo Switch',          icon: '🎮', category: 'Gaming' } },
-        { match: /razer\s*gold/i,     meta: { label: 'Razer Gold',        description: 'Razer Gold — universal gaming credits for 2 000+ games worldwide',       icon: '🎮', category: 'Gaming' } },
-        { match: /fifa/i,             meta: { label: 'EA Sports FC',      description: 'EA Sports FC (FIFA) gift card — buy FC Points for Ultimate Team',        icon: '⚽', category: 'Gaming' } },
-        { match: /google\s*play/i,    meta: { label: 'Google Play',       description: 'Google Play gift card — buy apps, games, movies & books on Android',     icon: '📱', category: 'Gaming' } },
-
-        // ── Betting / entertainment ───────────────────────────────────────────
-        { match: /hollywoodbets|hollywood\s*bets/i, meta: { label: 'Hollywood Bets', description: 'Hollywood Bets voucher — deposit funds into your Hollywood Bets account', icon: '🎰', category: 'Entertainment' } },
-        { match: /yesplay/i,          meta: { label: 'YesPlay',           description: 'YesPlay voucher — deposit funds into your YesPlay betting account',       icon: '🎲', category: 'Entertainment' } },
-        { match: /betway/i,           meta: { label: 'Betway',            description: 'Betway voucher — deposit funds into your Betway betting account',         icon: '🎯', category: 'Entertainment' } },
-
-        // ── Transport ─────────────────────────────────────────────────────────
-        { match: /intercape/i,        meta: { label: 'Intercape',         description: 'Intercape bus ticket voucher — travel between major SA cities',           icon: '🚌', category: 'Transport' } },
-        { match: /uber/i,             meta: { label: 'Uber',              description: 'Uber gift card — pay for Uber rides or Uber Eats orders',                 icon: '🚗', category: 'Transport' } },
-        { match: /bolt/i,             meta: { label: 'Bolt',              description: 'Bolt gift card — pay for Bolt rides',                                     icon: '⚡', category: 'Transport' } },
-
-        // ── Retail / shopping ─────────────────────────────────────────────────
-        { match: /tenacity/i,         meta: { label: 'Tenacity',          description: 'Tenacity retail voucher — use at Jet, Legit, Exact & other Tenacity stores', icon: '🏪', category: 'Shopping' } },
-        { match: /talk360/i,          meta: { label: 'Talk360',           description: 'Talk360 international calling credit — call any number worldwide',        icon: '📞', category: 'Entertainment' } },
-
-        // ── MyMoolah / generic ────────────────────────────────────────────────
-        { match: /mmvoucher|mm\s*voucher/i, meta: { label: 'MyMoolah Voucher', description: 'MyMoolah digital voucher — redeem cash at any MyMoolah agent',     icon: '💰', category: 'MyMoolah' } },
-        { match: /1voucher/i,         meta: { label: '1Voucher',          description: '1Voucher — a secure cash voucher accepted at thousands of online stores', icon: '🛒', category: 'Shopping' } },
-        { match: /wallet\s*code|steam.*wallet/i, meta: { label: 'Steam Wallet', description: 'Steam Wallet top-up code — add funds to your Steam account',      icon: '🎮', category: 'Gaming' } },
-      ];
-
-      /** Return enriched meta for a raw product name, or null if no match */
-      const enrichProduct = (rawName: string): ProductMeta | null => {
-        for (const entry of PRODUCT_META) {
-          if (entry.match.test(rawName)) return entry.meta;
-        }
-        return null;
+      const params = new URLSearchParams();
+      if (query) params.append('q', query);
+      if (category) params.append('category', category);
+      const qs = params.toString();
+      const url = `/api/v1/overlay/vouchers/catalog${qs ? `?${qs}` : ''}`;
+      const response = await this.request<any>(url);
+      const payload = response?.data?.data ?? response?.data ?? response;
+      return {
+        vouchers: payload?.vouchers || [],
+        categories: payload?.categories || [],
+        total: payload?.total || 0
       };
-
-      // ── Step 1: Normalise each raw product into a typed shape ──────────────────
-      interface NormalisedProduct {
-        id: string;
-        productId: any;
-        variantId: any;
-        rawName: string;
-        displayName: string;
-        brandKey: string;       // normalised key used for grouping (brand + supplier)
-        supplierCode: string;
-        minAmount: number;
-        maxAmount: number;
-        isVariable: boolean;    // true = own-amount entry field
-        denominations: number[];
-        category: any;
-        icon: string;
-        description: string;
-        featured: boolean;
-      }
-
-      const normalisedList: NormalisedProduct[] = sourceList.map((product: any) => {
-        const rawName = (product.productName || product.name || '').trim();
-        const enriched = enrichProduct(rawName);
-
-        // Strip range suffixes/prefixes from display name (used as fallback when no enrichment)
-        const strippedName = rawName
-          .replace(/\s+Voucher$/i, '')
-          .replace(/\s+Gift\s+Card$/i, '')
-          .replace(/\s+Token$/i, '')
-          .replace(/\s+R\d+\s*[-–]\s*R\d+\s*$/i, '')
-          .replace(/^R\d+\s*[-–]\s*R\d+\s+/i, '')
-          .replace(/\s+R\d+$/i, '')
-          .replace(/^R\d+\s+/i, '')
-          .replace(/\(\d+\s*months?\)/i, '')
-          .replace('HollywoodBets', 'Hollywood Bets')
-          .trim();
-
-        const displayName = enriched ? enriched.label : strippedName;
-
-        const minAmount = product.minAmount ?? product.price ?? product.min ?? 0;
-        const maxAmount = product.maxAmount ?? product.price ?? product.max ?? minAmount;
-        const supplierCode = (product.supplierCode || product.supplier?.code || '').toString().toUpperCase();
-
-        // A product is "variable" when min < max and it has no fixed denominations list
-        const explicitDenominations: number[] =
-          (Array.isArray(product.predefinedAmounts) && product.predefinedAmounts.length > 0
-            ? product.predefinedAmounts
-            : null) ||
-          (Array.isArray(product.denominationOptions) && product.denominationOptions.length > 0
-            ? product.denominationOptions
-            : null) ||
-          (Array.isArray(product.denominations) && product.denominations.length > 0
-            ? product.denominations
-            : null) ||
-          [];
-
-        // Fixed = has explicit denominations OR min === max (single price point)
-        // Variable = min < max AND no explicit denominations
-        const isVariable = explicitDenominations.length === 0 && minAmount < maxAmount;
-
-        // Grouping key: normalised display name + supplier (so Flash R50 and MobileMart R50 stay separate)
-        const brandKey = `${displayName.toLowerCase().replace(/\s+/g, ' ').trim()}::${supplierCode}`;
-
-        return {
-          id: (product.variantId || product.id || product.supplierProductId || rawName).toString(),
-          productId: product.productId,
-          variantId: product.variantId || product.id,
-          rawName,
-          displayName,
-          brandKey,
-          supplierCode,
-          minAmount,
-          maxAmount,
-          isVariable,
-          denominations: explicitDenominations,
-          category: enriched ? enriched.category : this.mapCategory(product.category || product.vasType || 'voucher'),
-          icon: enriched ? enriched.icon : this.getVoucherIcon(rawName || displayName),
-          description: enriched ? enriched.description : (product.description || displayName),
-          featured: product.isPromotional || product.featured ||
-            ['MyMoolah Voucher', 'Netflix', 'Google Play', 'DStv', 'Betway'].includes(displayName),
-        };
-      });
-
-      // ── Step 2: Group by brandKey ────────────────────────────────────────────
-      // Collect all variants per brand+supplier combination
-      const grouped = new Map<string, NormalisedProduct[]>();
-      for (const p of normalisedList) {
-        if (!grouped.has(p.brandKey)) grouped.set(p.brandKey, []);
-        grouped.get(p.brandKey)!.push(p);
-      }
-
-      // ── Step 3: Collapse each group into one card ────────────────────────────
-      // Business rule:
-      //   • If the group contains a variable product → show ONLY the variable card
-      //     (suppress all fixed-denomination variants of the same brand/supplier)
-      //   • If no variable exists → merge all fixed denominations into one card
-      const transformedVouchers = Array.from(grouped.values()).map((group) => {
-        const variableVariant = group.find(p => p.isVariable);
-
-        if (variableVariant) {
-          // Use the variable product as the card; ignore fixed siblings
-          return {
-            id: variableVariant.id,
-            productId: variableVariant.productId,
-            variantId: variableVariant.variantId,
-            name: variableVariant.displayName,
-            brand: variableVariant.displayName,
-            category: variableVariant.category,
-            minAmount: variableVariant.minAmount,
-            maxAmount: variableVariant.maxAmount,
-            isVariable: true,
-            icon: variableVariant.icon,
-            description: variableVariant.description,
-            supplierCode: variableVariant.supplierCode,
-            available: true,
-            featured: variableVariant.featured,
-            denominations: [],   // empty → modal shows free-text input
-          };
-        }
-
-        // All fixed: merge denominations from every variant in the group
-        const base = group[0];
-        const allDenoms = Array.from(
-          new Set(
-            group.flatMap(p =>
-              p.denominations.length > 0
-                ? p.denominations
-                : [p.minAmount]   // single-price product → treat its price as a denomination
-            )
-          )
-        ).sort((a, b) => a - b);
-
-        return {
-          id: base.id,
-          productId: base.productId,
-          variantId: base.variantId,
-          name: base.displayName,
-          brand: base.displayName,
-          category: base.category,
-          minAmount: Math.min(...allDenoms),
-          maxAmount: Math.max(...allDenoms),
-          isVariable: false,
-          icon: base.icon,
-          description: base.description,
-          supplierCode: base.supplierCode,
-          available: true,
-          featured: group.some(p => p.featured),
-          denominations: allDenoms,  // populated → modal shows denomination buttons
-        };
-      });
-
-      return { vouchers: transformedVouchers };
     } catch (error) {
-      console.error('❌ Error in getVouchers:', error);
+      console.error('Error fetching voucher catalog:', error);
       throw error;
     }
   }
+
 
   // ─── Data bundle label extraction ────────────────────────────────────────────
   // Parses MobileMart product names like "Vodacom Daily WhatsApp 250MB R3"
@@ -1068,104 +865,7 @@ class ApiService {
     return response.data!
   }
 
-  // Helper method to map backend categories to frontend categories
-  private mapCategory(backendCategory: string): 'Gaming' | 'Entertainment' | 'Transport' | 'Shopping' | 'MyMoolah' {
-    const categoryMap: { [key: string]: 'Gaming' | 'Entertainment' | 'Transport' | 'Shopping' | 'MyMoolah' } = {
-      'gaming': 'Gaming',
-      'entertainment': 'Entertainment',
-      'transport': 'Transport',
-      'shopping': 'Shopping',
-      'vouchers': 'MyMoolah',
-      'music': 'Entertainment'
-    };
-    return categoryMap[backendCategory.toLowerCase()] || 'Entertainment';
-  }
 
-  // Helper method to get voucher icons
-  private getVoucherIcon(voucherName: string): string {
-    const iconMap: { [key: string]: string } = {
-      'MMVoucher': '💰',
-      '1Voucher': '🛒',
-      'OTT Voucher': '🎬',
-      'Betway Voucher': '🎯',
-      'HollywoodBets Voucher': '🎰',
-      'YesPlay Voucher': '🎲',
-      'DStv Voucher': '📺',
-      'Netflix Voucher': '🎭',
-      'Fifa Mobile Gift Card': '⚽',
-      'Intercape Voucher': '🚌',
-      'Tenacity Voucher': '🏪',
-      'Google Play Voucher': '📱',
-      'Steam Gift Card': '🎮',
-      'PlayStation Gift Card': '🎮',
-      'Xbox Gift Card': '🎮',
-      'Nintendo Gift Card': '🎮',
-      'Spotify Gift Card': '🎵',
-      'Apple Music Gift Card': '🎵'
-    };
-    return iconMap[voucherName] || '🎁';
-  }
-
-  // Helper method to generate voucher denominations based on min/max amounts
-  private generateVoucherDenominations(minAmount: number, maxAmount: number): number[] {
-    // If no min/max amounts, provide default denominations
-    if (!minAmount && !maxAmount) {
-      return [500, 1000, 2000, 5000, 10000, 20000]; // R5, R10, R20, R50, R100, R200
-    }
-
-    // If only min amount, create denominations from min to reasonable max
-    if (minAmount && !maxAmount) {
-      const denominations: number[] = [];
-      let current = minAmount;
-      while (current <= minAmount * 10 && current <= 50000) { // Max R500
-        denominations.push(current);
-        current *= 2;
-      }
-      return denominations;
-    }
-
-    // If only max amount, create denominations from reasonable min to max
-    if (!minAmount && maxAmount) {
-      const denominations: number[] = [];
-      let current = Math.max(500, Math.floor(maxAmount / 10)); // Start at R5 or 1/10 of max
-      while (current <= maxAmount) {
-        denominations.push(current);
-        current *= 2;
-      }
-      return denominations;
-    }
-
-    // If both min and max, create reasonable denominations between them
-    if (minAmount && maxAmount) {
-      const denominations: number[] = [];
-      let current = minAmount;
-      
-      // Add min amount
-      denominations.push(current);
-      
-      // Generate intermediate amounts
-      while (current < maxAmount) {
-        if (current < 1000) {
-          current = Math.min(current * 2, maxAmount);
-        } else if (current < 5000) {
-          current = Math.min(current + 1000, maxAmount);
-        } else if (current < 20000) {
-          current = Math.min(current + 5000, maxAmount);
-        } else {
-          current = Math.min(current + 10000, maxAmount);
-        }
-        
-        if (current <= maxAmount) {
-          denominations.push(current);
-        }
-      }
-      
-      return denominations;
-    }
-
-    // Fallback to default denominations
-    return [500, 1000, 2000, 5000, 10000, 20000];
-  }
 
   // User Favorites API Methods
   async getUserFavorites(): Promise<{ favorites: any[]; count: number }> {

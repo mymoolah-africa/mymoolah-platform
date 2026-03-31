@@ -3559,4 +3559,243 @@ router.post('/bills/pay', auth, async (req, res) => {
   }
 });
 
+// ========================================
+// DIGITAL VOUCHERS OVERLAY ENDPOINTS
+// ========================================
+
+const VOUCHER_CATEGORY_MAP = {
+  gaming:       ['gaming', 'game', 'playstation', 'psn', 'xbox', 'nintendo', 'steam', 'roblox', 'pubg', 'free fire', 'razer', 'fifa', 'ea sports'],
+  entertainment:['entertainment', 'netflix', 'showmax', 'dstv', 'multichoice', 'spotify', 'apple music', 'itunes', 'ott', 'streaming', 'media'],
+  betting:      ['betting', 'bet', 'hollywood', 'betway', 'supabets', 'lottostar', 'lottoland', 'flybet', 'yesplay'],
+  shopping:     ['shopping', 'retail', 'makro', 'pick n pay', 'takealot', 'amazon', '1voucher', 'blu voucher', 'ringas', 'bok squad', 'cycle lab', 'pro shop'],
+  transport:    ['transport', 'uber', 'bolt', 'intercape'],
+  lifestyle:    ['lifestyle', 'beauty', 'sorbet', 'ticketmaster', 'ticket']
+};
+
+function mapVoucherCategory(rawCategory, productName) {
+  const combined = `${rawCategory || ''} ${productName || ''}`.toLowerCase().replace(/[^a-z0-9 ]/g, ' ');
+  for (const [categoryId, keywords] of Object.entries(VOUCHER_CATEGORY_MAP)) {
+    if (keywords.some(kw => combined.includes(kw))) return categoryId;
+  }
+  return 'other';
+}
+
+const VOUCHER_ICON_MAP = [
+  { match: /netflix/i,                   icon: '🎭' },
+  { match: /dstv/i,                      icon: '📺' },
+  { match: /showmax/i,                   icon: '🎬' },
+  { match: /spotify|apple\s*music/i,     icon: '🎵' },
+  { match: /itunes|apple/i,             icon: '🍎' },
+  { match: /ott/i,                       icon: '🎬' },
+  { match: /pubg|battleground|free\s*fire/i, icon: '🎮' },
+  { match: /roblox/i,                    icon: '🟥' },
+  { match: /steam|playstation|psn|xbox|nintendo|razer|fifa|ea\s*sport/i, icon: '🎮' },
+  { match: /google\s*play/i,            icon: '📱' },
+  { match: /hollywoodbets|hollywood/i,   icon: '🎰' },
+  { match: /betway/i,                    icon: '🎯' },
+  { match: /supabets|lottostar|lottoland|flybet|yesplay/i, icon: '🎲' },
+  { match: /uber/i,                      icon: '🚗' },
+  { match: /bolt/i,                      icon: '⚡' },
+  { match: /intercape/i,                 icon: '🚌' },
+  { match: /amazon|takealot/i,          icon: '🛍️' },
+  { match: /1voucher/i,                  icon: '🛒' },
+  { match: /blu\s*voucher|ringas/i,     icon: '💳' },
+  { match: /mmvoucher|mymoolah/i,       icon: '💰' },
+  { match: /sorbet/i,                    icon: '💆' },
+  { match: /ticketmaster/i,             icon: '🎫' },
+  { match: /makro|pick\s*n\s*pay/i,     icon: '🏪' },
+  { match: /bok\s*squad|pro\s*shop/i,   icon: '🏉' },
+  { match: /cycle\s*lab/i,              icon: '🚲' },
+];
+
+function getVoucherIcon(productName) {
+  if (!productName) return '🎁';
+  for (const entry of VOUCHER_ICON_MAP) {
+    if (entry.match.test(productName)) return entry.icon;
+  }
+  return '🎁';
+}
+
+function cleanVoucherDisplayName(rawName) {
+  if (!rawName) return 'Voucher';
+  return rawName
+    .replace(/\s+Voucher$/i, '')
+    .replace(/\s+Gift\s+Card$/i, '')
+    .replace(/\s+Token$/i, '')
+    .replace(/\s+R\d+\s*[-–]\s*R\d+\s*$/i, '')
+    .replace(/^R\d+\s*[-–]\s*R\d+\s+/i, '')
+    .replace(/\s+R\d+$/i, '')
+    .replace(/^R\d+\s+/i, '')
+    .replace(/\(\d+\s*months?\)/i, '')
+    .replace('HollywoodBets', 'Hollywood Bets')
+    .trim() || rawName;
+}
+
+/**
+ * Keep one variant per voucher brand (by product name),
+ * preferring higher commission; tie-break prefers FLASH over other suppliers.
+ */
+function filterVoucherVariantsForCatalog(variants) {
+  if (!Array.isArray(variants) || variants.length === 0) return variants;
+  const byBrand = new Map();
+  for (const variant of variants) {
+    const brandName = cleanVoucherDisplayName(variant.product?.name || variant.provider || 'Unknown');
+    const key = brandName.toLowerCase().trim();
+    const comm = parseFloat(variant.commission) || 0;
+    const prev = byBrand.get(key);
+    if (!prev) {
+      byBrand.set(key, { variant, brandName, commission: comm });
+      continue;
+    }
+    if (comm > prev.commission) {
+      byBrand.set(key, { variant, brandName, commission: comm });
+    } else if (comm === prev.commission) {
+      const pCode = (prev.variant.supplier?.code || '').toUpperCase();
+      const vCode = (variant.supplier?.code || '').toUpperCase();
+      if (vCode === 'FLASH' && pCode !== 'FLASH') {
+        byBrand.set(key, { variant, brandName, commission: comm });
+      }
+    }
+  }
+  return Array.from(byBrand.values());
+}
+
+/**
+ * @route   GET /api/v1/overlay/vouchers/catalog
+ * @desc    Get voucher catalog — deduped by brand (highest commission wins), sorted A-Z
+ * @access  Private
+ * @query   { q, category }
+ */
+router.get('/vouchers/catalog', auth, async (req, res) => {
+  try {
+    const { q, category } = req.query;
+    const { ProductVariant, Product, Supplier } = require('../models');
+
+    const voucherVariants = await ProductVariant.findAll({
+      where: { status: 'active' },
+      include: [
+        {
+          model: Product,
+          as: 'product',
+          where: { type: 'voucher', status: 'active' },
+          attributes: ['id', 'name', 'type', 'status', 'denominations', 'constraints', 'metadata']
+        },
+        {
+          model: Supplier,
+          as: 'supplier',
+          where: { isActive: true },
+          attributes: ['id', 'name', 'code', 'isActive']
+        }
+      ],
+      order: [['commission', 'DESC'], ['priority', 'ASC']]
+    });
+
+    const deduped = filterVoucherVariantsForCatalog(voucherVariants);
+
+    const voucherMap = new Map();
+
+    for (const { variant, brandName } of deduped) {
+      const key = brandName.toLowerCase().trim();
+      const rawName = variant.product?.name || variant.provider || 'Unknown';
+      const displayName = cleanVoucherDisplayName(rawName);
+      const rawCategory = variant.metadata?.category || variant.metadata?.mobilemart_content_creator || variant.provider || '';
+      const voucherCategory = mapVoucherCategory(rawCategory, displayName);
+
+      const minAmt = variant.minAmount ? parseFloat(variant.minAmount) : 0;
+      const maxAmt = variant.maxAmount ? parseFloat(variant.maxAmount) : minAmt;
+
+      let denominations = [];
+      if (Array.isArray(variant.denominations) && variant.denominations.length > 0) {
+        denominations = variant.denominations.map(d => typeof d === 'number' ? d : parseFloat(d)).filter(d => !isNaN(d));
+      } else if (variant.product?.denominations) {
+        const pd = variant.product.denominations;
+        if (Array.isArray(pd)) {
+          denominations = pd.map(d => typeof d === 'number' ? d : parseFloat(d)).filter(d => !isNaN(d));
+        }
+      }
+
+      const isVariable = denominations.length === 0 && minAmt > 0 && maxAmt > minAmt;
+
+      if (voucherMap.has(key)) {
+        const existing = voucherMap.get(key);
+        if (isVariable && !existing.isVariable) {
+          existing.isVariable = true;
+          existing.minAmount = minAmt;
+          existing.maxAmount = maxAmt;
+          existing.productId = variant.product?.id;
+          existing.variantId = variant.id;
+          existing.supplierCode = variant.supplier?.code;
+          existing.commission = parseFloat(variant.commission) || 0;
+          existing.denominations = [];
+        } else if (!isVariable && !existing.isVariable) {
+          const newDenoms = denominations.length > 0 ? denominations : (minAmt > 0 ? [minAmt] : []);
+          existing.denominations = Array.from(new Set([...existing.denominations, ...newDenoms])).sort((a, b) => a - b);
+          if (existing.denominations.length > 0) {
+            existing.minAmount = Math.min(...existing.denominations);
+            existing.maxAmount = Math.max(...existing.denominations);
+          }
+        }
+      } else {
+        voucherMap.set(key, {
+          id: `voucher-${variant.id}`,
+          productId: variant.product?.id,
+          variantId: variant.id,
+          name: displayName,
+          brand: displayName,
+          category: voucherCategory,
+          icon: getVoucherIcon(displayName),
+          description: `${displayName} digital voucher`,
+          supplierCode: variant.supplier?.code,
+          commission: parseFloat(variant.commission) || 0,
+          minAmount: minAmt,
+          maxAmount: maxAmt,
+          isVariable,
+          denominations: isVariable ? [] : (denominations.length > 0 ? denominations : (minAmt > 0 ? [minAmt] : [])),
+          available: true
+        });
+      }
+    }
+
+    let vouchers = Array.from(voucherMap.values());
+
+    if (q) {
+      const searchLower = q.toLowerCase();
+      vouchers = vouchers.filter(v =>
+        v.name.toLowerCase().includes(searchLower) ||
+        v.category.toLowerCase().includes(searchLower) ||
+        v.description.toLowerCase().includes(searchLower)
+      );
+    }
+
+    if (category) {
+      vouchers = vouchers.filter(v => v.category === category);
+    }
+
+    vouchers.sort((a, b) => a.name.localeCompare(b.name));
+
+    const categorySet = new Set(vouchers.map(v => v.category).filter(c => c !== 'other'));
+    const categories = Array.from(categorySet).sort().map(c => ({
+      id: c,
+      name: c.charAt(0).toUpperCase() + c.slice(1)
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        vouchers,
+        categories,
+        total: vouchers.length
+      }
+    });
+
+  } catch (error) {
+    console.error('Voucher Catalog Error:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to load voucher catalog',
+      message: error.message
+    });
+  }
+});
+
 module.exports = router;
