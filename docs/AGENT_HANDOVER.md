@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-31 19:30  
-**Latest Feature**: **Data Products UI Redesign + Failover Fixes** — Individual data product rows with bundle names/sizes/validity/category icons (WhatsApp, TikTok, Facebook, YouTube). Real PNG network logos (Vodacom). Fixed critical supplier failover constructor crash. Fixed MM_DEPLOYMENT_ENV being wiped on Cloud Run redeployments (now baked into deploy scripts). Fixed beneficiary display name bug. Fixed purchase response variable scoping.  
-**Document Version**: 2.52.0  
-**Session logs**: `docs/session_logs/2026-03-31_1930_data-ui-redesign-failover-fixes-deploy-env.md`, `docs/session_logs/2026-03-31_2300_supplier-failover-circuit-breaker.md`  
+**Last Updated**: 2026-03-31 21:30  
+**Latest Feature**: **Electricity eeziPower + Commission Optimization** — Added eeziPower PIN electricity voucher card to Electricity Overlay. Updated MobileMart electricity commission rates with 80+ per-municipality rates from Annexure A. Added provider name normalization for Flash/MobileMart electricity products to compete correctly in best-offer selection.  
+**Document Version**: 2.53.0  
+**Session logs**: `docs/session_logs/2026-03-31_2130_electricity-eezi-power-commission-optimization.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
