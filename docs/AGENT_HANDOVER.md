@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-31 23:00  
-**Latest Feature**: **Biller Payments Hardening** — Full 12-item security/functional/UX audit executed on bill payments. Banking-grade idempotency, simulation hard-block (503 in staging/prod, no-debit sim in UAT), input validation, MobileMart catalog-first product lookup, beneficiary edit/delete wiring, Copy/Share success buttons, KYC gate fix.  
-**Document Version**: 2.55.0  
-**Session logs**: `docs/session_logs/2026-03-31_2300_biller-payments-hardening.md`  
+**Last Updated**: 2026-03-31 23:30  
+**Latest Feature**: **Biller Sync + Catalog Stale Cleanup + Category Fix** — Fixed sync script JSON bug (0 products synced → 802 created). Added multi-env targeting (`--staging`/`--production`/`--uat`), `--billers-only` filter, stale product deactivation (soft-disable) to both manual script and daily 02:00 cron. Fixed bill category click (backend keyword mapping + frontend state). Fixed duplicate VasTransaction crash. 1,205 production billers synced to staging. Production users launching tomorrow — voucher overlay is last fix.  
+**Document Version**: 2.56.0  
+**Session logs**: `docs/session_logs/2026-03-31_2330_biller-sync-catalog-category-fix.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -664,14 +664,24 @@ You're part of a **banking-grade software system** where:
 
 ## 🎯 **CURRENT SESSION SUMMARY**
 
-**Session Status**: ✅ **COMPLETE** — Voucher Top-Up + eeziCash Fee Cleanup  
-**Last Session**: 2026-03-31 22:00 — Voucher top-up wallet deposit, eeziCash fee cleanup, electricity eeziPower commission
+**Session Status**: ✅ **COMPLETE** — Biller Sync + Catalog Stale Cleanup + Category Fix  
+**Last Session**: 2026-03-31 23:30 — Biller sync script improvements, stale product cleanup, bill category fix, staging sync complete
 
-### **Most Recent Work (2026-03-31 22:00)**
-- **Voucher top-up wallet deposit**: New Flash integration — users redeem 1Voucher/FNB/FlashPay PIN to deposit into wallet. Backend `redeemVoucherTopup()` handles full flow: Flash API call, 4% fee deduction, wallet credit, VasTransaction + Transaction records, FlashTransaction audit, ledger posting. Auth-protected route: `POST /api/v1/flash/voucher-topup/redeem`. Frontend: `TopupVoucherOverlay.tsx` (type selection, PIN entry, fee display, success/error). Card activated on TransactPage (was "Coming Soon").
-- **eeziCash fee cleanup**: Removed stale `eezi_voucher` fee rows from `supplier_fee_schedule` (2 rows) and `supplier_tier_fees` (4 rows). Token gen/redemption fees now correctly attributed to `cash_out` only.
-- **Migration**: `20260331_01_add_voucher_topup_to_vas_type_enum.js` — adds `voucher_topup` to both vasType ENUMs. Applied to UAT. Staging/production pending.
-- **Commission tier**: Added `voucher_topup` at 4% to `update-flash-commission-tiers.js`.
+### **Most Recent Work (2026-03-31 23:30)**
+- **Sync script fixed + extended**: Fixed JSON bug that caused all product INSERTs to fail. Added `--staging`/`--production`/`--uat` target flags, `--billers-only` filter, 5-second production safety pause. Renamed to `scripts/sync-mobilemart-products.js`.
+- **Stale product deactivation**: Products the API no longer returns are soft-disabled (`status → 'inactive'`). Added to both manual sync script and daily 02:00 cron (`catalogSynchronizationService.js`) for MobileMart and Flash. Safety guard: skips cleanup if 0 products synced.
+- **Bill category click fixed**: Backend `mapBillerCategory()` maps MobileMart's `contentCreator` to 6 frontend category IDs via keyword matching. Frontend `selectedCategory` state fixes results display. Categories now work: Insurance, Entertainment, Education, Municipal, Telecoms, Retail Credit.
+- **Duplicate declaration crash fixed**: `VasTransaction` declared twice in same `bills/pay` handler scope — merged into single declaration.
+- **Staging sync successful**: 1,205 production billers synced to staging (802 created, 403 updated, 0 failed).
+- **KYC OCR audited**: Confirmed `gpt-4o` correctly configured (line 719 of kycService.js). Awaiting André's test logs.
+
+### **Previous Work (2026-03-31 23:00)**
+- **Biller payments hardening**: Full 12-item audit — idempotency, simulation hard-block, input validation, catalog-first lookup, beneficiary edit/delete, Copy/Share buttons, KYC gate fix.
+
+### **Previous Work (2026-03-31 22:00)**
+- **Voucher top-up wallet deposit**: New Flash integration — 1Voucher/FNB/FlashPay PIN redemption to wallet.
+- **eeziCash fee cleanup**: Removed stale fee rows, corrected `cash_out` attribution.
+- **Migration**: `20260331_01_add_voucher_topup_to_vas_type_enum.js` — applied to UAT. Staging/production pending.
 
 ### **Previous Work (2026-03-31 19:30)**
 - **MM_DEPLOYMENT_ENV persistence**: Fixed critical bug where every staging redeployment wiped the env var. Added to deploy scripts.
@@ -705,15 +715,17 @@ You're part of a **banking-grade software system** where:
 
 ### **Next Agent Actions**
 1. Read `docs/CURSOR_2.0_RULES_FINAL.md` (MANDATORY)
-2. Read this file and 2–3 recent session logs
-3. **Electricity overlay**: Andre's next priority — build/fix the electricity purchase overlay
-4. **Add real PNG logos**: MTN, CellC, Telkom need real PNG brand assets (same pattern as Vodacom — import from `assets/` folder)
-5. **Test failover end-to-end**: After backend redeployment, verify that MobileMart error 1002 correctly triggers Flash failover
-6. **Production featured filter**: The best-offers cache path (used in production) does not filter by `featured`. Add this before production goes live with curated data lists
-7. Do NOT reactivate Peach Payments without explicit approval from Andre
-8. Do NOT add `RmtInf.Ustrd` to Pain.013 — SBSA rejects it
-9. PayShap production callback is an SBSA-side issue (BCB/CIB market segment) — do NOT try to fix in code
-10. npm audit: 9 remaining (5 low, 4 moderate) — all in transitive deps, cannot safely fix
+2. Read this file and 2–3 recent session logs (especially `2026-03-31_2330_biller-sync-catalog-category-fix.md`)
+3. **PRIORITY: Voucher overlay service** — Last overlay to fix before production users launch tomorrow. André will hand over this task.
+4. **KYC OCR debugging** — André will test KYC tomorrow and provide backend logs. Look for `OpenAI OCR attempt` log lines in Codespaces terminal.
+5. **Production biller sync** — Run `node scripts/sync-mobilemart-products.js --production --billers-only` to populate production DB
+6. **Add real PNG logos**: MTN, CellC, Telkom need real PNG brand assets (same pattern as Vodacom — import from `assets/` folder)
+7. **Test failover end-to-end**: After backend redeployment, verify MobileMart error 1002 correctly triggers Flash failover
+8. **Production featured filter**: Best-offers cache path does not filter by `featured`. Add before production goes live with curated lists
+9. Do NOT reactivate Peach Payments without explicit approval from André
+10. Do NOT add `RmtInf.Ustrd` to Pain.013 — SBSA rejects it
+11. PayShap production callback is an SBSA-side issue (BCB/CIB market segment) — do NOT try to fix in code
+12. npm audit: 9 remaining (5 low, 4 moderate) — all in transitive deps, cannot safely fix
 
 ---
 

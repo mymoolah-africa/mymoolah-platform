@@ -1,5 +1,44 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-03-31 - Biller Sync Script + Catalog Stale Cleanup + Bill Category Fix
+
+### Sync Script Improvements (`scripts/sync-mobilemart-products.js`)
+- **RENAMED** from `sync-mobilemart-production-to-staging.js` — clearer purpose
+- **JSON bug fix** — `denominations` raw JS array failed JSONB INSERT. Wrapped in `JSON.stringify()`. Previously caused 100% product INSERT failures.
+- **Multi-env targeting** — accepts `--staging`, `--production`, `--uat` flags. Routes to correct `db-connection-helper.js` client.
+- **Billers-only filter** — `--billers-only` flag restricts sync to `bill-payment` VAS type only
+- **Production safety** — 5-second countdown + warning when `--production` target is used
+- **Stale product deactivation** — after sync, queries for active MobileMart variants not found in API response → sets `status = 'inactive'` (soft-disable, never delete). Safety guard: skips if 0 products synced.
+
+### Daily Catalog Cron Stale Cleanup (`services/catalogSynchronizationService.js`)
+- **Seen product tracking** — `seenProductIds` map tracks all successfully synced `supplierProductId` per supplier during each sweep
+- **`deactivateStaleProducts(supplier)`** — Sequelize ORM query finds active variants with `supplierProductId NOT IN seenIds`, deactivates them + orphaned parent products
+- **Applies to both MobileMart and Flash** — wired into `sweepSupplierCatalog()` after each supplier's sync completes
+- **Safety guard** — if no products synced (API outage), stale cleanup is skipped
+
+### Bill Payment Category Fix
+- `routes/overlayServices.js` — Added `BILLER_CATEGORY_MAP` (6 categories: insurance, entertainment, education, municipal, telecoms, retail) and `mapBillerCategory(rawCategory)` function. Maps MobileMart `contentCreator`/`provider` to frontend category IDs via keyword matching. Applied to both `/bills/search` and `/bills/categories` routes.
+- `routes/overlayServices.js` — Fixed duplicate `const { VasTransaction }` declaration in `bills/pay` handler that crashed backend on startup. Merged into single declaration.
+- `mymoolah-wallet-frontend/components/overlays/BillPaymentOverlay.tsx` — Added `selectedCategory` state. Category click now sets state and clears search text. Results display when either `selectedCategory` is set or `searchQuery.length >= 2`. Added "Back to categories" button.
+
+### Staging Sync Results
+- 1,205 production billers synced to staging database (802 created, 403 updated, 0 failed)
+
+---
+
+## 2026-03-31 - Biller Payments Hardening (12-Item Audit)
+
+### Banking-Grade Bill Payment Security
+- Idempotency enforcement — duplicate purchase prevention via transaction reference
+- Simulation mode hard-block — 503 in staging/production, no-debit sim in UAT only
+- Input validation — express-validator on all bill payment routes
+- Catalog-first product lookup — verify product exists before calling MobileMart
+- Beneficiary edit/delete wiring — frontend connected to backend CRUD
+- Copy/Share success buttons — post-payment token actions
+- KYC tier gate fix — Tier 0 blocked from deposits
+
+---
+
 ## 2026-03-31 - Data Products UI Redesign, Supplier Failover Fixes, Deploy Env Persistence
 
 ### Deploy Script Hardening
