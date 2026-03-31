@@ -7,13 +7,13 @@ interface IconProps {
 
 export function VodacomIcon({ size = 24 }: IconProps) {
   return (
-    <svg width={size} height={size} viewBox="0 0 64 64" fill="none">
-      <rect width="64" height="64" rx="12" fill="#E60000" />
-      <path
-        d="M38 14a8 8 0 11-3.2 15.3C32 33 27 38 22 42c-1 .8-2.2.2-1.6-1 2.5-5 6-11 10-15.5A8 8 0 0138 14z"
-        fill="#fff"
-      />
-    </svg>
+    <img
+      src="/assets/vodacom-logo.png"
+      alt="Vodacom"
+      width={size}
+      height={size}
+      style={{ borderRadius: '50%', objectFit: 'cover' }}
+    />
   );
 }
 

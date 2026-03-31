@@ -1190,7 +1190,7 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
             let attempts = 0;
 
             try {
-              const { SupplierComparisonService } = require('../services/supplierComparisonService');
+              const SupplierComparisonService = require('../services/supplierComparisonService');
               const comparisonService = new SupplierComparisonService();
               const alternatives = await comparisonService.compareProducts(
                 type,
