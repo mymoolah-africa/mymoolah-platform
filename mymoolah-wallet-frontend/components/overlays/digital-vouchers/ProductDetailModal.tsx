@@ -8,6 +8,22 @@ import { Card, CardContent } from '../../ui/card';
 import { Separator } from '../../ui/separator';
 import { apiService } from '../../../services/apiService';
 
+import oneVoucherLogo from '../../../assets/1voucher-logo.png';
+import betwayLogo from '../../../assets/betway-logo.png';
+import hollywoodLogo from '../../../assets/hollywood-logo.png';
+import ottLogo from '../../../assets/ott-logo.png';
+
+const BRAND_LOGO_MAP: Record<string, string> = {
+  '1voucher': oneVoucherLogo,
+  'betway': betwayLogo,
+  'hollywood bets': hollywoodLogo,
+  'ott voucher': ottLogo,
+};
+
+function getBrandLogo(brandName: string): string | null {
+  return BRAND_LOGO_MAP[brandName.toLowerCase().trim()] || null;
+}
+
 interface Voucher {
   id: string;
   productId?: number;
@@ -144,7 +160,17 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
         return (
           <div className="space-y-5">
             <div className="text-center">
-              <div className="text-4xl mb-2">{voucher.icon}</div>
+              <div className="flex items-center justify-center mb-3" style={{ height: '48px' }}>
+                {getBrandLogo(voucher.name) ? (
+                  <img
+                    src={getBrandLogo(voucher.name)!}
+                    alt={voucher.name}
+                    style={{ maxHeight: '44px', maxWidth: '120px', objectFit: 'contain', borderRadius: '8px' }}
+                  />
+                ) : (
+                  <span className="text-4xl leading-none">{voucher.icon}</span>
+                )}
+              </div>
               <h3 style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '20px', fontWeight: '600', color: '#1f2937', marginBottom: '4px' }}>
                 {voucher.name}
               </h3>

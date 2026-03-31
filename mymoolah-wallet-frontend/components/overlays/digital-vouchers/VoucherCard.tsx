@@ -1,6 +1,11 @@
 import React from 'react';
 import { Star } from 'lucide-react';
 
+import oneVoucherLogo from '../../../assets/1voucher-logo.png';
+import betwayLogo from '../../../assets/betway-logo.png';
+import hollywoodLogo from '../../../assets/hollywood-logo.png';
+import ottLogo from '../../../assets/ott-logo.png';
+
 const _viteMode: string = (import.meta as any).env?.MODE ?? 'production';
 const _viteNodeEnv: string = (import.meta as any).env?.VITE_NODE_ENV ?? '';
 const isUatOrStaging = _viteMode !== 'production' || _viteNodeEnv === 'staging';
@@ -9,6 +14,18 @@ const SUPPLIER_BORDER: Record<string, string> = {
   FLASH: '2px solid #22c55e',
   MOBILEMART: '2px solid #3b82f6',
 };
+
+const BRAND_LOGO_MAP: Record<string, string> = {
+  '1voucher': oneVoucherLogo,
+  'betway': betwayLogo,
+  'hollywood bets': hollywoodLogo,
+  'ott voucher': ottLogo,
+};
+
+function getBrandLogo(brandName: string): string | null {
+  const key = brandName.toLowerCase().trim();
+  return BRAND_LOGO_MAP[key] || null;
+}
 
 interface Voucher {
   id: string;
@@ -40,6 +57,7 @@ function formatRands(cents: number): string {
 export function VoucherCard({ voucher, isFavorite, canFavorite = true, onSelect, onToggleFavorite }: VoucherCardProps) {
   const supplierKey = (voucher.supplierCode || '').toUpperCase();
   const supplierBorder = isUatOrStaging ? (SUPPLIER_BORDER[supplierKey] ?? undefined) : undefined;
+  const brandLogo = getBrandLogo(voucher.name);
 
   const priceLabel = voucher.isVariable
     ? `${formatRands(voucher.minAmount)} – ${formatRands(voucher.maxAmount)}`
@@ -79,8 +97,21 @@ export function VoucherCard({ voucher, isFavorite, canFavorite = true, onSelect,
         </div>
       )}
 
-      <div className="text-center mb-2">
-        <span className="text-2xl">{voucher.icon}</span>
+      <div className="flex items-center justify-center mb-2" style={{ height: '40px' }}>
+        {brandLogo ? (
+          <img
+            src={brandLogo}
+            alt={voucher.name}
+            style={{
+              maxHeight: '36px',
+              maxWidth: '72px',
+              objectFit: 'contain',
+              borderRadius: '6px',
+            }}
+          />
+        ) : (
+          <span className="text-2xl leading-none">{voucher.icon}</span>
+        )}
       </div>
 
       <h3
