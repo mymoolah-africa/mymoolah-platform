@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-01 00:40  
-**Latest Feature**: **Voucher Overlay Overhaul (Complete)** — Full audit and rebuild of voucher overlay across 4 commits. Backend: `VOUCHER_BRAND_TABLE` (40-entry brand recognition) maps raw supplier names to canonical brands, commission-based Flash/MobileMart dedup, variable-value vs fixed-denomination detection. Frontend: rebuilt all 4 components (~1,770 → ~700 lines), removed recipient/send-to-self from purchase modal, added real PNG brand logos (1Voucher, Betway, Hollywood Bets, OTT). Registered inline overlay purchase logic as tech debt. Andre confirmed working.  
-**Document Version**: 2.58.0  
+**Last Updated**: 2026-04-01 01:15  
+**Latest Feature**: **Voucher Overlay Overhaul + Flash Sync Script** — Full audit and rebuild of voucher overlay across 5 commits. Backend: `VOUCHER_BRAND_TABLE` (40-entry brand recognition), commission-based dedup, variable/fixed detection. Frontend: rebuilt 4 components (~1,770 → ~700 lines), removed recipient/send-to-self, added PNG brand logos. New `sync-flash-products.js` manual sync script mirrors `sync-mobilemart-products.js` pattern (db-connection-helper, Secret Manager, --vouchers-only/--staging/--production flags, stale cleanup). Tested on staging: 101 products synced, 0 failures.  
+**Document Version**: 2.59.0  
 **Session logs**: `docs/session_logs/2026-03-31_2359_voucher-overlay-overhaul.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
@@ -722,13 +722,13 @@ You're part of a **banking-grade software system** where:
 ### **Next Agent Actions**
 1. Read `docs/CURSOR_2.0_RULES_FINAL.md` (MANDATORY)
 2. Read this file and 2–3 recent session logs (especially `2026-03-31_2359_voucher-overlay-overhaul.md`)
-3. **Sync vouchers to staging**: `node scripts/sync-mobilemart-products.js --vouchers-only --staging`
-4. **Sync vouchers to production**: `node scripts/sync-mobilemart-products.js --vouchers-only --production`
-5. **Deploy**: `./scripts/build-push-deploy-staging.sh` then `./scripts/build-push-deploy-production.sh`
-6. **Production biller sync** — Run `node scripts/sync-mobilemart-products.js --production --billers-only` to populate production DB
-7. **KYC OCR debugging** — André will test KYC and provide backend logs. Look for `OpenAI OCR attempt` log lines.
-8. **Add more brand logos**: As André sources them — Steam, Netflix, Google Play, Roblox, MTN, CellC, Telkom (same Vite import pattern)
-9. **Test failover end-to-end**: After backend redeployment, verify MobileMart error 1002 correctly triggers Flash failover
+3. **Sync vouchers to production**: `node scripts/sync-mobilemart-products.js --vouchers-only --production` and `node scripts/sync-flash-products.js --vouchers-only --production`
+4. **Deploy**: `./scripts/build-push-deploy-staging.sh` then `./scripts/build-push-deploy-production.sh`
+5. **Production biller sync** — Run `node scripts/sync-mobilemart-products.js --production --billers-only` to populate production DB
+6. **KYC OCR debugging** — André will test KYC and provide backend logs. Look for `OpenAI OCR attempt` log lines.
+7. **Add more brand logos**: As André sources them — Steam, Netflix, Google Play, Roblox, MTN, CellC, Telkom (same Vite import pattern)
+8. **Test failover end-to-end**: After backend redeployment, verify MobileMart error 1002 correctly triggers Flash failover
+9. **Test daily 02:00 cron**: Trigger manually via `node -e "require('dotenv').config(); new (require('./services/catalogSynchronizationService'))().runDailySweep().then(()=>process.exit(0))"` in Codespaces
 10. **Future refactor (tech debt)**: Extract airtime/electricity/biller purchase logic from overlayServices.js into service classes (~9-13 hours, 1-2 sessions)
 11. Do NOT reactivate Peach Payments without explicit approval from André
 12. Do NOT add `RmtInf.Ustrd` to Pain.013 — SBSA rejects it

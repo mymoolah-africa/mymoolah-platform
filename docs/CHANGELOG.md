@@ -1,6 +1,6 @@
 # MyMoolah Treasury Platform - Changelog
 
-## 2026-04-01 - Voucher Overlay Overhaul (4 commits)
+## 2026-04-01 - Voucher Overlay Overhaul (6 commits)
 
 ### Backend — Brand-Level Catalog Route (`routes/overlayServices.js`)
 - **New route**: `GET /api/v1/overlay/vouchers/catalog` — dedicated voucher catalog endpoint
@@ -22,8 +22,9 @@
 - Imported via Vite modules (same pattern as Vodacom logo)
 - Professional sizing with `object-fit: contain` and rounded corners
 
-### Sync Script (`scripts/sync-mobilemart-products.js`)
-- Added `--vouchers-only` flag (mirrors `--billers-only`)
+### Sync Scripts
+- `scripts/sync-mobilemart-products.js` — Added `--vouchers-only` flag (mirrors `--billers-only`)
+- `scripts/sync-flash-products.js` — **New**. Manual Flash product sync mirroring MobileMart script pattern. Uses `db-connection-helper.js`, loads credentials from GCP Secret Manager, supports `--staging`/`--production`/`--uat` + `--vouchers-only`/`--airtime-only`/`--electricity-only`/`--billers-only` flags. Includes stale product deactivation. Tested on staging: 101 products, 0 failures.
 
 ### Architecture
 - Purchase stays on `productPurchaseService.js` (banking-grade: ACID, idempotency, circuit breaker)

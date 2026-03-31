@@ -74,6 +74,7 @@ Full audit and overhaul of the digital voucher overlay system — the last overl
 | `c2536c80` | fix: voucher catalog — brand-level grouping, remove popular suggestions, fix stale favorites |
 | `a18f25dd` | fix: remove recipient/send-to-self from voucher purchase modal |
 | `92c82fb9` | feat: add real brand logos for 1Voucher, Betway, Hollywood Bets, OTT Voucher |
+| `8b9e7204` | feat: add sync-flash-products.js manual sync script |
 
 ---
 
