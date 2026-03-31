@@ -178,49 +178,92 @@ router.get('/airtime-data/catalog', auth, async (req, res) => {
     // When true, collapse same rand amount to one row (legacy). When false (UAT/staging), keep one row per supplier.
     const catalogDedupeByAmountOnly = useBestOffersCatalogDisplay();
     
-    // Get products from database instead of calling supplier APIs
+    // Get products from database instead of calling supplier APIs.
+    // Primary source: ProductVariant (normalized, populated by daily catalog sync).
+    // Fallback: VasProduct (legacy, may be populated on UAT).
     let airtimeProducts = [];
     let dataProducts = [];
     
     try {
-      const { VasProduct } = require('../models');
+      const { ProductVariant, Product, Supplier, VasProduct } = require('../models');
       
-      // Determine if this is a Global provider selection coming from beneficiary
       const isGlobalAirtime = beneficiaryNetwork === 'global-airtime';
       const isGlobalData = beneficiaryNetwork === 'global-data';
-
-      // Get airtime and data products from database, filtered by network (or Global) and transaction type
-      // Use case-insensitive comparison to handle different capitalization (Vodacom vs vodacom vs VODACOM)
       const networkFilter = isGlobalAirtime ? 'Global' : (isGlobalData ? 'Global' : beneficiaryNetwork);
-      
-      airtimeProducts = await VasProduct.findAll({
-        where: {
-          vasType: 'airtime',
-          isActive: true,
-          provider: {
-            [Op.iLike]: networkFilter // Case-insensitive match
-          },
-          transactionType: 'topup' // Only show top-ups, not vouchers
-        },
-        order: [['priority', 'ASC'], ['productName', 'ASC']]
+
+      // Try ProductVariant first (normalized catalog, populated by daily 02:00 sync)
+      const pvWhere = (vasType) => ({
+        vasType,
+        status: 'active',
+        provider: { [Op.iLike]: networkFilter },
+        ...(vasType === 'airtime' || vasType === 'data' ? { transactionType: 'topup' } : {})
       });
-      
-      dataProducts = await VasProduct.findAll({
-        where: {
-          vasType: 'data',
-          isActive: true,
-          provider: {
-            [Op.iLike]: networkFilter // Case-insensitive match
-          },
-          transactionType: 'topup' // Only show top-ups, not vouchers
-        },
-        order: [['priority', 'ASC'], ['productName', 'ASC']]
+
+      let pvAirtime = await ProductVariant.findAll({
+        where: pvWhere('airtime'),
+        include: [
+          { model: Product, as: 'product', attributes: ['name', 'supplierProductId'] },
+          { model: Supplier, as: 'supplier', attributes: ['code', 'name'] }
+        ],
+        order: [['priority', 'ASC'], ['provider', 'ASC']]
       });
-      
-      console.log(`✅ Found ${airtimeProducts.length} airtime products and ${dataProducts.length} data products for ${beneficiaryNetwork}`);
+
+      let pvData = await ProductVariant.findAll({
+        where: pvWhere('data'),
+        include: [
+          { model: Product, as: 'product', attributes: ['name', 'supplierProductId'] },
+          { model: Supplier, as: 'supplier', attributes: ['code', 'name'] }
+        ],
+        order: [['priority', 'ASC'], ['provider', 'ASC']]
+      });
+
+      if (pvAirtime.length > 0 || pvData.length > 0) {
+        // Map ProductVariant rows to the same shape the rest of this route expects
+        const mapPV = (pv) => ({
+          id: pv.id,
+          supplierId: pv.supplier?.code || 'UNKNOWN',
+          supplierProductId: pv.supplierProductId || pv.product?.supplierProductId || '',
+          productName: pv.product?.name || pv.provider || 'Product',
+          vasType: pv.vasType,
+          transactionType: pv.transactionType || 'topup',
+          provider: pv.provider,
+          networkType: pv.networkType || 'local',
+          predefinedAmounts: pv.predefinedAmounts || pv.denominations || [],
+          minAmount: pv.minAmount || 0,
+          maxAmount: pv.maxAmount || 999999,
+          commission: parseFloat(pv.commission) || pv.pricing?.defaultCommissionRate || 0,
+          fixedFee: pv.fixedFee || 0,
+          isActive: pv.status === 'active',
+          priority: pv.priority || 1,
+          metadata: pv.metadata || {}
+        });
+        airtimeProducts = pvAirtime.map(mapPV);
+        dataProducts = pvData.map(mapPV);
+        console.log(`✅ ProductVariant: ${airtimeProducts.length} airtime + ${dataProducts.length} data products for ${beneficiaryNetwork}`);
+      } else {
+        // Fallback to legacy VasProduct table (UAT compatibility)
+        airtimeProducts = await VasProduct.findAll({
+          where: {
+            vasType: 'airtime',
+            isActive: true,
+            provider: { [Op.iLike]: networkFilter },
+            transactionType: 'topup'
+          },
+          order: [['priority', 'ASC'], ['productName', 'ASC']]
+        });
+        dataProducts = await VasProduct.findAll({
+          where: {
+            vasType: 'data',
+            isActive: true,
+            provider: { [Op.iLike]: networkFilter },
+            transactionType: 'topup'
+          },
+          order: [['priority', 'ASC'], ['productName', 'ASC']]
+        });
+        console.log(`✅ VasProduct fallback: ${airtimeProducts.length} airtime + ${dataProducts.length} data products for ${beneficiaryNetwork}`);
+      }
     } catch (modelError) {
-      console.error('❌ Error loading VasProduct model:', modelError);
-      // Fallback to mock data if model is not available
+      console.error('❌ Error loading catalog models:', modelError);
       airtimeProducts = [];
       dataProducts = [];
     }

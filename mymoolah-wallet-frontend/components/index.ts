@@ -1,19 +1,19 @@
-// Export all overlay components for easy importing
-export { AirtimeDataOverlay } from './AirtimeDataOverlay';
-export { ElectricityOverlay } from './ElectricityOverlay';
-export { BillPaymentOverlay } from './BillPaymentOverlay';
-export { FlashEeziCashOverlay } from './flash-eezicash/FlashEeziCashOverlay';
-export { MMCashRetailOverlay } from './mmcash-retail/MMCashRetailOverlay';
-export { ATMCashSendOverlay } from './atm-cashsend/ATMCashSendOverlay';
+// Overlay components — canonical source is components/overlays/
+export { AirtimeDataOverlay } from './overlays/AirtimeDataOverlay';
+export { ElectricityOverlay } from './overlays/ElectricityOverlay';
+export { BillPaymentOverlay } from './overlays/BillPaymentOverlay';
+export { FlashEeziCashOverlay } from './overlays/flash-eezicash/FlashEeziCashOverlay';
+export { MMCashRetailOverlay } from './overlays/mmcash-retail/MMCashRetailOverlay';
+export { ATMCashSendOverlay } from './overlays/atm-cashsend/ATMCashSendOverlay';
 export { BeneficiaryModal } from './shared/BeneficiaryModal';
 
 // Digital Vouchers Overlay Components
-export { DigitalVouchersOverlay } from './digital-vouchers/DigitalVouchersOverlay';
-export { VoucherCard } from './digital-vouchers/VoucherCard';
-export { VoucherSearch } from './digital-vouchers/VoucherSearch';
-export { ProductDetailModal } from './digital-vouchers/ProductDetailModal';
+export { DigitalVouchersOverlay } from './overlays/digital-vouchers/DigitalVouchersOverlay';
+export { VoucherCard } from './overlays/digital-vouchers/VoucherCard';
+export { VoucherSearch } from './overlays/digital-vouchers/VoucherSearch';
+export { ProductDetailModal } from './overlays/digital-vouchers/ProductDetailModal';
 
-// Export shared components
+// Shared components
 export { BeneficiaryList } from './shared/BeneficiaryList';
 export { ConfirmSheet } from './shared/ConfirmSheet';
 export { SearchBar } from './shared/SearchBar';

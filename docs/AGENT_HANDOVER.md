@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-31 10:30  
-**Latest Feature**: **NPM Audit Fix + Hardcoded Data Cleanup + Production Readiness** — Fixed 16 npm vulnerabilities (25→9, zero critical/high), removed all hardcoded PII from codebase (14 files), fixed production env vars (GCS perms, encryption keys, statement poller), aligned voucher schema, upgraded nodemailer 7→8. Deployed staging (00306-m8s) and production (00053-29p) as tag `20260331_v2`.  
-**Document Version**: 2.46.0  
-**Session logs**: `docs/session_logs/2026-03-31_1030_npm-audit-hardcoded-cleanup-production-readiness.md`, `docs/session_logs/2026-03-30_1030_ussd-fix-kyc-ui-payshap-inbound.md`  
+**Last Updated**: 2026-03-31 14:00  
+**Latest Feature**: **VAS Catalog & Frontend Fixes** — Fixed critical data flow gap: airtime/data overlay now reads from normalized `product_variants` (populated by daily sync) instead of empty legacy `vas_products`. Fixed ServicesPage broken navigation, replaced placeholder pages, removed 158KB dead frontend code (5 duplicate files). All VAS overlay catalog routes now use normalized schema.  
+**Document Version**: 2.47.0  
+**Session logs**: `docs/session_logs/2026-03-31_1400_vas-catalog-frontend-fixes.md`, `docs/session_logs/2026-03-31_1030_npm-audit-hardcoded-cleanup-production-readiness.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -664,14 +664,18 @@ You're part of a **banking-grade software system** where:
 
 ## 🎯 **CURRENT SESSION SUMMARY**
 
-**Session Status**: ✅ **COMPLETE** — NPM Audit Fix + Hardcoded Cleanup + Production Readiness  
-**Last Session**: 2026-03-31 — Security hardening, PII removal, production env fixes, deployments
+**Session Status**: ✅ **COMPLETE** — VAS Catalog & Frontend Fixes  
+**Last Session**: 2026-03-31 14:00 — Catalog data flow fix, frontend navigation fixes, dead code cleanup
 
-### **Most Recent Work (2026-03-31)**
-- **NPM audit remediation**: Fixed 16 of 25 vulnerabilities (1 critical basic-ftp, 6 high including sequelize SQL injection, axios DoS, path-to-regexp/minimatch/picomatch ReDoS). Upgraded nodemailer 7→8 (SMTP injection fix). Remaining 9 (5 low, 4 moderate) are in transitive deps of @google-cloud/storage and langchain — cannot safely fix without breaking those libraries.
-- **Hardcoded PII removal**: Full codebase sweep — removed hardcoded phone numbers, userId===1 KYC bypass, real PII in OCR examples, admin portal credentials, personal emails in migration defaults. 14 files modified.
-- **Production readiness fixes**: Granted GCS objectViewer to production SA, set SBSA_STATEMENT_POLLER_ENABLED=true, linked FIELD_ENCRYPTION_KEY and FIELD_HMAC_KEY from Secret Manager, aligned voucher schema (voucherId→voucherCode, amount→originalAmount, expiryDate→expiresAt).
-- **Deployments**: Staging (00306-m8s) and production (00053-29p) deployed as tag `20260331_v2`. Both confirmed serving 100% traffic.
+### **Most Recent Work (2026-03-31 14:00)**
+- **Airtime/data catalog data flow fix**: The overlay route at `GET /api/v1/overlay/airtime-data/catalog` was reading from `VasProduct` (legacy table, empty on staging/production). Updated to read from `ProductVariant` (normalized, populated by daily 02:00 catalog sync) with `VasProduct` as fallback. Electricity and bill payment routes already used `ProductVariant` — no changes needed.
+- **ServicesPage navigation fix**: The `/services` page navigated to non-existent routes (`/airtime/voucher`, `/airtime/topup`, etc.). Fixed to route to working overlays (`/airtime-data-overlay`, `/flash-eezicash-overlay`, `/electricity-overlay`, `/bill-payment-overlay`).
+- **Placeholder pages replaced**: `/electricity` and `/bill-payments` "Coming Soon" div placeholders replaced with `<Navigate>` redirects to working overlay routes.
+- **Dead frontend code removed**: 5 duplicate overlay files in `components/` root (~158KB) deleted. Updated barrel file `components/index.ts` to point to canonical `components/overlays/` paths.
+- **All VAS overlays verified**: Airtime/data, electricity, bill payments, digital vouchers — all confirmed to read from normalized `products`/`product_variants` schema.
+
+### **Previous Work (2026-03-31 10:30)**
+- **NPM audit remediation**: Fixed 16/25 vulnerabilities (zero critical/high remaining). Hardcoded PII removed (14 files). Production env fixes. Deployed staging + production as `20260331_v2`.
 
 ### **Previous Work (2026-03-25)**
 - **PayShap RTP Pain.013 fixes**: Fixed EDRIL rejection (CdtrRefInf.Ref 35-char limit), Ustrd rejection (removed), DuePyblAmt (net amount), PADCL priority. Creditor name in CdtrRefInf.Ref. Per-bank account normalization.
@@ -687,12 +691,13 @@ You're part of a **banking-grade software system** where:
 ### **Next Agent Actions**
 1. Read `docs/CURSOR_2.0_RULES_FINAL.md` (MANDATORY)
 2. Read this file and 2–3 recent session logs
-3. **PRIMARY TASK**: VAS products on staging and production (MobileMart + Flash)
-4. Do NOT reactivate Peach Payments without explicit approval from Andre
-5. Do NOT add `RmtInf.Ustrd` to Pain.013 — SBSA rejects it
-6. PayShap production callback is an SBSA-side issue (BCB/CIB market segment) — do NOT try to fix in code
-7. npm audit: 9 remaining (5 low, 4 moderate) — all in transitive deps, cannot safely fix
-8. Confirm with user: "✅ Onboarding complete. Ready to work. What would you like me to do?"
+3. **Deploy to staging/production**: VAS catalog fixes need deployment — `./scripts/deploy-backend.sh --staging` then `--production`
+4. **Test VAS overlays in Codespaces**: Airtime/data, electricity, bill payments, digital vouchers
+5. **Consider VasProduct sync optimization**: Purchase flow creates VasProduct records on-the-fly; adding sync to `CatalogSynchronizationService` would improve first-purchase latency
+6. Do NOT reactivate Peach Payments without explicit approval from Andre
+7. Do NOT add `RmtInf.Ustrd` to Pain.013 — SBSA rejects it
+8. PayShap production callback is an SBSA-side issue (BCB/CIB market segment) — do NOT try to fix in code
+9. npm audit: 9 remaining (5 low, 4 moderate) — all in transitive deps, cannot safely fix
 
 ---
 
@@ -700,6 +705,7 @@ You're part of a **banking-grade software system** where:
 
 | Date | Update |
 |------|--------|
+| Mar 31 (14:00) | **VAS catalog & frontend fixes**: Fixed airtime/data overlay to read from `ProductVariant` (daily sync) instead of empty `VasProduct`. Fixed ServicesPage broken navigation. Replaced placeholder pages. Removed 158KB dead duplicate frontend code. All VAS overlays verified on normalized schema. Session log: `docs/session_logs/2026-03-31_1400_vas-catalog-frontend-fixes.md` |
 | Mar 31 (10:30) | **NPM audit fix + hardcoded cleanup + production readiness**: Fixed 16/25 npm vulnerabilities (zero critical/high remaining). Removed all hardcoded PII (14 files). Fixed production GCS perms, encryption keys, statement poller. Voucher schema aligned. Nodemailer 7→8. Deployed staging (00306-m8s) + production (00053-29p) as `20260331_v2`. Session log: `docs/session_logs/2026-03-31_1030_npm-audit-hardcoded-cleanup-production-readiness.md` |
 | Mar 25 (14:00) | **PayShap RTP fixes + creditor name + PASA TPPP withdrawal**: Fixed EDRIL, Ustrd, DuePyblAmt, PADCL priority. Creditor name in CdtrRefInf.Ref — Capitec confirms "Andre Botes: MyMoolah RTP Test". Per-bank account normalization. PASA withdrawal response for Shree (email + flow diagrams). Session log: `docs/session_logs/2026-03-25_1100_payshap-rtp-fixes-pasa-tppp-withdrawal.md` |
 | Mar 24 (19:00) | **SBSA H2H documentation sync**: Updated all docs with confirmed status — Open Internet (not VPN), PGP not required, file names/directories confirmed, SFTP username OWN11, MT942 every 15 min. Added SBSA SOAP CHANGELOG entry. Cleaned up duplicate priorities. |
@@ -734,7 +740,7 @@ You're part of a **banking-grade software system** where:
 
 ## 🚀 **NEXT DEVELOPMENT PRIORITIES**
 
-1. **Staging & Production VAS Products** — André's next priority (Sunday morning). Configure and test VAS product catalog in staging and production environments.
+1. ~~**Staging & Production VAS Products**~~ — ✅ DONE (2026-03-31 14:00). All overlay catalog routes now read from normalized `product_variants` (populated by daily sync). Frontend navigation fixed. Needs deployment and testing.
 2. **SBSA PayShap Production Callback** — Louis Van Zyl investigating why real PayShap deposits don't trigger production callbacks (inward queue issue). Sandbox callbacks confirmed working (6/6). Production callback URL registered: `https://api-mm.mymoolah.africa/api/v1/standardbank/payshap/inbound-credit`.
 3. **SBSA H2H SFTP Channel** — Melanie Block enabling SFTP channel. Pain.001 v3 file passed SSVS validator. Test file with valid beneficiaries uploaded to GCS outbox. Awaiting channel activation to test file pickup and Pain.002 return.
 4. **EasyPay legal follow-up** — Await Nkululeko / EasyPay legal response to TPPP/NPS positioning email (sent/drafted 2026-03-24). Offer Standard Bank sponsor letter or PASA application pack if requested. Session log: `docs/session_logs/2026-03-24_1530_easypay-tppp-legal-response-draft.md`.

@@ -121,8 +121,8 @@ function AppContent() {
             <Route path="/feedback" element={<ProtectedRoute><FeedbackPage /></ProtectedRoute>} />
             <Route path="/referrals" element={<ProtectedRoute><ReferralPage /></ProtectedRoute>} />
             <Route path="/loyalty-promotions" element={<ProtectedRoute><LoyaltyPromotionsPage /></ProtectedRoute>} />
-            <Route path="/electricity" element={<ProtectedRoute><div>Electricity Page - Coming Soon</div></ProtectedRoute>} />
-            <Route path="/bill-payments" element={<ProtectedRoute><div>Bill Payments Page - Coming Soon</div></ProtectedRoute>} />
+            <Route path="/electricity" element={<Navigate to="/electricity-overlay" replace />} />
+            <Route path="/bill-payments" element={<Navigate to="/bill-payment-overlay" replace />} />
             
             {/* Overlay Routes */}
             <Route path="/airtime-data-overlay" element={<ProtectedRoute><AirtimeDataOverlay /></ProtectedRoute>} />

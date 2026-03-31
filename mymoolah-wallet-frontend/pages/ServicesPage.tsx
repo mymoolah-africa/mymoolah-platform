@@ -155,22 +155,25 @@ export function ServicesPage() {
         return;
       }
 
-      // Navigate to appropriate service page
+      // Route to the correct overlay page for each service type
       switch (service.type) {
         case 'voucher':
-          navigate('/airtime/voucher');
-          break;
         case 'topup':
-          navigate('/airtime/topup');
+        case 'data':
+        case 'global':
+          navigate('/airtime-data-overlay');
           break;
         case 'eezi':
-          navigate('/airtime/eezi');
+          navigate('/flash-eezicash-overlay');
           break;
-        case 'global':
-          navigate('/airtime/global');
+        case 'electricity':
+          navigate('/electricity-overlay');
+          break;
+        case 'bill-payment':
+          navigate('/bill-payment-overlay');
           break;
         default:
-          console.error('Unknown service type:', service.type);
+          navigate('/transact');
       }
     } catch (error) {
       console.error('Error navigating to service:', error);
