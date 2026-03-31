@@ -172,23 +172,44 @@ class SupplierComparisonService {
             whereClause.maxAmount = { [Op.gte]: amount };
         }
 
-        return await ProductVariant.findAll({
+        // For data products, prefer curated featured products for the target market.
+        // Falls back to all active data products if curation hasn't run yet.
+        if (vasType === 'data') {
+            whereClause.featured = true;
+        }
+
+        const includeOpts = [
+            {
+                model: Product,
+                as: 'product',
+                attributes: ['id', 'name', 'type', 'status'],
+                where: productWhere
+            },
+            {
+                model: Supplier,
+                as: 'supplier',
+                attributes: ['id', 'name', 'code', 'isActive']
+            }
+        ];
+        const orderOpts = [['commission', 'DESC'], ['isPromotional', 'DESC'], ['priority', 'ASC']];
+
+        let results = await ProductVariant.findAll({
             where: whereClause,
-            include: [
-                {
-                    model: Product,
-                    as: 'product',
-                    attributes: ['id', 'name', 'type', 'status'],
-                    where: productWhere
-                },
-                {
-                    model: Supplier,
-                    as: 'supplier',
-                    attributes: ['id', 'name', 'code', 'isActive']
-                }
-            ],
-            order: [['commission', 'DESC'], ['isPromotional', 'DESC'], ['priority', 'ASC']]
+            include: includeOpts,
+            order: orderOpts
         });
+
+        // Fallback: if featured filter returned nothing, return all active data products
+        if (results.length === 0 && vasType === 'data') {
+            delete whereClause.featured;
+            results = await ProductVariant.findAll({
+                where: whereClause,
+                include: includeOpts,
+                order: orderOpts
+            });
+        }
+
+        return results;
     }
 
     /**
