@@ -1,84 +1,79 @@
 # Session Log: Voucher Overlay Overhaul
 
-**Date**: 2026-03-31 23:59
-**Duration**: ~1 session
+**Date**: 2026-03-31 23:59 → 2026-04-01 00:40
+**Duration**: ~2 hours
 **Agent**: Claude 4.6 Opus (Thinking)
 
 ---
 
 ## Summary
 
-Full audit and overhaul of the digital voucher overlay system — the last overlay to fix before production user launch. Added a dedicated backend catalog route (matching the biller pattern), simplified the frontend to remove ~400 lines of client-side enrichment logic, rebuilt all 4 overlay components with proper variable-value vs fixed-denomination handling, added commission-based deduplication between Flash and MobileMart suppliers, and created a `--vouchers-only` sync script flag.
+Full audit and overhaul of the digital voucher overlay system — the last overlay to fix before production user launch. Four commits covering: (1) backend catalog route with commission-based dedup, (2) brand-level product grouping to eliminate raw supplier names, (3) recipient/send-to-self removal from purchase modal, (4) real PNG brand logos for 1Voucher, Betway, Hollywood Bets, and OTT Voucher. Also identified and registered inline purchase logic in airtime/electricity/biller overlays as architectural tech debt (~1,200 lines, ~9-13 hours to refactor).
 
 ---
 
 ## Tasks Completed
 
 ### 1. Backend — Voucher Catalog Route (overlayServices.js)
-- Added `GET /api/v1/overlay/vouchers/catalog` route modeled on the biller pattern
-- Added `filterVoucherVariantsForCatalog()` — deduplicates by brand name, keeps highest commission, Flash wins tiebreaks
-- Added `mapVoucherCategory()` with 6 categories: gaming, entertainment, betting, shopping, transport, lifestyle
-- Added `getVoucherIcon()` with 25 brand-specific icon mappings
-- Added `cleanVoucherDisplayName()` to strip "Voucher", "Gift Card", "Token" suffixes and price ranges
-- Route queries `ProductVariant + Product + Supplier`, deduplicates, groups by brand, determines variable vs fixed, sorts A-Z
-- Supports `?q=` search and `?category=` filter query params
-- Returns `{ vouchers, categories, total }` in standard overlay format
+- Added `GET /api/v1/overlay/vouchers/catalog` route
+- Initial version used name-based dedup (commit 1), then replaced with `VOUCHER_BRAND_TABLE` — a 40-entry brand recognition table that maps raw supplier names to canonical brands (commit 2)
+- "100 diamonds", "1080 diamonds", "530 diamonds" all map to "Free Fire" (one card)
+- "60 UC", "300 + 25 UC", "1500 + 300 UC" all map to "PUBG Mobile" (one card)
+- "$10 Credit", "$30 Credit" map to "Apple Credit" (one card)
+- Unrecognised products excluded from catalog (no more garbage names)
+- Per-brand: picks the supplier with highest commission (Flash tiebreak), then collapses that supplier's variants into one card
+- Variable-value products show free-text input; fixed-denomination show picker buttons
+- Supports `?q=` search and `?category=` filter
+- Returns `{ vouchers, categories, total }`
 
 ### 2. Sync Script — --vouchers-only Flag (sync-mobilemart-products.js)
 - Added `--vouchers-only` flag alongside existing `--billers-only`
-- When set, `vasTypes = ['voucher']` only
 - Updated CLI help text and argument parsing
 
 ### 3. Daily Cron Audit
 - Verified `catalogSynchronizationService.js` already includes `'voucher'` in VAS_TYPES
-- Verified `deactivateStaleProducts()` runs per supplier after each sweep
-- No changes needed — voucher stale cleanup is already working
+- Verified `deactivateStaleProducts()` runs after each sweep
+- No changes needed
 
 ### 4. Frontend — apiService.ts Simplification
-- Replaced 220-line `getVouchers()` function with 15-line version calling new overlay route
+- Replaced 220-line `getVouchers()` with 15-line version calling new overlay route
 - Removed dead helper methods: `mapCategory()`, `getVoucherIcon()`, `generateVoucherDenominations()`
-- Removed all client-side enrichment, normalization, grouping logic (now server-side)
-- Net reduction: ~300 lines removed from apiService.ts
+- Net reduction: ~300 lines
 
-### 5. Frontend — DigitalVouchersOverlay.tsx Rebuild
-- Simplified from 398 to 195 lines
-- Fixed `featured` vs favorites conflation — favorites now use a separate `isFavorite` boolean
-- Removed all `console.log` calls
-- Removed dead `getFavoriteCount` function
-- Added dynamic popular search suggestions from catalog data
-- Proper loading, error, and empty states
+### 5. Frontend — All 4 Overlay Components Rebuilt
+- **DigitalVouchersOverlay.tsx**: 398 → ~185 lines. Fixed favorites/featured conflation. Stale favorites pruned on load.
+- **ProductDetailModal.tsx**: 863 → ~250 lines. Removed recipient/send-to-self entirely. Shows real backend errors. Added brand logo support.
+- **VoucherCard.tsx**: Rebuilt with brand logo support (PNG logos for 1Voucher, Betway, Hollywood Bets, OTT; emoji fallback). Price range display.
+- **VoucherSearch.tsx**: 106 → 45 lines. Removed "Popular:" suggestions (bad UX). Fixed dual-state bug.
 
-### 6. Frontend — VoucherCard.tsx Rebuild
-- Simplified from 106 to 113 lines (cleaner, more feature-rich)
-- Shows price range for variable products (e.g., "R10 – R500")
-- Shows "X options" for fixed-denomination products
-- Removed duplicate click handler (outer div vs inner button)
-- Uses brand green (#86BE41) instead of gradient
-- Separate `isFavorite` and `canFavorite` props (not conflated with `featured`)
+### 6. Recipient / Send-to-Self Removed
+- Entire recipient section removed from purchase modal
+- User receives voucher code on success, copies it, and can WhatsApp to anyone
+- Matches UX pattern of other purchase modals
+- Removed ~140 lines including phone validation, MMWallet verification, recipient state
 
-### 7. Frontend — ProductDetailModal.tsx Rebuild
-- Reduced from 863 to 330 lines
-- Removed unused imports (`CreditCard`, `Info`)
-- Removed dead `validateEmail` function
-- Shows actual backend error messages on purchase failure (not generic message)
-- Replaced inline `@keyframes spin` with Tailwind `animate-spin`
-- Fixed modal positioning — removed hardcoded `top: 120px`, uses standard centering
-- Uses brand green (#86BE41) for selected denomination (not gradient)
-- Removed all `console.log` calls
+### 7. Real Brand Logos
+- Added PNG brand assets: `1voucher-logo.png`, `betway-logo.png`, `hollywood-logo.png`, `ott-logo.png`
+- Imported via Vite modules (same pattern as Vodacom in NetworkIcons.tsx)
+- VoucherCard: 36px height, 72px max width, 6px border radius
+- ProductDetailModal: 44px height, 120px max width, 8px border radius
+- `object-fit: contain` ensures logos aren't distorted regardless of source aspect ratio
 
-### 8. Frontend — VoucherSearch.tsx Rebuild
-- Simplified from 106 to 64 lines
-- Fixed dual state bug — removed local `searchValue` state, uses parent `searchQuery` directly
-- Dynamic suggestions via `suggestions` prop (from catalog, not hardcoded)
-- Cleaner hover states
+### 8. Legacy Cleanup + Tech Debt
+- Deleted 4 files from `components/digital-vouchers/` (legacy duplicate)
+- Registered "Airtime/Electricity/Biller purchase logic inline in route handler (~1,200 lines)" as tech debt
+- Documented architectural decision: voucher overlay uses `productPurchaseService` (banking-grade pattern)
 
-### 9. Legacy Duplicate Deletion
-- Deleted 4 files from `components/digital-vouchers/` (legacy duplicate, not imported)
-- Verified no imports reference the deleted directory
+---
 
-### 10. Tech Debt Registered
-- Added "Airtime/Electricity/Biller purchase logic inline in route handler (~1,200 lines)" to tech debt register
-- Documented architectural decision: voucher overlay uses `productPurchaseService` (correct pattern)
+## Commits (4)
+
+| Commit | Description |
+|--------|------------|
+| `09db622d` | feat: voucher overlay overhaul — backend catalog route, frontend rebuild, commission dedup |
+| `c2536c80` | fix: voucher catalog — brand-level grouping, remove popular suggestions, fix stale favorites |
+| `a18f25dd` | fix: remove recipient/send-to-self from voucher purchase modal |
+| `92c82fb9` | feat: add real brand logos for 1Voucher, Betway, Hollywood Bets, OTT Voucher |
 
 ---
 
@@ -86,61 +81,49 @@ Full audit and overhaul of the digital voucher overlay system — the last overl
 
 | Decision | Reason |
 |----------|--------|
-| Keep purchase on `productPurchaseService.js`, not inline in overlayServices.js | Banking-grade: ACID transactions, idempotency, circuit breaker, testability. The inline pattern in other overlays is tech debt. |
-| Server-side enrichment and dedup (not client-side) | Removes ~300 lines from frontend, reduces data transfer, consistent behavior |
-| Commission-based deduplication with Flash tiebreak | Flash wins on 13/17 overlapping products. MobileMart wins on 3 (HollywoodBets, Showmax, OTT). |
-| Separate `isFavorite` from `featured` | Previous code conflated user favorites with backend featured flag |
-| Brand green (#86BE41) for UI elements | Consistent with global design system |
-
----
-
-## Commission Comparison Summary (from product sheets)
-
-| Overlap Count | Flash Wins | MobileMart Wins | Tie |
-|--------------|-----------|----------------|-----|
-| 17 | 13 | 3 | 1 |
-
-Flash-exclusive: 1Voucher, Flash Token, Betway, Amazon, Takealot
-MobileMart-exclusive: Bok Squad, Cycle Lab, Makro, Pick n Pay, Pro Shop, Sorbet, Ticketmaster, Lottostar, Ringas, Lottoland, Flybet
+| Keep purchase on `productPurchaseService.js` | Banking-grade: ACID transactions, idempotency, circuit breaker. Inline pattern in other overlays is tech debt. |
+| Brand recognition table (not name dedup) | Raw supplier names like "100 diamonds" can't be deduped by cleaned name — need pattern matching to canonical brand |
+| Remove recipient/send-to-self | User copies voucher code and WhatsApp/shares manually. Simpler UX, matches other modals. |
+| Real PNG logos via Vite imports | Emoji icons are generic; real brand logos are professional. Same pattern as Vodacom logo. |
+| Exclude unrecognised products | Products not matching any brand pattern are garbage data — better to exclude than show raw names |
 
 ---
 
 ## Files Modified
 
-| File | Action | Lines Changed |
-|------|--------|--------------|
-| `routes/overlayServices.js` | Added voucher catalog route + helpers | +190 |
-| `scripts/sync-mobilemart-products.js` | Added --vouchers-only flag | +8 |
-| `mymoolah-wallet-frontend/services/apiService.ts` | Replaced getVouchers(), removed dead code | -300, +15 |
-| `mymoolah-wallet-frontend/components/overlays/digital-vouchers/DigitalVouchersOverlay.tsx` | Full rewrite | -398, +195 |
-| `mymoolah-wallet-frontend/components/overlays/digital-vouchers/ProductDetailModal.tsx` | Full rewrite | -863, +330 |
-| `mymoolah-wallet-frontend/components/overlays/digital-vouchers/VoucherCard.tsx` | Full rewrite | -106, +113 |
-| `mymoolah-wallet-frontend/components/overlays/digital-vouchers/VoucherSearch.tsx` | Full rewrite | -106, +64 |
-| `mymoolah-wallet-frontend/components/digital-vouchers/*` | Deleted (legacy duplicate) | -4 files |
-| `.cursor/rules/tech-debt.mdc` | Added overlay tech debt + architectural decision | +2 entries |
-
----
-
-## Issues Encountered
-- None — clean implementation
+| File | Action |
+|------|--------|
+| `routes/overlayServices.js` | Added voucher catalog route + VOUCHER_BRAND_TABLE |
+| `scripts/sync-mobilemart-products.js` | Added --vouchers-only flag |
+| `mymoolah-wallet-frontend/services/apiService.ts` | Replaced getVouchers(), removed ~300 lines dead code |
+| `mymoolah-wallet-frontend/components/overlays/digital-vouchers/DigitalVouchersOverlay.tsx` | Full rewrite |
+| `mymoolah-wallet-frontend/components/overlays/digital-vouchers/ProductDetailModal.tsx` | Full rewrite, removed recipient |
+| `mymoolah-wallet-frontend/components/overlays/digital-vouchers/VoucherCard.tsx` | Full rewrite, brand logos |
+| `mymoolah-wallet-frontend/components/overlays/digital-vouchers/VoucherSearch.tsx` | Full rewrite, no suggestions |
+| `mymoolah-wallet-frontend/assets/1voucher-logo.png` | New brand logo |
+| `mymoolah-wallet-frontend/assets/betway-logo.png` | New brand logo |
+| `mymoolah-wallet-frontend/assets/hollywood-logo.png` | New brand logo |
+| `mymoolah-wallet-frontend/assets/ott-logo.png` | New brand logo |
+| `mymoolah-wallet-frontend/components/digital-vouchers/*` | Deleted (legacy duplicate, 4 files) |
+| `.cursor/rules/tech-debt.mdc` | Added overlay tech debt + architectural decision |
 
 ---
 
 ## Next Steps for Next Agent
 
-1. **Test in Codespaces**: Pull, build frontend, restart backend, navigate to /vouchers-overlay
-2. **Sync vouchers to staging**: `node scripts/sync-mobilemart-products.js --vouchers-only --staging`
-3. **Sync vouchers to production**: `node scripts/sync-mobilemart-products.js --vouchers-only --production`
-4. **Verify purchase flow**: Test purchasing a variable-value voucher and a fixed-denomination voucher
-5. **Deploy**: `./scripts/build-push-deploy-staging.sh` then `./scripts/build-push-deploy-production.sh`
-6. **Future refactor**: Extract airtime/electricity/biller purchase logic from overlayServices.js into service classes (tech debt — ~9-13 hours)
+1. **Sync vouchers to staging**: `node scripts/sync-mobilemart-products.js --vouchers-only --staging`
+2. **Sync vouchers to production**: `node scripts/sync-mobilemart-products.js --vouchers-only --production`
+3. **Deploy**: `./scripts/build-push-deploy-staging.sh` then `./scripts/build-push-deploy-production.sh`
+4. **Add more brand logos**: As André sources them — Steam, Netflix, Google Play, Roblox, etc.
+5. **Future refactor (tech debt)**: Extract airtime/electricity/biller purchase logic from overlayServices.js into service classes (~9-13 hours)
 
 ---
 
 ## Context for Next Agent
 
-The voucher overlay now follows a clean architecture:
-- **Catalog**: `GET /api/v1/overlay/vouchers/catalog` in `overlayServices.js` (thin query + response shaping)
-- **Purchase**: `POST /api/v1/products/purchase` via `productPurchaseService.js` (banking-grade service with ACID, idempotency, circuit breaker)
-- **Sync**: Daily 02:00 cron in `catalogSynchronizationService.js` + manual `sync-mobilemart-products.js --vouchers-only`
-- **Frontend**: `DigitalVouchersOverlay.tsx` → calls `apiService.getVouchers()` → renders sorted, deduped cards
+The voucher overlay architecture:
+- **Catalog**: `GET /api/v1/overlay/vouchers/catalog` in `overlayServices.js` — `VOUCHER_BRAND_TABLE` maps raw names to brands, picks best supplier per brand, collapses variants into one card
+- **Purchase**: `POST /api/v1/products/purchase` via `productPurchaseService.js` (banking-grade)
+- **Sync**: Daily 02:00 cron + manual `sync-mobilemart-products.js --vouchers-only`
+- **Frontend**: `DigitalVouchersOverlay.tsx` → `apiService.getVouchers()` → sorted, deduped cards with brand logos
+- **Brand logos**: Vite-imported PNGs from `assets/` folder, mapped by brand name in `BRAND_LOGO_MAP`

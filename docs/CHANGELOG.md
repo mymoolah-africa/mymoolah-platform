@@ -1,5 +1,37 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-01 - Voucher Overlay Overhaul (4 commits)
+
+### Backend — Brand-Level Catalog Route (`routes/overlayServices.js`)
+- **New route**: `GET /api/v1/overlay/vouchers/catalog` — dedicated voucher catalog endpoint
+- **`VOUCHER_BRAND_TABLE`** — 40-entry brand recognition table. Maps raw supplier product names (e.g., "100 diamonds", "1500 + 300 UC", "$10 Credit") to canonical brands (Free Fire, PUBG Mobile, Apple Credit). Unrecognised products excluded from catalog.
+- **Commission-based dedup** — per brand, picks supplier with highest commission (Flash tiebreak). Collapses winning supplier's variants into one card.
+- **Variable vs fixed detection** — variable-value products show free-text input; fixed-denomination show picker buttons
+- **Category filtering** — `?category=gaming|entertainment|betting|shopping|transport|lifestyle`
+- **Search** — `?q=` filters by name, category, description
+
+### Frontend — Complete Rebuild (~1,770 → ~700 lines)
+- **`apiService.ts`** — Replaced 220-line `getVouchers()` with 15-line call to new overlay route. Removed 3 dead helper methods (~300 lines total).
+- **`DigitalVouchersOverlay.tsx`** — Rebuilt. Stale favorites auto-pruned on load. Removed "Popular:" suggestions. Fixed `featured` vs favorites conflation.
+- **`ProductDetailModal.tsx`** — Rebuilt. Removed entire recipient/send-to-self section (~140 lines). User copies voucher code and WhatsApp/shares manually. Shows real backend error messages. Added brand logo support.
+- **`VoucherCard.tsx`** — Rebuilt with brand logo support (PNG for known brands, emoji fallback). Price range display. Removed duplicate click handler.
+- **`VoucherSearch.tsx`** — Rebuilt. Simple search-only component (45 lines).
+
+### Brand Logos
+- Added real PNG brand assets: `1voucher-logo.png`, `betway-logo.png`, `hollywood-logo.png`, `ott-logo.png`
+- Imported via Vite modules (same pattern as Vodacom logo)
+- Professional sizing with `object-fit: contain` and rounded corners
+
+### Sync Script (`scripts/sync-mobilemart-products.js`)
+- Added `--vouchers-only` flag (mirrors `--billers-only`)
+
+### Architecture
+- Purchase stays on `productPurchaseService.js` (banking-grade: ACID, idempotency, circuit breaker)
+- Identified and registered inline purchase logic in airtime/electricity/biller overlays (~1,200 lines) as tech debt
+- Deleted 4 legacy duplicate files from `components/digital-vouchers/`
+
+---
+
 ## 2026-03-31 - Biller Sync Script + Catalog Stale Cleanup + Bill Category Fix
 
 ### Sync Script Improvements (`scripts/sync-mobilemart-products.js`)
