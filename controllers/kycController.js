@@ -234,10 +234,21 @@ class KYCController {
       // Process async (don't await - let it run in background)
       (async () => {
         try {
-          const { User } = require('../models');
+          const { User, Kyc, sequelize } = require('../models');
           const user = await User.findByPk(userId);
           const wallet = await Wallet.findOne({ where: { userId: userId } });
           let currentTier = user?.kyc_tier ?? null;
+
+          // Reset any previous KYC rejection so old data doesn't leak into
+          // the new attempt (prevents self-healing from returning stale reasons)
+          try {
+            await Kyc.update(
+              { status: 'pending', rejectionReason: null, reviewedAt: null },
+              { where: { userId } }
+            );
+          } catch (resetErr) {
+            // Non-fatal — table or record may not exist yet
+          }
 
           // --- Phase 1: Process identity document if provided ---
           if (identityUrl) {
@@ -450,8 +461,12 @@ class KYCController {
 
       // Self-healing: if the KYC record is rejected with a reason but user.kycStatus
       // hasn't been updated (race condition between async processing and status update),
-      // trust the KYC record and fix the user status
-      if (kycRecord?.status === 'rejected' && kycRecord?.rejectionReason && finalKycStatus !== 'rejected' && finalKycStatus !== 'verified') {
+      // trust the KYC record and fix the user status.
+      // Skip when 'documents_uploaded' — a new upload is being processed and
+      // the old KYC record hasn't been updated yet.
+      if (kycRecord?.status === 'rejected' && kycRecord?.rejectionReason
+          && finalKycStatus !== 'rejected' && finalKycStatus !== 'verified'
+          && finalKycStatus !== 'documents_uploaded') {
         console.log('🔧 Self-healing: KYC record is rejected but user.kycStatus is', finalKycStatus, '— correcting to rejected');
         finalKycStatus = 'rejected';
         if (user) {
