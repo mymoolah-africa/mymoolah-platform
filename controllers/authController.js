@@ -51,6 +51,14 @@ class AuthController {
         return res.status(409).json({ success: false, message: 'User with this ID number already exists' });
       }
       
+      // Normalise idType: frontend sends 'passport' but model expects a qualified variant
+      const ID_TYPE_MAP = {
+        'passport': 'international_passport',
+      };
+      if (ID_TYPE_MAP[idType]) {
+        idType = ID_TYPE_MAP[idType];
+      }
+
       // Hash password
       const passwordHash = await bcrypt.hash(password, 12);
       

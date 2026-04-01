@@ -54,8 +54,8 @@ router.post('/register', [
     .withMessage('Name must be between 2 and 100 characters'),
   // ID type and number must be provided at registration so OCR can compare later
   body('idType')
-    .isIn(['south_african_id', 'south_african_temporary_id', 'south_african_driving_license', 'passport'])
-    .withMessage('idType must be one of: south_african_id | south_african_temporary_id | south_african_driving_license | passport'),
+    .isIn(['south_african_id', 'south_african_temporary_id', 'south_african_driving_license', 'passport', 'international_passport', 'generic_passport', 'generic_id'])
+    .withMessage('idType must be one of: south_african_id | south_african_temporary_id | south_african_driving_license | passport | international_passport'),
   body('idNumber')
     .custom((value, { req }) => {
       const idType = req.body.idType;
