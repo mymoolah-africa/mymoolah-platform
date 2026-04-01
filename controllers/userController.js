@@ -222,7 +222,7 @@ class UserController {
       await user.reload();
       
       // Only return safe fields
-      const { id, email, firstName, lastName, phoneNumber, accountNumber, balance, status, kycStatus, createdAt, updatedAt, wallet } = user;
+      const { id, email, firstName, lastName, phoneNumber, accountNumber, balance, status, kycStatus, kyc_tier, createdAt, updatedAt, wallet } = user;
       
       // Determine final KYC status (prioritize user.kycStatus, fallback to wallet.kycVerified)
       const finalKycStatus = kycStatus || (wallet?.kycVerified ? 'verified' : 'not_started');
@@ -238,8 +238,9 @@ class UserController {
         accountNumber, 
         balance, 
         status, 
-        kycStatus: finalKycStatus, // Always return a valid status (never null/undefined)
-        kycVerified: isKycVerified, // Include kycVerified field for frontend convenience
+        kycStatus: finalKycStatus,
+        kycVerified: isKycVerified,
+        kyc_tier: kyc_tier != null ? kyc_tier : null,
         createdAt, 
         updatedAt, 
         wallet 
