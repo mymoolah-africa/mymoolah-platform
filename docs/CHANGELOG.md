@@ -1,5 +1,39 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-01 - Production API Testing & Fixes (15+ issues)
+
+### Registration
+- **`routes/auth.js`** — Extended `idType` validator to accept `international_passport`, `generic_passport`, `generic_id`
+- **`controllers/authController.js`** — Maps `'passport'` → `'international_passport'`; `walletId` uses timestamp format `WAL-${Date.now()}-${user.id}`
+
+### KYC — Rejection Flow & POA Validation
+- **`controllers/kycController.js`** — Direct SQL for `user.kycStatus` updates (Sequelize stale instance fix); self-healing in `GET /api/v1/kyc/status`; `rejectionReason` in API response; `persistKycRejection` helper; KYC record reset on re-upload; debug logging removed
+- **`controllers/userController.js`** — Added `kyc_tier` to `getMe` response
+- **`services/kycService.js`** — New `validatePOADocument()`: surname match, 2/4 address indicators (street, suburb, city, postal code), 90-day recency. Separate OCR prompt for POA. `parseOCRResults` branches by `documentType` for correct field mapping.
+
+### Frontend — Styled Modals & KYC
+- **`ErrorModal.tsx`** — Added `success` type (green icon + button)
+- **`ProfilePage.tsx` (components + pages)** — All `alert()` replaced with `ErrorModal`
+- **`KYCStatusPage.tsx` (components + pages)** — `APP_CONFIG.API.baseUrl` for API calls; rejection reason `useEffect` + modal
+
+### Payment Requests
+- **`migrations/20260401_01_add_version_to_payment_requests.js`** — Adds `version` column (INTEGER, default 1) for `PaymentRequest` optimistic locking
+- **`scripts/deploy-backend.sh`** — Added `FIELD_ENCRYPTION_KEY` and `FIELD_HMAC_KEY` to `build_secrets_args()`
+- **`controllers/requestController.js`** — Detailed error logging in catch block
+
+### Voucher Purchases
+- **`services/productPurchaseService.js`** — `errorData` now wrapped in object if string (prevents SequelizeValidationError crash)
+- **`migrations/20260401_02_add_voucher_to_flash_transactions_service_type_enum.js`** — Adds `'voucher'` to `enum_flash_transactions_serviceType`
+- **`services/supplierPricingService.js`** — `service_type::text` cast in volume count query + try/catch (prevents ENUM mismatch crash for `airtime`/`data`/`electricity`)
+
+### Scripts
+- **`scripts/delete-staging-user.js`** — New. Purges user + all related records (wallets, notifications, settings, KYC) by mobile number. Staging only.
+
+### Known Issue
+- **1Voucher**: Flash rejects product code `311` (error 2283 "Invalid product specified"). Handled gracefully — returns proper error message instead of 500. Needs Flash confirmation on correct code.
+
+---
+
 ## 2026-04-01 - Fix SBSA GCS permissions + .keep file filter
 
 ### Problem

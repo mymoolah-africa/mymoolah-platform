@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-01 03:00  
-**Latest Feature**: **SBSA GCS permissions + .keep file filter fixed** — Statement poller was accepting all files in inbox (including `.keep` placeholder), causing repeated parse errors. Filter now only accepts `FINSTMT`/`PROVSTMT` patterns. Both staging and production SAs granted `objectAdmin` on `mymoolah-sftp-inbound` bucket (staging was missing `objects.list`, production was missing `objects.create`). Previous: Cloud Scheduler migration, Voucher overlay overhaul.  
-**Document Version**: 2.61.0  
-**Session logs**: `docs/session_logs/2026-03-31_2359_voucher-overlay-overhaul.md`  
+**Last Updated**: 2026-04-01 17:00  
+**Latest Feature**: **Production API Testing & Fixes** — Comprehensive staging API testing: 15+ issues fixed across registration (passport idType), KYC (rejection flow, POA validation, re-upload), password change (styled modals), payment requests (version column migration, encryption keys), voucher purchases (errorData crash, ENUM mismatch). Both staging and production deployed as `20260401_v1`. 1Voucher broken at Flash level (product code 311 rejected — data issue, not code). Previous: SBSA GCS permissions, Cloud Scheduler, Voucher overlay overhaul.  
+**Document Version**: 2.62.0  
+**Session logs**: `docs/session_logs/2026-04-01_1700_production-api-testing-fixes.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -100,7 +100,10 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (March 17, 2026 - 19:00)**
+### **Latest Achievement (April 1, 2026 - 17:00)**
+**Production API Testing & Fixes (15+ issues)** — Comprehensive staging API testing session with André. Fixed: (1) Registration 500 — passport `idType` mapping + `walletId` length; (2) KYC rejection flow — direct SQL updates, self-healing status, rejection modal with specific reason; (3) KYC re-upload stale reason bug; (4) POA-specific OCR validation (surname match, 2/4 address indicators, 90-day recency); (5) `kyc_tier` in `/api/v1/users/me`; (6) All native `alert()` calls replaced with styled `ErrorModal` (added `success` type); (7) Payment request 500 — missing `version` column (new migration) + encryption keys missing from deploy script; (8) Voucher purchase 500 — `errorData` string-to-object wrapping; (9) Commission ENUM crash — `service_type::text` cast + try/catch. Migrations `20260401_01` and `20260401_02` applied to staging + production. Both environments deployed as `20260401_v1`. 1Voucher product code 311 rejected by Flash (error 2283) — data issue needs Flash confirmation. Session log: `docs/session_logs/2026-04-01_1700_production-api-testing-fixes.md`.
+
+### **Previous Achievement (March 17, 2026 - 19:00)**
 **EFT Overlay Polish + VoiceInput On-Demand Rewrite** — (1) "Top-up via EFT" overlay fully aligned with global design system: Account Holder "MyMoolah Treasury", Account Number "272406481", corrected "How it works" steps, PayShap instant-payment section (24/7/365), "Tap to Add Money" and "ATM Cash Send" tiles hidden. Fixed missing TopBanner (`/add-money-eft` added to `pagesWithTopBanner`) and missing BottomNavigation (added to both `shouldShowNav` and `showBottomNav` allowlists). Updated `mymoolah-wallet-frontend/.env.local` with correct Vite vars. (2) VoiceInput complete rewrite — old implementation created `SpeechRecognition` in a `useEffect` with `onTranscript`/`onError` deps; every parent re-render destroyed and recreated the instance before `onstart` fired. New on-demand approach creates/tears down instance per button tap; `continuous: false`; fully self-contained. SupportPage simplified — mic button lives directly in input row (no two-step toggle). User confirmed: "works much better now". (3) Fixed disbursement routes auth import. Session log: `docs/session_logs/2026-03-17_1900_eft-overlay-voice-input-fix.md`.
 
 ### **Previous Achievement (March 12, 2026 - 23:30)**
@@ -664,17 +667,20 @@ You're part of a **banking-grade software system** where:
 
 ## 🎯 **CURRENT SESSION SUMMARY**
 
-**Session Status**: ✅ **COMPLETE** — Voucher Overlay Overhaul (4 commits, Andre confirmed working)  
-**Last Session**: 2026-04-01 00:40 — Full voucher overlay audit, rebuild, and iterative fixes
+**Session Status**: ✅ **COMPLETE** — Production API Testing & Fixes (15+ issues, deployed to staging + production)  
+**Last Session**: 2026-04-01 17:00 — Comprehensive staging API testing with André
 
-### **Most Recent Work (2026-04-01 00:40)**
-- **Voucher overlay overhaul**: Full audit and rebuild of the last overlay before production launch. 4 commits total.
-- **Backend catalog route**: Added `GET /api/v1/overlay/vouchers/catalog` with `VOUCHER_BRAND_TABLE` — 40-entry brand recognition table that maps raw supplier names (e.g., "100 diamonds", "60 UC", "$10 Credit") to canonical brands (Free Fire, PUBG Mobile, Apple Credit). Commission-based Flash/MobileMart dedup. Unrecognised products excluded.
-- **Frontend rebuilt**: All 4 overlay components rewritten (~1,770 → ~700 lines). Removed ~300 lines client-side enrichment from `apiService.ts`. Stale favorites auto-pruned on load.
-- **Recipient removed**: Removed "Send to myself" / recipient phone from purchase modal. User copies voucher code and WhatsApp/shares manually. Matches other modals' UX.
-- **Real brand logos**: PNG assets for 1Voucher, Betway, Hollywood Bets, OTT Voucher imported via Vite modules. Professional sizing with `object-fit: contain`.
-- **Sync script**: Added `--vouchers-only` flag.
-- **Tech debt registered**: Inline purchase logic in airtime/electricity/biller overlays (~1,200 lines) flagged. Voucher purchase uses `productPurchaseService.js` (banking-grade).
+### **Most Recent Work (2026-04-01 17:00)**
+- **Production API testing**: André manually tested all major flows on staging — registration, KYC (ID + POA), password change, wallet transfers, payment requests, airtime/data, vouchers. Each 500/400 error diagnosed via `gcloud logging read` and fixed.
+- **Registration fixes**: Passport `idType` mapping (`'passport'` → `'international_passport'`), `walletId` length fix (`WAL-${Date.now()}-${user.id}`)
+- **KYC overhaul**: Direct SQL for user status updates (Sequelize stale instance fix), self-healing status endpoint, rejection reason modal, re-upload reset, debug logging removed
+- **POA validation**: New `validatePOADocument()` — surname match, 2/4 address indicators, 90-day document recency. Separate OCR prompt for address extraction. `parseOCRResults` now branches by document type.
+- **UI consistency**: All native `alert()` calls in ProfilePage replaced with styled `ErrorModal`. Added `success` type (green) to `ErrorModal`.
+- **Payment request fix**: Migration `20260401_01` adds `version` column. `FIELD_ENCRYPTION_KEY` + `FIELD_HMAC_KEY` added to deploy script.
+- **Voucher purchase fix**: `errorData` string-to-object wrapping prevents Sequelize validation crash. `service_type::text` cast prevents ENUM mismatch crashes in commission queries.
+- **Migrations**: `20260401_01` (version column) and `20260401_02` (voucher ENUM) applied to staging + production.
+- **1Voucher**: Product code `311` rejected by Flash (error 2283 "Invalid product specified"). Data issue — needs Flash confirmation.
+- **Staging user cleanup**: `scripts/delete-staging-user.js` purges user + all related records by mobile number.
 
 ### **Previous Work (2026-03-31 23:30)**
 - **Sync script fixed + extended**: Fixed JSON bug that caused all product INSERTs to fail. Added `--staging`/`--production`/`--uat` target flags, `--billers-only` filter, 5-second production safety pause. Renamed to `scripts/sync-mobilemart-products.js`.
@@ -721,16 +727,16 @@ You're part of a **banking-grade software system** where:
 
 ### **Next Agent Actions**
 1. Read `docs/CURSOR_2.0_RULES_FINAL.md` (MANDATORY)
-2. Read this file and 2–3 recent session logs (especially `2026-03-31_2359_voucher-overlay-overhaul.md`)
-3. ~~**DEPLOY REQUIRED**~~ — DONE (2026-04-01). Both staging (`00337-frj`) and production (`00059-789`) deployed with tag `20260401_v2`. Cloud Scheduler jobs active. SBSA filter + Cloud Scheduler + voucher overhaul all live.
-4. ~~**Manual production sync**~~ — catch up stale data if needed: `node scripts/sync-mobilemart-products.js --production` and `node scripts/sync-flash-products.js --production` (run in Codespaces)
-5. **KYC OCR debugging** — André will test KYC and provide backend logs. Look for `OpenAI OCR attempt` log lines.
+2. Read this file and recent session logs (especially `2026-04-01_1700_production-api-testing-fixes.md`)
+3. ~~**DEPLOY REQUIRED**~~ — DONE (2026-04-01). Staging + production deployed as `20260401_v1`. All API fixes, KYC, POA, modals, migrations live.
+4. **Confirm 1Voucher product code with Flash** — Code `311` rejected (error 2283). Need Flash to confirm correct product code. The error is handled gracefully (proper message, no 500).
+5. **Continue API testing**: electricity purchases, bill payments, eeziCash, referral system, AI support chat
 6. **Add more brand logos**: As André sources them — Steam, Netflix, Google Play, Roblox, MTN, CellC, Telkom (same Vite import pattern)
-7. ~~**Fix SBSA GCS permissions**~~ — DONE (2026-04-01). Both SAs granted `objectAdmin` on `mymoolah-sftp-inbound`. `.keep` file filter added to statement poller.
-8. **Future refactor (tech debt)**: Extract airtime/electricity/biller purchase logic from overlayServices.js into service classes (~9-13 hours, 1-2 sessions)
-9. Do NOT reactivate Peach Payments without explicit approval from André
-10. Do NOT add `RmtInf.Ustrd` to Pain.013 — SBSA rejects it
-11. npm audit: 9 remaining (5 low, 4 moderate) — all in transitive deps, cannot safely fix
+7. **Future refactor (tech debt)**: Extract airtime/electricity/biller purchase logic from overlayServices.js into service classes (~9-13 hours, 1-2 sessions)
+8. Do NOT reactivate Peach Payments without explicit approval from André
+9. Do NOT add `RmtInf.Ustrd` to Pain.013 — SBSA rejects it
+10. npm audit: 9 remaining (5 low, 4 moderate) — all in transitive deps, cannot safely fix
+11. **Commission allocation**: `flash_transactions.service_type` ENUM still missing `airtime`, `data`, `electricity` — but the `::text` cast in `supplierPricingService.js` handles this gracefully. Commission tiers in DB need matching service types for correct commission calculation.
 
 ---
 
@@ -738,6 +744,7 @@ You're part of a **banking-grade software system** where:
 
 | Date | Update |
 |------|--------|
+| Apr 1 (17:00) | **Production API Testing & Fixes (15+ issues)**: Comprehensive staging testing — registration (passport idType + walletId), KYC (rejection flow, self-healing status, POA validation with surname/address/date), password change (styled modals), payment requests (version column migration, encryption keys in deploy script), voucher purchases (errorData crash, ENUM mismatch). Migrations 20260401_01 + 20260401_02 applied to staging + production. Both environments deployed as `20260401_v1`. 1Voucher product code `311` rejected by Flash (data issue). Session log: `docs/session_logs/2026-04-01_1700_production-api-testing-fixes.md` |
 | Mar 31 (19:30) | **Data UI Redesign + Failover Fixes + Deploy Env Persistence**: Fixed MM_DEPLOYMENT_ENV wiped on every redeployment (added to deploy scripts). Fixed supplier failover constructor crash (`SupplierComparisonService is not a constructor`). Redesigned data products UI — individual rows with category/network icons, bundle names, data sizes, validity, prices. Real Vodacom PNG logo. Fixed beneficiary display name bug. Fixed purchase response scoping. Session log: `docs/session_logs/2026-03-31_1930_data-ui-redesign-failover-fixes-deploy-env.md` |
 | Mar 31 (14:00) | **VAS catalog & frontend fixes**: Fixed airtime/data overlay to read from `ProductVariant` (daily sync) instead of empty `VasProduct`. Fixed ServicesPage broken navigation. Replaced placeholder pages. Removed 158KB dead duplicate frontend code. All VAS overlays verified on normalized schema. Session log: `docs/session_logs/2026-03-31_1400_vas-catalog-frontend-fixes.md` |
 | Mar 31 (10:30) | **NPM audit fix + hardcoded cleanup + production readiness**: Fixed 16/25 npm vulnerabilities (zero critical/high remaining). Removed all hardcoded PII (14 files). Fixed production GCS perms, encryption keys, statement poller. Voucher schema aligned. Nodemailer 7→8. Deployed staging (00306-m8s) + production (00053-29p) as `20260331_v2`. Session log: `docs/session_logs/2026-03-31_1030_npm-audit-hardcoded-cleanup-production-readiness.md` |
