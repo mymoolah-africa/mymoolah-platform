@@ -2,7 +2,7 @@ const KYCService = require('../services/kycService');
 const { sequelize } = require('../models');
 const Wallet = require('../models/Wallet')(sequelize, require('sequelize').DataTypes);
 const notificationService = require('../services/notificationService');
-const { getWalletDefaults } = require('../config/kycTierLimits');
+const { getWalletDefaults, getLimitsForTier } = require('../config/kycTierLimits');
 const path = require('path');
 const fs = require('fs').promises;
 
