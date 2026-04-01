@@ -142,7 +142,7 @@ Full audit and overhaul of the digital voucher overlay system — the last overl
 
 ## Next Steps for Next Agent
 
-1. **Deploy backend** to apply `.keep` filter fix: `./scripts/deploy-backend.sh --staging` then `./scripts/deploy-backend.sh --production`
+1. ~~**Deploy backend**~~ — DONE (2026-04-01 10:30). Staging `00337-frj` + Production `00059-789` deployed as `20260401_v2`.
 2. **Sync MobileMart vouchers to staging**: `node scripts/sync-mobilemart-products.js --vouchers-only --staging`
 3. **Sync Flash vouchers to staging**: `node scripts/sync-flash-products.js --vouchers-only --staging`
 4. **Sync to production**: Same commands with `--production`

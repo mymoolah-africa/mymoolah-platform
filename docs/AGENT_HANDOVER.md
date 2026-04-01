@@ -722,12 +722,8 @@ You're part of a **banking-grade software system** where:
 ### **Next Agent Actions**
 1. Read `docs/CURSOR_2.0_RULES_FINAL.md` (MANDATORY)
 2. Read this file and 2–3 recent session logs (especially `2026-03-31_2359_voucher-overlay-overhaul.md`)
-3. **DEPLOY REQUIRED**: Backend must be redeployed for Cloud Scheduler to work:
-   - `./scripts/deploy-backend.sh --staging` then `./scripts/deploy-backend.sh --production`
-   - After deploy: `./scripts/setup-cloud-scheduler.sh --both` (creates the scheduler jobs)
-   - Verify: `gcloud scheduler jobs list --location=africa-south1 --project=mymoolah-db`
-   - Test: `gcloud scheduler jobs run catalog-sweep-staging --location=africa-south1 --project=mymoolah-db`
-4. **Manual production sync** (catch up stale data): `node scripts/sync-mobilemart-products.js --production` and `node scripts/sync-flash-products.js --production`
+3. ~~**DEPLOY REQUIRED**~~ — DONE (2026-04-01). Both staging (`00337-frj`) and production (`00059-789`) deployed with tag `20260401_v2`. Cloud Scheduler jobs active. SBSA filter + Cloud Scheduler + voucher overhaul all live.
+4. ~~**Manual production sync**~~ — catch up stale data if needed: `node scripts/sync-mobilemart-products.js --production` and `node scripts/sync-flash-products.js --production` (run in Codespaces)
 5. **KYC OCR debugging** — André will test KYC and provide backend logs. Look for `OpenAI OCR attempt` log lines.
 6. **Add more brand logos**: As André sources them — Steam, Netflix, Google Play, Roblox, MTN, CellC, Telkom (same Vite import pattern)
 7. ~~**Fix SBSA GCS permissions**~~ — DONE (2026-04-01). Both SAs granted `objectAdmin` on `mymoolah-sftp-inbound`. `.keep` file filter added to statement poller.
