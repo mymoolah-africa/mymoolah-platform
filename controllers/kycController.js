@@ -252,8 +252,22 @@ class KYCController {
               try {
                 const { Kyc } = require('../models');
                 const kycRecord = await Kyc.findOne({ where: { userId }, order: [['createdAt', 'DESC']] });
-                if (kycRecord) await kycRecord.update({ status: 'rejected', rejectionReason: failureReason, reviewedAt: new Date() });
-              } catch (kycUpdateErr) { console.error('Failed to update KYC record:', kycUpdateErr.message); }
+                if (kycRecord) {
+                  await kycRecord.update({ status: 'rejected', rejectionReason: failureReason, reviewedAt: new Date() });
+                  console.log('✅ KYC record updated with rejectionReason:', failureReason);
+                } else {
+                  await Kyc.create({
+                    userId,
+                    documentType: 'id_card',
+                    documentNumber: 'REJECTED',
+                    status: 'rejected',
+                    rejectionReason: failureReason,
+                    submittedAt: new Date(),
+                    reviewedAt: new Date()
+                  });
+                  console.log('✅ KYC record CREATED with rejectionReason (no prior record):', failureReason);
+                }
+              } catch (kycUpdateErr) { console.error('Failed to update/create KYC record:', kycUpdateErr.message); }
               try {
                 await notificationService.createNotification(userId, 'maintenance', 'KYC Verification Failed',
                   failureReason,
@@ -291,8 +305,22 @@ class KYCController {
               try {
                 const { Kyc } = require('../models');
                 const kycRecord = await Kyc.findOne({ where: { userId }, order: [['createdAt', 'DESC']] });
-                if (kycRecord) await kycRecord.update({ status: 'rejected', rejectionReason: failureReason, reviewedAt: new Date() });
-              } catch (kycUpdateErr) { console.error('Failed to update KYC record:', kycUpdateErr.message); }
+                if (kycRecord) {
+                  await kycRecord.update({ status: 'rejected', rejectionReason: failureReason, reviewedAt: new Date() });
+                  console.log('✅ KYC record updated with rejectionReason:', failureReason);
+                } else {
+                  await Kyc.create({
+                    userId,
+                    documentType: 'id_card',
+                    documentNumber: 'REJECTED',
+                    status: 'rejected',
+                    rejectionReason: failureReason,
+                    submittedAt: new Date(),
+                    reviewedAt: new Date()
+                  });
+                  console.log('✅ KYC record CREATED with rejectionReason (no prior record):', failureReason);
+                }
+              } catch (kycUpdateErr) { console.error('Failed to update/create KYC record:', kycUpdateErr.message); }
               try {
                 await notificationService.createNotification(userId, 'maintenance', 'KYC Verification Failed',
                   failureReason,
