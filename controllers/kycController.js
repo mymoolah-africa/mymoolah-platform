@@ -438,11 +438,18 @@ class KYCController {
       
       let finalKycStatus = user?.kycStatus || (wallet.kycVerified ? 'verified' : (kycRecord ? kycRecord.status : 'not_started'));
 
-      // Self-healing: if the KYC record is rejected with a reason but user.kycStatus
-      // hasn't been updated (race condition between async processing and status update),
-      // trust the KYC record and fix the user status.
-      // Skip when 'documents_uploaded' — a new upload is being processed and
-      // the old KYC record hasn't been updated yet.
+      // Self-healing: wallet is verified + tier >= 1, but kycStatus is stale
+      // (race condition: 429 storm caused retry upload that overwrote verified status)
+      if (wallet.kycVerified && user?.kyc_tier >= 1
+          && finalKycStatus !== 'verified' && finalKycStatus !== 'rejected') {
+        console.log('🔧 Self-healing: wallet verified + tier', user.kyc_tier, 'but kycStatus is', finalKycStatus, '— correcting to verified');
+        finalKycStatus = 'verified';
+        if (user) {
+          user.update({ kycStatus: 'verified' }).catch(err => console.error('Self-heal user.kycStatus update failed:', err.message));
+        }
+      }
+
+      // Self-healing: KYC record rejected but user.kycStatus not updated
       if (kycRecord?.status === 'rejected' && kycRecord?.rejectionReason
           && finalKycStatus !== 'rejected' && finalKycStatus !== 'verified'
           && finalKycStatus !== 'documents_uploaded') {
