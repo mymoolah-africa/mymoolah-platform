@@ -363,9 +363,12 @@ class KYCController {
           }
 
           // --- All phases passed — finalize kycStatus ---
-          if (user && user.kycStatus !== 'verified') {
-            await user.update({ kycStatus: 'verified' });
-          }
+          // Use direct SQL: the Sequelize `user` instance is stale (loaded before
+          // the frontend POST that may have overwritten kycStatus to 'documents_uploaded').
+          await sequelize.query(
+            'UPDATE users SET "kycStatus" = $1, "updatedAt" = NOW() WHERE id = $2',
+            { bind: ['verified', userId] }
+          );
 
           const tierLabels = { 0: 'Tier 0 (basic)', 1: 'Tier 1 (ID verified)', 2: 'Tier 2 (fully verified)' };
           const tierLabel = tierLabels[currentTier] || `Tier ${currentTier}`;

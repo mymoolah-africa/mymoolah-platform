@@ -206,15 +206,9 @@ export function KYCDocumentsPage() {
         return;
       }
 
-      if (updateKYCStatus) {
+      if (updateKYCStatus && data.success && data.status === 'approved') {
         try {
-          if (data.success && data.status === 'approved') {
-            await updateKYCStatus('verified');
-          } else if (data.status === 'pending_review') {
-            await updateKYCStatus('under_review');
-          } else {
-            await updateKYCStatus('documents_uploaded');
-          }
+          await updateKYCStatus('verified');
         } catch (statusError) {
           console.error('Failed to update KYC status in context:', statusError);
         }
