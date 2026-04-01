@@ -246,8 +246,16 @@ class KYCController {
             if (!identityResult.success) {
               const failureReason = identityResult.message || identityResult.validation?.issues?.join('. ') || 'Document validation failed. Please try again with a clearer image.';
               console.log('❌ KYC ID validation failed:', identityResult.validation?.issues);
-              if (user) {
-                await user.update({ kycStatus: 'rejected' });
+              // Use direct SQL to avoid Sequelize instance staleness
+              try {
+                const { sequelize } = require('../models');
+                await sequelize.query(
+                  'UPDATE users SET "kycStatus" = $1, "updatedAt" = NOW() WHERE id = $2',
+                  { bind: ['rejected', userId] }
+                );
+                console.log('✅ user.kycStatus set to rejected via direct SQL for userId:', userId);
+              } catch (statusErr) {
+                console.error('❌ Failed to set user.kycStatus to rejected:', statusErr.message);
               }
               try {
                 const { Kyc } = require('../models');
@@ -299,8 +307,15 @@ class KYCController {
             } else {
               const failureReason = identityResult.message || identityResult.validation?.issues?.join('. ') || 'Document validation failed. Please try again with a clearer image.';
               console.log('⚠️  KYC validation failed - user can retry:', identityResult.validation?.issues);
-              if (user) {
-                await user.update({ kycStatus: 'rejected' });
+              try {
+                const { sequelize } = require('../models');
+                await sequelize.query(
+                  'UPDATE users SET "kycStatus" = $1, "updatedAt" = NOW() WHERE id = $2',
+                  { bind: ['rejected', userId] }
+                );
+                console.log('✅ user.kycStatus set to rejected via direct SQL for userId:', userId);
+              } catch (statusErr) {
+                console.error('❌ Failed to set user.kycStatus to rejected:', statusErr.message);
               }
               try {
                 const { Kyc } = require('../models');
@@ -431,22 +446,23 @@ class KYCController {
         console.warn('⚠️  Could not fetch KYC record:', kycError.message);
       }
       
-      const finalKycStatus = user?.kycStatus || (wallet.kycVerified ? 'verified' : (kycRecord ? kycRecord.status : 'not_started'));
+      let finalKycStatus = user?.kycStatus || (wallet.kycVerified ? 'verified' : (kycRecord ? kycRecord.status : 'not_started'));
+
+      // Self-healing: if the KYC record is rejected with a reason but user.kycStatus
+      // hasn't been updated (race condition between async processing and status update),
+      // trust the KYC record and fix the user status
+      if (kycRecord?.status === 'rejected' && kycRecord?.rejectionReason && finalKycStatus !== 'rejected' && finalKycStatus !== 'verified') {
+        console.log('🔧 Self-healing: KYC record is rejected but user.kycStatus is', finalKycStatus, '— correcting to rejected');
+        finalKycStatus = 'rejected';
+        if (user) {
+          user.update({ kycStatus: 'rejected' }).catch(err => console.error('Self-heal user.kycStatus update failed:', err.message));
+        }
+      }
+
       const isVerified = finalKycStatus === 'verified' || wallet.kycVerified === true;
 
       const currentKycTier = user?.kyc_tier != null ? user.kyc_tier : null;
       const tierLimits = getLimitsForTier(currentKycTier);
-
-      // DEBUG: Log what GET /kyc/status is actually returning
-      if (finalKycStatus === 'rejected' || kycRecord?.rejectionReason) {
-        console.log('🔍 GET /kyc/status response debug:', {
-          userKycStatus: user?.kycStatus,
-          finalKycStatus,
-          kycRecordExists: !!kycRecord,
-          kycRecordStatus: kycRecord?.status,
-          rejectionReason: kycRecord?.rejectionReason || null
-        });
-      }
       
       res.json({
         success: true,
