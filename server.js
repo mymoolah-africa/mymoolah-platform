@@ -462,13 +462,14 @@ app.use(requestLogger);
 // Apply authentication rate limiting to auth routes
 app.use('/api/v1/auth', authLimiter);
 
-// Dashboard read limiter (120/min for polling GETs — balance, transactions, notifications, settings)
+// Dashboard read limiter (120/min for polling GETs — balance, transactions, notifications, settings, KYC status)
 app.use('/api/v1/wallets', walletReadLimiter);
 app.use('/api/v1/transactions', walletReadLimiter);
 app.use('/api/v1/notifications', walletReadLimiter);
 app.use('/api/v1/users', walletReadLimiter);
 app.use('/api/v1/settings', walletReadLimiter);
 app.use('/api/v1/vouchers', walletReadLimiter);
+app.use('/api/v1/kyc', walletReadLimiter);
 
 // Financial write limiter (10/min for money-moving POST/PUT/DELETE — skips GETs)
 app.use('/api/v1/transactions', financialLimiter);
