@@ -359,7 +359,7 @@ const authLimiter = rateLimit({
   }
 });
 
-// Financial transaction rate limiting
+// Financial transaction rate limiting (write operations: POST, PUT, DELETE)
 const financialLimiter = rateLimit({
   windowMs: config.rateLimits.financial.windowMs,
   max: config.rateLimits.financial.max,
@@ -367,10 +367,10 @@ const financialLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   validate: {
-    trustProxy: false // Disable validation - we handle proxy manually
+    trustProxy: false
   },
   keyGenerator: (req) => getClientIP(req) + '-financial',
-  skip: (req) => req.method === 'OPTIONS' || 
+  skip: (req) => req.method === 'OPTIONS' || req.method === 'GET' ||
     (process.env.NODE_ENV && process.env.NODE_ENV !== 'production') ||
     process.env.STAGING === 'true',
   handler: (req, res) => {
@@ -378,6 +378,27 @@ const financialLimiter = rateLimit({
       success: false,
       message: config.rateLimits.financial.message,
       retryAfter: Math.ceil(config.rateLimits.financial.windowMs / 1000)
+    });
+  }
+});
+
+// Wallet/dashboard read limiter (GET requests: balance, transactions, notifications polling)
+const walletReadLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000,
+  max: process.env.NODE_ENV === 'production' ? 120 : 1000,
+  message: 'Too many read requests',
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: { trustProxy: false },
+  keyGenerator: (req) => getClientIP(req) + '-wallet-read',
+  skip: (req) => req.method !== 'GET' || req.method === 'OPTIONS' ||
+    (process.env.NODE_ENV && process.env.NODE_ENV !== 'production') ||
+    process.env.STAGING === 'true',
+  handler: (req, res) => {
+    res.status(429).json({
+      success: false,
+      message: 'Too many read requests, please try again shortly.',
+      retryAfter: 60
     });
   }
 });
@@ -441,7 +462,11 @@ app.use(requestLogger);
 // Apply authentication rate limiting to auth routes
 app.use('/api/v1/auth', authLimiter);
 
-// Apply financial rate limiting to transaction routes
+// Wallet/transaction read limiter (120/min for dashboard polling GETs)
+app.use('/api/v1/wallets', walletReadLimiter);
+app.use('/api/v1/transactions', walletReadLimiter);
+
+// Financial write limiter (10/min for money-moving POST/PUT/DELETE — skips GETs)
 app.use('/api/v1/transactions', financialLimiter);
 app.use('/api/v1/wallets', financialLimiter);
 app.use('/api/v1/airtime', financialLimiter);

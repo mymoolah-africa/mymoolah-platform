@@ -129,7 +129,7 @@ class SecurityConfig {
       },
       auth: {
         windowMs: 15 * 60 * 1000, // 15 minutes
-        max: process.env.NODE_ENV === 'production' ? 5 : 50,
+        max: process.env.NODE_ENV === 'production' ? 15 : 50,
         message: 'Too many authentication attempts',
         standardHeaders: true,
         legacyHeaders: false,
