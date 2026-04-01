@@ -10,7 +10,10 @@ set -euo pipefail
 #   ./scripts/setup-cloud-scheduler.sh --both
 
 PROJECT_ID="mymoolah-db"
-REGION="africa-south1"
+# Cloud Scheduler not available in africa-south1. europe-west1 is the closest
+# supported region. Only the cron timer runs here — the HTTP request still
+# targets Cloud Run in africa-south1. Timezone is Africa/Johannesburg.
+SCHEDULER_LOCATION="europe-west1"
 
 STAGING_SERVICE_URL="https://mymoolah-backend-staging-4ekgjiko5a-bq.a.run.app"
 STAGING_SA="mymoolah-staging-sa@${PROJECT_ID}.iam.gserviceaccount.com"
@@ -35,12 +38,12 @@ create_scheduler_job() {
 
   # Delete existing job if it exists (idempotent)
   gcloud scheduler jobs delete "${job_name}" \
-    --location="${REGION}" \
+    --location="${SCHEDULER_LOCATION}" \
     --project="${PROJECT_ID}" \
     --quiet 2>/dev/null || true
 
   gcloud scheduler jobs create http "${job_name}" \
-    --location="${REGION}" \
+    --location="${SCHEDULER_LOCATION}" \
     --project="${PROJECT_ID}" \
     --schedule="0 2 * * *" \
     --time-zone="Africa/Johannesburg" \
@@ -89,10 +92,10 @@ fi
 
 echo "========================================"
 log "Setup complete. Verify with:"
-echo "  gcloud scheduler jobs list --location=${REGION} --project=${PROJECT_ID}"
+echo "  gcloud scheduler jobs list --location=${SCHEDULER_LOCATION} --project=${PROJECT_ID}"
 echo ""
 log "Test a job manually:"
-echo "  gcloud scheduler jobs run catalog-sweep-staging --location=${REGION} --project=${PROJECT_ID}"
-echo "  gcloud scheduler jobs run catalog-sweep-production --location=${REGION} --project=${PROJECT_ID}"
+echo "  gcloud scheduler jobs run catalog-sweep-staging --location=${SCHEDULER_LOCATION} --project=${PROJECT_ID}"
+echo "  gcloud scheduler jobs run catalog-sweep-production --location=${SCHEDULER_LOCATION} --project=${PROJECT_ID}"
 echo "========================================"
 echo ""
