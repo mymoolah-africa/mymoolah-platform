@@ -705,7 +705,33 @@ Return JSON only:
   "expiryDate": "2030-06-01",
   "countryOfBirth": "SOUTH AFRICA"
 }`
-      : "Extract the following information from this South African proof of address document: Street address, City, Postal code, Province. Return as JSON format.";
+      : `Extract structured data from this proof of address document (utility bill, bank statement, municipal account, or insurance document). Return ONLY valid JSON, no explanation.
+
+Fields to extract:
+1. accountHolder: Full name/surname shown on the document (the person the bill is addressed to)
+2. surname: Last name / surname of the account holder
+3. streetAddress: Street number and street name (e.g. "14 Oak Avenue")
+4. suburb: Suburb or area name (if visible)
+5. city: City or town name
+6. postalCode: Postal/ZIP code (4 digits for SA)
+7. province: Province name (if visible)
+8. documentDate: Date on the document (YYYY-MM-DD) — use statement date, invoice date, or issue date
+9. documentType: Type of document (e.g. "electricity bill", "bank statement", "water bill", "rates notice", "insurance letter")
+
+CRITICAL: Extract the most recent date visible on the document.
+
+Return JSON only:
+{
+  "accountHolder": "L BOTES",
+  "surname": "BOTES",
+  "streetAddress": "14 Oak Avenue",
+  "suburb": "Centurion",
+  "city": "Pretoria",
+  "postalCode": "0157",
+  "province": "Gauteng",
+  "documentDate": "2026-02-15",
+  "documentType": "electricity bill"
+}`;
     
     // Retry logic for OpenAI API calls
     let lastError;
@@ -1330,23 +1356,150 @@ Return JSON only:
         if (docTypeMatch) results.documentType = clean(docTypeMatch[1]);
         if (countryMatch) results.countryOfIssue = clean(countryMatch[1]);
       } else {
-        // Extract address fields
+        // Extract POA address fields
         const clean = v => (v || '').trim().replace(/[\s,;]+$/, '');
-        const addressMatch = ocrText.match(/address[:\s]+([^\n,]+)/i);
+        const holderMatch = ocrText.match(/(?:account\s*holder|name)[:\s]+([^\n,]+)/i);
+        const surnameMatch = ocrText.match(/surname[:\s]+([^\n,]+)/i);
+        const addressMatch = ocrText.match(/(?:street\s*)?address[:\s]+([^\n,]+)/i);
+        const suburbMatch = ocrText.match(/suburb[:\s]+([^\n,]+)/i);
         const cityMatch = ocrText.match(/city[:\s]+([^\n,]+)/i);
         const postalMatch = ocrText.match(/postal[:\s]+([^\n,]+)/i);
         const provinceMatch = ocrText.match(/province[:\s]+([^\n,]+)/i);
-        
+        const dateMatch = ocrText.match(/(?:document\s*)?date[:\s]+([^\n,]+)/i);
+
+        if (holderMatch) results.accountHolder = clean(holderMatch[1]);
+        if (surnameMatch) results.surname = clean(surnameMatch[1]);
         if (addressMatch) results.streetAddress = clean(addressMatch[1]);
+        if (suburbMatch) results.suburb = clean(suburbMatch[1]);
         if (cityMatch) results.city = clean(cityMatch[1]);
         if (postalMatch) results.postalCode = clean(postalMatch[1]);
         if (provinceMatch) results.province = clean(provinceMatch[1]);
+        if (dateMatch) results.documentDate = clean(dateMatch[1]);
       }
 
       return results;
     } catch (error) {
       console.error('❌ Error parsing OCR results:', error);
       return {};
+    }
+  }
+
+  // Validate Proof of Address document
+  // Rules: surname match + at least 2 address indicators + document within 90 days
+  async validatePOADocument(ocrResults, userId) {
+    const validation = {
+      isValid: false,
+      confidence: 0,
+      issues: [],
+      tolerantNameMatch: false
+    };
+
+    try {
+      const { sequelize } = require('../models');
+      const User = require('../models/User')(sequelize, require('sequelize').DataTypes);
+      const user = await User.findOne({ where: { id: userId } });
+
+      if (!user) {
+        validation.issues.push('User not found');
+        return validation;
+      }
+
+      // --- Check 1: Surname match ---
+      const docSurname = (ocrResults.surname || ocrResults.accountHolder || '').trim().toUpperCase();
+      const userSurname = (user.lastName || '').trim().toUpperCase();
+
+      if (!docSurname) {
+        validation.issues.push('Name/surname not found on document. Please upload a utility bill or bank statement that clearly shows your name.');
+        return validation;
+      }
+
+      // Check if user's surname appears anywhere in the account holder name
+      // e.g. accountHolder "L BOTES" should match surname "BOTES"
+      const surnameFound = docSurname.includes(userSurname) ||
+                           userSurname.includes(docSurname) ||
+                           docSurname.split(/\s+/).some(part => part === userSurname);
+
+      if (!userSurname || !surnameFound) {
+        validation.issues.push(`Surname mismatch: Document shows "${ocrResults.surname || ocrResults.accountHolder}" but your registered surname is "${user.lastName}"`);
+        return validation;
+      }
+
+      console.log('✅ POA surname match:', docSurname, '~', userSurname);
+      validation.confidence += 40;
+
+      // --- Check 2: Address indicators (need at least 2 of 4) ---
+      let addressScore = 0;
+      const addressDetails = [];
+
+      const streetAddress = (ocrResults.streetAddress || '').trim();
+      const suburb = (ocrResults.suburb || '').trim();
+      const city = (ocrResults.city || '').trim();
+      const postalCode = (ocrResults.postalCode || '').trim();
+
+      if (streetAddress && streetAddress.length >= 5) {
+        addressScore++;
+        addressDetails.push(`street: "${streetAddress}"`);
+      }
+      if (suburb && suburb.length >= 3) {
+        addressScore++;
+        addressDetails.push(`suburb: "${suburb}"`);
+      }
+      if (city && city.length >= 3) {
+        addressScore++;
+        addressDetails.push(`city: "${city}"`);
+      }
+      if (postalCode && /^\d{4}$/.test(postalCode)) {
+        addressScore++;
+        addressDetails.push(`postal: ${postalCode}`);
+      }
+
+      console.log(`📍 POA address indicators: ${addressScore}/4 — ${addressDetails.join(', ')}`);
+
+      if (addressScore < 2) {
+        validation.issues.push(`Insufficient address information found on document (${addressScore}/4 indicators). Please upload a clear utility bill or bank statement showing your full residential address.`);
+        return validation;
+      }
+
+      validation.confidence += addressScore * 10;
+
+      // --- Check 3: Document recency (within 90 days) ---
+      const docDateStr = (ocrResults.documentDate || '').trim();
+      if (docDateStr) {
+        const docDate = new Date(docDateStr);
+        const now = new Date();
+        const diffDays = Math.floor((now - docDate) / (1000 * 60 * 60 * 24));
+
+        if (isNaN(docDate.getTime())) {
+          console.warn('⚠️  POA date could not be parsed:', docDateStr);
+          // Non-fatal — don't reject just because date parsing failed
+          validation.confidence += 5;
+        } else if (diffDays > 90) {
+          validation.issues.push(`Document is ${diffDays} days old (dated ${docDateStr}). Please upload a document issued within the last 3 months.`);
+          return validation;
+        } else if (diffDays < 0) {
+          // Future date — likely OCR error, allow with warning
+          console.warn('⚠️  POA date is in the future:', docDateStr);
+          validation.confidence += 5;
+        } else {
+          console.log(`✅ POA document is ${diffDays} days old (within 90-day limit)`);
+          validation.confidence += 20;
+        }
+      } else {
+        console.warn('⚠️  No date found on POA document — allowing but flagging');
+        // No date found is not a hard failure — the document might still be valid
+        // but we reduce confidence
+        validation.confidence += 5;
+      }
+
+      // All checks passed
+      validation.isValid = true;
+      console.log(`✅ POA validation passed — confidence: ${validation.confidence}%`);
+      return validation;
+
+    } catch (error) {
+      console.error('❌ POA validation error:', error);
+      validation.issues.push('Address document validation encountered an error. Please try again.');
+      return validation;
     }
   }
 
@@ -1746,9 +1899,15 @@ Return JSON only:
         return await this.queueForManualReview(userId, documentType, documentUrl, ocrError);
       }
       
-      // Validate document against user information
-      console.log('🔍 Validating document against user registration...');
-      const validation = await this.validateDocumentAgainstUser(ocrResults, userId);
+      // Validate document — POA uses address-specific validation, ID uses identity validation
+      let validation;
+      if (documentType === 'proof_of_address') {
+        console.log('🔍 Validating POA document (surname + address + recency)...');
+        validation = await this.validatePOADocument(ocrResults, userId);
+      } else {
+        console.log('🔍 Validating identity document against user registration...');
+        validation = await this.validateDocumentAgainstUser(ocrResults, userId);
+      }
       console.log('📋 Validation results:', {
         isValid: validation.isValid,
         issues: validation.issues,
