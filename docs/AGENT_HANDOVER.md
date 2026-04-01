@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-01 18:50  
-**Latest Feature**: **Production User Cleanup & Rate Limiter Fix** — Fixed 429 "too many requests" on production: `financialLimiter` (10/min) was blocking dashboard GET requests. Split into `walletReadLimiter` (120/min for GETs) and `financialLimiter` (10/min for writes only). Auth limiter increased from 5 to 15. Purged User ID 1 from production (7 rows), reset sequence for ID 1 re-registration. Product/supplier data untouched (1,974 products). Previous: 15+ API fixes deployed as `20260401_v1`.  
-**Document Version**: 2.63.0  
-**Session logs**: `docs/session_logs/2026-04-01_1850_production-user-cleanup-rate-limiter-fix.md`  
+**Last Updated**: 2026-04-01 20:25  
+**Latest Feature**: **Rate Limiter Tuning, KYC Polling Fix & Self-Healing** — Fixed KYC 2-second polling death spiral that exhausted rate limits. Changed to 10s with exponential backoff on 429. General limiter raised to 1500/15min. Added self-healing to kycController: auto-corrects stale kycStatus when wallet already verified. Fixed stuck Tier 2 status for User 1. Both backend and wallet frontend deployed to production separately. Previous: User cleanup & initial rate limiter split.  
+**Document Version**: 2.64.0  
+**Session logs**: `docs/session_logs/2026-04-01_2025_rate-limiter-kyc-polling-fix.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
