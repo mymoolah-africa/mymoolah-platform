@@ -120,9 +120,9 @@ export function KYCStatusPage() {
       },
       {
         id: 'complete',
-        title: currentStatus === 'rejected' ? 'Action Required' : 'Verification Complete',
+        title: currentStatus === 'rejected' ? 'Verification Failed' : 'Verification Complete',
         description: currentStatus === 'rejected' ? 
-          'Some documents need to be re-submitted' : 
+          (rejectionModal.reason || 'Some documents need to be re-submitted') : 
           'Your identity has been verified successfully',
         status: currentStatus === 'verified' ? 'completed' : 
                 currentStatus === 'rejected' ? 'current' : 'pending',
@@ -205,7 +205,7 @@ export function KYCStatusPage() {
       case 'ussd_basic':
         return 'Your USSD wallet is active with basic verification. Upload documents to upgrade your limits.';
       case 'rejected':
-        return 'Some documents need to be re-submitted for verification.';
+        return rejectionModal.reason || 'Some documents need to be re-submitted for verification.';
       default:
         return 'Please upload your documents to begin verification.';
     }
@@ -227,6 +227,29 @@ export function KYCStatusPage() {
   }, [currentStatus]);
 
   const [initialStatus] = useState(currentStatus);
+
+  // When status becomes 'rejected', fetch the rejection reason and show modal
+  useEffect(() => {
+    if (currentStatus === 'rejected' && !rejectionModal.open && !rejectionModal.reason) {
+      const fetchRejectionReason = async () => {
+        try {
+          const token = getToken();
+          if (!token) return;
+          const response = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/kyc/status`, {
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+          });
+          if (!response.ok) return;
+          const data = await response.json();
+          if (data.kycRecord?.rejectionReason) {
+            setRejectionModal({ open: true, reason: data.kycRecord.rejectionReason });
+          }
+        } catch (err) {
+          console.error('Failed to fetch rejection reason:', err);
+        }
+      };
+      fetchRejectionReason();
+    }
+  }, [currentStatus]);
 
   // Auto-navigate only when status transitions to verified during polling
   // (not when user opens the page already verified)
