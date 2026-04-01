@@ -75,6 +75,8 @@ Full audit and overhaul of the digital voucher overlay system — the last overl
 | `a18f25dd` | fix: remove recipient/send-to-self from voucher purchase modal |
 | `92c82fb9` | feat: add real brand logos for 1Voucher, Betway, Hollywood Bets, OTT Voucher |
 | `8b9e7204` | feat: add sync-flash-products.js manual sync script |
+| `b22e2832` | docs: session log, handover, changelog — Flash sync script addition |
+| (pending)  | feat: Cloud Scheduler replaces node-cron for catalog sync |
 
 ---
 
@@ -87,6 +89,7 @@ Full audit and overhaul of the digital voucher overlay system — the last overl
 | Remove recipient/send-to-self | User copies voucher code and WhatsApp/shares manually. Simpler UX, matches other modals. |
 | Real PNG logos via Vite imports | Emoji icons are generic; real brand logos are professional. Same pattern as Vodacom logo. |
 | Exclude unrecognised products | Products not matching any brand pattern are garbage data — better to exclude than show raw names |
+| Cloud Scheduler replaces node-cron | Cloud Run kills idle instances mid-sweep (production logs confirmed). Cloud Scheduler sends HTTP request that keeps instance alive for full sweep duration. OIDC auth, 30-min timeout, 3 retries with exponential backoff. |
 
 ---
 
@@ -108,6 +111,12 @@ Full audit and overhaul of the digital voucher overlay system — the last overl
 | `mymoolah-wallet-frontend/components/digital-vouchers/*` | Deleted (legacy duplicate, 4 files) |
 | `.cursor/rules/tech-debt.mdc` | Added overlay tech debt + architectural decision |
 | `scripts/sync-flash-products.js` | New — manual Flash product sync script |
+| `middleware/cloudSchedulerAuth.js` | New — OIDC token verification for Cloud Scheduler |
+| `controllers/catalogSyncController.js` | Added `scheduledSweep` method (synchronous, HTTP-based) |
+| `routes/catalogSync.js` | Added `/scheduled-sweep` route with OIDC auth |
+| `server.js` | Conditional node-cron: skipped when `CATALOG_SYNC_MODE=scheduler` |
+| `scripts/deploy-backend.sh` | Timeout 300→1800s, added CATALOG_SYNC_MODE + CLOUD_RUN_SERVICE_URL |
+| `scripts/setup-cloud-scheduler.sh` | New — creates Cloud Scheduler jobs for staging/production |
 
 ---
 

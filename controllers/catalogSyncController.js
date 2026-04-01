@@ -260,6 +260,57 @@ class CatalogSyncController {
   }
 
   /**
+   * Cloud Scheduler-triggered sweep — runs synchronously within the HTTP
+   * request lifecycle so Cloud Run keeps the instance alive for the full
+   * duration. Returns detailed results when complete.
+   *
+   * Auth: OIDC token verified by cloudSchedulerAuth middleware (not JWT).
+   */
+  async scheduledSweep(req, res) {
+    const startTime = Date.now();
+    const triggeredBy = req.schedulerAuth
+      ? req.schedulerAuth.email
+      : (req.user ? req.user.id : 'unknown');
+
+    console.log(`🔄 Cloud Scheduler sweep triggered by: ${triggeredBy}`);
+
+    try {
+      const wasRunning = this.catalogSyncService.isRunning;
+      if (!wasRunning) this.catalogSyncService.isRunning = true;
+
+      await this.catalogSyncService.performDailySweep();
+
+      if (!wasRunning) this.catalogSyncService.isRunning = false;
+
+      const durationMs = Date.now() - startTime;
+      const stats = this.catalogSyncService.getStatus();
+
+      console.log(`✅ Cloud Scheduler sweep completed in ${durationMs}ms`);
+
+      res.json({
+        success: true,
+        message: 'Catalog sweep completed',
+        data: {
+          durationMs,
+          triggeredBy,
+          completedAt: new Date().toISOString(),
+          syncStats: stats.syncStats,
+        },
+      });
+    } catch (error) {
+      const durationMs = Date.now() - startTime;
+      console.error(`❌ Cloud Scheduler sweep failed after ${durationMs}ms:`, error.message);
+
+      res.status(500).json({
+        success: false,
+        error: 'Catalog sweep failed',
+        message: error.message,
+        data: { durationMs, triggeredBy },
+      });
+    }
+  }
+
+  /**
    * Health check for catalog synchronization service
    */
   async healthCheck(req, res) {

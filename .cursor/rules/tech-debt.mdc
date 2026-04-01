@@ -41,6 +41,7 @@ alwaysApply: true
 | MM_DEPLOYMENT_ENV baked into deploy scripts | Mar 2026 | Cloud Run `--set-env-vars` replaces ALL env vars; manually-set vars lost on redeploy. Now permanent in staging + production scripts |
 | Real PNG brand assets for network logos | Mar 2026 | Hand-drawn SVG cannot accurately reproduce brand marks; import PNGs as Vite modules from `assets/` |
 | Voucher overlay uses productPurchaseService (not inline route) | Mar 2026 | Banking-grade architecture: service layer handles ACID transactions, idempotency, circuit breaker, commission. Overlay route is thin catalog query only. Other overlays should follow this pattern (flagged as tech debt). |
+| Cloud Scheduler replaces node-cron for catalog sync | Apr 2026 | Cloud Run kills idle instances mid-sweep (~16 min in). Cloud Scheduler sends HTTP POST that keeps instance alive. OIDC auth, 1800s timeout, 3 retries. Node-cron kept as fallback for local dev. |
 
 ## Rule: When to Add Here
 

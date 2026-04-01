@@ -721,13 +721,17 @@ const initializeBackgroundServices = async () => {
       console.error('❌ Failed to start monthly tier review:', error.message);
     }
     
-    // Start Catalog Synchronization (daily only at 02:00; shadow 10-minute updates until prod)
+    // Start Catalog Synchronization
+    // CATALOG_SYNC_MODE=scheduler → Cloud Scheduler calls /api/v1/catalog-sync/scheduled-sweep via HTTP
+    // CATALOG_SYNC_MODE unset     → node-cron fallback (local dev / Codespaces)
     try {
-      const catalogSyncService = new CatalogSynchronizationService();
-      if (process.env.ENABLE_CATALOG_SYNC !== 'false') {
-        catalogSyncService.startDailyOnly();
-      } else {
+      if (process.env.ENABLE_CATALOG_SYNC === 'false') {
         console.log('⚠️  Catalog synchronization disabled via ENABLE_CATALOG_SYNC=false');
+      } else if (process.env.CATALOG_SYNC_MODE === 'scheduler') {
+        console.log('📅 Catalog sync mode: Cloud Scheduler (node-cron disabled — sweep triggered via HTTP)');
+      } else {
+        const catalogSyncService = new CatalogSynchronizationService();
+        catalogSyncService.startDailyOnly();
       }
     } catch (catalogErr) {
       console.error('❌ Failed to start Catalog Synchronization Service:', catalogErr.message);

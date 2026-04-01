@@ -1,5 +1,27 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-01 - Cloud Scheduler for Catalog Sync (banking-grade fix)
+
+### Problem
+Cloud Run was killing instances mid-catalog-sweep. The node-cron 02:00 task runs as a background process invisible to Cloud Run. After ~16 minutes (airtime + data sync done, vouchers in progress), Cloud Run recycled the instance. MobileMart vouchers/billers stuck at March 27 on production.
+
+### Solution — Cloud Scheduler + HTTP trigger
+- **`middleware/cloudSchedulerAuth.js`** — OIDC token verification. GCP-native authentication (no shared secrets). Verifies token signature, audience, and service account.
+- **`POST /api/v1/catalog-sync/scheduled-sweep`** — synchronous sweep endpoint. Runs within the HTTP request lifecycle so Cloud Run keeps the instance alive.
+- **`server.js`** — `CATALOG_SYNC_MODE=scheduler` disables node-cron on Cloud Run. Node-cron remains as fallback for local dev.
+- **`deploy-backend.sh`** — request timeout increased 300s→1800s (30 min). Added `CATALOG_SYNC_MODE`, `CLOUD_SCHEDULER_SERVICE_ACCOUNT`, `CLOUD_RUN_SERVICE_URL` env vars.
+- **`scripts/setup-cloud-scheduler.sh`** — creates Cloud Scheduler jobs. Schedule: 02:00 SAST daily. Auth: OIDC. Retry: 3 attempts, exponential backoff 60s–600s. Deadline: 1800s.
+
+### Architectural Decision
+| Decision | Reason |
+|----------|--------|
+| Cloud Scheduler over node-cron | Cloud Run kills idle instances; HTTP request keeps instance alive |
+| OIDC auth over shared secret | GCP-native, cryptographic, no secret rotation needed |
+| 1800s timeout | Sweep takes 15–25 minutes for full Flash + MobileMart catalog |
+| Retry with backoff | Supplier API maintenance (like Flash's 01:00–03:00 window) handled gracefully |
+
+---
+
 ## 2026-04-01 - Voucher Overlay Overhaul (6 commits)
 
 ### Backend — Brand-Level Catalog Route (`routes/overlayServices.js`)

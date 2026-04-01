@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-01 01:15  
-**Latest Feature**: **Voucher Overlay Overhaul + Flash Sync Script** — Full audit and rebuild of voucher overlay across 5 commits. Backend: `VOUCHER_BRAND_TABLE` (40-entry brand recognition), commission-based dedup, variable/fixed detection. Frontend: rebuilt 4 components (~1,770 → ~700 lines), removed recipient/send-to-self, added PNG brand logos. New `sync-flash-products.js` manual sync script mirrors `sync-mobilemart-products.js` pattern (db-connection-helper, Secret Manager, --vouchers-only/--staging/--production flags, stale cleanup). Tested on staging: 101 products synced, 0 failures.  
-**Document Version**: 2.59.0  
+**Last Updated**: 2026-04-01 02:00  
+**Latest Feature**: **Cloud Scheduler replaces node-cron for catalog sync** — Production log analysis revealed Cloud Run was killing instances mid-sweep (after ~16 minutes, during MobileMart voucher sync). Node-cron runs as a background task invisible to Cloud Run. Fix: Cloud Scheduler sends HTTP POST to `/api/v1/catalog-sync/scheduled-sweep` at 02:00 SAST. The request keeps the instance alive for the full sweep. OIDC token auth (GCP-native, no shared secrets). Cloud Run timeout increased 300s→1800s. Retry policy: 3 attempts, exponential backoff 60s–600s. Previous: Voucher overlay overhaul, Flash sync script.  
+**Document Version**: 2.60.0  
 **Session logs**: `docs/session_logs/2026-03-31_2359_voucher-overlay-overhaul.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
@@ -722,17 +722,19 @@ You're part of a **banking-grade software system** where:
 ### **Next Agent Actions**
 1. Read `docs/CURSOR_2.0_RULES_FINAL.md` (MANDATORY)
 2. Read this file and 2–3 recent session logs (especially `2026-03-31_2359_voucher-overlay-overhaul.md`)
-3. **Sync vouchers to production**: `node scripts/sync-mobilemart-products.js --vouchers-only --production` and `node scripts/sync-flash-products.js --vouchers-only --production`
-4. **Deploy**: `./scripts/build-push-deploy-staging.sh` then `./scripts/build-push-deploy-production.sh`
-5. **Production biller sync** — Run `node scripts/sync-mobilemart-products.js --production --billers-only` to populate production DB
-6. **KYC OCR debugging** — André will test KYC and provide backend logs. Look for `OpenAI OCR attempt` log lines.
-7. **Add more brand logos**: As André sources them — Steam, Netflix, Google Play, Roblox, MTN, CellC, Telkom (same Vite import pattern)
-8. **Test failover end-to-end**: After backend redeployment, verify MobileMart error 1002 correctly triggers Flash failover
-9. **Test daily 02:00 cron**: Trigger manually via `node -e "require('dotenv').config(); new (require('./services/catalogSynchronizationService'))().runDailySweep().then(()=>process.exit(0))"` in Codespaces
-10. **Future refactor (tech debt)**: Extract airtime/electricity/biller purchase logic from overlayServices.js into service classes (~9-13 hours, 1-2 sessions)
-11. Do NOT reactivate Peach Payments without explicit approval from André
-12. Do NOT add `RmtInf.Ustrd` to Pain.013 — SBSA rejects it
-13. npm audit: 9 remaining (5 low, 4 moderate) — all in transitive deps, cannot safely fix
+3. **DEPLOY REQUIRED**: Backend must be redeployed for Cloud Scheduler to work:
+   - `./scripts/deploy-backend.sh --staging` then `./scripts/deploy-backend.sh --production`
+   - After deploy: `./scripts/setup-cloud-scheduler.sh --both` (creates the scheduler jobs)
+   - Verify: `gcloud scheduler jobs list --location=africa-south1 --project=mymoolah-db`
+   - Test: `gcloud scheduler jobs run catalog-sweep-staging --location=africa-south1 --project=mymoolah-db`
+4. **Manual production sync** (catch up stale data): `node scripts/sync-mobilemart-products.js --production` and `node scripts/sync-flash-products.js --production`
+5. **KYC OCR debugging** — André will test KYC and provide backend logs. Look for `OpenAI OCR attempt` log lines.
+6. **Add more brand logos**: As André sources them — Steam, Netflix, Google Play, Roblox, MTN, CellC, Telkom (same Vite import pattern)
+7. **Fix SBSA GCS permissions** — staging SA needs `storage.objects.list`, production SA needs `storage.objects.create` on the SBSA GCS bucket
+8. **Future refactor (tech debt)**: Extract airtime/electricity/biller purchase logic from overlayServices.js into service classes (~9-13 hours, 1-2 sessions)
+9. Do NOT reactivate Peach Payments without explicit approval from André
+10. Do NOT add `RmtInf.Ustrd` to Pain.013 — SBSA rejects it
+11. npm audit: 9 remaining (5 low, 4 moderate) — all in transitive deps, cannot safely fix
 
 ---
 

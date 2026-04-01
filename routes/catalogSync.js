@@ -4,6 +4,7 @@ const express = require('express');
 const router = express.Router();
 const CatalogSyncController = require('../controllers/catalogSyncController');
 const auth = require('../middleware/auth');
+const { verifyCloudSchedulerToken } = require('../middleware/cloudSchedulerAuth');
 const rateLimit = require('express-rate-limit');
 
 const catalogSyncController = new CatalogSyncController();
@@ -99,6 +100,15 @@ router.post('/stop', auth, catalogSyncController.stopService.bind(catalogSyncCon
  * @access Admin only (or public if no auth - for script/cron use)
  */
 router.post('/refresh-best-offers', auth, catalogSyncController.refreshBestOffers.bind(catalogSyncController));
+
+/**
+ * @route POST /api/v1/catalog-sync/scheduled-sweep
+ * @desc Cloud Scheduler-triggered daily sweep. Runs synchronously within the
+ *       HTTP request so Cloud Run keeps the instance alive. Authenticated via
+ *       GCP OIDC token (not JWT). No rate limit — Cloud Scheduler calls once/day.
+ * @access Cloud Scheduler only (OIDC token)
+ */
+router.post('/scheduled-sweep', verifyCloudSchedulerToken, catalogSyncController.scheduledSweep.bind(catalogSyncController));
 
 module.exports = router;
 
