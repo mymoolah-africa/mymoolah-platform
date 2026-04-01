@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
@@ -136,6 +136,7 @@ export function KYCStatusPage() {
   };
 
   const [rejectionModal, setRejectionModal] = useState<{ open: boolean; reason: string }>({ open: false, reason: '' });
+  const pollBackoffRef = useRef(10_000);
 
   const handleRefreshStatus = async () => {
     setIsRefreshing(true);
@@ -152,9 +153,16 @@ export function KYCStatusPage() {
         }
       });
 
+      if (response.status === 429) {
+        pollBackoffRef.current = Math.min(pollBackoffRef.current * 2, 60_000);
+        return;
+      }
+
       if (!response.ok) {
         throw new Error('Failed to fetch KYC status');
       }
+
+      pollBackoffRef.current = 10_000;
 
       const data = await response.json();
 
@@ -215,14 +223,16 @@ export function KYCStatusPage() {
   const stages = getStatusStages(currentStatus);
   const progressValue = getProgressValue(currentStatus);
 
-  // Auto-refresh for pending statuses - poll faster (every 2 seconds) for better UX
   useEffect(() => {
     if (currentStatus === 'documents_uploaded' || currentStatus === 'under_review') {
-      const interval = setInterval(() => {
+      let timer: ReturnType<typeof setTimeout>;
+      const tick = () => {
         handleRefreshStatus();
-      }, 2000); // Refresh every 2 seconds (faster than 30s for better UX)
+        timer = setTimeout(tick, pollBackoffRef.current);
+      };
+      timer = setTimeout(tick, pollBackoffRef.current);
 
-      return () => clearInterval(interval);
+      return () => clearTimeout(timer);
     }
   }, [currentStatus]);
 
