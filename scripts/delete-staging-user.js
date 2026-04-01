@@ -9,14 +9,14 @@
  *
  * Safety:
  *   - ONLY works against the STAGING database (port 6544)
- *   - Uses admin client (postgres) because some tables have FK constraints
+ *   - Uses mymoolah_app client (table owner in Cloud SQL)
  *   - Resets the user's auto-increment ID so it can be reused
  *   - Prints a summary of all rows deleted
  */
 
 'use strict';
 
-const { getStagingAdminClient } = require('./db-connection-helper');
+const { getStagingClient } = require('./db-connection-helper');
 
 function normalizeToE164(phone) {
   let cleaned = String(phone).replace(/[\s\-()]/g, '');
@@ -101,7 +101,7 @@ async function main() {
   const e164 = normalizeToE164(phoneArg);
   console.log(`\nLooking up user with phone: ${e164} on STAGING...\n`);
 
-  const client = await getStagingAdminClient();
+  const client = await getStagingClient();
 
   try {
     const userResult = await client.query(
