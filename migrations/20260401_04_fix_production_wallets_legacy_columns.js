@@ -5,20 +5,62 @@ module.exports = {
     const tableDesc = await queryInterface.describeTable("wallets");
     const cols = Object.keys(tableDesc);
 
-    // walletId_prev is a leftover from a previous walletId migration
-    // It's NOT NULL with no default, blocking new wallet creation
     if (cols.includes("walletId_prev")) {
+      // Drop FK constraints that reference walletId_prev
+      const [fks] = await queryInterface.sequelize.query(`
+        SELECT conname, conrelid::regclass AS tbl
+        FROM pg_constraint
+        WHERE confrelid = 'wallets'::regclass
+          AND pg_get_constraintdef(oid) LIKE '%walletId_prev%'
+      `);
+      for (const fk of fks) {
+        await queryInterface.sequelize.query(
+          `ALTER TABLE ${fk.tbl} DROP CONSTRAINT IF EXISTS "${fk.conname}"`
+        );
+        console.log(`✅ Dropped FK ${fk.tbl}.${fk.conname}`);
+      }
+
       await queryInterface.removeColumn("wallets", "walletId_prev");
-      console.log("✅ Dropped legacy wallets.walletId_prev column");
+      console.log("✅ Dropped legacy wallets.walletId_prev");
+
+      // Re-create the FKs pointing to walletId instead
+      const [hasSender] = await queryInterface.sequelize.query(`
+        SELECT column_name FROM information_schema.columns
+        WHERE table_name = 'transactions' AND column_name = 'senderWalletId'
+      `);
+      if (hasSender.length > 0) {
+        await queryInterface.sequelize.query(`
+          ALTER TABLE transactions
+          ADD CONSTRAINT transactions_senderWalletId_fkey
+          FOREIGN KEY ("senderWalletId") REFERENCES wallets("walletId")
+          ON UPDATE CASCADE ON DELETE SET NULL
+        `);
+        console.log("✅ Re-created transactions.senderWalletId FK → wallets.walletId");
+      }
+
+      const [hasReceiver] = await queryInterface.sequelize.query(`
+        SELECT column_name FROM information_schema.columns
+        WHERE table_name = 'transactions' AND column_name = 'receiverWalletId'
+      `);
+      if (hasReceiver.length > 0) {
+        await queryInterface.sequelize.query(`
+          ALTER TABLE transactions
+          ADD CONSTRAINT transactions_receiverWalletId_fkey
+          FOREIGN KEY ("receiverWalletId") REFERENCES wallets("walletId")
+          ON UPDATE CASCADE ON DELETE SET NULL
+        `);
+        console.log("✅ Re-created transactions.receiverWalletId FK → wallets.walletId");
+      }
+    } else {
+      console.log("⏭️  walletId_prev does not exist — skipping");
     }
 
-    // walletId_old is also a migration artifact
     if (cols.includes("walletId_old")) {
       await queryInterface.removeColumn("wallets", "walletId_old");
-      console.log("✅ Dropped legacy wallets.walletId_old column");
+      console.log("✅ Dropped legacy wallets.walletId_old");
     }
 
-    // Ensure walletId is NOT NULL (it's currently nullable in production)
+    // Ensure walletId is NOT NULL
     if (cols.includes("walletId")) {
       const col = tableDesc["walletId"];
       if (col && col.allowNull !== false) {
