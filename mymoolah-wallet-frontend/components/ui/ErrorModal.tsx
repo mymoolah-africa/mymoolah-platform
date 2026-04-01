@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './dialog';
 import { Button } from './button';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle2 } from 'lucide-react';
 
 const ERROR_MODAL_DESC_ID = 'error-modal-description';
 
@@ -10,7 +10,7 @@ interface ErrorModalProps {
   onClose: () => void;
   title?: string;
   message: string;
-  type?: 'error' | 'warning' | 'info';
+  type?: 'error' | 'warning' | 'info' | 'success';
   showCloseButton?: boolean;
 }
 
@@ -39,6 +39,8 @@ export const ErrorModal: React.FC<ErrorModalProps> = ({
         return 'text-yellow-500';
       case 'info':
         return 'text-blue-500';
+      case 'success':
+        return 'text-green-500';
       default:
         return 'text-red-500';
     }
@@ -52,10 +54,14 @@ export const ErrorModal: React.FC<ErrorModalProps> = ({
         return 'bg-yellow-500 hover:bg-yellow-600';
       case 'info':
         return 'bg-blue-500 hover:bg-blue-600';
+      case 'success':
+        return 'bg-green-500 hover:bg-green-600';
       default:
         return 'bg-red-500 hover:bg-red-600';
     }
   };
+
+  const Icon = type === 'success' ? CheckCircle2 : AlertCircle;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -68,7 +74,7 @@ export const ErrorModal: React.FC<ErrorModalProps> = ({
         </DialogDescription>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <AlertCircle className={`w-5 h-5 ${getIconColor()}`} />
+            <Icon className={`w-5 h-5 ${getIconColor()}`} />
             {title}
           </DialogTitle>
         </DialogHeader>

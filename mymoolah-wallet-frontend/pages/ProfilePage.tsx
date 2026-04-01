@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/apiService';
+import { ErrorModal } from '../components/ui/ErrorModal';
 
 // Import icons directly from lucide-react
 import { 
@@ -118,6 +119,13 @@ export function ProfilePage() {
   const [newPhoneNumber, setNewPhoneNumber] = useState('');
   const [phoneOtp, setPhoneOtp] = useState('');
 
+  const [notifyModal, setNotifyModal] = useState<{
+    open: boolean;
+    title: string;
+    message: string;
+    type: 'error' | 'warning' | 'info' | 'success';
+  }>({ open: false, title: '', message: '', type: 'info' });
+
   // Refresh user status when ProfilePage mounts to ensure latest KYC status
   React.useEffect(() => {
     if (refreshUserStatus) {
@@ -221,14 +229,14 @@ export function ProfilePage() {
       title: 'Notification Settings',
       description: 'Manage alerts, marketing, and update notifications',
       icon: <Bell className="w-5 h-5" />,
-      onClick: () => alert('Notification settings coming soon!')
+      onClick: () => setNotifyModal({ open: true, title: 'Coming Soon', message: 'Notification settings will be available in a future update.', type: 'info' })
     },
     {
       id: 'device-management',
       title: 'Device Management',
       description: 'Manage logged-in devices and sessions',
       icon: <Smartphone className="w-5 h-5" />,
-      onClick: () => alert('Device management coming soon!')
+      onClick: () => setNotifyModal({ open: true, title: 'Coming Soon', message: 'Device management will be available in a future update.', type: 'info' })
     },
 
     {
@@ -244,10 +252,10 @@ export function ProfilePage() {
   const handleProfileUpdate = async () => {
     try {
       // In demo mode, just update local state
-      alert('Profile updated successfully! (Demo mode)');
+      setNotifyModal({ open: true, title: 'Success', message: 'Profile updated successfully.', type: 'success' });
       setIsEditingProfile(false);
     } catch (error) {
-      alert('Failed to update profile. Please try again.');
+      setNotifyModal({ open: true, title: 'Update Failed', message: 'Failed to update profile. Please try again.', type: 'error' });
     }
   };
 
@@ -351,11 +359,11 @@ export function ProfilePage() {
     // Client-side validation to match registration rules
     const strength = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      alert('New password and confirmation do not match');
+      setNotifyModal({ open: true, title: 'Validation Error', message: 'New password and confirmation do not match.', type: 'warning' });
       return;
     }
     if (!strength.test(passwordForm.newPassword)) {
-      alert('Password must be at least 8 characters and contain a letter, a number, and a special character');
+      setNotifyModal({ open: true, title: 'Weak Password', message: 'Password must be at least 8 characters and contain a letter, a number, and a special character.', type: 'warning' });
       return;
     }
     try {
@@ -364,11 +372,11 @@ export function ProfilePage() {
         passwordForm.newPassword,
         passwordForm.confirmPassword
       );
-      alert('Password changed successfully');
+      setNotifyModal({ open: true, title: 'Success', message: 'Password changed successfully.', type: 'success' });
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
       setIsChangingPassword(false);
     } catch (error: any) {
-      alert(error?.message || 'Failed to change password. Please try again.');
+      setNotifyModal({ open: true, title: 'Password Change Failed', message: error?.message || 'Failed to change password. Please try again.', type: 'error' });
     }
   };
 
@@ -385,7 +393,7 @@ export function ProfilePage() {
       navigate('/login');
     } catch (error) {
       setIsLoggingOut(false);
-      alert('Logout failed. Please try again.');
+      setNotifyModal({ open: true, title: 'Logout Failed', message: 'Logout failed. Please try again.', type: 'error' });
     }
   };
 
@@ -425,6 +433,13 @@ export function ProfilePage() {
 
   return (
     <div style={{ fontFamily: 'Montserrat, sans-serif', backgroundColor: '#ffffff', minHeight: '100vh' }}>
+      <ErrorModal
+        isOpen={notifyModal.open}
+        onClose={() => setNotifyModal(m => ({ ...m, open: false }))}
+        title={notifyModal.title}
+        message={notifyModal.message}
+        type={notifyModal.type}
+      />
       {/* Top Navigation Bar */}
       <div 
         style={{

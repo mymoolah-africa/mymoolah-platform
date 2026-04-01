@@ -127,6 +127,9 @@ build_secrets_args() {
     base="${base},JWT_SECRET=jwt-secret-staging:latest,SESSION_SECRET=session-secret-staging:latest,DB_PASSWORD=db-mmtp-pg-staging-password:latest"
   fi
 
+  # Field-level encryption keys (POPIA: AES-256-GCM for PII, HMAC-SHA256 for blind indexes)
+  base="${base},FIELD_ENCRYPTION_KEY=FIELD_ENCRYPTION_KEY:latest,FIELD_HMAC_KEY=FIELD_HMAC_KEY:latest"
+
   for name in "easypay-api-key${ext}" "openai-api-key${ext}" "valr-api-key${ext}" "valr-api-secret${ext}"; do
     if gcloud secrets describe "${name}" --project="${PROJECT_ID}" >/dev/null 2>&1; then
       case "${name}" in

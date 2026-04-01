@@ -82,6 +82,7 @@ module.exports = {
       return res.status(201).json({ success: true, data: { requestId: pr.id } });
     } catch (err) {
       await t.rollback();
+      console.error('❌ createWalletRequest error:', err.message, err.stack?.split('\n').slice(0, 5).join('\n'));
       return res.status(500).json({ success: false, message: 'Failed to create payment request' });
     }
   },
