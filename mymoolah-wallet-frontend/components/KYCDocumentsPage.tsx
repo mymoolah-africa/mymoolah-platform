@@ -75,16 +75,13 @@ export function KYCDocumentsPage() {
   const kycTier = (user as any)?.kycTier ?? null;
   const identityAlreadyVerified = kycTier != null && kycTier >= 1;
   const needsIdentity = !identityAlreadyVerified;
-  const needsAddress = kycTier == null || kycTier < 2;
 
-  // Only redirect if fully verified (Tier 2)
   if (kycTier != null && kycTier >= 2) {
     return <Navigate to="/dashboard" replace />;
   }
 
-  const totalRequired = (needsIdentity ? 1 : 0) + (needsAddress ? 1 : 0);
-  const uploaded = (needsIdentity && documents.identity.file ? 1 : 0) +
-                   (needsAddress && documents.address.file ? 1 : 0);
+  const currentStep = needsIdentity ? 1 : 2;
+  const currentFile = needsIdentity ? documents.identity.file : documents.address.file;
 
   const handleFileSelect = (type: DocumentType, file: File) => {
     const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg'];
@@ -133,11 +130,11 @@ export function KYCDocumentsPage() {
 
     try {
       if (needsIdentity && !documents.identity.file) {
-        throw new Error('Please upload your identity document (SA ID, Passport, Driving License, or Temporary ID Certificate)');
+        throw new Error('Please upload your identity document (SA ID, Passport, Driving Licence, or Temporary ID)');
       }
 
-      if (!documents.identity.file && !documents.address.file) {
-        throw new Error('Please upload at least one document');
+      if (identityAlreadyVerified && !documents.address.file) {
+        throw new Error('Please upload your proof of address (utility bill, bank statement, or municipal account)');
       }
 
       for (let i = 0; i <= 100; i += 10) {
@@ -184,7 +181,12 @@ export function KYCDocumentsPage() {
 
       if (!data.success && (data.status === 'retry' || data.status === 'failed')) {
         const issues: string[] = data?.validation?.issues || [];
-        const tips: string[] = [
+        const tips: string[] = identityAlreadyVerified ? [
+          'Upload a clear photo of a utility bill, bank statement, or municipal account',
+          'The document must be less than 3 months old',
+          'Your name and address must be clearly visible',
+          'Only images are supported (JPG/PNG), max 10MB'
+        ] : [
           'Upload a clear photo of your SA ID book, passport, driver\'s licence or temporary ID',
           'Ensure the whole document is visible with good lighting (no glare)',
           `The name must match your profile: ${(user as any)?.name || ''}`.trim(),
@@ -227,7 +229,7 @@ export function KYCDocumentsPage() {
     }
   };
 
-  const isSubmitDisabled = (needsIdentity && !documents.identity.file && !documents.address.file) || isLoading;
+  const isSubmitDisabled = !currentFile || isLoading;
 
   const tierBadgeColors: Record<number, { bg: string; text: string; label: string }> = {
     0: { bg: 'bg-amber-100', text: 'text-amber-800', label: 'Tier 0 — Basic' },
@@ -268,7 +270,7 @@ export function KYCDocumentsPage() {
               color: 'white',
               marginBottom: '0.5rem'
             }}>
-              {identityAlreadyVerified ? 'Upgrade Your Verification' : 'Verify Your Identity'}
+              {identityAlreadyVerified ? 'Step 2: Proof of Address' : 'Step 1: Verify Your ID'}
             </h1>
             <p className="text-white/90" style={{ 
               fontFamily: 'Montserrat, sans-serif', 
@@ -276,8 +278,8 @@ export function KYCDocumentsPage() {
               fontWeight: 'var(--font-weight-normal)' 
             }}>
               {identityAlreadyVerified
-                ? 'Upload proof of address to unlock higher transaction limits'
-                : 'Upload your documents to unlock full wallet features'}
+                ? 'Upload proof of address to unlock higher limits and international transfers'
+                : 'Upload your SA ID, passport, or driver\'s licence to activate your wallet'}
             </p>
           </div>
 
@@ -292,24 +294,24 @@ export function KYCDocumentsPage() {
             </div>
           )}
 
-          {/* Progress Indicator */}
+          {/* Step Progress */}
           <div className="mb-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-white/80" style={{ 
                 fontFamily: 'Montserrat, sans-serif', 
                 fontSize: 'var(--mobile-font-small)' 
               }}>
-                Documents Required
+                Step {currentStep} of 2
               </span>
               <span className="text-white/80" style={{ 
                 fontFamily: 'Montserrat, sans-serif', 
                 fontSize: 'var(--mobile-font-small)' 
               }}>
-                {uploaded}/{totalRequired}
+                {currentFile ? 'Ready to submit' : 'Upload required'}
               </span>
             </div>
             <Progress 
-              value={totalRequired > 0 ? (uploaded / totalRequired) * 100 : 0}
+              value={identityAlreadyVerified ? (currentFile ? 100 : 50) : (currentFile ? 50 : 0)}
               className="h-2 bg-white/20"
             />
           </div>
@@ -346,7 +348,11 @@ export function KYCDocumentsPage() {
                       <Button
                         onClick={() => {
                           setKycFeedback(null);
-                          identityFileRef.current?.click();
+                          if (identityAlreadyVerified) {
+                            addressFileRef.current?.click();
+                          } else {
+                            identityFileRef.current?.click();
+                          }
                         }}
                         className="bg-[#86BE41] hover:bg-[#7AB139]"
                       >
@@ -356,7 +362,7 @@ export function KYCDocumentsPage() {
                         variant="outline"
                         onClick={() => {
                           setKycFeedback(null);
-                          handleRemoveDocument('identity');
+                          handleRemoveDocument(identityAlreadyVerified ? 'address' : 'identity');
                         }}
                         className="border-[#2D8CCA] text-[#2D8CCA] hover:bg-[#2D8CCA] hover:text-white"
                       >
@@ -543,8 +549,8 @@ export function KYCDocumentsPage() {
               </Card>
             )}
 
-            {/* Proof of Address Upload Card */}
-            {needsAddress && (
+            {/* Proof of Address Upload Card — only visible after ID is verified (Tier 1+) */}
+            {identityAlreadyVerified && (
               <Card className="bg-white border border-gray-200" style={{ 
                 borderRadius: 'var(--mobile-border-radius)',
                 boxShadow: 'var(--mobile-shadow)'
@@ -562,15 +568,6 @@ export function KYCDocumentsPage() {
                     Proof of Address
                     {documents.address.file && (
                       <Check className="w-5 h-5 text-green-500 ml-auto" />
-                    )}
-                    {!identityAlreadyVerified && !documents.identity.file && (
-                      <span className="ml-auto text-gray-400" style={{ 
-                        fontFamily: 'Montserrat, sans-serif', 
-                        fontSize: 'var(--mobile-font-small)',
-                        fontWeight: 'var(--font-weight-normal)'
-                      }}>
-                        Optional
-                      </span>
                     )}
                   </CardTitle>
                   <p className="text-gray-600" style={{ 
@@ -681,30 +678,35 @@ export function KYCDocumentsPage() {
               </Card>
             )}
 
-            {/* Tier Upgrade Info */}
-            {!identityAlreadyVerified && (
-              <Card className="bg-white/95 border border-white/50" style={{ 
-                borderRadius: 'var(--mobile-border-radius)',
-                boxShadow: 'var(--mobile-shadow)'
-              }}>
-                <CardContent className="pt-4 pb-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
+            {/* How It Works */}
+            <Card className="bg-white/95 border border-white/50" style={{ 
+              borderRadius: 'var(--mobile-border-radius)',
+              boxShadow: 'var(--mobile-shadow)'
+            }}>
+              <CardContent className="pt-4 pb-4">
+                <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 'var(--mobile-font-small)', fontWeight: 'var(--font-weight-bold)', color: '#1f2937', marginBottom: '0.5rem' }}>
+                  How verification works
+                </p>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    {identityAlreadyVerified ? (
+                      <Check className="w-4 h-4 text-green-500" />
+                    ) : (
                       <ChevronRight className="w-4 h-4 text-[#86BE41]" />
-                      <span style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 'var(--mobile-font-small)', fontWeight: 'var(--font-weight-medium)', color: '#1f2937' }}>
-                        ID only = Tier 1 (standard limits)
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <ChevronRight className="w-4 h-4 text-[#2D8CCA]" />
-                      <span style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 'var(--mobile-font-small)', fontWeight: 'var(--font-weight-medium)', color: '#1f2937' }}>
-                        ID + Proof of Address = Tier 2 (higher limits)
-                      </span>
-                    </div>
+                    )}
+                    <span style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 'var(--mobile-font-small)', fontWeight: 'var(--font-weight-medium)', color: identityAlreadyVerified ? '#16a34a' : '#1f2937' }}>
+                      Step 1: Upload your ID — activates your wallet
+                    </span>
                   </div>
-                </CardContent>
-              </Card>
-            )}
+                  <div className="flex items-center gap-2">
+                    <ChevronRight className="w-4 h-4 text-[#2D8CCA]" />
+                    <span style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 'var(--mobile-font-small)', fontWeight: 'var(--font-weight-medium)', color: identityAlreadyVerified ? '#1f2937' : '#9ca3af' }}>
+                      Step 2: Upload proof of address — unlocks higher limits
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Upload Progress */}
             {isLoading && uploadProgress > 0 && (
@@ -720,7 +722,7 @@ export function KYCDocumentsPage() {
                         fontSize: 'var(--mobile-font-small)', 
                         fontWeight: 'var(--font-weight-medium)' 
                       }}>
-                        Uploading Documents...
+                        {identityAlreadyVerified ? 'Uploading Proof of Address...' : 'Uploading ID Document...'}
                       </span>
                       <span style={{ 
                         fontFamily: 'Montserrat, sans-serif', 
@@ -751,11 +753,11 @@ export function KYCDocumentsPage() {
               {isLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  <span style={{ fontFamily: 'Montserrat, sans-serif' }}>Uploading Documents...</span>
+                  <span style={{ fontFamily: 'Montserrat, sans-serif' }}>Verifying...</span>
                 </>
               ) : (
                 <span style={{ fontFamily: 'Montserrat, sans-serif' }}>
-                  {identityAlreadyVerified ? 'Submit for Tier 2 Verification' : 'Submit for Verification'}
+                  {identityAlreadyVerified ? 'Verify Proof of Address' : 'Verify My ID'}
                 </span>
               )}
             </Button>
@@ -783,7 +785,9 @@ export function KYCDocumentsPage() {
                       fontSize: 'var(--mobile-font-small)', 
                       fontWeight: 'var(--font-weight-normal)' 
                     }}>
-                      Make sure your documents are clear, well-lit, and all corners are visible. Processing typically takes 2-5 minutes.
+                      {identityAlreadyVerified
+                        ? 'Upload a clear photo of a recent utility bill, bank statement, or municipal account.'
+                        : 'Take a clear photo of your SA ID, passport, or driver\'s licence. Make sure all text is readable.'}
                     </p>
                     
                     <div className="space-y-2 text-xs text-gray-600" style={{ 
@@ -792,16 +796,23 @@ export function KYCDocumentsPage() {
                     }}>
                       <div className="flex items-center gap-2">
                         <Check className="w-3 h-3 text-green-500" />
-                        <span>Clear, high-quality images</span>
+                        <span>Clear, high-quality image with good lighting</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Check className="w-3 h-3 text-green-500" />
-                        <span>All text must be readable</span>
+                        <span>All text must be readable (no blur or glare)</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Check className="w-3 h-3 text-green-500" />
-                        <span>Proof of address must be less than 3 months old</span>
-                      </div>
+                      {identityAlreadyVerified ? (
+                        <div className="flex items-center gap-2">
+                          <Check className="w-3 h-3 text-green-500" />
+                          <span>Document must be less than 3 months old</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <Check className="w-3 h-3 text-green-500" />
+                          <span>Name must match your registration: {(user as any)?.name || ''}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
