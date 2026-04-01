@@ -1185,22 +1185,38 @@ Return JSON only:
             finalFullName = parts.join(' ').trim();
           }
           
-          const canonical = {
-            surname: surname ? String(surname).trim() : null,
-            forenames: forenames ? String(forenames).trim() : null,
-            firstNames: forenames ? String(forenames).trim() : null, // Alias for compatibility
-            fullName: finalFullName ? String(finalFullName).trim() : null,
-            idNumber: (lower['idnumber'] || lower['id/passport number'] || lower['identity number'] || lower['id number'] || lower['passport number'] || lower['id'] || null),
-            licenseNumber: (lower['license number'] || lower['driving license number'] || lower['license'] || null),
-            dateOfBirth: (lower['dateofbirth'] || lower['date of birth'] || lower['dob'] || null),
-            dateIssued: (lower['dateissued'] || lower['date issued'] || null),
-            validFrom: (lower['validfrom'] || lower['valid from'] || lower['validfromdate'] || lower['valid from date'] || null),
-            validTo: (lower['validto'] || lower['valid to'] || lower['validtodate'] || lower['valid to date'] || null),
-            expiryDate: (lower['expirydate'] || lower['expiry date'] || lower['expirationdate'] || lower['expiration date'] || lower['dateofexpiry'] || lower['date of expiry'] || lower['passportexpirydate'] || lower['passport expiry date'] || lower['licenseexpirydate'] || lower['license expiry date'] || null),
-            nationality: lower['nationality'] || null,
-            documentType: lower['document type'] || lower['doctype'] || null,
-            countryOfIssue: (lower['countryofbirth'] || lower['country of birth'] || lower['country of issue'] || lower['country'] || null)
-          };
+          // POA documents have a different field schema from identity documents
+          let canonical;
+          if (documentType === 'proof_of_address') {
+            canonical = {
+              accountHolder: (lower['accountholder'] || lower['account holder'] || lower['account_holder'] || lower['name'] || null),
+              surname: surname ? String(surname).trim() : null,
+              streetAddress: (lower['streetaddress'] || lower['street address'] || lower['street_address'] || lower['address'] || null),
+              suburb: (lower['suburb'] || lower['area'] || null),
+              city: (lower['city'] || lower['town'] || null),
+              postalCode: (lower['postalcode'] || lower['postal code'] || lower['postal_code'] || lower['zip'] || null),
+              province: (lower['province'] || lower['state'] || null),
+              documentDate: (lower['documentdate'] || lower['document date'] || lower['document_date'] || lower['statement date'] || lower['invoice date'] || lower['date'] || null),
+              documentType: (lower['documenttype'] || lower['document type'] || lower['document_type'] || null),
+            };
+          } else {
+            canonical = {
+              surname: surname ? String(surname).trim() : null,
+              forenames: forenames ? String(forenames).trim() : null,
+              firstNames: forenames ? String(forenames).trim() : null,
+              fullName: finalFullName ? String(finalFullName).trim() : null,
+              idNumber: (lower['idnumber'] || lower['id/passport number'] || lower['identity number'] || lower['id number'] || lower['passport number'] || lower['id'] || null),
+              licenseNumber: (lower['license number'] || lower['driving license number'] || lower['license'] || null),
+              dateOfBirth: (lower['dateofbirth'] || lower['date of birth'] || lower['dob'] || null),
+              dateIssued: (lower['dateissued'] || lower['date issued'] || null),
+              validFrom: (lower['validfrom'] || lower['valid from'] || lower['validfromdate'] || lower['valid from date'] || null),
+              validTo: (lower['validto'] || lower['valid to'] || lower['validtodate'] || lower['valid to date'] || null),
+              expiryDate: (lower['expirydate'] || lower['expiry date'] || lower['expirationdate'] || lower['expiration date'] || lower['dateofexpiry'] || lower['date of expiry'] || lower['passportexpirydate'] || lower['passport expiry date'] || lower['licenseexpirydate'] || lower['license expiry date'] || null),
+              nationality: lower['nationality'] || null,
+              documentType: lower['document type'] || lower['doctype'] || null,
+              countryOfIssue: (lower['countryofbirth'] || lower['country of birth'] || lower['country of issue'] || lower['country'] || null)
+            };
+          }
           
           // Clean and normalize ID/passport number
           if (canonical.idNumber) {
@@ -1317,6 +1333,9 @@ Return JSON only:
           }
           if (canonical.expiryDate) {
             canonical.expiryDate = normalizeDate(canonical.expiryDate);
+          }
+          if (canonical.documentDate) {
+            canonical.documentDate = normalizeDate(canonical.documentDate);
           }
           
           // Ensure all string fields are trimmed
