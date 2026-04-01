@@ -86,7 +86,7 @@ class AuthController {
 
       const wallet = await Wallet.create({
         userId: user.id,
-        walletId: `WAL-${user.id}`,
+        walletId: `WAL-${Date.now()}-${user.id}`,
         balance: 0.00,
         currency: 'ZAR',
         status: 'active',
