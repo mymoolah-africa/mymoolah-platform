@@ -231,6 +231,46 @@ class KYCController {
         estimatedProcessingTime: addressUrl ? 20000 : 10000
       });
 
+      // --- Helper: persist KYC rejection (user status + KYC record + notification) ---
+      async function persistKycRejection(uid, reason, docType) {
+        const { Kyc: KycModel, sequelize: seq } = require('../models');
+        const dbDocType = docType === 'proof_of_address' ? 'utility_bill' : 'id_card';
+
+        // 1. Set user.kycStatus to 'rejected' via direct SQL (avoids Sequelize staleness)
+        try {
+          await seq.query(
+            'UPDATE users SET "kycStatus" = $1, "updatedAt" = NOW() WHERE id = $2',
+            { bind: ['rejected', uid] }
+          );
+        } catch (err) {
+          console.error('❌ Failed to set user.kycStatus to rejected:', err.message);
+        }
+
+        // 2. Upsert KYC record with rejection reason
+        try {
+          const existing = await KycModel.findOne({ where: { userId: uid }, order: [['createdAt', 'DESC']] });
+          if (existing) {
+            await existing.update({ status: 'rejected', rejectionReason: reason, reviewedAt: new Date() });
+          } else {
+            await KycModel.create({
+              userId: uid, documentType: dbDocType, documentNumber: 'REJECTED',
+              status: 'rejected', rejectionReason: reason,
+              submittedAt: new Date(), reviewedAt: new Date()
+            });
+          }
+        } catch (err) {
+          console.error('❌ Failed to upsert KYC record:', err.message);
+        }
+
+        // 3. User notification
+        try {
+          await notificationService.createNotification(uid, 'maintenance', 'KYC Verification Failed',
+            reason, { severity: 'warning', category: 'transaction', source: 'system' });
+        } catch (err) {
+          console.error('❌ Failed to create KYC failure notification:', err.message);
+        }
+      }
+
       // Process async (don't await - let it run in background)
       (async () => {
         try {
@@ -240,60 +280,22 @@ class KYCController {
           let currentTier = user?.kyc_tier ?? null;
 
           // Reset any previous KYC rejection so old data doesn't leak into
-          // the new attempt (prevents self-healing from returning stale reasons)
+          // the new attempt while async OCR is still running
           try {
             await Kyc.update(
               { status: 'pending', rejectionReason: null, reviewedAt: null },
               { where: { userId } }
             );
-          } catch (resetErr) {
-            // Non-fatal — table or record may not exist yet
-          }
+          } catch (resetErr) { /* Non-fatal — record may not exist yet */ }
 
           // --- Phase 1: Process identity document if provided ---
           if (identityUrl) {
             const identityResult = await KYCService.processKYCSubmission(userId, 'id_document', identityUrl, parseInt(retryCount));
 
             if (!identityResult.success) {
-              const failureReason = identityResult.message || identityResult.validation?.issues?.join('. ') || 'Document validation failed. Please try again with a clearer image.';
+              const reason = identityResult.message || identityResult.validation?.issues?.join('. ') || 'Document validation failed. Please try again with a clearer image.';
               console.log('❌ KYC ID validation failed:', identityResult.validation?.issues);
-              // Use direct SQL to avoid Sequelize instance staleness
-              try {
-                const { sequelize } = require('../models');
-                await sequelize.query(
-                  'UPDATE users SET "kycStatus" = $1, "updatedAt" = NOW() WHERE id = $2',
-                  { bind: ['rejected', userId] }
-                );
-                console.log('✅ user.kycStatus set to rejected via direct SQL for userId:', userId);
-              } catch (statusErr) {
-                console.error('❌ Failed to set user.kycStatus to rejected:', statusErr.message);
-              }
-              try {
-                const { Kyc } = require('../models');
-                const kycRecord = await Kyc.findOne({ where: { userId }, order: [['createdAt', 'DESC']] });
-                if (kycRecord) {
-                  await kycRecord.update({ status: 'rejected', rejectionReason: failureReason, reviewedAt: new Date() });
-                  console.log('✅ KYC record updated with rejectionReason:', failureReason);
-                } else {
-                  await Kyc.create({
-                    userId,
-                    documentType: 'id_card',
-                    documentNumber: 'REJECTED',
-                    status: 'rejected',
-                    rejectionReason: failureReason,
-                    submittedAt: new Date(),
-                    reviewedAt: new Date()
-                  });
-                  console.log('✅ KYC record CREATED with rejectionReason (no prior record):', failureReason);
-                }
-              } catch (kycUpdateErr) { console.error('Failed to update/create KYC record:', kycUpdateErr.message); }
-              try {
-                await notificationService.createNotification(userId, 'maintenance', 'KYC Verification Failed',
-                  failureReason,
-                  { severity: 'warning', category: 'transaction', source: 'system' });
-              } catch (notifError) {
-                console.error('❌ Failed to create KYC failure notification:', notifError);
-              }
+              await persistKycRejection(userId, reason, 'id_document');
               return;
             }
 
@@ -308,52 +310,22 @@ class KYCController {
                   dailyLimit: tier1Limits.dailyLimit,
                   monthlyLimit: tier1Limits.monthlyLimit,
                 });
-                console.log('✅ Wallet KYC verified + limits upgraded to Tier 1');
               }
               currentTier = 1;
               if (user) {
-                await user.update({ kycStatus: 'verified', kyc_tier: 1 });
-                console.log('✅ User KYC: Tier 1 (ID verified)');
-              }
-            } else {
-              const failureReason = identityResult.message || identityResult.validation?.issues?.join('. ') || 'Document validation failed. Please try again with a clearer image.';
-              console.log('⚠️  KYC validation failed - user can retry:', identityResult.validation?.issues);
-              try {
-                const { sequelize } = require('../models');
-                await sequelize.query(
-                  'UPDATE users SET "kycStatus" = $1, "updatedAt" = NOW() WHERE id = $2',
-                  { bind: ['rejected', userId] }
-                );
-                console.log('✅ user.kycStatus set to rejected via direct SQL for userId:', userId);
-              } catch (statusErr) {
-                console.error('❌ Failed to set user.kycStatus to rejected:', statusErr.message);
-              }
-              try {
-                const { Kyc } = require('../models');
-                const kycRecord = await Kyc.findOne({ where: { userId }, order: [['createdAt', 'DESC']] });
-                if (kycRecord) {
-                  await kycRecord.update({ status: 'rejected', rejectionReason: failureReason, reviewedAt: new Date() });
-                  console.log('✅ KYC record updated with rejectionReason:', failureReason);
+                // Only set kycStatus to 'verified' now if there's no POA to process.
+                // Otherwise defer until all phases complete so the frontend keeps polling.
+                if (!addressUrl) {
+                  await user.update({ kycStatus: 'verified', kyc_tier: 1 });
                 } else {
-                  await Kyc.create({
-                    userId,
-                    documentType: 'id_card',
-                    documentNumber: 'REJECTED',
-                    status: 'rejected',
-                    rejectionReason: failureReason,
-                    submittedAt: new Date(),
-                    reviewedAt: new Date()
-                  });
-                  console.log('✅ KYC record CREATED with rejectionReason (no prior record):', failureReason);
+                  await user.update({ kyc_tier: 1 });
                 }
-              } catch (kycUpdateErr) { console.error('Failed to update/create KYC record:', kycUpdateErr.message); }
-              try {
-                await notificationService.createNotification(userId, 'maintenance', 'KYC Verification Failed',
-                  failureReason,
-                  { severity: 'warning', category: 'transaction', source: 'system' });
-              } catch (notifError) {
-                console.error('❌ Failed to create KYC failure notification:', notifError);
               }
+              console.log('✅ User KYC: Tier 1 (ID verified)');
+            } else {
+              const reason = identityResult.message || identityResult.validation?.issues?.join('. ') || 'Document validation failed. Please try again with a clearer image.';
+              console.log('❌ KYC validation failed:', identityResult.validation?.issues);
+              await persistKycRejection(userId, reason, 'id_document');
               return;
             }
           }
@@ -365,10 +337,9 @@ class KYCController {
               const addressValid = addressResult.success &&
                                   (addressResult.validation.isValid || addressResult.status === 'approved');
               if (addressValid) {
+                currentTier = 2;
                 if (user) {
                   await user.update({ kyc_tier: 2 });
-                  currentTier = 2;
-                  console.log('✅ User KYC: Tier 2 (ID + POA verified)');
                 }
                 if (wallet) {
                   const tier2Limits = getWalletDefaults(2);
@@ -376,26 +347,34 @@ class KYCController {
                     dailyLimit: tier2Limits.dailyLimit,
                     monthlyLimit: tier2Limits.monthlyLimit,
                   });
-                  console.log('✅ Wallet limits upgraded to Tier 2');
                 }
+                console.log('✅ User KYC: Tier 2 (ID + POA verified)');
               } else {
-                console.log('⚠️  POA validation failed — staying at Tier 1:', addressResult.validation?.issues);
+                const reason = addressResult.message || addressResult.validation?.issues?.join('. ') || 'Address document validation failed. Please upload a clear utility bill or bank statement.';
+                console.log('❌ POA validation failed:', addressResult.validation?.issues);
+                await persistKycRejection(userId, reason, 'proof_of_address');
+                return;
               }
             } catch (poaError) {
               console.error('❌ POA processing error:', poaError.message);
+              await persistKycRejection(userId, 'Address document processing failed. Please try again.', 'proof_of_address');
+              return;
             }
           }
 
-          // --- Notification ---
+          // --- All phases passed — finalize kycStatus ---
+          if (user && user.kycStatus !== 'verified') {
+            await user.update({ kycStatus: 'verified' });
+          }
+
           const tierLabels = { 0: 'Tier 0 (basic)', 1: 'Tier 1 (ID verified)', 2: 'Tier 2 (fully verified)' };
           const tierLabel = tierLabels[currentTier] || `Tier ${currentTier}`;
           try {
             await notificationService.createNotification(userId, 'txn_wallet_credit', 'KYC Verification Successful',
               `Your documents have been verified successfully (${tierLabel}). Your wallet is now activated.`,
               { severity: 'info', category: 'transaction', source: 'system' });
-            console.log('✅ KYC verification notification created');
           } catch (notifError) {
-            console.warn('⚠️  Failed to create KYC notification:', notifError.message);
+            console.warn('⚠️  Failed to create KYC success notification:', notifError.message);
           }
         } catch (kycError) {
           console.error('❌ KYC processing error (async):', kycError);
