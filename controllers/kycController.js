@@ -436,6 +436,17 @@ class KYCController {
 
       const currentKycTier = user?.kyc_tier != null ? user.kyc_tier : null;
       const tierLimits = getLimitsForTier(currentKycTier);
+
+      // DEBUG: Log what GET /kyc/status is actually returning
+      if (finalKycStatus === 'rejected' || kycRecord?.rejectionReason) {
+        console.log('🔍 GET /kyc/status response debug:', {
+          userKycStatus: user?.kycStatus,
+          finalKycStatus,
+          kycRecordExists: !!kycRecord,
+          kycRecordStatus: kycRecord?.status,
+          rejectionReason: kycRecord?.rejectionReason || null
+        });
+      }
       
       res.json({
         success: true,
