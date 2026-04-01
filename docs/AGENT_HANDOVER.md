@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-01 02:00  
-**Latest Feature**: **Cloud Scheduler replaces node-cron for catalog sync** — Production log analysis revealed Cloud Run was killing instances mid-sweep (after ~16 minutes, during MobileMart voucher sync). Node-cron runs as a background task invisible to Cloud Run. Fix: Cloud Scheduler sends HTTP POST to `/api/v1/catalog-sync/scheduled-sweep` at 02:00 SAST. The request keeps the instance alive for the full sweep. OIDC token auth (GCP-native, no shared secrets). Cloud Run timeout increased 300s→1800s. Retry policy: 3 attempts, exponential backoff 60s–600s. Previous: Voucher overlay overhaul, Flash sync script.  
-**Document Version**: 2.60.0  
+**Last Updated**: 2026-04-01 03:00  
+**Latest Feature**: **SBSA GCS permissions + .keep file filter fixed** — Statement poller was accepting all files in inbox (including `.keep` placeholder), causing repeated parse errors. Filter now only accepts `FINSTMT`/`PROVSTMT` patterns. Both staging and production SAs granted `objectAdmin` on `mymoolah-sftp-inbound` bucket (staging was missing `objects.list`, production was missing `objects.create`). Previous: Cloud Scheduler migration, Voucher overlay overhaul.  
+**Document Version**: 2.61.0  
 **Session logs**: `docs/session_logs/2026-03-31_2359_voucher-overlay-overhaul.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
@@ -730,7 +730,7 @@ You're part of a **banking-grade software system** where:
 4. **Manual production sync** (catch up stale data): `node scripts/sync-mobilemart-products.js --production` and `node scripts/sync-flash-products.js --production`
 5. **KYC OCR debugging** — André will test KYC and provide backend logs. Look for `OpenAI OCR attempt` log lines.
 6. **Add more brand logos**: As André sources them — Steam, Netflix, Google Play, Roblox, MTN, CellC, Telkom (same Vite import pattern)
-7. **Fix SBSA GCS permissions** — staging SA needs `storage.objects.list`, production SA needs `storage.objects.create` on the SBSA GCS bucket
+7. ~~**Fix SBSA GCS permissions**~~ — DONE (2026-04-01). Both SAs granted `objectAdmin` on `mymoolah-sftp-inbound`. `.keep` file filter added to statement poller.
 8. **Future refactor (tech debt)**: Extract airtime/electricity/biller purchase logic from overlayServices.js into service classes (~9-13 hours, 1-2 sessions)
 9. Do NOT reactivate Peach Payments without explicit approval from André
 10. Do NOT add `RmtInf.Ustrd` to Pain.013 — SBSA rejects it

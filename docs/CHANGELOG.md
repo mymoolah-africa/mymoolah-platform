@@ -1,5 +1,20 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-01 - Fix SBSA GCS permissions + .keep file filter
+
+### Problem
+Three issues identified in Cloud Run production logs during SBSA statement polling:
+1. **Staging SA** (`mymoolah-staging-sa`) lacked `storage.objects.list` — could not list statement files.
+2. **Production SA** (`mymoolah-production-sa`) lacked `storage.objects.create` — could not archive (move) processed files.
+3. **`.keep` placeholder file** in GCS inbox was being parsed as MT940, causing repeated parsing errors.
+
+### Fix
+- **`services/standardbank/sbsaStatementService.js`** — Statement file filter now only accepts filenames matching `FINSTMT` or `PROVSTMT` patterns. Dotfiles (`.keep`) and unrecognised files are logged and skipped.
+- **`scripts/fix-sbsa-gcs-permissions.sh`** — Grants `roles/storage.objectAdmin` to both staging and production SAs on `gs://mymoolah-sftp-inbound`. Run once; permissions verified.
+- **Tech debt register updated** — added resolution and flagged missing sweep helper scripts.
+
+---
+
 ## 2026-04-01 - Cloud Scheduler for Catalog Sync (banking-grade fix)
 
 ### Problem

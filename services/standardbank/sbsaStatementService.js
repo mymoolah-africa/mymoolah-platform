@@ -107,12 +107,13 @@ class SBSAStatementService {
     const statementFiles = files.filter(f => {
       if (f.name.endsWith('/')) return false;
       const basename = f.name.split('/').pop();
-      // Accept known SBSA patterns; also accept any file in the folder for flexibility
+      if (!basename || basename.startsWith('.')) return false;
       const isFinstmt  = FINSTMT_PATTERN.test(basename);
       const isProvstmt = PROVSTMT_PATTERN.test(basename);
-      if (isFinstmt)  logger.info('Found MT940 end-of-day statement', { file: basename });
-      if (isProvstmt) logger.info('Found MT942 intraday statement', { file: basename });
-      return true;
+      if (isFinstmt)  { logger.info('Found MT940 end-of-day statement', { file: basename }); return true; }
+      if (isProvstmt) { logger.info('Found MT942 intraday statement', { file: basename }); return true; }
+      logger.warn('Skipping unrecognised file in statements inbox', { file: basename });
+      return false;
     });
 
     let processed = 0, skipped = 0, failed = 0;

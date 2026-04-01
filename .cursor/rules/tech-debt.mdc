@@ -20,6 +20,7 @@ alwaysApply: true
 | Production best-offers cache ignores `featured` flag | `services/supplierComparisonService.js`, `services/bestOfferService.js` | Medium — production data catalog will show all products, not curated list | Add featured filter to best-offers path or rebuild cache with only featured products |
 | SVG network logos (MTN, CellC, Telkom) are approximate | `components/ui/NetworkIcons.tsx` | Low — cosmetic only | Replace with real PNG brand assets (same approach as Vodacom) |
 | Airtime/Electricity/Biller purchase logic inline in route handler (~1,200 lines) | `routes/overlayServices.js` (lines ~471-900, ~2310-2506, ~3070-3560) | Medium — violates separation of concerns; no ACID wrapper; harder to test; duplicated patterns across 3 overlays | Extract into dedicated purchase service classes following `productPurchaseService.js` pattern (the voucher overlay already uses the correct architecture). Effort: ~9-13 hours across 1-2 sessions. |
+| Missing `refresh-vas-best-offers.js` and `mark-featured-data-products.js` | `services/catalogSynchronizationService.js` | Low — non-fatal warnings in daily sweep logs | Create the scripts or remove the references from catalogSynchronizationService |
 
 ## Architectural Decisions Log
 
@@ -42,6 +43,7 @@ alwaysApply: true
 | Real PNG brand assets for network logos | Mar 2026 | Hand-drawn SVG cannot accurately reproduce brand marks; import PNGs as Vite modules from `assets/` |
 | Voucher overlay uses productPurchaseService (not inline route) | Mar 2026 | Banking-grade architecture: service layer handles ACID transactions, idempotency, circuit breaker, commission. Overlay route is thin catalog query only. Other overlays should follow this pattern (flagged as tech debt). |
 | Cloud Scheduler replaces node-cron for catalog sync | Apr 2026 | Cloud Run kills idle instances mid-sweep (~16 min in). Cloud Scheduler sends HTTP POST that keeps instance alive. OIDC auth, 1800s timeout, 3 retries. Node-cron kept as fallback for local dev. |
+| SBSA statement poller: .keep file filter + GCS permissions fixed | Mar 2026 | Poller accepted all files (including .keep placeholder) — now only accepts FINSTMT/PROVSTMT patterns. Both staging+production SAs granted objectAdmin on sftp-inbound bucket. |
 
 ## Rule: When to Add Here
 

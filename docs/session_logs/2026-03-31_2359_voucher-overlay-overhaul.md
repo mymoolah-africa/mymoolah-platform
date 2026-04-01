@@ -120,14 +120,35 @@ Full audit and overhaul of the digital voucher overlay system — the last overl
 
 ---
 
+## SBSA GCS Fixes (continued session — 2026-04-01 03:00)
+
+### Tasks Completed
+1. **Fixed `.keep` file filter**: `sbsaStatementService.js` `pollAndProcess()` was returning `true` for all files — now only accepts `FINSTMT`/`PROVSTMT` patterns. Dotfiles and unrecognised files are logged with a warning and skipped.
+2. **Fixed staging SA permissions**: Granted `roles/storage.objectAdmin` to `mymoolah-staging-sa` on `gs://mymoolah-sftp-inbound`.
+3. **Fixed production SA permissions**: Granted `roles/storage.objectAdmin` to `mymoolah-production-sa` on `gs://mymoolah-sftp-inbound`.
+4. **Created fix script**: `scripts/fix-sbsa-gcs-permissions.sh` (run-once, already executed).
+5. **Updated tech debt register**: Added resolution entry and flagged missing sweep helper scripts.
+
+### Files Modified
+| File | Change |
+|------|--------|
+| `services/standardbank/sbsaStatementService.js` | Fixed file filter — only accept FINSTMT/PROVSTMT, skip .keep and unrecognised files |
+| `scripts/fix-sbsa-gcs-permissions.sh` | New — grants objectAdmin to both SAs on sftp-inbound bucket |
+| `.cursor/rules/tech-debt.mdc` | Added resolution entry, flagged missing helper scripts |
+| `docs/AGENT_HANDOVER.md` | Updated latest feature, marked SBSA fix as done |
+| `docs/CHANGELOG.md` | Added entry for SBSA GCS fix |
+
+---
+
 ## Next Steps for Next Agent
 
-1. **Sync MobileMart vouchers to staging**: `node scripts/sync-mobilemart-products.js --vouchers-only --staging`
-2. **Sync Flash vouchers to staging**: `node scripts/sync-flash-products.js --vouchers-only --staging`
-3. **Sync to production**: Same commands with `--production`
-4. **Deploy**: `./scripts/build-push-deploy-staging.sh` then `./scripts/build-push-deploy-production.sh`
+1. **Deploy backend** to apply `.keep` filter fix: `./scripts/deploy-backend.sh --staging` then `./scripts/deploy-backend.sh --production`
+2. **Sync MobileMart vouchers to staging**: `node scripts/sync-mobilemart-products.js --vouchers-only --staging`
+3. **Sync Flash vouchers to staging**: `node scripts/sync-flash-products.js --vouchers-only --staging`
+4. **Sync to production**: Same commands with `--production`
 5. **Add more brand logos**: As André sources them — Steam, Netflix, Google Play, Roblox, etc.
-6. **Future refactor (tech debt)**: Extract airtime/electricity/biller purchase logic from overlayServices.js into service classes (~9-13 hours)
+6. **Create missing helper scripts**: `refresh-vas-best-offers.js` and `mark-featured-data-products.js` (or remove references from `catalogSynchronizationService.js`)
+7. **Future refactor (tech debt)**: Extract airtime/electricity/biller purchase logic from overlayServices.js into service classes (~9-13 hours)
 
 ---
 
