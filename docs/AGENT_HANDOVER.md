@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-01 17:00  
-**Latest Feature**: **Production API Testing & Fixes** — Comprehensive staging API testing: 15+ issues fixed across registration (passport idType), KYC (rejection flow, POA validation, re-upload), password change (styled modals), payment requests (version column migration, encryption keys), voucher purchases (errorData crash, ENUM mismatch). Both staging and production deployed as `20260401_v1`. 1Voucher broken at Flash level (product code 311 rejected — data issue, not code). Previous: SBSA GCS permissions, Cloud Scheduler, Voucher overlay overhaul.  
-**Document Version**: 2.62.0  
-**Session logs**: `docs/session_logs/2026-04-01_1700_production-api-testing-fixes.md`  
+**Last Updated**: 2026-04-01 18:50  
+**Latest Feature**: **Production User Cleanup & Rate Limiter Fix** — Fixed 429 "too many requests" on production: `financialLimiter` (10/min) was blocking dashboard GET requests. Split into `walletReadLimiter` (120/min for GETs) and `financialLimiter` (10/min for writes only). Auth limiter increased from 5 to 15. Purged User ID 1 from production (7 rows), reset sequence for ID 1 re-registration. Product/supplier data untouched (1,974 products). Previous: 15+ API fixes deployed as `20260401_v1`.  
+**Document Version**: 2.63.0  
+**Session logs**: `docs/session_logs/2026-04-01_1850_production-user-cleanup-rate-limiter-fix.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -100,7 +100,10 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (April 1, 2026 - 17:00)**
+### **Latest Achievement (April 1, 2026 - 18:50)**
+**Production User Cleanup & Rate Limiter Fix** — (1) Diagnosed production 429 errors via `gcloud logging read` — `financialLimiter` (10 req/min) was applied to all `/api/v1/wallets` routes including dashboard GETs. Split into `walletReadLimiter` (120/min for GET) and `financialLimiter` (10/min for POST/PUT/DELETE only). Auth limiter increased from 5→15 failed attempts/15min. (2) Purged User ID 1 (Andre Botes, +27825571055) from production: 7 rows deleted (users, kyc, wallets, UserSettings, notifications×3). Sequence reset — next registration gets ID 1. Product/supplier data verified untouched (1,974 products, 2 suppliers, 93 commission tiers). Created `scripts/delete-production-user.js` with dry-run, SAVEPOINT isolation, and sequence reset. **Rate limiter fix requires redeployment.** Session log: `docs/session_logs/2026-04-01_1850_production-user-cleanup-rate-limiter-fix.md`.
+
+### **Previous Achievement (April 1, 2026 - 17:00)**
 **Production API Testing & Fixes (15+ issues)** — Comprehensive staging API testing session with André. Fixed: (1) Registration 500 — passport `idType` mapping + `walletId` length; (2) KYC rejection flow — direct SQL updates, self-healing status, rejection modal with specific reason; (3) KYC re-upload stale reason bug; (4) POA-specific OCR validation (surname match, 2/4 address indicators, 90-day recency); (5) `kyc_tier` in `/api/v1/users/me`; (6) All native `alert()` calls replaced with styled `ErrorModal` (added `success` type); (7) Payment request 500 — missing `version` column (new migration) + encryption keys missing from deploy script; (8) Voucher purchase 500 — `errorData` string-to-object wrapping; (9) Commission ENUM crash — `service_type::text` cast + try/catch. Migrations `20260401_01` and `20260401_02` applied to staging + production. Both environments deployed as `20260401_v1`. 1Voucher product code 311 rejected by Flash (error 2283) — data issue needs Flash confirmation. Session log: `docs/session_logs/2026-04-01_1700_production-api-testing-fixes.md`.
 
 ### **Previous Achievement (March 17, 2026 - 19:00)**
