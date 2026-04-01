@@ -33,14 +33,19 @@ async function getFees(supplierCode, serviceType) {
 }
 
 async function _resolveTier(supplierId, svcType, productIdOverride, period) {
-  const [countRows] = await sequelize.query(
-    `SELECT COUNT(*)::int AS cnt
-     FROM flash_transactions
-     WHERE service_type=:serviceType AND operation='purchase' AND status='completed'
-       AND date_trunc(:period, created_at) = date_trunc(:period, now())`,
-    { replacements: { serviceType: svcType, period } }
-  );
-  const volume = countRows?.[0]?.cnt || 0;
+  let volume = 0;
+  try {
+    const [countRows] = await sequelize.query(
+      `SELECT COUNT(*)::int AS cnt
+       FROM flash_transactions
+       WHERE service_type::text = :serviceType AND operation='purchase' AND status='completed'
+         AND date_trunc(:period, created_at) = date_trunc(:period, now())`,
+      { replacements: { serviceType: svcType, period } }
+    );
+    volume = countRows?.[0]?.cnt || 0;
+  } catch (err) {
+    console.warn(`[supplierPricingService] Volume count failed for serviceType=${svcType}: ${err.message}`);
+  }
   const replacements = { supplierId, serviceType: svcType, productId: productIdOverride };
   const [tiers] = await sequelize.query(
     `SELECT * FROM supplier_commission_tiers

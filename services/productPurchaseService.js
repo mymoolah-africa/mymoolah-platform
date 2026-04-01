@@ -261,7 +261,7 @@ class ProductPurchaseService {
 
         await supplierTransaction.update({
           status: 'failed',
-          errorData: supplierResult.error
+          errorData: typeof supplierResult.error === 'object' ? supplierResult.error : { message: String(supplierResult.error || 'Unknown error') }
         }, { transaction });
       }
 
