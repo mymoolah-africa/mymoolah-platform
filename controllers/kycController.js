@@ -244,10 +244,19 @@ class KYCController {
             const identityResult = await KYCService.processKYCSubmission(userId, 'id_document', identityUrl, parseInt(retryCount));
 
             if (!identityResult.success) {
+              const failureReason = identityResult.message || identityResult.validation?.issues?.join('. ') || 'Document validation failed. Please try again with a clearer image.';
               console.log('❌ KYC ID validation failed:', identityResult.validation?.issues);
+              if (user) {
+                await user.update({ kycStatus: 'rejected' });
+              }
+              try {
+                const { Kyc } = require('../models');
+                const kycRecord = await Kyc.findOne({ where: { userId }, order: [['createdAt', 'DESC']] });
+                if (kycRecord) await kycRecord.update({ status: 'rejected', rejectionReason: failureReason, reviewedAt: new Date() });
+              } catch (kycUpdateErr) { console.error('Failed to update KYC record:', kycUpdateErr.message); }
               try {
                 await notificationService.createNotification(userId, 'maintenance', 'KYC Verification Failed',
-                  identityResult.message || 'Document validation failed. Please try again with a clearer image.',
+                  failureReason,
                   { severity: 'warning', category: 'transaction', source: 'system' });
               } catch (notifError) {
                 console.error('❌ Failed to create KYC failure notification:', notifError);
@@ -274,10 +283,19 @@ class KYCController {
                 console.log('✅ User KYC: Tier 1 (ID verified)');
               }
             } else {
+              const failureReason = identityResult.message || identityResult.validation?.issues?.join('. ') || 'Document validation failed. Please try again with a clearer image.';
               console.log('⚠️  KYC validation failed - user can retry:', identityResult.validation?.issues);
+              if (user) {
+                await user.update({ kycStatus: 'rejected' });
+              }
+              try {
+                const { Kyc } = require('../models');
+                const kycRecord = await Kyc.findOne({ where: { userId }, order: [['createdAt', 'DESC']] });
+                if (kycRecord) await kycRecord.update({ status: 'rejected', rejectionReason: failureReason, reviewedAt: new Date() });
+              } catch (kycUpdateErr) { console.error('Failed to update KYC record:', kycUpdateErr.message); }
               try {
                 await notificationService.createNotification(userId, 'maintenance', 'KYC Verification Failed',
-                  identityResult.message || 'Document validation failed. Please try again with a clearer image.',
+                  failureReason,
                   { severity: 'warning', category: 'transaction', source: 'system' });
               } catch (notifError) {
                 console.error('❌ Failed to create KYC failure notification:', notifError);
@@ -378,7 +396,7 @@ class KYCController {
         kycRecord = await Kyc.findOne({ 
           where: { userId: userId },
           order: [['createdAt', 'DESC']],
-          attributes: ['id', 'userId', 'documentType', 'documentNumber', 'status', 'submittedAt', 'reviewedAt', 'reviewerNotes', 'createdAt', 'updatedAt']
+          attributes: ['id', 'userId', 'documentType', 'documentNumber', 'status', 'submittedAt', 'reviewedAt', 'reviewerNotes', 'rejectionReason', 'createdAt', 'updatedAt']
         });
       } catch (kycError) {
         // If KYC table query fails, continue without kycRecord
@@ -415,7 +433,8 @@ class KYCController {
           status: kycRecord.status,
           documentType: kycRecord.documentType,
           submittedAt: kycRecord.submittedAt,
-          reviewedAt: kycRecord.reviewedAt
+          reviewedAt: kycRecord.reviewedAt,
+          rejectionReason: kycRecord.rejectionReason || null
         } : null
       });
 

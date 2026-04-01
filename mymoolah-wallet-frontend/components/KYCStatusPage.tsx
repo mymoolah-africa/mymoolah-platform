@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Progress } from '../components/ui/progress';
+import { ErrorModal } from '../components/ui/ErrorModal';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 import { 
   CheckCircle,
@@ -17,6 +18,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { getToken } from '../utils/authToken';
+import { APP_CONFIG } from '../config/app-config';
 
 type KYCStatus = 'not_started' | 'documents_uploaded' | 'under_review' | 'verified' | 'rejected' | 'ussd_basic';
 
@@ -133,16 +135,17 @@ export function KYCStatusPage() {
     return stages;
   };
 
+  const [rejectionModal, setRejectionModal] = useState<{ open: boolean; reason: string }>({ open: false, reason: '' });
+
   const handleRefreshStatus = async () => {
     setIsRefreshing(true);
     try {
-      // Real API call to check verification status
       const token = getToken();
       if (!token) {
         throw new Error('No authentication token found');
       }
 
-      const response = await fetch('/api/v1/kyc/status', {
+      const response = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/kyc/status`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -154,8 +157,11 @@ export function KYCStatusPage() {
       }
 
       const data = await response.json();
+
+      if (data.kycStatus === 'rejected' && data.kycRecord?.rejectionReason) {
+        setRejectionModal({ open: true, reason: data.kycRecord.rejectionReason });
+      }
       
-      // Update user status if available
       if (refreshUserStatus) {
         await refreshUserStatus();
       }
@@ -236,6 +242,16 @@ export function KYCStatusPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#86BE41] to-[#2D8CCA]">
+      <ErrorModal
+        isOpen={rejectionModal.open}
+        onClose={() => {
+          setRejectionModal({ open: false, reason: '' });
+          navigate('/kyc/documents');
+        }}
+        title="Verification Failed"
+        message={rejectionModal.reason}
+        type="warning"
+      />
       {/* Mobile Container */}
       <div className="max-w-sm mx-auto bg-gradient-to-br from-[#86BE41] to-[#2D8CCA] min-h-screen flex flex-col">
         {/* Header Section */}
