@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-01 21:30  
-**Latest Feature**: **Sequential KYC Flow & Race Condition Fix** — Implemented step-by-step KYC: Step 1 (ID only → Tier 1) then Step 2 (POA only → Tier 2). Fixed critical race condition where frontend POST overwrote backend's async `verified` status with `documents_uploaded`. Backend now uses direct SQL (bypasses stale Sequelize instance). Frontend no longer writes intermediate status to DB. Self-healing auto-corrects stale kycStatus. Rate limiter tuned to 1500/15min. KYC polling changed from 2s to 10s with 429 backoff. Tested with 2 real production users. 4 wallet + 3 backend deploys to production.  
-**Document Version**: 2.65.0  
-**Session logs**: `docs/session_logs/2026-04-01_2130_kyc-sequential-flow-race-condition-fix.md`  
+**Last Updated**: 2026-04-02 11:30  
+**Latest Feature**: **Treasury Float & Deposit Simulation** — First production treasury operations. Simulated SBSA SOAP deposit notification for R4 000 PayShap deposit (ref: 0825571055). Wallet credited R1 500, MobileMart float R2 500 (per bank statement). Flash float account created (R875 from Flash portal). Fixed `standardbankDepositNotificationService.js` to create `transactions` table record (was missing — deposits didn't appear in transaction history). Created `scripts/simulate-sbsa-deposit-notification.sh`. Float monitoring thresholds set. Seeded float balances replaced with real values.  
+**Document Version**: 2.66.0  
+**Session logs**: `docs/session_logs/2026-04-02_1130_treasury-float-deposit-simulation.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
