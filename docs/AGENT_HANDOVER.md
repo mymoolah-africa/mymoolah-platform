@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-02 13:30  
-**Latest Feature**: **Electricity Purchase Fix & Production Reconciliation** — Fixed two critical production blockers: missing `vas_products` table (migration `20260402_01`) and missing `processingTime` column on `transactions` table (migration `20260402_02`). Reconciled R200 and R100 failed purchases (wallet, float, commission, VAT, journal entries). Seeded `tax_configurations` with VAT_15. After migrations, R150 electricity purchase completed fully end-to-end — automated commission (1%), VAT output, and double-entry journal entries. Wallet: R550, MobileMart float: R2200, Commission revenue: R6.50, VAT payable: R0.85.  
-**Document Version**: 2.67.0  
-**Session logs**: `docs/session_logs/2026-04-02_1330_electricity-purchase-fix-production-reconciliation.md`  
+**Last Updated**: 2026-04-02 15:30  
+**Latest Feature**: **RTP Discovery Bank Reconciliation & CdtrRefInf.Ref Fix** — Live R10 RTP to Discovery Bank reconciled across all ledgers (wallet R4.25, SBSA fee R5.75 = R5.00 ex-VAT + R0.75 VAT, journal balanced DR=CR=R10.00). Fixed critical bug: `CdtrRefInf.Ref` in Pain.013 was using user-provided description text instead of creditor's MSISDN from DB. Now always uses `"{CreditorName}: {creditorPhoneNumber}"` sourced from `users.phoneNumber`, ensuring deposit notification service can auto-match inbound credits to the correct wallet. Applied to both `initiateRtpRequest` and `retryRtpAsPbac` paths. Wallet: R554.25, Commission revenue: R6.50, VAT payable: R1.60.  
+**Document Version**: 2.68.0  
+**Session logs**: `docs/session_logs/2026-04-02_1530_rtp-discovery-bank-reconciliation-reference-fix.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -100,7 +100,10 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (April 1, 2026 - 18:50)**
+### **Latest Achievement (April 2, 2026 - 15:30)**
+**RTP Discovery Bank Reconciliation & CdtrRefInf.Ref Fix** — (1) Live R10 RTP to Discovery Bank reconciled across all production ledgers: wallet credited R4.25 (R10 - R5.75 fee), SBSA fee correctly split (R5.00 ex-VAT + R0.75 VAT), journal entry #5 balanced (DR R10.00 = CR R10.00), tax transaction recorded as pass-through (net VAT R0). (2) Fixed critical `CdtrRefInf.Ref` bug: Pain.013 remittance info was using user-provided `description`/`reference` text instead of creditor's MSISDN from DB. This would break wallet auto-crediting via the deposit notification service. Now always uses `"{CreditorName}: {creditorPhoneNumber}"` from `users.phoneNumber`. Applied to both `initiateRtpRequest()` and `retryRtpAsPbac()`. User description preserved in RTP metadata as `userDescription`. **Requires redeployment.** Session log: `docs/session_logs/2026-04-02_1530_rtp-discovery-bank-reconciliation-reference-fix.md`.
+
+### **Previous Achievement (April 1, 2026 - 18:50)**
 **Production User Cleanup & Rate Limiter Fix** — (1) Diagnosed production 429 errors via `gcloud logging read` — `financialLimiter` (10 req/min) was applied to all `/api/v1/wallets` routes including dashboard GETs. Split into `walletReadLimiter` (120/min for GET) and `financialLimiter` (10/min for POST/PUT/DELETE only). Auth limiter increased from 5→15 failed attempts/15min. (2) Purged User ID 1 (Andre Botes, +27825571055) from production: 7 rows deleted (users, kyc, wallets, UserSettings, notifications×3). Sequence reset — next registration gets ID 1. Product/supplier data verified untouched (1,974 products, 2 suppliers, 93 commission tiers). Created `scripts/delete-production-user.js` with dry-run, SAVEPOINT isolation, and sequence reset. **Rate limiter fix requires redeployment.** Session log: `docs/session_logs/2026-04-01_1850_production-user-cleanup-rate-limiter-fix.md`.
 
 ### **Previous Achievement (April 1, 2026 - 17:00)**
@@ -670,20 +673,23 @@ You're part of a **banking-grade software system** where:
 
 ## 🎯 **CURRENT SESSION SUMMARY**
 
-**Session Status**: ✅ **COMPLETE** — Production API Testing & Fixes (15+ issues, deployed to staging + production)  
-**Last Session**: 2026-04-01 17:00 — Comprehensive staging API testing with André
+**Session Status**: ✅ **COMPLETE** — RTP Discovery Bank Reconciliation & CdtrRefInf.Ref Fix  
+**Last Session**: 2026-04-02 15:30 — Live RTP reconciliation and remittance reference fix
 
-### **Most Recent Work (2026-04-01 17:00)**
-- **Production API testing**: André manually tested all major flows on staging — registration, KYC (ID + POA), password change, wallet transfers, payment requests, airtime/data, vouchers. Each 500/400 error diagnosed via `gcloud logging read` and fixed.
-- **Registration fixes**: Passport `idType` mapping (`'passport'` → `'international_passport'`), `walletId` length fix (`WAL-${Date.now()}-${user.id}`)
-- **KYC overhaul**: Direct SQL for user status updates (Sequelize stale instance fix), self-healing status endpoint, rejection reason modal, re-upload reset, debug logging removed
-- **POA validation**: New `validatePOADocument()` — surname match, 2/4 address indicators, 90-day document recency. Separate OCR prompt for address extraction. `parseOCRResults` now branches by document type.
-- **UI consistency**: All native `alert()` calls in ProfilePage replaced with styled `ErrorModal`. Added `success` type (green) to `ErrorModal`.
-- **Payment request fix**: Migration `20260401_01` adds `version` column. `FIELD_ENCRYPTION_KEY` + `FIELD_HMAC_KEY` added to deploy script.
-- **Voucher purchase fix**: `errorData` string-to-object wrapping prevents Sequelize validation crash. `service_type::text` cast prevents ENUM mismatch crashes in commission queries.
-- **Migrations**: `20260401_01` (version column) and `20260401_02` (voucher ENUM) applied to staging + production.
-- **1Voucher**: Product code `311` rejected by Flash (error 2283 "Invalid product specified"). Data issue — needs Flash confirmation.
-- **Staging user cleanup**: `scripts/delete-staging-user.js` purges user + all related records by mobile number.
+### **Most Recent Work (2026-04-02 15:30)**
+- **Live RTP reconciliation**: André sent R10 RTP to Discovery Bank on production. Full double-entry ledger reconciliation performed — all amounts correctly allocated (R4.25 wallet, R5.75 fee, journal balanced).
+- **CdtrRefInf.Ref fix**: Pain.013 `remittanceInfo` was using user-provided `description`/`reference` text. Fixed to always use creditor's MSISDN from `users.phoneNumber` in DB. Critical for deposit notification service wallet auto-matching.
+- **Both code paths fixed**: `initiateRtpRequest()` and `retryRtpAsPbac()` in `standardbankRtpService.js`.
+- **Discovery Bank confirmed working**: RTP submitted, payer notified on Discovery app, approved, wallet credited. Bank code `679000` correctly resolved.
+- **Balance auto-refresh delay**: Notification created correctly with `reason: "balance_refresh"` but took ~1 minute to reflect. Minor UX issue in polling/deduplication logic.
+- **Prior RTP (ID 1) correctly rejected**: First attempt declined by André on Discovery app — no amounts posted, correct notification sent.
+
+### **Previous Work (2026-04-02 13:30)**
+- **Electricity purchase fix**: Created `vas_products` table migration (`20260402_01`) and `processingTime` column migration (`20260402_02`). Reconciled R200 and R100 failed purchases. R150 electricity purchase completed end-to-end with automated commission and VAT.
+- **Treasury operations**: MobileMart float R2200 (real), Flash float R875 (real). Deposit notification service now creates transaction records.
+
+### **Previous Work (2026-04-01 17:00)**
+- **Production API testing**: Comprehensive staging API testing — registration, KYC, wallet transfers, payment requests, airtime/data, vouchers. 15+ issues fixed and deployed.
 
 ### **Previous Work (2026-03-31 23:30)**
 - **Sync script fixed + extended**: Fixed JSON bug that caused all product INSERTs to fail. Added `--staging`/`--production`/`--uat` target flags, `--billers-only` filter, 5-second production safety pause. Renamed to `scripts/sync-mobilemart-products.js`.
@@ -723,23 +729,27 @@ You're part of a **banking-grade software system** where:
 ### **Current State**
 - SFTP Gateway: `34.35.137.166`, **port 5022**, admin `https://34.35.137.166` — ✅ Running
 - SBSA H2H: PG15 + SSH key submitted ✅ | SOAP handler live ✅ | VPN resolved (Open Internet) ✅ | PGP not required ✅ | File names confirmed ✅ | Awaiting SBSA test traffic before freeze (Thu Mar 27 → Apr 8)
-- PayShap RTP: Standard Bank ✅ (Peach DECOMMISSIONED). Creditor name in payment reference ✅ (Capitec confirmed)
+- PayShap RTP: Standard Bank ✅ | Discovery Bank ✅ (Peach DECOMMISSIONED). Creditor MSISDN auto-resolved in CdtrRefInf.Ref ✅
 - Peach Payments: ARCHIVED (2026-03-21). See `routes/peach.js` for reactivation steps.
 - Production: `api-mm.mymoolah.africa`, `wallet.mymoolah.africa` — live
-- **Production redeploy required** — all RTP fixes, SOAP handler, account normalization, Peach decommission
+- **Production redeploy required** — RTP CdtrRefInf.Ref fix (commit `0a990d56`)
+- Production wallet (User 1): R554.25 | MobileMart float: R2,200 | Flash float: R875
+- Commission revenue: R6.50 | VAT control: R1.60
 
 ### **Next Agent Actions**
 1. Read `docs/CURSOR_2.0_RULES_FINAL.md` (MANDATORY)
-2. Read this file and recent session logs (especially `2026-04-01_1700_production-api-testing-fixes.md`)
-3. ~~**DEPLOY REQUIRED**~~ — DONE (2026-04-01). Staging + production deployed as `20260401_v1`. All API fixes, KYC, POA, modals, migrations live.
-4. **Confirm 1Voucher product code with Flash** — Code `311` rejected (error 2283). Need Flash to confirm correct product code. The error is handled gracefully (proper message, no 500).
-5. **Continue API testing**: electricity purchases, bill payments, eeziCash, referral system, AI support chat
-6. **Add more brand logos**: As André sources them — Steam, Netflix, Google Play, Roblox, MTN, CellC, Telkom (same Vite import pattern)
-7. **Future refactor (tech debt)**: Extract airtime/electricity/biller purchase logic from overlayServices.js into service classes (~9-13 hours, 1-2 sessions)
-8. Do NOT reactivate Peach Payments without explicit approval from André
-9. Do NOT add `RmtInf.Ustrd` to Pain.013 — SBSA rejects it
-10. npm audit: 9 remaining (5 low, 4 moderate) — all in transitive deps, cannot safely fix
-11. **Commission allocation**: `flash_transactions.service_type` ENUM still missing `airtime`, `data`, `electricity` — but the `::text` cast in `supplierPricingService.js` handles this gracefully. Commission tiers in DB need matching service types for correct commission calculation.
+2. Read this file and recent session logs (especially `2026-04-02_1530_rtp-discovery-bank-reconciliation-reference-fix.md`)
+3. **DEPLOY REQUIRED** — RTP CdtrRefInf.Ref fix (commit `0a990d56`). The fix ensures `CdtrRefInf.Ref` uses the creditor's phone number from DB, not user input. Deploy to production via `./scripts/deploy-backend.sh --production`.
+4. **Test RTP after deployment** — Send another RTP to verify the reference now contains the auto-resolved MSISDN (e.g. `"Andre Botes: 0825571055"` without manually typing the phone number).
+5. **Balance auto-refresh UX**: Investigate why the balance didn't auto-refresh for ~1 minute after RTP paid notification. The 10s polling in `MoolahContext.tsx` with `window.__processedTxnNotifIds` deduplication may skip a refresh cycle under certain timing.
+6. **Confirm 1Voucher product code with Flash** — Code `311` rejected (error 2283). Need Flash to confirm correct product code.
+7. **Continue API testing**: bill payments, eeziCash, referral system, AI support chat
+8. **Add more brand logos**: As André sources them — Steam, Netflix, Google Play, Roblox, MTN, CellC, Telkom (same Vite import pattern)
+9. **Future refactor (tech debt)**: Extract airtime/electricity/biller purchase logic from overlayServices.js into service classes (~9-13 hours, 1-2 sessions)
+10. Do NOT reactivate Peach Payments without explicit approval from André
+11. Do NOT add `RmtInf.Ustrd` to Pain.013 — SBSA rejects it
+12. npm audit: 9 remaining (5 low, 4 moderate) — all in transitive deps, cannot safely fix
+13. **Commission allocation**: `flash_transactions.service_type` ENUM still missing `airtime`, `data`, `electricity` — but the `::text` cast in `supplierPricingService.js` handles this gracefully.
 
 ---
 
@@ -747,6 +757,8 @@ You're part of a **banking-grade software system** where:
 
 | Date | Update |
 |------|--------|
+| Apr 2 (15:30) | **RTP Discovery Bank Reconciliation & CdtrRefInf.Ref Fix**: Live R10 RTP to Discovery Bank — full ledger reconciliation verified (wallet R4.25, fee R5.75, journal balanced R10=R10). Fixed critical `CdtrRefInf.Ref` bug: Pain.013 was using user-provided description instead of creditor's MSISDN from DB. Now auto-resolves phone from `users.phoneNumber`. Applied to `initiateRtpRequest` + `retryRtpAsPbac`. Requires redeployment. Session log: `docs/session_logs/2026-04-02_1530_rtp-discovery-bank-reconciliation-reference-fix.md` |
+| Apr 2 (13:30) | **Electricity Purchase Fix & Production Reconciliation**: Created `vas_products` table + `processingTime` column migrations. Reconciled R200 and R100 failed purchases. R150 electricity end-to-end. Wallet R550, MobileMart float R2200, Commission R6.50. Session log: `docs/session_logs/2026-04-02_1330_electricity-purchase-fix-production-reconciliation.md` |
 | Apr 1 (17:00) | **Production API Testing & Fixes (15+ issues)**: Comprehensive staging testing — registration (passport idType + walletId), KYC (rejection flow, self-healing status, POA validation with surname/address/date), password change (styled modals), payment requests (version column migration, encryption keys in deploy script), voucher purchases (errorData crash, ENUM mismatch). Migrations 20260401_01 + 20260401_02 applied to staging + production. Both environments deployed as `20260401_v1`. 1Voucher product code `311` rejected by Flash (data issue). Session log: `docs/session_logs/2026-04-01_1700_production-api-testing-fixes.md` |
 | Mar 31 (19:30) | **Data UI Redesign + Failover Fixes + Deploy Env Persistence**: Fixed MM_DEPLOYMENT_ENV wiped on every redeployment (added to deploy scripts). Fixed supplier failover constructor crash (`SupplierComparisonService is not a constructor`). Redesigned data products UI — individual rows with category/network icons, bundle names, data sizes, validity, prices. Real Vodacom PNG logo. Fixed beneficiary display name bug. Fixed purchase response scoping. Session log: `docs/session_logs/2026-03-31_1930_data-ui-redesign-failover-fixes-deploy-env.md` |
 | Mar 31 (14:00) | **VAS catalog & frontend fixes**: Fixed airtime/data overlay to read from `ProductVariant` (daily sync) instead of empty `VasProduct`. Fixed ServicesPage broken navigation. Replaced placeholder pages. Removed 158KB dead duplicate frontend code. All VAS overlays verified on normalized schema. Session log: `docs/session_logs/2026-03-31_1400_vas-catalog-frontend-fixes.md` |

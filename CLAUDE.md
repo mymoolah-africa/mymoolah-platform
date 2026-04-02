@@ -117,7 +117,8 @@ Never `pm2 restart all`, never `node server.js`, never `npm start`.
 | `aiSupportService.js` references `gpt-5` | Medium — will crash if called |
 | Conversation history in-memory only | Medium — lost on restart |
 | `check-proxies-cs.sh` missing | Low — bash error only |
-| npm audit: 25 vulnerabilities (2 critical) | Medium |
+| npm audit: 9 vulnerabilities (5 low, 4 moderate) | Low — transitive deps |
+| RTP balance auto-refresh can miss a polling cycle | Low — cosmetic delay, `MoolahContext.tsx` dedup logic |
 
 ---
 

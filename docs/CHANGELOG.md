@@ -1,5 +1,34 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-02 - RTP Discovery Bank Reconciliation & CdtrRefInf.Ref Fix
+
+### RTP Pain.013 Remittance Reference Fix (Critical)
+- **`services/standardbankRtpService.js`** — `CdtrRefInf.Ref` in Pain.013 was built from user-provided `description`/`reference` text. Changed to always use creditor's `phoneNumber` from `users` table (converted from `+27825571055` to `0825571055` format). This is critical because the deposit notification service (`standardbankDepositNotificationService.js`) uses `resolveReference()` to match the reference to a phone number and auto-credit the correct wallet. User-provided text would break this matching.
+- **Both paths fixed**: `initiateRtpRequest()` and `retryRtpAsPbac()`. User's description preserved in RTP metadata as `userDescription`.
+- **Requires production redeployment** — commit `0a990d56`.
+
+### Production RTP Reconciliation — Discovery Bank R10
+- **RTP Request ID 2** — R10 to Discovery Bank (bank code `679000`), payer Andre Botes (account `18828076450`). Status: ACCC (Accepted Settlement Completed).
+- **Wallet credit**: R4.25 (R10.00 - R5.75 SBSA fee). Wallet balance: R550.00 → R554.25.
+- **SBSA fee**: R5.75 (VAT inclusive) = R5.00 ex-VAT + R0.75 VAT (15%).
+- **Journal entry #5** (`SBSA-RTP-MM-RTP-1775135300309-puiowp`): 4 lines, DR R10.00 = CR R10.00 (balanced).
+  - DR `1100-01-01` (Bank) R10.00
+  - CR `2100-01-01` (Client Float) R4.25
+  - CR `5000-10-01` (SBSA Cost) R5.00
+  - CR `2300-10-01` (VAT Control) R0.75
+- **Tax transaction**: Pass-through VAT (output = input, net R0). `TAX-0c0f13eb`.
+- **Notification**: `txn_wallet_credit` with `reason: "balance_refresh"` and `subtype: "payshap_rtp_paid"`.
+- **RTP Request ID 1** — Same amount, declined by payer. No amounts posted, correct rejection notification sent.
+
+### Production State
+- Wallet 0825571055: R554.25
+- MobileMart float: R2,200.00
+- Flash float: R875.00
+- Commission revenue: R6.50
+- VAT control: R1.60
+
+---
+
 ## 2026-04-02 - Electricity Purchase Fix, Production Reconciliation & Treasury Operations
 
 ### Electricity Purchase — Critical Production Fix
