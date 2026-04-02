@@ -102,22 +102,43 @@ async function initiateRtpRequest(params) {
     throw new Error('Wallet does not belong to user');
   }
 
-  // Resolve creditor name for Pain.013 (shown to debtor as requester). Prefer override, else User lookup.
+  // Resolve creditor name + phone for Pain.013.
+  // Name: shown to debtor as requester identity.
+  // Phone (MSISDN): used in CdtrRefInf.Ref so the deposit notification service
+  // can auto-match the inbound credit to the correct wallet. User-provided
+  // description/reference must NOT replace the MSISDN in the remittance info —
+  // the platform relies on this for automated wallet crediting.
   let resolvedCreditorName = (typeof creditorNameOverride === 'string' && creditorNameOverride.trim())
     ? creditorNameOverride.trim()
     : null;
-  if (!resolvedCreditorName && userId) {
+  let creditorPhoneNumber = null;
+  if (userId) {
     try {
-      const user = await db.User.findByPk(userId, { attributes: ['firstName', 'lastName'] });
-      if (user && (user.firstName || user.lastName)) {
-        resolvedCreditorName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+      const user = await db.User.findByPk(userId, { attributes: ['firstName', 'lastName', 'phoneNumber'] });
+      if (user) {
+        if (!resolvedCreditorName && (user.firstName || user.lastName)) {
+          resolvedCreditorName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+        }
+        if (user.phoneNumber) {
+          // Strip +27 prefix and convert to local 0-prefixed format for reference
+          creditorPhoneNumber = user.phoneNumber.replace(/^\+27/, '0');
+        }
       }
     } catch (userErr) {
-      console.warn('[RTP] Could not resolve creditor name from User:', userErr.message);
+      console.warn('[RTP] Could not resolve creditor details from User:', userErr.message);
     }
   }
 
   const merchantTransactionId = `MM-RTP-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+  // Build remittance info: "{CreditorName}: {creditorMSISDN}"
+  // The MSISDN is critical — the deposit notification service uses it to resolve
+  // which wallet to credit. User-provided description/reference is stored on the
+  // RTP record but never placed in CdtrRefInf.Ref.
+  const remittanceRef = creditorPhoneNumber || merchantTransactionId;
+  const remittanceInfo = resolvedCreditorName
+    ? `${resolvedCreditorName}: ${remittanceRef}`.substring(0, 35)
+    : remittanceRef;
 
   // DbtrAgt differs by mode:
   //   Proxy: proxy domain (e.g. 'discoverybank') — proxy directory lookup (preferred)
@@ -138,9 +159,7 @@ async function initiateRtpRequest(params) {
     payerMobileNumber: payerMobileNumber || undefined,
     payerAccountNumber: payerAccountNumber || undefined,
     payerBankCode: resolvedPayerBankCode,
-    remittanceInfo: resolvedCreditorName
-      ? `${resolvedCreditorName}: ${description || reference || merchantTransactionId}`.substring(0, 35)
-      : (description || reference || merchantTransactionId),
+    remittanceInfo,
     expiryMinutes,
     creditorName: resolvedCreditorName || undefined,
   });
@@ -198,6 +217,8 @@ async function initiateRtpRequest(params) {
       monthlyRtpCount: monthlyCount,
       pricingTier: `${monthlyCount}-txns`,
       creditorName: resolvedCreditorName || undefined,
+      creditorPhoneNumber: creditorPhoneNumber || undefined,
+      userDescription: description || reference || undefined,
     },
   });
 
@@ -523,14 +544,24 @@ async function retryRtpAsPbac(originalRtp) {
 
   const retryMerchantTxId = `${originalRtp.merchantTransactionId}-PBAC`;
 
-  // Creditor name for PBAC retry: from metadata (stored on initial RTP) or User lookup
+  // Creditor name + phone for PBAC retry: from metadata or User lookup.
+  // Phone (MSISDN) is mandatory in CdtrRefInf.Ref for wallet auto-matching.
   let creditorName = originalRtp.metadata?.creditorName;
-  if (!creditorName && userId) {
+  let retryCreditorPhone = null;
+  if (userId) {
     try {
-      const user = await db.User.findByPk(userId, { attributes: ['firstName', 'lastName'] });
-      if (user) creditorName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+      const user = await db.User.findByPk(userId, { attributes: ['firstName', 'lastName', 'phoneNumber'] });
+      if (user) {
+        if (!creditorName) creditorName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+        if (user.phoneNumber) retryCreditorPhone = user.phoneNumber.replace(/^\+27/, '0');
+      }
     } catch (_) { /* non-fatal */ }
   }
+
+  const retryRemittanceRef = retryCreditorPhone || retryMerchantTxId;
+  const retryRemittanceInfo = creditorName
+    ? `${creditorName}: ${retryRemittanceRef}`.substring(0, 35)
+    : retryRemittanceRef;
 
   const { pain013, msgId, uetr: retryUetr } = buildPain013({
     merchantTransactionId: retryMerchantTxId,
@@ -540,9 +571,7 @@ async function retryRtpAsPbac(originalRtp) {
     payerMobileNumber: undefined,
     payerAccountNumber,
     payerBankCode: resolvedBankCode,
-    remittanceInfo: creditorName
-      ? `${creditorName}: ${originalRtp.description || originalRtp.referenceNumber || retryMerchantTxId}`.substring(0, 35)
-      : (originalRtp.description || originalRtp.referenceNumber || retryMerchantTxId),
+    remittanceInfo: retryRemittanceInfo,
     expiryMinutes: 60,
     creditorName: creditorName || undefined,
   });
