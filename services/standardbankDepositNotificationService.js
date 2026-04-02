@@ -452,6 +452,28 @@ async function processDepositNotification(payload) {
         { transaction }
       );
 
+      const userTxnId = `TXN-SBSA-DEP-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      await db.Transaction.create(
+        {
+          transactionId: userTxnId,
+          userId,
+          walletId: lockedWallet.walletId,
+          receiverWalletId: lockedWallet.walletId,
+          amount,
+          type: 'deposit',
+          status: 'completed',
+          description: `PayShap deposit from bank account (Ref: ${referenceNumber})`,
+          fee: 0,
+          currency,
+          metadata: {
+            source: 'SBSA_DEPOSIT_NOTIFICATION',
+            sbsaTransactionId: transactionId,
+            referenceNumber,
+          },
+        },
+        { transaction }
+      );
+
       await transaction.commit();
 
       try {
