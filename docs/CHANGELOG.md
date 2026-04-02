@@ -1,5 +1,33 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-01 - Sequential KYC Flow, Race Condition Fix & Rate Limiter Tuning
+
+### KYC — Sequential Upload Flow
+- **`mymoolah-wallet-frontend/pages/KYCDocumentsPage.tsx`** — Step 1 (ID only → Tier 1) then Step 2 (POA only → Tier 2). Conditional rendering based on `kycTier`. Step-aware headers, tips, and submit buttons. Removed simultaneous dual-upload.
+- **`mymoolah-wallet-frontend/components/KYCDocumentsPage.tsx`** — Synced copy of pages/ version.
+
+### KYC — Race Condition Fix (Critical)
+- **`controllers/kycController.js`** — Final `kycStatus` update uses direct SQL (`sequelize.query`) instead of stale Sequelize instance `user.update()`. Self-healing in `GET /api/v1/kyc/status`: auto-corrects stale status when `wallet.kycVerified=true` and `kyc_tier>=1`.
+- **`mymoolah-wallet-frontend/pages/KYCDocumentsPage.tsx`** — Frontend no longer writes intermediate `documents_uploaded` to DB. Only writes `verified` on immediate `approved` response. For async 202, navigates to status page and lets polling handle it.
+
+### KYC — Polling Death Spiral Fix
+- **`mymoolah-wallet-frontend/pages/KYCStatusPage.tsx`** — Changed 2-second `setInterval` to 10-second `setTimeout` with exponential backoff on 429 (doubles up to 60s max, resets on success).
+- **`mymoolah-wallet-frontend/components/KYCStatusPage.tsx`** — Synced copy.
+
+### Rate Limiter Tuning
+- **`config/security.js`** — General rate limit: 100 → 600 → 1500 requests/15min. Auth limit: 5 → 15/15min.
+- **`server.js`** — New `walletReadLimiter` (120/min) for GET-only polling routes (`/wallets`, `/transactions`, `/notifications`, `/users`, `/settings`, `/vouchers`, `/kyc`). `financialLimiter` skips GETs.
+
+### Scripts
+- **`scripts/delete-production-user.js`** — New. Purges user + all related records by user ID with SAVEPOINTs. Resets `users_id_seq` via `setval()`. Production only.
+
+### Production Deployments
+- Wallet frontend: 4 deploys (revisions 00017-00020)
+- Backend: 3 deploys (revisions 00072-00078)
+- Tested with 2 real production users (User 1 and User 2, both Tier 2 verified)
+
+---
+
 ## 2026-04-01 - Production API Testing & Fixes (15+ issues)
 
 ### Registration
