@@ -21,6 +21,7 @@ alwaysApply: true
 | SVG network logos (MTN, CellC, Telkom) are approximate | `components/ui/NetworkIcons.tsx` | Low — cosmetic only | Replace with real PNG brand assets (same approach as Vodacom) |
 | Airtime/Electricity/Biller purchase logic inline in route handler (~1,200 lines) | `routes/overlayServices.js` (lines ~471-900, ~2310-2506, ~3070-3560) | Medium — violates separation of concerns; no ACID wrapper; harder to test; duplicated patterns across 3 overlays | Extract into dedicated purchase service classes following `productPurchaseService.js` pattern (the voucher overlay already uses the correct architecture). Effort: ~9-13 hours across 1-2 sessions. |
 | Missing `refresh-vas-best-offers.js` and `mark-featured-data-products.js` | `services/catalogSynchronizationService.js` | Low — non-fatal warnings in daily sweep logs | Create the scripts or remove the references from catalogSynchronizationService |
+| KYC success UX: no auto-navigation, notification bell hidden | `KYCStatusPage.tsx`, `KYCDocumentsPage.tsx`, `TopBanner.tsx` | Medium — user sees no feedback after successful KYC; must manually navigate back; red notification icon hidden behind KYC modal styling which differs from standard modals | After successful KYC verification: (1) auto-close KYC page and navigate to dashboard, (2) align KYC page styling with standard modal patterns so TopBanner notification bell is visible, (3) optionally show a brief success toast before redirect |
 
 ## Architectural Decisions Log
 
