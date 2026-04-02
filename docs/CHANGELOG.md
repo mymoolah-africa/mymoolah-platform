@@ -1,5 +1,39 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-02 - Electricity Purchase Fix, Production Reconciliation & Treasury Operations
+
+### Electricity Purchase — Critical Production Fix
+- **`migrations/20260402_01_create_vas_products_table.js`** — Created `vas_products` table with 3 ENUM types, 6 indexes, and all columns matching `models/VasProduct.js`. No prior migration had ever created this table despite the model referencing it, causing all VAS purchases to crash with `relation "vas_products" does not exist`.
+- **`migrations/20260402_02_add_processing_time_to_transactions.js`** — Added `processingTime` (INTEGER, nullable) column to `transactions` table. The Transaction model defined it but no migration had created it, causing `Transaction.create()` to crash with `column "processingTime" does not exist`.
+
+### Production Reconciliation (Manual)
+- **R200 Electricity** — MobileMart API succeeded (token: `32244458195865671079`, 59.3 kWh, Cape Town). Post-processing crashed at `VasProduct.findOrCreate`. Manually reconciled: wallet debit R200, transaction record, float deduction, commission R2.00, VAT R0.26, journal entry.
+- **R100 Electricity** — MobileMart API succeeded (token: `48932930309256444514`, 29.7 kWh, Cape Town). Post-processing crashed at `Transaction.create`. Wallet already debited by live code. Manually reconciled: transaction record, float deduction, commission R1.00, VAT R0.13, journal entry.
+
+### Automated End-to-End (Post-Migration)
+- **R150 Electricity** — First fully automated purchase. Wallet debit, VAS transaction, transaction history, commission (R1.50), VAT (R0.20), journal entry — all posted automatically.
+- **R500 Wallet Send** — Completed successfully.
+
+### Treasury Operations
+- **`services/standardbankDepositNotificationService.js`** — Added `db.Transaction.create()` inside wallet credit ACID transaction so deposits appear in dashboard transaction history. Committed but not yet deployed.
+- **`scripts/simulate-sbsa-deposit-notification.sh`** — NEW: Parameterized SBSA SOAP deposit simulation script.
+- **Production float setup**: MobileMart R2200 (real), Flash R875 (real). EasyPay/VALR zeroed (seeded values removed).
+- **`tax_configurations`** — Seeded VAT_15 record (FK parent for `tax_transactions`).
+
+### Commission & VAT Ledger
+- 4 journal entries posted (2 manual reconciliation + 2 automated), all balanced
+- Commission Revenue (4000-10-01): R6.50 cumulative
+- VAT Control (2300-10-01): R0.85 cumulative output VAT
+- MM Commission Clearing (2200-01-01): R6.50 cumulative
+
+### Production State
+- Wallet 0825571055: R550.00
+- MobileMart float: R2 200.00
+- Flash float: R875.00
+- Backend revision: 00078 (unchanged — fixes were DB migrations only)
+
+---
+
 ## 2026-04-01 - Sequential KYC Flow, Race Condition Fix & Rate Limiter Tuning
 
 ### KYC — Sequential Upload Flow

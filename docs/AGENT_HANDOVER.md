@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-02 11:30  
-**Latest Feature**: **Treasury Float & Deposit Simulation** — First production treasury operations. Simulated SBSA SOAP deposit notification for R4 000 PayShap deposit (ref: 0825571055). Wallet credited R1 500, MobileMart float R2 500 (per bank statement). Flash float account created (R875 from Flash portal). Fixed `standardbankDepositNotificationService.js` to create `transactions` table record (was missing — deposits didn't appear in transaction history). Created `scripts/simulate-sbsa-deposit-notification.sh`. Float monitoring thresholds set. Seeded float balances replaced with real values.  
-**Document Version**: 2.66.0  
-**Session logs**: `docs/session_logs/2026-04-02_1130_treasury-float-deposit-simulation.md`  
+**Last Updated**: 2026-04-02 13:30  
+**Latest Feature**: **Electricity Purchase Fix & Production Reconciliation** — Fixed two critical production blockers: missing `vas_products` table (migration `20260402_01`) and missing `processingTime` column on `transactions` table (migration `20260402_02`). Reconciled R200 and R100 failed purchases (wallet, float, commission, VAT, journal entries). Seeded `tax_configurations` with VAT_15. After migrations, R150 electricity purchase completed fully end-to-end — automated commission (1%), VAT output, and double-entry journal entries. Wallet: R550, MobileMart float: R2200, Commission revenue: R6.50, VAT payable: R0.85.  
+**Document Version**: 2.67.0  
+**Session logs**: `docs/session_logs/2026-04-02_1330_electricity-purchase-fix-production-reconciliation.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
