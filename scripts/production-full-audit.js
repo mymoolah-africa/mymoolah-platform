@@ -11,6 +11,10 @@
  *   1. Double-entry: every journal entry debits === credits
  *   2. Trial balance: sum of all debits === sum of all credits across all accounts
  *   3. Wallet reconciliation: wallet.balance matches net transaction flow
+ *       — MyMoolah-issued vouchers only (`purchaseType=voucher_issue` / `voucherType=standard`):
+ *         internal legs, no VAT, no platform tx fee on those lines.
+ *         EasyPay / digital-overlay / 3rd-party vouchers use other descriptions (e.g. `Voucher purchase - …`)
+ *         and are outbound supplier flows — commission/VAT rules apply there, not here.
  *   4. Float reconciliation: supplier_floats.currentBalance matches ledger
  *   5. Commission audit: VAS commission journal entries match expected rates
  *   6. VAT audit: tax_transactions match journal VAT lines
@@ -167,6 +171,57 @@ function money(v) { return `R ${Number(v || 0).toFixed(2)}`; }
     // Total wallets balance
     const totalWallets = await c.query(`SELECT COALESCE(SUM(balance), 0) as total FROM wallets`);
     console.log(`\n  ${BOLD}Total wallet balances: ${money(totalWallets.rows[0].total)}${RESET}`);
+
+    // MyMoolah-issued vouchers only (portal "MyMoolah Voucher" — not EasyPay / overlay catalog)
+    const mmVoucherTxns = await c.query(`
+      SELECT t.id, t."userId", t.type, t.amount, t.description, t.fee, t.metadata, t."createdAt",
+             u."firstName", u."lastName"
+      FROM transactions t
+      JOIN users u ON u.id = t."userId"
+      WHERE t.status = 'completed'
+        AND (
+          (t.description LIKE 'Voucher purchase:%' AND t.metadata->>'purchaseType' = 'voucher_issue')
+          OR (t.description LIKE 'Voucher redemption:%' AND t.metadata->>'voucherType' = 'standard')
+        )
+      ORDER BY t."createdAt" ASC
+    `);
+    if (mmVoucherTxns.rows.length > 0) {
+      section('MyMoolah-issued vouchers only (internal — no VAT / platform tx fee on these legs)');
+      console.log(`  ${DIM}Does NOT apply to EasyPay, Flash/MobileMart catalog, or other 3rd-party vouchers (outbound).${RESET}`);
+      mmVoucherTxns.rows.forEach(t => {
+        const dt = new Date(t.createdAt).toISOString().replace('T', ' ').substring(0, 19);
+        const codeMatch = (t.description || '').match(/:\s*(\d+)\s*$/);
+        const voucherCode = codeMatch ? codeMatch[1] : (t.description || '').trim();
+        const feeStr = t.fee != null && parseFloat(t.fee) !== 0 ? money(t.fee) : 'R 0.00';
+        console.log(`    TXN#${String(t.id).padEnd(4)} ${dt}  ${t.type.padEnd(10)} ${money(t.amount).padStart(10)}  fee ${feeStr}  code ${voucherCode}  ${t.firstName} ${t.lastName}`);
+      });
+      pass('MyMoolah voucher issue/redeem: bookkeeping-only legs; not RTP/PayShap (no R5.75 fee).');
+    }
+
+    // Outbound voucher purchases (digital overlay catalog, EasyPay paths — not MM issue/redeem)
+    const thirdPartyVoucherTxns = await c.query(`
+      SELECT t.id, t."userId", t.type, t.amount, t.description, t.fee, t."createdAt",
+             u."firstName", u."lastName"
+      FROM transactions t
+      JOIN users u ON u.id = t."userId"
+      WHERE t.status = 'completed'
+        AND t.type IN ('payment', 'purchase')
+        AND (
+          t.description LIKE 'Voucher purchase -%'
+          OR t.description LIKE 'EasyPay Voucher:%'
+          OR t.description LIKE 'EasyPay Voucher %'
+        )
+      ORDER BY t."createdAt" ASC
+    `);
+    if (thirdPartyVoucherTxns.rows.length > 0) {
+      section('Outbound / 3rd-party voucher payments (not MyMoolah-issued — supplier-facing)');
+      console.log(`  ${DIM}EasyPay, overlay catalog, etc.: commission/VAT/float may apply — not the internal MM voucher test path.${RESET}`);
+      thirdPartyVoucherTxns.rows.forEach(t => {
+        const dt = new Date(t.createdAt).toISOString().replace('T', ' ').substring(0, 19);
+        console.log(`    TXN#${String(t.id).padEnd(4)} ${dt}  ${t.type.padEnd(10)} ${money(t.amount).padStart(10)}  ${(t.description || '').substring(0, 55)}`);
+      });
+      pass('Outbound voucher txns listed for context (audit uses supplier/commission rules for these).');
+    }
 
     // ═══════════════════════════════════════════════════════════════
     // 4. FLOAT RECONCILIATION
