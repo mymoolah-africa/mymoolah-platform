@@ -52,6 +52,27 @@ function header(title) { console.log(`\n${BOLD}${CYAN}${'═'.repeat(70)}${RESET
 function section(title) { console.log(`\n  ${BOLD}${title}${RESET}`); console.log(`  ${'─'.repeat(60)}`); }
 function money(v) { return `R ${Number(v || 0).toFixed(2)}`; }
 
+/** TXN-1775202940860-i573h1 -> 1775202940860 */
+function walletTxnTimestampFromId(transactionId) {
+  const m = String(transactionId || '').match(/TXN-(\d{10,})-/);
+  return m ? m[1] : null;
+}
+
+/** True if JE reference contains the VAS id, or a 13-digit epoch within maxDriftMs of vasTsKey, or wallet TXN timestamp */
+function journalRefLinksVas(refs, vasTransactionId, vasTsKey, walletTxnId, maxDriftMs = 120000) {
+  const ts = parseInt(vasTsKey, 10);
+  const walletTs = walletTxnTimestampFromId(walletTxnId);
+  return refs.some(ref => {
+    if (!ref) return false;
+    if (ref.includes(vasTransactionId)) return true;
+    if (ref.includes(vasTsKey)) return true;
+    if (walletTs && ref.includes(walletTs)) return true;
+    if (!Number.isFinite(ts)) return false;
+    const nums = ref.match(/\d{13}/g) || [];
+    return nums.some(n => Math.abs(parseInt(n, 10) - ts) <= maxDriftMs);
+  });
+}
+
 (async () => {
   console.log(`\n${BOLD}${CYAN}╔══════════════════════════════════════════════════════════════════╗${RESET}`);
   console.log(`${BOLD}${CYAN}║  MYMOOLAH PRODUCTION FULL AUDIT — ${ENV.toUpperCase()} ${' '.repeat(Math.max(0, 27 - ENV.length))}║${RESET}`);
@@ -450,7 +471,7 @@ function money(v) { return `R ${Number(v || 0).toFixed(2)}`; }
     header('9. VAS TRANSACTION COMPLETENESS');
 
     const vasTxns = await c.query(`
-      SELECT v."transactionId", v."userId", v."vasType", v.amount, v.status,
+      SELECT v."transactionId", v."userId", v."vasType", v.amount, v.status, v.metadata,
              u."firstName"
       FROM vas_transactions v
       LEFT JOIN users u ON u.id = v."userId"
@@ -458,19 +479,31 @@ function money(v) { return `R ${Number(v || 0).toFixed(2)}`; }
     `);
 
     const allJeRefs = await c.query(`SELECT reference FROM journal_entries`);
-    const jeRefSet = allJeRefs.rows.map(r => r.reference);
+    const jeRefList = allJeRefs.rows.map(r => r.reference);
 
-    const allWalletTxns = await c.query(`SELECT id, "transactionId", metadata, description FROM transactions WHERE status = 'completed'`);
+    const allWalletTxns = await c.query(`
+      SELECT id, "userId", "transactionId", type, amount, metadata, description
+      FROM transactions WHERE status = 'completed'
+    `);
 
     vasTxns.rows.forEach(v => {
       const amountR = (parseInt(v.amount) / 100).toFixed(2);
       const vasTsKey = v.transactionId.split('-')[1];
+      const meta = v.metadata || {};
+      const walletTxnIdFromVas = meta.walletTransactionId || null;
 
-      const hasJournal = jeRefSet.some(ref => ref.includes(vasTsKey) || ref.includes(v.transactionId));
+      const hasJournal = journalRefLinksVas(jeRefList, v.transactionId, vasTsKey, walletTxnIdFromVas);
       const hasWalletTxn = allWalletTxns.rows.some(t => {
-        const meta = t.metadata || {};
-        return meta.vasTransactionId === String(v.transactionId) ||
-               (t.description && t.description.includes(v.vasType));
+        const tmeta = t.metadata || {};
+        if (walletTxnIdFromVas && t.transactionId === walletTxnIdFromVas) return true;
+        if (tmeta.vasTransactionId === String(v.transactionId)) return true;
+        // Fallback: same user, type payment/purchase, amount matches VAS (cents), description mentions vasType
+        const amtMatch = Math.abs(parseFloat(t.amount) - parseInt(v.amount, 10) / 100) < 0.01;
+        if (amtMatch && t.userId === v.userId && ['payment', 'purchase'].includes(t.type) &&
+            t.description && new RegExp(v.vasType.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i').test(t.description)) {
+          return true;
+        }
+        return false;
       });
 
       if (hasJournal) {
