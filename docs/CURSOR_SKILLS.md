@@ -24,6 +24,13 @@ Skills extend Cursor Agent with specialized knowledge for banking-grade, Mojaloo
 | **interaction-design** | wshobson/agents | Microinteractions, motion design, UX polish |
 | **security-best-practices** | supercent-io/skills-template | Security patterns for applications |
 | **frontend-design** | .agents/skills/ (project) | Distinctive UI, typography, aesthetics |
+| **auditing** | .agents/skills/ (project) | Banking-grade ledger auditing, FICA/POPIA/SARB compliance, SHA-256 hash-chained audit trails, double-entry reconciliation, SOX-grade internal controls |
+| **fintech-test-driven-development** | .agents/skills/ (project) | Jest/Supertest TDD for financial endpoints, idempotency, race conditions |
+| **safe-database-migrations** | .agents/skills/ (project) | Zero-downtime PostgreSQL/Sequelize migrations |
+| **redis-caching-and-locks** | .agents/skills/ (project) | Distributed locks, rate limiting, idempotency caching |
+| **robust-financial-forms** | .agents/skills/ (project) | Type-safe financial data entry, KYC forms |
+| **background-jobs-and-cron** | .agents/skills/ (project) | Idempotent Node.js cron jobs for reconciliation |
+| **local-ai-and-ocr-pipelines** | .agents/skills/ (project) | ML/OCR pipelines for KYC document processing |
 
 ## Installation Location
 
@@ -50,7 +57,9 @@ npx skills add <owner/repo> --skill <name> --agent cursor -y
 | Rule | Skill support |
 |------|---------------|
 | Rule 9 (DB aggregation, <50ms) | postgresql-optimization, sql-optimization-patterns |
-| Rule 5 (Banking-grade security) | security-best-practices |
+| Rule 5 (Banking-grade security) | security-best-practices, auditing |
+| FICA/POPIA/SARB compliance | auditing |
+| Ledger, reconciliation, audit trail | auditing |
 | REST API design | api-design-principles |
 | Tailwind/React UI | tailwind-design-system, frontend-design |
 | 11-language, inclusive UX | accessibility-compliance, interaction-design |

@@ -1,5 +1,27 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-03 - Auditing Skill v2.0.0 — World-Class Banking-Grade Upgrade
+
+### Summary
+Major upgrade to `.agents/skills/auditing/SKILL.md` from 549 lines to 1,238 lines (v1.0 to v2.0.0). Merges best practices from three top open-source auditing skills with comprehensive South African regulatory compliance.
+
+### Sources Merged
+- **Agent Audit Trail** (openclaw/skills, 2,593 stars, MIT-0): SHA-256 hash-chain event schema, monotonic ordering, WORM storage enforcement, chain integrity verification
+- **SOX Compliance** (odinlayer-skills, LobeHub marketplace): COSO framework mapping, segregation of duties matrix, material weakness auto-detection, change management controls
+- **CFO Stack /cfo-audit** (MikeChongCan/cfo-stack): 6-step PASS/WARN/FAIL structured audit workflow, anomaly detection patterns, read-only audit constraint
+
+### New Sections Added
+- **Section 6: South African Regulatory Compliance** — Full FICA Act 38/2001 (CDD s.21, EDD s.21B, record keeping s.22, CTR s.28, SAR s.29, RMCP s.42), POPIA Act 4/2013 (lawful processing, purpose limitation, data minimisation, retention s.14, security safeguards s.19, breach notification s.22, data subject rights, penalties), SARB/FSCA prudential and conduct standards (NPS Act, PEM, payment service directive, FAIS), RICA, Companies Act, regulatory cross-reference table
+- **Section 7: SOX-Grade Internal Controls** — COSO framework mapping, SoD matrix (9 function pairs), material weakness auto-detection (9 conditions with severity), WORM storage enforcement (PostgreSQL trigger), change management controls
+- **Section 8: Structured Audit Workflow** — 6-step workflow (Structural, Completeness, Accuracy, Anomaly, Compliance, Report), PASS/WARN/FAIL scoring rules, automatic FAIL conditions, audit report template
+- **Section 3 enhanced**: Full audit event schema (17 fields), 30+ event kinds (including FICA/POPIA events), hash chain computation code, WORM enforcement trigger SQL
+
+### Files Modified
+- `.agents/skills/auditing/SKILL.md` (549 → 1,238 lines)
+- `docs/CURSOR_SKILLS.md` (updated skills inventory)
+
+---
+
 ## 2026-04-03 - Production Full Audit Script (`production-full-audit.js`)
 
 ### Summary
