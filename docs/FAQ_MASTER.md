@@ -1,6 +1,6 @@
 # MyMoolah Treasury Platform – Comprehensive FAQ Library
 
-_Last updated: 12 March 2026_
+_Last updated: 3 April 2026_
 
 This FAQ is the single source of truth for customer support, covering all live and developed features of the MyMoolah digital wallet. Sections are ordered by the most common customer enquiries. Update this document and regenerate the knowledge base whenever a new feature goes live.
 
@@ -175,6 +175,21 @@ A: Dial `*130*3621*3*[YOUR 12-DIGIT PIN]#` from the mobile number you want to to
 
 **Q: Why isn't my eeziPay PIN working?**
 A: Check that you are dialling from the correct number, that the PIN is entered exactly as shown (12 digits, no spaces), and that the voucher has not already been redeemed. If still failing, contact support with your transaction reference.
+
+**Q: What is eeziPower?**
+A: eeziPower is a prepaid electricity product available through the MyMoolah wallet. When you purchase eeziPower, you receive a unique PIN. You then redeem that PIN via USSD or WhatsApp to receive your prepaid electricity token, which you enter into your meter.
+
+**Q: How do I redeem my eeziPower PIN via USSD?**
+A: Dial `*130*269#` from any phone and follow these steps: (1) Select option 1 from the menu. (2) Enter your prepaid electricity meter number. (3) Enter the eeziPower PIN shown in the MyMoolah app or SMS. Flash will validate the PIN and deliver your prepaid electricity token via SMS.
+
+**Q: How do I redeem my eeziPower PIN via WhatsApp?**
+A: Save the number **078 035 3732** to your contacts. Open WhatsApp, send "Hi" or "Hello" to that number, and follow the on-screen prompts to submit your meter number and eeziPower PIN. Your prepaid electricity token will be delivered in the chat.
+
+**Q: What do I do after I receive my eeziPower electricity token?**
+A: Enter the 20-digit electricity token into your prepaid meter. The token is unique to your meter number and cannot be transferred. If you experience any issues entering the token, contact your electricity utility provider.
+
+**Q: My eeziPower PIN is not working — what should I do?**
+A: Verify the following: (1) The PIN is entered exactly as shown — no spaces or extra digits. (2) Your meter number is correct and corresponds to a valid prepaid electricity meter. (3) The PIN has not already been redeemed. If the issue persists, note your MyMoolah transaction reference number and contact support for assistance.
 
 ---
 
