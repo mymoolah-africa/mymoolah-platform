@@ -247,7 +247,12 @@ class ApiService {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || `HTTP ${response.status}`);
+        const body = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
+        const msg =
+          (typeof body.message === 'string' && body.message) ||
+          (typeof body.error === 'string' && body.error) ||
+          `HTTP ${response.status}`;
+        throw new Error(msg);
       }
 
       return {
