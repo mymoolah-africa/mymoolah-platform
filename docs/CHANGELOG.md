@@ -1,5 +1,26 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-03 - Production Full Audit Script (`production-full-audit.js`)
+
+### Summary
+- **`scripts/production-full-audit.js`** — Banking-grade reconciliation runner for `production` (default), `--staging`, or `--uat` via `db-connection-helper.js`.
+- **Checks**: Journal entry balance, trial balance, wallet vs transaction net flow (correct handling when `send`/`payment`/`purchase` store positive amounts), supplier floats, commission JEs (gross/net/VAT), `tax_transactions` (incl. RTP VAT pass-through rows), `referral_earnings` vs `REFERRAL-%` JEs, SBSA RTP JEs, treasury (operator reference + DB-visible PayShap/RTP subtotals + MobileMart `supplier_floats`), revenue summary and RTP fee pass-through (R5.75 user charge = R5 SBSA + R0.75 VAT, no platform margin wording), user/KYC summary, full transaction timeline.
+- **Treasury facts (printed, operator reference)**: R4,000 TA bank in; **R2,500** bank prepayment to MobileMart; R1,500 PayShap wallet allocation; R500 P2P to Hendrik (not Flash float); RTP principal stays in TA; RTP fee pass-through to SBSA.
+- **Vouchers**: Internal **MyMoolah** legs only when `metadata.purchaseType = voucher_issue` (purchase) or `metadata.voucherType = standard` (redemption). Separate listing for outbound patterns (`Voucher purchase -%`, `EasyPay Voucher:%`).
+- **VAS completeness**: Links wallet via `vas_transactions.metadata.walletTransactionId`; links commission JEs by wallet TXN timestamp embedded in reference and by ~2-minute epoch drift vs VAS id.
+- **Production data (one-off)**: Two referral commission journal entries were posted manually where `referral_earnings` existed without matching JEs (align ledger with app). Consider automating referral JE posting in a future change.
+
+### Run
+```bash
+node scripts/production-full-audit.js --production
+# or: --staging | --uat
+```
+
+### Requires
+- Cloud SQL Auth Proxy healthy for target env (see `docs/DATABASE_CONNECTION_GUIDE.md`)
+
+---
+
 ## 2026-04-03 - VAS Catalog Production Deployment, Biller Telecoms Fix, eeziPower Label Fix
 
 ### VAS Catalog Simplification → Production

@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-03 15:00  
-**Latest Feature**: **VAS Catalog Simplification (Staging + Production)** — Replaced 8+ tables, 6 services, 2 scripts, 3,400+ lines of catalog pipeline with a single materialized view (`v_best_offers`), `product_selection_rules` table, externalized commission config (`config/supplier-commissions.json`), and unified `productCatalogService.js`. Applied to both staging and production. Also fixed: Telecoms biller category empty (added `'telcos'` keyword), eeziPower mislabelled as eeziAirtime (backend + frontend). Requires backend + wallet redeployment.  
-**Document Version**: 2.71.0  
-**Session logs**: `docs/session_logs/2026-04-03_1500_vas-catalog-production-biller-eezipower-fix.md`  
+**Last Updated**: 2026-04-03 21:00  
+**Latest Feature**: **Production Full Audit Script (`production-full-audit.js`)** — Runnable reconciliation for `--production` | `--staging` | `--uat`: double-entry, trial balance, wallets (correct sign for payment/send/purchase), supplier floats, commission/VAT, tax (incl. RTP pass-through), referrals vs `referral_earnings` + JEs, RTP JEs, treasury narrative (operator facts: R4k TA, **R2,500** MM bank prepayment, R1.5k PayShap wallet, R500 P2P not Flash), revenue + R5.75 fee pass-through wording, **MyMoolah-only** internal voucher legs vs outbound (`Voucher purchase -` / EasyPay), VAS completeness via `walletTransactionId` + JE timestamp drift. Production had two referral JEs posted manually to align ledger with `referral_earnings` (historical gap). Session log: `docs/session_logs/2026-04-03_2100_production-audit-treasury-referrals-vouchers-vas.md`.  
+**Document Version**: 2.72.0  
+**Session logs**: `docs/session_logs/2026-04-03_2100_production-audit-treasury-referrals-vouchers-vas.md`, `docs/session_logs/2026-04-03_1500_vas-catalog-production-biller-eezipower-fix.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -100,7 +100,10 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (April 3, 2026 - 15:00)**
+### **Latest Achievement (April 3, 2026 - evening)**
+**Production Full Audit Script + Treasury / Referral / Voucher / VAS Audit Refinements** — Added and hardened `scripts/production-full-audit.js` (db-connection-helper, multi-env). Wallet reconciliation fixed for positive stored amounts on outflows. Referral audit aligns `referral_earnings` with `REFERRAL-%` journal entries; production ledger topped up for two missing referral postings (manual, session log). Treasury section documents operator TA facts (**R2,500** MobileMart bank prepayment, P2P vs Flash), removes misleading balance equality check, shows MobileMart `supplier_floats`. RTP fees described as **R5.75 full pass-through** (no MM margin). Internal **MyMoolah** voucher legs scoped via metadata (`voucher_issue` / `standard`); outbound voucher payments listed separately. VAS completeness warnings cleared using `metadata.walletTransactionId` and commission JE timestamp proximity. Session log: `docs/session_logs/2026-04-03_2100_production-audit-treasury-referrals-vouchers-vas.md`.
+
+### **Previous Achievement (April 3, 2026 - 15:00)**
 **VAS Catalog Simplification (Staging + Production) + Biller Telecoms Fix + eeziPower Label Fix** — (1) Applied VAS Catalog Simplification to production: ran migrations `20260403_02` (product_selection_rules, 60 rules) and `20260403_03` (v_best_offers materialized view, 197 rows). 8/9 regression tests passed. (2) Fixed empty Telecoms biller category: MobileMart's `mobilemart_content_creator: "telcos"` wasn't in `BILLER_CATEGORY_MAP` — added keyword, unlocking 35 telecoms billers. (3) Fixed eeziPower purchases mislabelled as "eeziAirtime": backend now uses correct labels/vasType/metadata per `isEeziPower` flag; frontend `TransactionDetailModal` shows "Your eeziPower PIN" with amber styling and electricity instructions. Session logs: `docs/session_logs/2026-04-03_1500_vas-catalog-production-biller-eezipower-fix.md`, `docs/session_logs/2026-04-03_1400_vas-catalog-simplification.md`.
 
 ### **Previous Achievement (April 3, 2026 - 09:00)**
@@ -225,6 +228,7 @@ The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade fin
    - After approval → trigger `embed:kb` automatically
    - Location: portal admin area (authenticated route)
 7. Phase 3 (Future): Redis conversation memory across sessions
+8. **Treasury / audit (optional)**: With proxies healthy, re-run `node scripts/production-full-audit.js --production` after material activity; automate referral commission JEs when `referral_earnings` rows are created (see tech debt register — ledger drift was corrected manually Apr 3).
 
 **⚠️ CODESPACES STARTUP — CRITICAL REMINDER**: ALWAYS use `bash scripts/start-codespace-with-proxy.sh` (NOT `npm start`). The backend requires the Cloud SQL Auth Proxy on port 6543. If you get `ECONNREFUSED 127.0.0.1:6543`, the proxy is not running — run the startup script. If you get `EADDRINUSE: 0.0.0.0:3001`, run `fuser -k 3001/tcp` first.
 
