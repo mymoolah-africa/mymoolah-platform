@@ -2792,7 +2792,7 @@ const BILLER_CATEGORY_MAP = {
   entertainment:['entertainment', 'dstv', 'multichoice', 'netflix', 'showmax', 'gaming', 'streaming', 'media', 'betting'],
   education:    ['education', 'school', 'university', 'college', 'academy', 'training', 'tuition', 'bursary'],
   municipal:    ['municipal', 'municipality', 'council', 'metro', 'water', 'rates', 'city of', 'district'],
-  telecoms:     ['telecoms', 'telecom', 'telkom', 'vodacom', 'mtn', 'cell c', 'cellc', 'rain', 'fibre', 'broadband', 'internet'],
+  telecoms:     ['telecoms', 'telecom', 'telcos', 'telkom', 'vodacom', 'mtn', 'cell c', 'cellc', 'rain', 'fibre', 'broadband', 'internet'],
   retail:       ['retail', 'credit', 'store', 'clothing', 'furniture', 'pepkor', 'pep', 'ackermans', 'edgars', 'jet', 'foschini', 'mrp', 'truworths', 'woolworths']
 };
 
