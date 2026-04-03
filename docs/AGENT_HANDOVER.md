@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-03 09:00  
-**Latest Feature**: **Referral System Banking-Grade Fix** — Referral codes were ephemeral (new random code on every page load, never saved). Fixed: `users.referral_code` column added (migration `20260403_01`), code generated once and persisted forever. `processSignup()` now accepts both SMS invite codes and stable user codes. USSD referral code lookup fixed (queried non-existent table). Dead frontend code removed. Error responses hardened. Requires migration + redeployment.  
-**Document Version**: 2.69.0  
-**Session logs**: `docs/session_logs/2026-04-03_0900_referral-system-banking-grade-fix.md`  
+**Last Updated**: 2026-04-03 14:00  
+**Latest Feature**: **VAS Catalog Simplification (Staging)** — Replaced 8+ tables, 6 services, 2 scripts, 3,400+ lines of catalog pipeline with a single materialized view (`v_best_offers`), `product_selection_rules` table, externalized commission config (`config/supplier-commissions.json`), and unified `productCatalogService.js`. Staging only — production unchanged. 34/34 regression tests passed. Requires backend restart on staging Codespaces to activate new code paths.  
+**Document Version**: 2.70.0  
+**Session logs**: `docs/session_logs/2026-04-03_1400_vas-catalog-simplification.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
