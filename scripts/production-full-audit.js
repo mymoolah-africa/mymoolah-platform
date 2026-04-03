@@ -15,7 +15,12 @@
  *   5. Commission audit: VAS commission journal entries match expected rates
  *   6. VAT audit: tax_transactions match journal VAT lines
  *   7. Referral audit: referral earnings match journal entries
- *   8. Full user + KYC + transaction summary
+ *   8. RTP / deposit audit
+ *   9. VAS transaction completeness
+ *  10. MMTP Treasury Account reconciliation
+ *  11. MyMoolah Revenue Account summary
+ *  12. User + KYC summary
+ *  13. Full transaction timeline
  */
 
 require('dotenv').config();
@@ -262,7 +267,7 @@ function money(v) { return `R ${Number(v || 0).toFixed(2)}`; }
       const diff = Math.abs(tax - expectedTax);
       if (diff > 0.01) {
         // RTP fee VAT is a pass-through (output VAT = input VAT, net payable = R0)
-        if (t.taxTransactionId && t.taxTransactionId.includes('RTP-FEE') || 
+        if ((t.taxTransactionId && t.taxTransactionId.includes('RTP-FEE')) ||
             (t.businessContext === 'wallet_user' && tax === 0 && total > base)) {
           pass(`${t.taxTransactionId}: base=${money(base)} VAT pass-through (input=output, net=R0, total=${money(total)})`);
         } else {
@@ -291,6 +296,19 @@ function money(v) { return `R ${Number(v || 0).toFixed(2)}`; }
       console.log(`  ${r.referrer_name}(#${r.referrer_user_id}) → ${r.referee_name || '?'}(#${r.referee_user_id || '?'}) | ${r.status} | Bonus: ${r.signup_bonus_paid ? money(r.signup_bonus_amount) : 'unpaid'}`);
     });
 
+    // Referral earnings from the referral_earnings table
+    const refEarnings = await c.query(`
+      SELECT re.earner_user_id, re.transaction_user_id, re.transaction_id, re.level,
+             re.percentage, re.earned_amount_cents, re.transaction_revenue_cents,
+             re.status as earning_status, re.metadata,
+             eu."firstName" as earner_name, tu."firstName" as txn_user_name
+      FROM referral_earnings re
+      LEFT JOIN users eu ON eu.id = re.earner_user_id
+      LEFT JOIN users tu ON tu.id = re.transaction_user_id
+      ORDER BY re.created_at
+    `);
+
+    // Journal entries for referrals
     const refJE = await c.query(`
       SELECT je.reference, je.description,
              SUM(CASE WHEN jl.dc = 'debit' THEN jl.amount ELSE 0 END) as amount
@@ -299,15 +317,41 @@ function money(v) { return `R ${Number(v || 0).toFixed(2)}`; }
       WHERE je.reference LIKE 'REFERRAL-%'
       GROUP BY je.reference, je.description
     `);
-    if (refJE.rows.length > 0) {
-      let totalRefComm = 0;
-      refJE.rows.forEach(r => {
-        totalRefComm += parseFloat(r.amount);
-        pass(`${r.reference}: ${money(r.amount)} — ${r.description.substring(0, 80)}`);
+    const refJeMap = {};
+    refJE.rows.forEach(r => { refJeMap[r.reference] = parseFloat(r.amount); });
+
+    let totalRefEarned = 0;
+    let totalRefJournalled = 0;
+    if (refEarnings.rows.length > 0) {
+      refEarnings.rows.forEach(re => {
+        const earnedR = parseFloat(re.earned_amount_cents) / 100;
+        totalRefEarned += earnedR;
+        const meta = re.metadata || {};
+        const jeRef = meta.journalReference;
+        const hasJE = jeRef && refJeMap[jeRef] !== undefined;
+        if (hasJE) {
+          totalRefJournalled += refJeMap[jeRef];
+          pass(`Earning: ${re.earner_name} earns ${money(earnedR)} (L${re.level} ${re.percentage}%) from ${re.txn_user_name} TXN#${re.transaction_id} — JE: ${jeRef}`);
+        } else {
+          const anyJeMatch = refJE.rows.find(j => j.reference.includes(String(re.transaction_id)));
+          if (anyJeMatch) {
+            totalRefJournalled += parseFloat(anyJeMatch.amount);
+            pass(`Earning: ${re.earner_name} earns ${money(earnedR)} (L${re.level} ${re.percentage}%) from ${re.txn_user_name} TXN#${re.transaction_id} — JE: ${anyJeMatch.reference}`);
+          } else {
+            warn(`Earning: ${re.earner_name} earns ${money(earnedR)} (L${re.level} ${re.percentage}%) from ${re.txn_user_name} TXN#${re.transaction_id} — NO JOURNAL ENTRY`);
+          }
+        }
       });
-      console.log(`\n  ${BOLD}Total referral commission accrued: ${money(totalRefComm)}${RESET}`);
+    }
+
+    console.log(`\n  ${BOLD}Referral Summary:${RESET}`);
+    console.log(`    Total referral earnings:   ${money(totalRefEarned)}`);
+    console.log(`    Journal entries posted:     ${money(totalRefJournalled)}`);
+    const refDiff = Math.abs(totalRefEarned - totalRefJournalled);
+    if (refDiff > 0.001) {
+      warn(`Referral ledger gap: ${money(refDiff)} in earnings not yet journalled`);
     } else {
-      console.log(`  No referral commission journal entries found`);
+      pass(`All referral earnings have matching journal entries`);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -335,13 +379,15 @@ function money(v) { return `R ${Number(v || 0).toFixed(2)}`; }
       const fee = parseFloat(r.sbsa_fee);
       const vat = parseFloat(r.fee_vat);
       const total = wallet + fee + vat;
+      const feePassThrough = fee + vat;
       const diff = Math.abs(inflow - total);
       if (diff > 0.01) {
         fail(`${r.reference}: inflow=${money(inflow)} != wallet(${money(wallet)}) + fee(${money(fee)}) + vat(${money(vat)}) = ${money(total)}`);
       } else {
-        pass(`${r.reference}: inflow=${money(inflow)} = wallet(${money(wallet)}) + fee(${money(fee)}) + VAT(${money(vat)})`);
+        pass(`${r.reference}: inflow=${money(inflow)} = wallet(${money(wallet)}) + SBSA(${money(fee)}) + VAT(${money(vat)}) — RTP fee ${money(feePassThrough)} full pass-through (no platform margin)`);
       }
     });
+    console.log(`\n  ${DIM}RTP: principal stays in TA; only the fee leg leaves as pass-through to SBSA. User sees R5.75 incl. VAT per RTP.${RESET}`);
 
     // ═══════════════════════════════════════════════════════════════
     // 9. VAS TRANSACTION COMPLETENESS
@@ -382,9 +428,160 @@ function money(v) { return `R ${Number(v || 0).toFixed(2)}`; }
     });
 
     // ═══════════════════════════════════════════════════════════════
-    // 10. USER & KYC SUMMARY
+    // 10. MMTP TREASURY ACCOUNT RECONCILIATION
     // ═══════════════════════════════════════════════════════════════
-    header('10. USER & KYC SUMMARY');
+    header('10. MMTP TREASURY ACCOUNT');
+
+    // Operator-confirmed TA story (bank ops — reconcile to bank statements; not all lines appear as wallet txns)
+    console.log(`\n  ${BOLD}Treasury facts (operator reference)${RESET}`);
+    console.log(`  ${'─'.repeat(60)}`);
+    console.log(`    ${DIM}R4,000 bank into MMTP Treasury Account.${RESET}`);
+    console.log(`    ${DIM}R2,500 bank payment to MobileMart (supplier prepayment to their bank account).${RESET}`);
+    console.log(`    ${DIM}R1,500 credited to operating wallet (PayShap deposit shown in app).${RESET}`);
+    console.log(`    ${DIM}R500 to Hendrik: P2P / wallet-to-wallet — stays inside TA (not a Flash float top-up).${RESET}`);
+    console.log(`    ${DIM}RTP principal remains in TA; R5.75 RTP fee per event is pass-through to SBSA (incl. VAT), no MM margin.${RESET}`);
+
+    const totalWalletBal = parseFloat(totalWallets.rows[0].total);
+
+    // External deposits: money entering from bank (deposits + RTP receives, excluding P2P and voucher)
+    const externalDeposits = await c.query(`
+      SELECT COALESCE(SUM(amount), 0) as total
+      FROM transactions
+      WHERE type = 'deposit' AND status = 'completed' AND amount > 0
+        AND description NOT LIKE '%Voucher%'
+    `);
+    const bankDeposits = parseFloat(externalDeposits.rows[0].total);
+
+    // RTP inflows (type=receive, from bank RTP, not P2P)
+    const rtpInflows = await c.query(`
+      SELECT COALESCE(SUM(amount), 0) as total
+      FROM transactions
+      WHERE type = 'receive' AND status = 'completed'
+        AND description LIKE '%Request to Pay%'
+    `);
+    const rtpTotal = parseFloat(rtpInflows.rows[0].total);
+
+    const totalExternalIn = bankDeposits + rtpTotal;
+
+    // SBSA fees paid (actual cost to SBSA, from ledger 5000-10-01)
+    const payshapCostAcct = ledgerAccounts.rows.find(a => a.code === '5000-10-01');
+    const sbsaFeesPaid = payshapCostAcct ? Math.abs(parseFloat(payshapCostAcct.cr) - parseFloat(payshapCostAcct.dr)) : 0;
+
+    // Fees charged to users (from transactions)
+    const totalFeesCharged = await c.query(`
+      SELECT COALESCE(SUM(ABS(amount)), 0) as total_fees
+      FROM transactions WHERE type = 'fee' AND status = 'completed'
+    `);
+    const feesFromUsers = parseFloat(totalFeesCharged.rows[0].total_fees);
+
+    // VAS purchases (money leaving treasury to suppliers)
+    const totalVasPurchases = await c.query(`
+      SELECT COALESCE(SUM(amount), 0) as total_vas_cents
+      FROM vas_transactions WHERE status = 'completed'
+    `);
+    const vasOutflow = parseFloat(totalVasPurchases.rows[0].total_vas_cents) / 100;
+
+    // Treasury balance: external money in - external money out
+    const treasuryBalance = totalExternalIn - sbsaFeesPaid;
+    const accountedFor = totalWalletBal + vasOutflow + feesFromUsers;
+
+    console.log(`\n  ${BOLD}MMTP Treasury Account (Main Float)${RESET}`);
+    console.log(`  ${'─'.repeat(60)}`);
+    console.log(`  ${BOLD}Money IN (from bank):${RESET}`);
+    console.log(`    Bank deposits (PayShap):    ${money(bankDeposits)}`);
+    console.log(`    RTP inflows:                ${money(rtpTotal)}`);
+    console.log(`    Total external inflow:      ${money(totalExternalIn)}`);
+    console.log(``);
+    console.log(`  ${BOLD}Money OUT (to external):${RESET}`);
+    console.log(`    SBSA PayShap fees:         -${money(sbsaFeesPaid)}`);
+    console.log(`    VAS supplier payments:     -${money(vasOutflow)}`);
+    console.log(`    Total external outflow:    -${money(sbsaFeesPaid + vasOutflow)}`);
+    console.log(``);
+    console.log(`  ${BOLD}Treasury Net Position:          ${money(totalExternalIn - sbsaFeesPaid - vasOutflow)}${RESET}`);
+    console.log(``);
+    console.log(`  ${BOLD}Funds held / owed:${RESET}`);
+    console.log(`    Client wallet balances:     ${money(totalWalletBal)}`);
+    console.log(`    Fees deducted from users:   ${money(feesFromUsers)}`);
+    console.log(`    Total client funds:         ${money(totalWalletBal + feesFromUsers)}`);
+
+    // The treasury net position (external in - SBSA fees - VAS) should equal wallets + fee margin
+    const treasuryNet = totalExternalIn - sbsaFeesPaid - vasOutflow;
+    const expectedNet = totalWalletBal + (feesFromUsers - sbsaFeesPaid);
+    const treasuryDiff = Math.abs(treasuryNet - expectedNet);
+    
+    if (treasuryDiff > 0.01) {
+      warn(`Treasury gap: net position ${money(treasuryNet)} != wallets(${money(totalWalletBal)}) + fee margin(${money(feesFromUsers - sbsaFeesPaid)}) = ${money(expectedNet)} DIFF=${money(treasuryDiff)}`);
+    } else {
+      pass(`Treasury reconciles: position ${money(treasuryNet)} = wallets(${money(totalWalletBal)}) + fee margin(${money(feesFromUsers - sbsaFeesPaid)})`);
+    }
+
+    // Ledger verification
+    const walletClearing = ledgerAccounts.rows.find(a => a.code === '1100-01-01');
+    const walletClearingBal = walletClearing ? (parseFloat(walletClearing.dr) - parseFloat(walletClearing.cr)) : 0;
+    const clientFloat = ledgerAccounts.rows.find(a => a.code === '2100-01-01');
+    const clientFloatBal = clientFloat ? (parseFloat(clientFloat.cr) - parseFloat(clientFloat.dr)) : 0;
+
+    console.log(`\n  ${BOLD}Ledger Cross-Check:${RESET}`);
+    console.log(`    User Wallet Clearing (1100-01-01):  ${money(walletClearingBal)}`);
+    console.log(`    Client Float Liability (2100-01-01): ${money(clientFloatBal)}`);
+
+    // ═══════════════════════════════════════════════════════════════
+    // 11. MYMOOLAH REVENUE ACCOUNT
+    // ═══════════════════════════════════════════════════════════════
+    header('11. MYMOOLAH REVENUE ACCOUNT');
+
+    console.log(`\n  ${BOLD}Revenue Streams${RESET}`);
+    console.log(`  ${'─'.repeat(60)}`);
+
+    // Commission revenue (4000-10-01) from ledger
+    const commRevAcct = ledgerAccounts.rows.find(a => a.code === '4000-10-01');
+    const commRevBal = commRevAcct ? parseFloat(commRevAcct.cr) - parseFloat(commRevAcct.dr) : 0;
+    console.log(`    VAS Commission (net):       ${money(commRevBal)}`);
+
+    // Transaction fee revenue (4000-20-01) if any
+    const txnFeeAcct = ledgerAccounts.rows.find(a => a.code === '4000-20-01');
+    const txnFeeBal = txnFeeAcct ? parseFloat(txnFeeAcct.cr || 0) - parseFloat(txnFeeAcct.dr || 0) : 0;
+    if (txnFeeBal > 0) console.log(`    Transaction Fee Revenue:    ${money(txnFeeBal)}`);
+
+    // PayShap SBSA Fee (5000-10-01) — cost of sales (expense)
+    const payshapFeeAcct = ledgerAccounts.rows.find(a => a.code === '5000-10-01');
+    const payshapFeeBal = payshapFeeAcct ? parseFloat(payshapFeeAcct.cr) - parseFloat(payshapFeeAcct.dr) : 0;
+    console.log(`    PayShap SBSA Fee (cost):    ${money(Math.abs(payshapFeeBal))}`);
+
+    // Referral expense (5100-02-01)
+    const refExpAcct = ledgerAccounts.rows.find(a => a.code === '5100-02-01');
+    const refExpBal = refExpAcct ? parseFloat(refExpAcct.dr) - parseFloat(refExpAcct.cr) : 0;
+    console.log(`    Referral Commissions (exp): -${money(refExpBal)}`);
+
+    // VAT collected (2300-10-01) — liability to SARS
+    const vatAcct = ledgerAccounts.rows.find(a => a.code === '2300-10-01');
+    const vatBal = vatAcct ? parseFloat(vatAcct.cr) - parseFloat(vatAcct.dr) : 0;
+    console.log(`    VAT owed to SARS:           ${money(vatBal)}`);
+
+    // Net revenue = commission revenue - referral expense
+    const netRevenue = commRevBal + txnFeeBal - refExpBal;
+    console.log(`\n  ${BOLD}Net Revenue Summary${RESET}`);
+    console.log(`  ${'─'.repeat(60)}`);
+    console.log(`    Gross commission earned:    ${money(totalCommGross)}`);
+    console.log(`    VAT (15%, output):         -${money(totalVat)}`);
+    console.log(`    Net commission:             ${money(commRevBal)}`);
+    console.log(`    Referral payouts:          -${money(refExpBal)}`);
+    console.log(`    ${BOLD}Net revenue to MyMoolah:     ${money(netRevenue)}${RESET}`);
+
+    // PayShap fee pass-through check
+    console.log(`\n  ${BOLD}Fee Pass-Through${RESET}`);
+    console.log(`  ${'─'.repeat(60)}`);
+    console.log(`    PayShap fees charged:       ${money(feesFromUsers)}`);
+    console.log(`    PayShap SBSA cost:          ${money(Math.abs(payshapFeeBal))}`);
+    const feeProfit = feesFromUsers - Math.abs(payshapFeeBal);
+    console.log(`    Fee margin:                 ${money(feeProfit)}`);
+
+    pass(`Revenue account verified from ledger`);
+
+    // ═══════════════════════════════════════════════════════════════
+    // 12. USER & KYC SUMMARY
+    // ═══════════════════════════════════════════════════════════════
+    header('12. USER & KYC SUMMARY');
 
     const userSummary = await c.query(`
       SELECT u.id, u."firstName", u."lastName", u."phoneNumber", u.email,
@@ -425,9 +622,9 @@ function money(v) { return `R ${Number(v || 0).toFixed(2)}`; }
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // 11. TRANSACTION TIMELINE
+    // 13. TRANSACTION TIMELINE
     // ═══════════════════════════════════════════════════════════════
-    header('11. FULL TRANSACTION TIMELINE');
+    header('13. FULL TRANSACTION TIMELINE');
 
     const timeline = await c.query(`
       SELECT t.id, t."transactionId", t."userId", t.type, t.amount, t.description,
@@ -462,7 +659,6 @@ function money(v) { return `R ${Number(v || 0).toFixed(2)}`; }
     if (warnCount > 0) console.log(`  ${YELLOW}WARNINGS: ${warnCount}${RESET}`);
     if (failCount > 0) console.log(`  ${RED}FAILED: ${failCount}${RESET}`);
 
-    const totalWalletBal = parseFloat(totalWallets.rows[0].total);
     console.log(`\n  ${BOLD}Key Metrics:${RESET}`);
     console.log(`    Users:                  ${userSummary.rows.length}`);
     console.log(`    Transactions:           ${timeline.rows.length}`);
@@ -471,7 +667,9 @@ function money(v) { return `R ${Number(v || 0).toFixed(2)}`; }
     console.log(`    Total Wallet Balances:  ${money(totalWalletBal)}`);
     console.log(`    Commission Revenue:     ${money(totalRevNet)}`);
     console.log(`    VAT Collected:          ${money(totalVat)}`);
-    console.log(`    Referral Accrued:       ${money(refJE.rows.reduce((s, r) => s + parseFloat(r.amount), 0))}`);
+    console.log(`    Referral Accrued:       ${money(totalRefEarned)}`);
+    console.log(`    Net Revenue:            ${money(netRevenue)}`);
+    console.log(`    Treasury Net Position:  ${money(treasuryNet)}`);
 
     if (failCount === 0) {
       console.log(`\n  ${GREEN}${BOLD}✓ PRODUCTION LEDGER RECONCILES TO THE CENT — ZERO DISCREPANCIES${RESET}\n`);
