@@ -38,7 +38,8 @@ const SELECTION_RULES = [
   { label: 'WhatsApp mid',     pattern: '%WhatsApp%',  minPrice: 1500,  maxPrice: 5000,  picks: 1 },
 
   // Social media bundles (TikTok, Facebook, YouTube, Instagram)
-  { label: 'TikTok',           pattern: '%TikTok%',    minPrice: 0,     maxPrice: 3000,  picks: 1 },
+  { label: 'TikTok cheap',     pattern: '%TikTok%',    minPrice: 0,     maxPrice: 3000,  picks: 1 },
+  { label: 'TikTok value',     pattern: '%TikTok%',    minPrice: 3000,  maxPrice: 12000, picks: 1 },
   { label: 'Facebook',         pattern: '%Facebook%',  minPrice: 0,     maxPrice: 3000,  picks: 1 },
   { label: 'YouTube',          pattern: '%YouTube%',   minPrice: 0,     maxPrice: 3000,  picks: 1 },
 
@@ -52,7 +53,8 @@ const SELECTION_RULES = [
 
   // General monthly data (value range R30-R200)
   { label: 'Monthly budget',   pattern: '%Monthly%',   minPrice: 3000,  maxPrice: 6000,  picks: 1, exclude: '%WhatsApp%|%TikTok%|%Facebook%|%YouTube%|%Instagram%|%Social%|%Chat%|%LTE%|%All Network%' },
-  { label: 'Monthly mid',      pattern: '%Monthly%',   minPrice: 6000,  maxPrice: 15000, picks: 1, exclude: '%WhatsApp%|%TikTok%|%Facebook%|%YouTube%|%Instagram%|%Social%|%Chat%|%LTE%|%All Network%' },
+  { label: 'Monthly mid',      pattern: '%Monthly%',   minPrice: 6000,  maxPrice: 10000, picks: 1, exclude: '%WhatsApp%|%TikTok%|%Facebook%|%YouTube%|%Instagram%|%Social%|%Chat%|%LTE%|%All Network%' },
+  { label: 'Monthly stretch',  pattern: '%Monthly%',   minPrice: 8000,  maxPrice: 15000, picks: 1, exclude: '%WhatsApp%|%TikTok%|%Facebook%|%YouTube%|%Instagram%|%Social%|%Chat%|%LTE%|%All Network%' },
   { label: 'Monthly value',    pattern: '%Monthly%',   minPrice: 15000, maxPrice: 30000, picks: 1, exclude: '%WhatsApp%|%TikTok%|%Facebook%|%YouTube%|%Instagram%|%Social%|%Chat%|%LTE%|%All Network%' },
 
   // One All-Network or LTE bundle (bigger value for those who can afford)

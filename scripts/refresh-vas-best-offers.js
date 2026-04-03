@@ -6,15 +6,22 @@
  * Populates vas_best_offers from product_variants. For each (vasType, provider, denomination),
  * selects the variant with HIGHEST commission. One product per logical offering.
  *
- * Run after catalog sync: node scripts/refresh-vas-best-offers.js
+ * Airtime: collapses to ONE variable/pinless entry per provider (removes fixed voice bundles).
+ * Data: only includes products where featured = true (curated by mark-featured-data-products.js).
+ *
+ * Usage:
+ *   node scripts/refresh-vas-best-offers.js --staging
+ *   node scripts/refresh-vas-best-offers.js --production
+ *   node scripts/refresh-vas-best-offers.js --uat          (default)
  *
  * @author MyMoolah Development Team
  * @date 2026-02-18
  */
 
 require('dotenv').config();
-const { sequelize } = require('../models');
-const { QueryTypes } = require('sequelize');
+const {
+  getUATClient, getStagingClient, getProductionClient,
+} = require('./db-connection-helper');
 
 const NORMALIZE_PROVIDER = {
   'cell c': 'CellC',
@@ -29,16 +36,11 @@ const NORMALIZE_PROVIDER = {
   'global-data': 'Global'
 };
 
-// Electricity municipality/provider name normalization.
-// Flash and MobileMart may use slightly different names for the same municipality.
-// This map ensures products for the same municipality compete on commission.
 const NORMALIZE_ELECTRICITY_PROVIDER = {
-  // ESKOM variants
   'eskom online': 'ESKOM', 'eskom central': 'ESKOM', 'eskom eastern': 'ESKOM',
   'eskom north eastern': 'ESKOM', 'eskom north west': 'ESKOM',
   'eskom northern': 'ESKOM', 'eskom southern': 'ESKOM',
   'eskom soweto': 'ESKOM', 'eskom western': 'ESKOM',
-  // Municipality name variants (Flash vs MobileMart)
   'blouberg municipality': 'Blouberg', 'blouberg': 'Blouberg',
   'blue crane route': 'Blue Crane Route',
   'breede valley municipality': 'Breede Valley', 'breede valley': 'Breede Valley',
@@ -98,42 +100,54 @@ function normalizeProvider(p, vasType) {
   return NORMALIZE_PROVIDER[key] || p.trim();
 }
 
-async function refreshBestOffers() {
+/**
+ * Refresh the vas_best_offers table for a given environment.
+ * @param {Function} getClient - db-connection-helper client getter (getUATClient, getStagingClient, etc.)
+ * @param {string} envName - Environment label for logging
+ */
+async function refreshBestOffers(getClient, envName) {
+  if (!getClient) {
+    const args = process.argv.slice(2);
+    if (args.includes('--production')) {
+      getClient = getProductionClient;
+      envName = 'Production';
+    } else if (args.includes('--staging')) {
+      getClient = getStagingClient;
+      envName = 'Staging';
+    } else {
+      getClient = getUATClient;
+      envName = 'UAT';
+    }
+  }
+
   const catalogVersion = Date.now();
   const refreshedBy = process.env.REFRESH_JOB_NAME || 'refresh-vas-best-offers';
 
-  console.log('🔄 Refreshing vas_best_offers...');
+  console.log(`🔄 Refreshing vas_best_offers (${envName})...`);
   const start = Date.now();
 
-  const transaction = await sequelize.transaction();
+  const client = await getClient();
 
   try {
+    await client.query('BEGIN');
+
     // 1. Fetch all active variants with product and supplier
-    const variants = await sequelize.query(
+    const { rows: variants } = await client.query(
       `SELECT pv.id as "productVariantId", pv."productId", pv."supplierId", pv."supplierProductId",
               pv."vasType", pv.provider, pv.commission, pv."fixedFee", pv.denominations,
               pv."minAmount", pv."maxAmount", pv."predefinedAmounts",
+              pv.featured, pv."priceType",
               p.name as "productName", s.code as "supplierCode"
        FROM product_variants pv
        JOIN products p ON p.id = pv."productId"
        JOIN suppliers s ON s.id = pv."supplierId"
        WHERE pv.status = 'active' AND p.status = 'active' AND s."isActive" = true
-       ORDER BY pv.commission DESC NULLS LAST`,
-      { type: QueryTypes.SELECT, transaction }
+       ORDER BY pv.commission DESC NULLS LAST`
     );
 
     console.log(`   Found ${variants.length} active variants`);
 
-    // 2. Build best-offer map.
-    //
-    // Key strategy:
-    //   • Fixed-denomination products (minAmount === maxAmount, or explicit
-    //     denominations list): one row per denomination so production can
-    //     select the best supplier for each exact amount.
-    //   • Variable-range products (minAmount !== maxAmount, no explicit
-    //     denominations): ONE row per product, keyed by productName, with
-    //     all denominations aggregated. This prevents "Wallet Code R10",
-    //     "Wallet Code R20", etc. appearing as separate cards in the UI.
+    // 2. Build best-offer map
     const bestByKey = new Map();
 
     for (const v of variants) {
@@ -149,7 +163,6 @@ async function refreshBestOffers() {
       if (provider.length > 100) provider = provider.slice(0, 100);
       const commission = parseFloat(v.commission) || 0;
 
-      // Collect explicit denominations
       let denoms = [];
       if (Array.isArray(v.denominations) && v.denominations.length > 0) {
         denoms = v.denominations.filter((n) => typeof n === 'number' && !Number.isNaN(n));
@@ -162,20 +175,15 @@ async function refreshBestOffers() {
       const isFixedAmount = v.minAmount != null && v.maxAmount != null && v.minAmount === v.maxAmount;
 
       if (!hasExplicitDenoms && isFixedAmount) {
-        // Single fixed amount — treat as one denomination
         denoms = [v.minAmount];
       }
 
       if (!hasExplicitDenoms && !isFixedAmount && v.minAmount != null) {
-        // Variable-range product (e.g. "Wallet Code R2–R999"):
-        // Store as ONE entry keyed by product name to avoid duplicate cards.
         const key = `${vasType}|${provider}|product:${v.productName}`;
         const existing = bestByKey.get(key);
         if (!existing || commission > existing.commission) {
           bestByKey.set(key, {
-            vasType,
-            provider,
-            // Use minAmount as the canonical denomination for the DB row
+            vasType, provider,
             denominationCents: v.minAmount,
             productVariantId: v.productVariantId,
             productId: v.productId,
@@ -185,10 +193,10 @@ async function refreshBestOffers() {
             supplierProductId: v.supplierProductId,
             commission,
             fixedFee: v.fixedFee || 0,
-            // Store the full range so the UI can display "R2 – R999"
             denominations: [],
             minAmount: v.minAmount,
-            maxAmount: v.maxAmount
+            maxAmount: v.maxAmount,
+            featured: v.featured || false
           });
         }
         continue;
@@ -196,13 +204,11 @@ async function refreshBestOffers() {
 
       if (denoms.length === 0) continue;
 
-      // Fixed / explicit-denomination products: one row per denomination
       for (const denom of denoms) {
         const key = `${vasType}|${provider}|${denom}`;
         if (!bestByKey.has(key)) {
           bestByKey.set(key, {
-            vasType,
-            provider,
+            vasType, provider,
             denominationCents: denom,
             productVariantId: v.productVariantId,
             productId: v.productId,
@@ -214,68 +220,172 @@ async function refreshBestOffers() {
             fixedFee: v.fixedFee || 0,
             denominations: [denom],
             minAmount: denom,
-            maxAmount: denom
+            maxAmount: denom,
+            featured: v.featured || false
           });
         }
       }
     }
 
-    const rows = Array.from(bestByKey.values());
-    console.log(`   Computed ${rows.length} best offers`);
+    // ── Post-processing: Airtime collapse ──────────────────────────────
+    // The frontend expects ONE variable/pinless airtime entry per provider.
+    // Fixed-denomination voice bundles (e.g. R3.50 daily) must be removed
+    // from the cache so custom-amount purchases resolve to the correct product.
+    const airtimeProviders = new Map();
+    const keysToRemove = [];
 
-    // 3. Atomic replace: truncate and insert
-    await sequelize.query('TRUNCATE TABLE vas_best_offers RESTART IDENTITY', { transaction });
+    for (const [key, entry] of bestByKey) {
+      if (entry.vasType !== 'airtime') continue;
+      const prov = entry.provider;
+      if (!airtimeProviders.has(prov)) {
+        airtimeProviders.set(prov, { variable: null, fixed: [] });
+      }
+      const bucket = airtimeProviders.get(prov);
+      const isVariable = entry.minAmount !== entry.maxAmount;
+      if (isVariable) {
+        if (!bucket.variable || entry.commission > bucket.variable.commission) {
+          if (bucket.variable) keysToRemove.push(bucket.variable._key);
+          bucket.variable = { ...entry, _key: key };
+        } else {
+          keysToRemove.push(key);
+        }
+      } else {
+        bucket.fixed.push(key);
+      }
+    }
+
+    for (const [, bucket] of airtimeProviders) {
+      if (bucket.variable) {
+        for (const fixedKey of bucket.fixed) keysToRemove.push(fixedKey);
+        const v = bestByKey.get(bucket.variable._key);
+        if (v) {
+          v.minAmount = 200;
+          v.maxAmount = 99900;
+          v.denominations = [];
+        }
+      }
+    }
+
+    for (const k of keysToRemove) bestByKey.delete(k);
+    console.log(`   Airtime: collapsed to ${airtimeProviders.size} providers (${keysToRemove.length} fixed entries removed)`);
+
+    // ── Post-processing: Data featured filter ────────────────────────────
+    // Only include data products where featured = true (curated by mark-featured-data-products.js).
+    // If no featured data products exist, keep all as fallback.
+    const dataKeys = [];
+    const featuredDataKeys = [];
+
+    for (const [key, entry] of bestByKey) {
+      if (entry.vasType !== 'data') continue;
+      dataKeys.push(key);
+      if (entry.featured === true) featuredDataKeys.push(key);
+    }
+
+    if (featuredDataKeys.length > 0) {
+      const unfeaturedDataKeys = dataKeys.filter(k => !featuredDataKeys.includes(k));
+      for (const k of unfeaturedDataKeys) bestByKey.delete(k);
+      console.log(`   Data: ${featuredDataKeys.length} featured kept, ${unfeaturedDataKeys.length} non-featured removed`);
+    } else {
+      console.log(`   Data: no featured products found — keeping all ${dataKeys.length} as fallback`);
+    }
+
+    const rawRows = Array.from(bestByKey.values());
+    rawRows.forEach(r => delete r._key);
+
+    // Final deduplication: unique constraint is (vas_type, provider, denomination_cents).
+    // Keep only the highest-commission entry per unique key.
+    const deduped = new Map();
+    for (const r of rawRows) {
+      const dk = `${r.vasType}|${r.provider}|${r.denominationCents}`;
+      const existing = deduped.get(dk);
+      if (!existing || r.commission > existing.commission) {
+        deduped.set(dk, r);
+      }
+    }
+    const rows = Array.from(deduped.values());
+    console.log(`   Computed ${rows.length} best offers (${rawRows.length - rows.length} duplicates merged)`);
+
+    // 3. Atomic replace: truncate and insert in batches
+    await client.query('TRUNCATE TABLE vas_best_offers RESTART IDENTITY');
 
     if (rows.length > 0) {
-      const { Sequelize } = require('sequelize');
-      const qi = sequelize.getQueryInterface();
-      const rowsForInsert = rows.map((r) => {
-        const denoms = r.denominations || [r.denominationCents];
-        const jsonStr = JSON.stringify(denoms).replace(/'/g, "''");
-        return {
-          vas_type: r.vasType,
-          provider: r.provider || '',
-          denomination_cents: r.denominationCents,
-          product_variant_id: r.productVariantId,
-          product_id: r.productId,
-          supplier_id: r.supplierId,
-          supplier_code: r.supplierCode || '',
-          product_name: r.productName || '',
-          supplier_product_id: r.supplierProductId || '',
-          commission: r.commission,
-          fixed_fee: r.fixedFee || 0,
-          denominations: Sequelize.literal(`'${jsonStr}'::jsonb`),
-          min_amount: r.minAmount,
-          max_amount: r.maxAmount,
-          catalog_version: catalogVersion
-        };
-      });
-      await qi.bulkInsert('vas_best_offers', rowsForInsert, { transaction });
+      const BATCH_SIZE = 200;
+      for (let b = 0; b < rows.length; b += BATCH_SIZE) {
+        const batch = rows.slice(b, b + BATCH_SIZE);
+        const valuePlaceholders = [];
+        const values = [];
+        let idx = 1;
+
+        for (const r of batch) {
+          const denoms = r.denominations || [r.denominationCents];
+          valuePlaceholders.push(
+            `($${idx++}, $${idx++}, $${idx++}, $${idx++}, $${idx++}, $${idx++}, $${idx++}, $${idx++}, $${idx++}, $${idx++}, $${idx++}, $${idx++}::jsonb, $${idx++}, $${idx++}, $${idx++})`
+          );
+          values.push(
+            r.vasType,
+            r.provider || '',
+            r.denominationCents,
+            r.productVariantId,
+            r.productId,
+            r.supplierId,
+            r.supplierCode || '',
+            r.productName || '',
+            r.supplierProductId || '',
+            r.commission,
+            r.fixedFee || 0,
+            JSON.stringify(denoms),
+            r.minAmount,
+            r.maxAmount,
+            catalogVersion
+          );
+        }
+
+        await client.query(
+          `INSERT INTO vas_best_offers
+           (vas_type, provider, denomination_cents, product_variant_id, product_id,
+            supplier_id, supplier_code, product_name, supplier_product_id,
+            commission, fixed_fee, denominations, min_amount, max_amount, catalog_version)
+           VALUES ${valuePlaceholders.join(', ')}
+           ON CONFLICT (vas_type, provider, denomination_cents)
+           DO UPDATE SET
+             commission = EXCLUDED.commission,
+             product_variant_id = EXCLUDED.product_variant_id,
+             product_id = EXCLUDED.product_id,
+             supplier_id = EXCLUDED.supplier_id,
+             supplier_code = EXCLUDED.supplier_code,
+             product_name = EXCLUDED.product_name,
+             supplier_product_id = EXCLUDED.supplier_product_id,
+             fixed_fee = EXCLUDED.fixed_fee,
+             denominations = EXCLUDED.denominations,
+             min_amount = EXCLUDED.min_amount,
+             max_amount = EXCLUDED.max_amount,
+             catalog_version = EXCLUDED.catalog_version`,
+          values
+        );
+      }
     }
 
     // 4. Audit log
-    await sequelize.query(
+    await client.query(
       `INSERT INTO catalog_refresh_audit (refreshed_by, vas_type, rows_affected, catalog_version)
-       VALUES (:refreshedBy, NULL, :rowsAffected, :catalogVersion)`,
-      {
-        replacements: { refreshedBy, rowsAffected: rows.length, catalogVersion },
-        transaction
-      }
+       VALUES ($1, NULL, $2, $3)`,
+      [refreshedBy, rows.length, catalogVersion]
     );
 
-    await transaction.commit();
+    await client.query('COMMIT');
 
     const elapsed = Date.now() - start;
     console.log(`✅ vas_best_offers refreshed in ${elapsed}ms (${rows.length} rows, version ${catalogVersion})`);
     return { rowsAffected: rows.length, catalogVersion };
   } catch (err) {
-    await transaction.rollback();
+    await client.query('ROLLBACK');
     console.error('❌ Refresh failed:', err.message);
     throw err;
+  } finally {
+    client.release();
   }
 }
 
-// Allow running as script or requiring as module
 if (require.main === module) {
   refreshBestOffers()
     .then(() => process.exit(0))

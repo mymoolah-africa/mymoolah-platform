@@ -11,6 +11,7 @@ class CatalogSynchronizationService {
   constructor() {
     this.isRunning = false;
     this.dailySweepCron = null; // node-cron task for daily sweep
+    this.cacheRefreshCron = null; // node-cron task for 6-hourly cache refresh
     this.frequentUpdateInterval = null;
     this.lastSweepTime = null;
     this.lastUpdateTime = null;
@@ -38,6 +39,9 @@ class CatalogSynchronizationService {
 
     // Schedule daily sweep at 02:00 local time
     this.scheduleDailySweep();
+
+    // Schedule 6-hourly cache refresh (mark-featured + best-offers only, no API sweep)
+    this.scheduleCacheRefresh();
     
     // Start frequent updates every 10 minutes
     this.startFrequentUpdates();
@@ -57,6 +61,7 @@ class CatalogSynchronizationService {
     console.log('🚀 Starting catalog synchronization service (daily only)…');
     this.isRunning = true;
     this.scheduleDailySweep();
+    this.scheduleCacheRefresh();
     console.log('✅ Catalog synchronization service (daily only) started');
   }
 
@@ -75,6 +80,11 @@ class CatalogSynchronizationService {
     if (this.dailySweepCron) {
       this.dailySweepCron.stop();
       this.dailySweepCron = null;
+    }
+
+    if (this.cacheRefreshCron) {
+      this.cacheRefreshCron.stop();
+      this.cacheRefreshCron = null;
     }
 
     if (this.frequentUpdateInterval) {
@@ -121,6 +131,54 @@ class CatalogSynchronizationService {
   }
 
   /**
+   * Schedule lightweight cache refresh every 6 hours (00:00, 06:00, 12:00, 18:00 SAST).
+   * Runs ONLY mark-featured-data-products + refreshBestOffers (no supplier API calls).
+   * Reduces stale-cache window from 24h to 6h with negligible overhead.
+   */
+  scheduleCacheRefresh() {
+    const cron = require('node-cron');
+
+    this.cacheRefreshCron = cron.schedule('0 */6 * * *', async () => {
+      console.log('🔄 Running 6-hourly cache refresh (featured + best-offers)...');
+      const start = Date.now();
+      try {
+        // 1. Re-curate featured data products
+        try {
+          const { execSync } = require('child_process');
+          const env = process.env.NODE_ENV === 'production' ? '--production' : '--staging';
+          execSync(`node scripts/mark-featured-data-products.js ${env}`, {
+            cwd: require('path').resolve(__dirname, '..'),
+            stdio: 'pipe',
+            timeout: 120000,
+          });
+          console.log('   ✅ Featured data products re-curated');
+        } catch (featErr) {
+          console.warn('   ⚠️ Featured curation skipped:', featErr.message);
+        }
+
+        // 2. Rebuild best-offers cache
+        try {
+          const { refreshBestOffers } = require('../scripts/refresh-vas-best-offers');
+          const { getClient, envName } = this._resolveClientGetter();
+          const result = await refreshBestOffers(getClient, envName);
+          console.log(`   ✅ vas_best_offers refreshed: ${result.rowsAffected} rows`);
+        } catch (boErr) {
+          console.warn('   ⚠️ Best-offers refresh skipped:', boErr.message);
+        }
+
+        console.log(`✅ 6-hourly cache refresh completed in ${Date.now() - start}ms`);
+      } catch (error) {
+        console.error('❌ 6-hourly cache refresh failed:', error.message);
+      }
+    }, {
+      timezone: 'Africa/Johannesburg',
+      scheduled: true
+    });
+
+    console.log('📅 6-hourly cache refresh scheduled: 0 */6 * * * (SAST)');
+  }
+
+  /**
    * Start frequent updates every 10 minutes
    */
   startFrequentUpdates() {
@@ -161,16 +219,8 @@ class CatalogSynchronizationService {
       // Update catalog cache
       await this.updateCatalogCache();
 
-      // Refresh pre-computed best-offers table (banking-grade: one product per denomination, highest commission)
-      try {
-        const { refreshBestOffers } = require('../scripts/refresh-vas-best-offers');
-        const result = await refreshBestOffers();
-        console.log(`📊 vas_best_offers refreshed: ${result.rowsAffected} rows`);
-      } catch (boErr) {
-        console.warn('⚠️ vas_best_offers refresh skipped:', boErr.message);
-      }
-
-      // Re-run featured product curation (API-driven, rule-based selection for the target audience)
+      // Re-run featured product curation FIRST (sets featured flags on data products).
+      // This MUST run before refreshBestOffers so the cache picks up curated flags.
       try {
         const { execSync } = require('child_process');
         const env = process.env.NODE_ENV === 'production' ? '--production' : '--staging';
@@ -182,6 +232,17 @@ class CatalogSynchronizationService {
         console.log('📊 Featured data products re-curated after catalog sweep');
       } catch (featErr) {
         console.warn('⚠️ Featured product curation skipped:', featErr.message);
+      }
+
+      // Refresh pre-computed best-offers table (banking-grade: one product per denomination, highest commission).
+      // Runs AFTER mark-featured so the cache respects curated featured flags.
+      try {
+        const { refreshBestOffers } = require('../scripts/refresh-vas-best-offers');
+        const { getClient, envName } = this._resolveClientGetter();
+        const result = await refreshBestOffers(getClient, envName);
+        console.log(`📊 vas_best_offers refreshed: ${result.rowsAffected} rows`);
+      } catch (boErr) {
+        console.warn('⚠️ vas_best_offers refresh skipped:', boErr.message);
       }
 
       // Log sweep results
@@ -685,9 +746,15 @@ class CatalogSynchronizationService {
   /**
    * Deactivate product_variants that exist in the DB but were NOT returned
    * by the supplier's API during this sync run.
-   * Soft-disable only (status → 'inactive') — no rows are deleted.
+   *
+   * Safety: requires 2 consecutive missed sweeps before deactivating. A single
+   * partial API response will NOT deactivate products — it only increments
+   * metadata.missedSweepCount. Products returned by the next sweep have their
+   * counter reset to 0 automatically (via the upsert in syncFlashProduct /
+   * syncMobileMartProduct which overwrites metadata.missedSweepCount).
    */
   async deactivateStaleProducts(supplier) {
+    const REQUIRED_MISSES = 2;
     const supplierKey = supplier.code;
     const seenSet = this.seenProductIds[supplierKey];
 
@@ -699,6 +766,7 @@ class CatalogSynchronizationService {
     const seenIds = [...seenSet];
 
     try {
+      // Find active variants NOT in the current sweep
       const staleVariants = await ProductVariant.findAll({
         where: {
           supplierId: supplier.id,
@@ -719,15 +787,58 @@ class CatalogSynchronizationService {
         return;
       }
 
-      console.log(`  ⚠️  Found ${staleVariants.length} stale ${supplierKey} variant(s) to deactivate:`);
+      // Reset missedSweepCount on products that WERE returned
+      await ProductVariant.update(
+        { metadata: sequelize.literal(`jsonb_set(COALESCE(metadata, '{}')::jsonb, '{missedSweepCount}', '0')`) },
+        {
+          where: {
+            supplierId: supplier.id,
+            status: 'active',
+            supplierProductId: { [Op.in]: seenIds }
+          }
+        }
+      );
+
+      // Increment missedSweepCount on stale variants
+      const toWarn = [];
+      const toDeactivate = [];
+
       for (const v of staleVariants) {
+        const meta = v.metadata || {};
+        const missCount = (parseInt(meta.missedSweepCount, 10) || 0) + 1;
+
+        if (missCount >= REQUIRED_MISSES) {
+          toDeactivate.push(v);
+        } else {
+          toWarn.push(v);
+        }
+
+        await v.update({
+          metadata: { ...meta, missedSweepCount: missCount, lastMissedAt: new Date().toISOString() }
+        });
+      }
+
+      if (toWarn.length > 0) {
+        console.log(`  ⚠️  ${toWarn.length} ${supplierKey} variant(s) missed 1 sweep (will deactivate after ${REQUIRED_MISSES}):`);
+        for (const v of toWarn) {
+          console.log(`     - [${v.vasType}] ${v.product?.name || 'Unknown'} (${v.supplierProductId})`);
+        }
+      }
+
+      if (toDeactivate.length === 0) {
+        console.log(`  ✅ No ${supplierKey} products reached ${REQUIRED_MISSES} consecutive misses — none deactivated.`);
+        return;
+      }
+
+      console.log(`  🗑️  ${toDeactivate.length} ${supplierKey} variant(s) missed ${REQUIRED_MISSES}+ sweeps — deactivating:`);
+      for (const v of toDeactivate) {
         console.log(`     - [${v.vasType}] ${v.product?.name || 'Unknown'} (${v.supplierProductId})`);
       }
 
-      const staleIds = staleVariants.map(v => v.id);
+      const deactivateIds = toDeactivate.map(v => v.id);
       await ProductVariant.update(
         { status: 'inactive', updatedAt: new Date() },
-        { where: { id: { [Op.in]: staleIds } } }
+        { where: { id: { [Op.in]: deactivateIds } } }
       );
 
       // Deactivate parent products with no remaining active variants from this supplier
@@ -748,8 +859,8 @@ class CatalogSynchronizationService {
         );
       }
 
-      this.syncStats.decommissionedProducts += staleVariants.length;
-      console.log(`  ✅ Deactivated ${staleVariants.length} variant(s) and ${orphanedProducts.length} parent product(s) for ${supplierKey}.`);
+      this.syncStats.decommissionedProducts += toDeactivate.length;
+      console.log(`  ✅ Deactivated ${toDeactivate.length} variant(s) and ${orphanedProducts.length} parent product(s) for ${supplierKey}. ${toWarn.length} warned (1st miss).`);
     } catch (error) {
       console.error(`  ❌ Stale product cleanup failed for ${supplierKey}:`, error.message);
       this.syncStats.errors++;
@@ -863,6 +974,9 @@ class CatalogSynchronizationService {
       priority: 2, // MobileMart is secondary supplier
       status: mmProduct.isActive !== false ? 'active' : 'inactive',
       
+      // Price type (variable vs fixed) — needed for best-offers airtime filtering
+      priceType: hasFixedAmount ? 'fixed' : 'variable',
+
       // Denominations
       denominations: denominations,
       
@@ -1248,6 +1362,22 @@ class CatalogSynchronizationService {
     } catch (notifyError) {
       console.error('Failed to notify admin of error:', notifyError);
     }
+  }
+
+  /**
+   * Resolve the correct db-connection-helper client getter for the current environment.
+   * Uses MM_DEPLOYMENT_ENV (set in Cloud Run) with NODE_ENV as fallback.
+   */
+  _resolveClientGetter() {
+    const { getUATClient, getStagingClient, getProductionClient } = require('../scripts/db-connection-helper');
+    const mm = (process.env.MM_DEPLOYMENT_ENV || '').trim().toLowerCase();
+    if (mm === 'production' || (!mm && process.env.NODE_ENV === 'production')) {
+      return { getClient: getProductionClient, envName: 'Production' };
+    }
+    if (mm === 'staging') {
+      return { getClient: getStagingClient, envName: 'Staging' };
+    }
+    return { getClient: getUATClient, envName: 'UAT' };
   }
 
   /**
