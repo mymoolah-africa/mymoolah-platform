@@ -174,9 +174,8 @@ router.get('/airtime-data/catalog', auth, async (req, res) => {
     
     console.log(`📱 Beneficiary network: ${beneficiaryNetwork}`);
 
-    const { useBestOffersCatalogDisplay } = require('../services/catalogDisplayPolicy');
-    // When true, collapse same rand amount to one row (legacy). When false (UAT/staging), keep one row per supplier.
-    const catalogDedupeByAmountOnly = useBestOffersCatalogDisplay();
+    // Deduplication mode: always dedupe by amount for consistent UX
+    const catalogDedupeByAmountOnly = true;
     
     // Get products from database instead of calling supplier APIs.
     // Primary source: ProductVariant (normalized, populated by daily catalog sync).
@@ -2164,65 +2163,11 @@ router.get('/electricity/catalog', auth, async (req, res) => {
       meterType = 'Eskom'; // Default to Eskom for now
     }
 
-    const { ProductVariant, Product, Supplier } = require('../models');
-    const { useBestOffersCatalogDisplay } = require('../services/catalogDisplayPolicy');
-    const bestOfferService = require('../services/bestOfferService');
-    const SupplierComparisonService = require('../services/supplierComparisonService');
+    const productCatalogService = require('../services/productCatalogService');
 
-    let electricityVariants = [];
-
-    // Production-style listing: prefer pre-computed vas_best_offers when enabled and populated
-    if (useBestOffersCatalogDisplay()) {
-      try {
-        const providerArg = meterType && meterType !== 'Global' ? meterType : null;
-        const bestResult = await bestOfferService.getBestOffers('electricity', providerArg);
-        if (bestResult.source === 'vas_best_offers' && bestResult.products.length > 0) {
-          electricityVariants = bestResult.products.map((p) => ({
-            id: p.id,
-            productId: p.productId,
-            productName: p.productName,
-            supplierProductId: p.supplierProductId,
-            supplierCode: p.supplierCode,
-            supplier: p.supplier || p.supplierCode,
-            minAmount: p.minAmount,
-            maxAmount: p.maxAmount,
-            commission: p.commission,
-            denominations: p.denominations,
-            predefinedAmounts: p.predefinedAmounts,
-            metadata: {}
-          }));
-        }
-      } catch (boErr) {
-        console.warn('⚠️ Electricity catalog best-offers path failed, using full variants:', boErr.message);
-      }
-    }
-
-    if (electricityVariants.length === 0) {
-      const whereClause = { status: 'active' };
-      if (meterType && meterType !== 'Global') {
-        whereClause.provider = meterType;
-      }
-      const allVariants = await ProductVariant.findAll({
-        where: whereClause,
-        include: [
-          {
-            model: Product,
-            as: 'product',
-            where: { type: 'electricity', status: 'active' },
-            attributes: ['id', 'name', 'type', 'status']
-          },
-          {
-            model: Supplier,
-            as: 'supplier',
-            where: { isActive: true },
-            attributes: ['id', 'name', 'code', 'isActive']
-          }
-        ],
-        order: [['commission', 'DESC'], ['priority', 'ASC'], ['minAmount', 'ASC']]
-      });
-      const comparisonService = new SupplierComparisonService();
-      electricityVariants = allVariants.map((v) => comparisonService.formatProductForResponse(v));
-    }
+    const providerArg = meterType && meterType !== 'Global' ? meterType : null;
+    const result = await productCatalogService.getCatalog('electricity', { provider: providerArg });
+    const electricityVariants = result.products;
     
     // Extract unique supplier codes for providers list
     const uniqueSuppliers = [...new Set(electricityVariants.map(v => {
@@ -2868,8 +2813,7 @@ function mapBillerCategory(rawCategory) {
 router.get('/bills/search', auth, async (req, res) => {
   try {
     const { q, category } = req.query;
-    const { useBestOffersCatalogDisplay } = require('../services/catalogDisplayPolicy');
-    const catalogBestMode = useBestOffersCatalogDisplay();
+    const catalogBestMode = true;
     
     // Get bill payment products from ProductVariant (normalized schema)
     const { ProductVariant, Product, Supplier } = require('../models');
@@ -2977,8 +2921,7 @@ router.get('/bills/search', auth, async (req, res) => {
  */
 router.get('/bills/categories', auth, async (req, res) => {
   try {
-    const { useBestOffersCatalogDisplay } = require('../services/catalogDisplayPolicy');
-    const catalogBestMode = useBestOffersCatalogDisplay();
+    const catalogBestMode = true;
 
     // Get bill payment products from ProductVariant to extract unique categories
     const { ProductVariant, Product, Supplier } = require('../models');

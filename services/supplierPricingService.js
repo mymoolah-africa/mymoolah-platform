@@ -1,3 +1,5 @@
+// DEPRECATED: Commission logic moved to config/supplier-commissions.json (Apr 2026).
+// Kept as fallback until production migration is validated.
 'use strict';
 
 // Generic supplier pricing service (banking-grade, Mojaloop aligned)

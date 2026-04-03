@@ -1,3 +1,5 @@
+// DEPRECATED: Replaced by productCatalogService.js and v_best_offers materialized view (Apr 2026).
+// Kept as fallback until production migration is validated.
 'use strict';
 
 const { Product, ProductVariant, ProductComparison, Supplier, sequelize } = require('../models');

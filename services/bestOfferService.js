@@ -1,3 +1,5 @@
+// DEPRECATED: Replaced by productCatalogService.js and v_best_offers materialized view (Apr 2026).
+// Kept as fallback until production migration is validated.
 /**
  * Best Offer Service - Banking-grade pre-computed VAS catalog
  *

@@ -1,406 +1,170 @@
 'use strict';
 
-const { Product, ProductBrand, ProductVariant, Supplier, sequelize } = require('../models');
+/**
+ * Unified product catalog service -- single read path for all VAS types.
+ *
+ * Replaces: bestOfferService.js, catalogDisplayPolicy.js, productComparisonService.js,
+ *           mark-featured-data-products.js, refresh-vas-best-offers.js
+ *
+ * All product selection is driven by the v_best_offers materialized view which
+ * encodes Andre's bracket x product-type matrix. The view is refreshed after
+ * each catalog sweep.
+ */
+
+const { ProductVariant, Product, Supplier, sequelize } = require('../models');
 const { Op } = require('sequelize');
-const Redis = require('ioredis');
-const crypto = require('crypto');
 
 class ProductCatalogService {
-  constructor() {
-    this.redis = null;
-    this.cacheTTL = 300; // 5 minutes
-    this.searchCacheTTL = 60; // 1 minute
+  /**
+   * Get curated product catalog for a VAS type.
+   * @param {string} vasType - airtime|data|electricity|voucher|bill_payment
+   * @param {object} options - { provider, amount, bracket, limit }
+   * @returns {Promise<{products: Array, source: string}>}
+   */
+  async getCatalog(vasType, options = {}) {
+    const { provider, amount, bracket, limit } = options;
 
-    const hasRedisUrl = process.env.REDIS_URL && process.env.REDIS_URL.trim() !== '';
-    const redisEnabled = process.env.REDIS_ENABLED !== 'false';
-
-    if (hasRedisUrl && redisEnabled) {
-      try {
-        this.redis = new Redis(process.env.REDIS_URL, {
-          retryStrategy: (times) => {
-            if (times > 3) {
-              console.warn('⚠️ Redis connection failed after 3 attempts, disabling Redis cache');
-              this.redis = null;
-              return null;
-            }
-            return Math.min(times * 200, 2000);
-          },
-          maxRetriesPerRequest: 1,
-          lazyConnect: true,
-          enableOfflineQueue: false,
-          connectTimeout: 5000,
-          commandTimeout: 5000
-        });
-
-        // Handle Redis errors gracefully with logging
-        this.redis.on('error', (err) => {
-          console.warn('⚠️ Redis error:', err.message);
-          this.redis = null;
-        });
-
-        this.redis.on('connect', () => {
-          console.log('✅ Redis connected for ProductCatalogService');
-        });
-
-        console.log('✅ Redis client initialized for ProductCatalogService (lazy connect enabled)');
-      } catch (error) {
-        console.warn('⚠️ Failed to initialize Redis, continuing without cache:', error.message);
-        this.redis = null;
-      }
-    } else {
-      console.log('ℹ️ Redis disabled for ProductCatalogService (REDIS_URL not set or REDIS_ENABLED=false)');
+    if (vasType === 'data' || vasType === 'airtime') {
+      return this._getFromView(vasType, provider, bracket, limit);
     }
+
+    return this._getFromVariants(vasType, provider, amount, limit);
   }
 
   /**
-   * Get featured products with caching
-   * @param {number} limit - Number of products to return
-   * @param {string} type - Product type filter
-   * @returns {Promise<Array>} Featured products
+   * Read curated products from the materialized view.
+   * Used for data (bracket x type matrix) and airtime (one variable per provider).
    */
-  async getFeaturedProducts(limit = 12, type = null) {
-    const cacheKey = `featured_products:${limit}:${type || 'all'}`;
+  async _getFromView(vasType, provider, bracket, limit) {
+    const conditions = [`"vasType" = :vasType`];
+    const replacements = { vasType };
 
-    return this._getOrSetCache(cacheKey, this.cacheTTL, async () => {
-      const where = { isFeatured: true, status: 'active' };
-      if (type) where.type = type;
+    if (provider) {
+      conditions.push(`provider = :provider`);
+      replacements.provider = provider;
+    }
+    if (bracket) {
+      conditions.push(`bracket_code = :bracket`);
+      replacements.bracket = bracket;
+    }
 
-      const products = await Product.findAll({
-        where,
-        include: this._getCommonIncludes(),
-        order: [['sortOrder', 'ASC'], ['name', 'ASC']],
-        limit,
-        attributes: this._getProductAttributes()
-      });
+    const sql = `
+      SELECT variant_id, "vasType", provider, "minAmount", "maxAmount",
+             commission, "fixedFee", "supplierProductId", "priceType",
+             product_name, product_id, supplier_code, supplier_id,
+             bracket_code, type_label
+      FROM v_best_offers
+      WHERE ${conditions.join(' AND ')}
+      ORDER BY provider, bracket_code, type_label, commission DESC
+      ${limit ? `LIMIT ${parseInt(limit)}` : ''}
+    `;
 
-      return products.map(p => this._transformProduct(p));
-    });
-  }
+    const [rows] = await sequelize.query(sql, { replacements });
 
-  /**
-   * Search products with full-text search and filters
-   * @param {Object} params - Search parameters
-   * @returns {Promise<Object>} Search results with pagination
-   */
-  async searchProducts(params = {}) {
-    const { query = '', type = null, category = null, page = 1, limit = 20 } = params;
-    const cacheKey = this._generateSearchCacheKey(params);
-    const ttl = query.trim() ? this.searchCacheTTL : this.cacheTTL;
-
-    // Only cache if query is provided (consistent with original logic)
-    const shouldUseCache = !!query.trim();
-
-    const fetchLogic = async () => {
-      const where = { status: 'active' };
-      if (type) where.type = type;
-
-      const include = this._getCommonIncludes();
-      if (category) include[0].where.category = category;
-
-      let searchWhere = {};
-      if (query.trim()) {
-        searchWhere = {
-          [Op.or]: [
-            { name: { [Op.iLike]: `%${query}%` } },
-            { '$brand.name$': { [Op.iLike]: `%${query}%` } },
-            { '$brand.tags$': { [Op.overlap]: [query] } }
-          ]
-        };
-      }
-
-      const offset = (page - 1) * limit;
-      const { count, rows } = await Product.findAndCountAll({
-        where: { ...where, ...searchWhere },
-        include,
-        order: [['isFeatured', 'DESC'], ['sortOrder', 'ASC'], ['name', 'ASC']],
-        limit,
-        offset,
-        attributes: this._getProductAttributes()
-      });
-
-      return {
-        products: rows.map(p => this._transformProduct(p)),
-        pagination: {
-          page,
-          limit,
-          total: count,
-          totalPages: Math.ceil(count / limit),
-          hasNext: page < Math.ceil(count / limit),
-          hasPrev: page > 1
-        }
-      };
+    return {
+      products: rows.map(r => this.formatProduct(r)),
+      source: 'v_best_offers'
     };
-
-    return shouldUseCache 
-      ? this._getOrSetCache(cacheKey, ttl, fetchLogic) 
-      : fetchLogic();
   }
 
   /**
-   * Get product by ID with full details
-   * @param {number} productId - Product ID
-   * @returns {Promise<Object>} Product details
+   * Fallback for VAS types without bracket curation (electricity, voucher, bill_payment).
+   * Queries product_variants directly, ordered by commission DESC.
    */
-  async getProductById(productId) {
-    const cacheKey = `product:${productId}`;
+  async _getFromVariants(vasType, provider, amount, limit) {
+    const where = { vasType, status: 'active' };
+    if (provider) where.provider = provider;
+    if (amount) {
+      where.minAmount = { [Op.lte]: amount };
+      where.maxAmount = { [Op.gte]: amount };
+    }
 
-    return this._getOrSetCache(cacheKey, this.cacheTTL, async () => {
-      const product = await Product.findOne({
-        where: { id: productId, status: 'active' },
-        include: this._getCommonIncludes(),
-        attributes: this._getProductAttributes()
-      });
-
-      if (!product) throw new Error('Product not found');
-
-      return this._transformProduct(product, true);
+    const variants = await ProductVariant.findAll({
+      where,
+      include: [
+        { model: Product, as: 'product', attributes: ['id', 'name', 'type'] },
+        { model: Supplier, as: 'supplier', attributes: ['id', 'code', 'name'] }
+      ],
+      order: [['commission', 'DESC'], ['minAmount', 'ASC'], ['priority', 'ASC']],
+      limit: limit ? parseInt(limit) : undefined
     });
+
+    return {
+      products: variants.map(v => this.formatProduct({
+        variant_id: v.id,
+        vasType: v.vasType,
+        provider: v.provider,
+        minAmount: v.minAmount,
+        maxAmount: v.maxAmount,
+        commission: v.commission,
+        fixedFee: v.fixedFee,
+        supplierProductId: v.supplierProductId,
+        priceType: v.priceType,
+        product_name: v.product?.name,
+        product_id: v.product?.id,
+        supplier_code: v.supplier?.code,
+        supplier_id: v.supplier?.id,
+        bracket_code: null,
+        type_label: vasType
+      })),
+      source: 'product_variants'
+    };
   }
 
   /**
-   * Get available categories
-   * @returns {Promise<Array>} Available categories
+   * Single response shape for all callers.
    */
-  async getCategories() {
-    return this._getOrSetCache('product_categories', this.cacheTTL * 2, async () => {
-      const categories = await ProductBrand.findAll({
-        where: { isActive: true },
-        attributes: [[sequelize.fn('DISTINCT', sequelize.col('category')), 'category']],
-        raw: true
-      });
-      return categories.map(cat => cat.category).sort();
-    });
+  formatProduct(row) {
+    return {
+      id: row.variant_id,
+      productId: row.product_id,
+      productName: row.product_name,
+      supplierProductId: row.supplierProductId,
+      supplierCode: row.supplier_code,
+      supplierId: row.supplier_id,
+      vasType: row.vasType,
+      provider: row.provider,
+      priceType: row.priceType,
+      minAmount: row.minAmount,
+      maxAmount: row.maxAmount,
+      commission: parseFloat(row.commission) || 0,
+      fixedFee: row.fixedFee || 0,
+      bracketCode: row.bracket_code,
+      typeLabel: row.type_label
+    };
   }
 
   /**
-   * Get available product types
-   * @returns {Promise<Array>} Available product types
+   * Refresh the materialized view (call after catalog sweep).
+   * Uses CONCURRENTLY to avoid locking reads during refresh.
    */
-  async getProductTypes() {
-    return this._getOrSetCache('product_types', this.cacheTTL * 2, async () => {
-      const types = await Product.findAll({
-        where: { status: 'active' },
-        attributes: [[sequelize.fn('DISTINCT', sequelize.col('type')), 'type']],
-        raw: true
-      });
-      return types.map(t => t.type).sort();
-    });
-  }
-
-  /**
-   * Invalidate cache for a product
-   * @param {number} productId - Product ID
-   */
-  async invalidateProductCache(productId) {
-    if (!this.redis) return;
+  async refreshView() {
     try {
-      await Promise.all([
-        this.redis.del(`product:${productId}`),
-        this.redis.del('product_categories'),
-        this.redis.del('product_types')
-      ]);
-    } catch (error) {
-      console.warn('⚠️ Error invalidating product cache:', error.message);
+      await sequelize.query('REFRESH MATERIALIZED VIEW CONCURRENTLY v_best_offers');
+      console.log('v_best_offers view refreshed');
+    } catch (err) {
+      if (err.message?.includes('has not been populated')) {
+        await sequelize.query('REFRESH MATERIALIZED VIEW v_best_offers');
+        console.log('v_best_offers view refreshed (initial populate)');
+      } else {
+        throw err;
+      }
     }
   }
 
   /**
-   * Health check for the service
-   * @returns {Promise<Object>} Health status
+   * Health check: verify view exists and has data.
    */
   async healthCheck() {
     try {
-      await Product.count();
-      let cacheStatus = 'not configured';
-      
-      if (this.redis) {
-        try {
-          await this.redis.ping();
-          cacheStatus = 'connected';
-        } catch (e) {
-          cacheStatus = 'error';
-        }
-      }
-
-      return {
-        status: 'healthy',
-        database: 'connected',
-        cache: cacheStatus,
-        timestamp: new Date().toISOString()
-      };
-    } catch (error) {
-      return {
-        status: 'unhealthy',
-        error: error.message,
-        timestamp: new Date().toISOString()
-      };
+      const [rows] = await sequelize.query(
+        `SELECT "vasType", COUNT(*) as cnt FROM v_best_offers GROUP BY "vasType"`
+      );
+      return { status: 'healthy', counts: rows };
+    } catch (err) {
+      return { status: 'unhealthy', error: err.message };
     }
-  }
-
-  // ==========================================
-  // Private Helper Methods
-  // ==========================================
-
-  /**
-   * Generic cache wrapper to reduce duplication
-   * @private
-   */
-  async _getOrSetCache(key, ttl, fetchFunction) {
-    if (this.redis) {
-      try {
-        const cached = await this.redis.get(key);
-        if (cached) return JSON.parse(cached);
-      } catch (e) {
-        // Cache read failure - not critical, continue without cache
-        console.warn('⚠️ Redis cache read error:', e.message);
-      }
-    }
-
-    try {
-      const result = await fetchFunction();
-      
-      if (this.redis && result) {
-        try {
-          await this.redis.setex(key, ttl, JSON.stringify(result));
-        } catch (e) {
-          // Cache write failure - not critical, continue
-          console.warn('⚠️ Redis cache write error:', e.message);
-        }
-      }
-      
-      return result;
-    } catch (error) {
-      // Only log critical application errors
-      console.error(`Error in ProductCatalogService [${key}]:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Generate cache key for search results
-   * @private
-   */
-  _generateSearchCacheKey(params) {
-    const hash = crypto.createHash('md5').update(JSON.stringify(params)).digest('hex');
-    return `search:${hash}`;
-  }
-
-  /**
-   * Get common includes for product queries
-   *
-   * Variable-first ordering: priceType='variable' variants surface first.
-   * Only one variant (the best) is returned per product for list views.
-   * @private
-   */
-  _getCommonIncludes() {
-    return [
-      {
-        model: ProductBrand,
-        as: 'brand',
-        where: { isActive: true },
-        required: true
-      },
-      {
-        model: ProductVariant,
-        as: 'variants',
-        where: { status: 'active' },
-        required: true,
-        include: [{
-          model: Supplier,
-          as: 'supplier',
-          where: { isActive: true },
-          required: true,
-          attributes: ['id', 'name', 'code']
-        }],
-        // Variable-first: variable variants surface before fixed ones
-        order: [
-          [sequelize.literal(`CASE WHEN "variants"."priceType" = 'variable' THEN 0 ELSE 1 END`), 'ASC'],
-          ['isPreferred', 'DESC'],
-          ['sortOrder', 'ASC']
-        ],
-        limit: 1
-      }
-    ];
-  }
-
-  /**
-   * Get product attributes for queries
-   * @private
-   */
-  _getProductAttributes() {
-    return [
-      'id', 'name', 'type', 'isFeatured', 'sortOrder', 'metadata',
-      'description', 'category', 'tags', 'createdAt', 'updatedAt'
-    ];
-  }
-
-  /**
-   * Transform product for frontend consumption.
-   *
-   * Variable-first strategy:
-   *   - If the best variant is 'variable', returns priceType='variable' with
-   *     minAmount/maxAmount so the UI renders an amount-entry input.
-   *   - If the best variant is 'fixed', returns priceType='fixed' with the
-   *     full denominations array so the UI renders a picker.
-   * @private
-   */
-  _transformProduct(product, includeTimestamps = false) {
-    const bestVariant  = product.variants?.[0];
-    const denominations = bestVariant?.denominations || [];
-    const priceType    = bestVariant?.priceType || 'fixed';
-    const isVariable   = priceType === 'variable';
-
-    // For variable products use explicit min/max; fall back to denomination range
-    const minAmount = isVariable
-      ? (bestVariant?.minAmount || (denominations.length > 0 ? Math.min(...denominations) : null))
-      : null;
-    const maxAmount = isVariable
-      ? (bestVariant?.maxAmount || (denominations.length > 0 ? Math.max(...denominations) : null))
-      : null;
-
-    const result = {
-      id: product.id,
-      name: product.name,
-      type: product.type,
-      brand: {
-        id: product.brand.id,
-        name: product.brand.name,
-        logoUrl: product.brand.logoUrl,
-        category: product.brand.category,
-        tags: product.brand.tags
-      },
-      supplier: bestVariant ? {
-        id: bestVariant.supplier.id,
-        name: bestVariant.supplier.name,
-        code: bestVariant.supplier.code
-      } : null,
-      // Pricing strategy fields
-      priceType,
-      // For variable products: enter any amount between minAmount and maxAmount (cents)
-      minAmount,
-      maxAmount,
-      // For fixed products: pick one of these denominations (cents); empty for variable
-      denominations: isVariable ? [] : denominations,
-      constraints: bestVariant?.constraints || {},
-      metadata: product.metadata,
-      description: product.description,
-      category: product.category,
-      tags: product.tags,
-      // Convenience display range (always populated regardless of priceType)
-      priceRange: isVariable
-        ? { min: minAmount || 0, max: maxAmount || 0 }
-        : (denominations.length > 0
-            ? { min: Math.min(...denominations), max: Math.max(...denominations) }
-            : { min: 0, max: 0 })
-    };
-
-    if (includeTimestamps) {
-      result.createdAt = product.createdAt;
-      result.updatedAt = product.updatedAt;
-    }
-
-    return result;
   }
 }
 
-module.exports = ProductCatalogService;
+module.exports = new ProductCatalogService();

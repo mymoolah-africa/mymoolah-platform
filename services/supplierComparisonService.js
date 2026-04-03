@@ -10,8 +10,7 @@
 
 const { ProductVariant, Product, Supplier } = require('../models');
 const { Op } = require('sequelize');
-const bestOfferService = require('./bestOfferService');
-const { useBestOffersCatalogDisplay } = require('./catalogDisplayPolicy');
+const productCatalogService = require('./productCatalogService');
 
 class SupplierComparisonService {
     constructor() {
@@ -47,103 +46,30 @@ class SupplierComparisonService {
                 suppliers: {},
                 bestDeals: [],
                 promotionalOffers: [],
-                recommendations: [],
-                catalogVersion: null
+                recommendations: []
             };
 
-            // Catalog display: optional MM_DEPLOYMENT_ENV overrides NODE_ENV for listing only.
-            // Unset MM_DEPLOYMENT_ENV → legacy: NODE_ENV === 'production' uses vas_best_offers.
-            const catalogUseBestOffers = useBestOffersCatalogDisplay();
+            // Single path: productCatalogService handles all environments
+            const result = await productCatalogService.getCatalog(vasType, { provider, amount });
+            comparison.bestDeals = result.products;
 
-            if (catalogUseBestOffers) {
-                // Production only: use pre-computed best-offers cache
-                try {
-                    const bestResult = await bestOfferService.getBestOffers(vasType, provider);
-                    if (bestResult.source === 'vas_best_offers' && bestResult.products.length > 0) {
-                        comparison.bestDeals = this._applyInternationalPinConversion(bestResult.products, vasType);
-                        comparison.catalogVersion = bestResult.catalogVersion;
-                        for (const [code, meta] of Object.entries(this.suppliers)) {
-                            comparison.suppliers[code] = {
-                                name: meta.name || code,
-                                priority: meta.priority ?? 999,
-                                productCount: 0,
-                                products: []
-                            };
-                        }
-                        return comparison;
-                    }
-                } catch (boErr) {
-                    console.warn('⚠️ BestOfferService fallback:', boErr.message);
-                }
-            }
-
-            // UAT / Staging / Fallback: runtime comparison - ALL products from all suppliers
-            const allProducts = await this.getProductVariants(vasType, amount, provider);
-
-            // Group by supplier dynamically (supports new suppliers without code changes)
-            const groupedBySupplier = {};
-            for (const p of allProducts) {
-                const codeRaw = p.supplier?.code || 'UNKNOWN';
-                const code = codeRaw.toLowerCase();
-                if (!groupedBySupplier[code]) {
-                    groupedBySupplier[code] = [];
-                }
-                groupedBySupplier[code].push(p);
-            }
-
-            // Build supplier summaries for known suppliers (ensure keys always exist)
-            for (const [knownCode, supMeta] of Object.entries(this.suppliers)) {
-                const products = groupedBySupplier[knownCode] || [];
-                comparison.suppliers[knownCode] = {
-                    name: supMeta.name || knownCode,
-                    priority: supMeta.priority ?? 999,
-                    productCount: products.length,
-                    products: products.map(p => this.formatProductForResponse(p))
-                };
-            }
-
-            // Include any additional suppliers not in the known list
-            for (const [code, products] of Object.entries(groupedBySupplier)) {
-                if (comparison.suppliers[code]) continue;
+            // Group products by supplier for the suppliers breakdown
+            for (const [code, meta] of Object.entries(this.suppliers)) {
+                const supplierProducts = result.products.filter(
+                  p => (p.supplierCode || '').toLowerCase() === code
+                );
                 comparison.suppliers[code] = {
-                    name: code,
-                    priority: 999,
-                    productCount: products.length,
-                    products: products.map(p => this.formatProductForResponse(p))
+                    name: meta.name || code,
+                    priority: meta.priority ?? 999,
+                    productCount: supplierProducts.length,
+                    products: supplierProducts
                 };
             }
-
-            if (catalogUseBestOffers) {
-                // Best-offers mode fallback (cache empty or partial): deduplicate by best commission
-                comparison.bestDeals = this.findBestDeals(Object.values(groupedBySupplier), amount, vasType);
-            } else {
-                // Full catalog: ALL products, sorted Flash-first then MobileMart,
-                // within each supplier: airtime/data by price asc, vouchers A-Z
-                const allFormatted = [];
-                // Iterate suppliers in priority order (Flash=1, MobileMart=2, others last)
-                const sortedSupplierCodes = Object.keys(groupedBySupplier).sort((a, b) => {
-                    const pa = this.suppliers[a]?.priority ?? 999;
-                    const pb = this.suppliers[b]?.priority ?? 999;
-                    return pa - pb;
-                });
-                for (const code of sortedSupplierCodes) {
-                    const group = groupedBySupplier[code];
-                    const formatted = group.map(p => this.formatProductForResponse(p));
-                    allFormatted.push(...formatted);
-                }
-                comparison.bestDeals = this.sortProductsForUat(allFormatted, vasType);
-            }
-            
-            // Find promotional offers across all suppliers
-            comparison.promotionalOffers = this.findPromotionalOffers(Object.values(groupedBySupplier));
-            
-            // Generate AI recommendations
-            comparison.recommendations = this.generateRecommendations(comparison);
 
             return comparison;
 
         } catch (error) {
-            console.error('❌ Supplier Comparison Service: Error comparing products:', error.message);
+            console.error('Supplier Comparison Service: Error comparing products:', error.message);
             throw new Error(`Failed to compare products: ${error.message}`);
         }
     }

@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// DEPRECATED: Replaced by product_selection_rules table + v_best_offers materialized view (Apr 2026).
+// Kept as fallback until production migration is validated.
 /**
  * Mark Featured Data Products (API-driven, rule-based)
  *

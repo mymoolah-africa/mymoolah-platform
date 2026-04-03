@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// DEPRECATED: Replaced by v_best_offers materialized view (Apr 2026).
+// Kept as fallback until production migration is validated.
 
 /**
  * Refresh vas_best_offers - Banking-grade pre-computed best-offer table

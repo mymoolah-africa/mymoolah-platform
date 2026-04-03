@@ -1,3 +1,5 @@
+// DEPRECATED: Replaced by productCatalogService.js — single read path for all environments (Apr 2026).
+// Kept as fallback until production migration is validated.
 'use strict';
 
 /**

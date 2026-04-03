@@ -1,0 +1,113 @@
+{
+  "_description": "Contractual commission rates per supplier. Rates from Annexure A (1 Aug 2024) unless noted. All percentages incl. VAT.",
+  "_matching": "product_overrides: matched by substring in provider or productName (case-insensitive). First match wins.",
+
+  "FLASH": {
+    "airtime":     { "default": 3.00 },
+    "data":        { "default": 3.00 },
+    "electricity": { "default": 0.85 },
+    "voucher": {
+      "default": 3.50,
+      "product_overrides": {
+        "amazon": 2.80, "apple": 4.50, "bettabets": 4.10, "betway": 3.00,
+        "blu": 3.00, "bolt": 3.50, "easybet": 4.10, "easyload": 3.50,
+        "ea fc mobile": 4.80, "free fire": 3.50, "gbets": 3.50, "google play": 3.10,
+        "gold rush": 3.50, "hollywoodbets": 3.00, "lottostar": 3.50, "netflix": 3.25,
+        "ott": 3.00, "playstation": 3.50, "pubg": 7.00, "razer gold": 3.50,
+        "roblox": 6.00, "showmax": 3.10, "steam": 3.50, "supabets": 3.80,
+        "takealot": 2.40, "uber": 2.80, "uber eats": 2.80,
+        "world sports betting": 3.50, "yesplay": 3.00,
+        "1voucher": 1.00, "fnb voucher": 1.00
+      }
+    },
+    "bill_payment": {
+      "default": 2.50,
+      "product_overrides": {
+        "nyaradzo": 4.10, "ackermans": 2.50, "pep": 2.50, "talk360": 6.00,
+        "intercape": 5.00, "ria sikhona": 0.40
+      }
+    },
+    "fixed_fee_overrides": {
+      "flash token": { "fixedFee": 300, "commission": 0 },
+      "dstv":        { "fixedFee": 300, "commission": 0 },
+      "municipality": { "fixedFee": 200, "commission": 0 },
+      "metro":       { "fixedFee": 200, "commission": 0 }
+    }
+  },
+
+  "MOBILEMART": {
+    "airtime": {
+      "default": 4.50,
+      "provider_overrides": {
+        "vodacom": 4.50, "mtn": 4.50, "cellc": 4.80, "telkom": 3.50
+      }
+    },
+    "data": {
+      "default": 4.50,
+      "provider_overrides": {
+        "vodacom": 4.50, "mtn": 4.50, "cellc": 4.80, "telkom": 3.50
+      }
+    },
+    "voucher": {
+      "default": 3.50,
+      "product_overrides": {
+        "bok squad": 10.00, "hollywood": 5.00, "pubg": 5.00, "showmax": 5.00,
+        "roblox": 4.50, "spotify": 4.50, "lottostar": 4.00, "supabets": 4.00,
+        "sorbet": 4.00, "ticketmaster": 4.00, "itunes": 3.50, "ott": 3.50,
+        "flybet": 3.50, "netflix": 3.00, "playstation": 3.00, "fifa mobile": 3.00,
+        "razer gold": 2.50, "free fire": 2.50, "steam": 2.50, "lottoland": 2.50,
+        "google": 2.20, "uber": 2.00, "pro shop": 2.00, "blu voucher": 1.80,
+        "ringas": 1.80, "cycle lab": 1.50, "makro": 1.00, "pick n pay": 1.00
+      }
+    },
+    "electricity": {
+      "default": 0.40,
+      "provider_overrides": {
+        "bluswitch": 1.40, "centlec": 1.30, "centlec municipality": 1.30,
+        "makana municipality": 1.50, "letsimeng municipality": 1.50,
+        "swellendam municipality": 1.20, "langeberg municipality": 1.50,
+        "maluti a phofung municipality": 1.50, "matjhabeng municipality": 1.50,
+        "prince albert municipality": 1.15, "emthanjeni municipality": 1.10,
+        "kammiesberg municipality": 1.50, "nama khoi municipality": 1.50,
+        "energy intelligence consortium": 1.50,
+        "private utilities 1": 1.50, "private utilities 2": 1.50,
+        "private utilities 4": 1.50, "private utilities 5": 1.50,
+        "private utilities 7": 1.50, "private utilities 8": 1.50,
+        "private utilities 9": 1.50,
+        "eskom": 0.90, "eskom online": 0.90,
+        "bela bela": 1.10, "blueberry": 1.10, "brohamca": 1.00,
+        "citiq": 1.10, "city power": 0.85,
+        "dikgatlong": 1.50, "ditsobotla": 1.30,
+        "gasegonyana": 1.25, "greater letaba": 1.15,
+        "harrygwala": 1.00, "is metering": 1.10,
+        "jager tech": 1.10, "jager jhb": 1.00,
+        "jb marks": 1.00, "northwest 405": 1.00,
+        "kgetlengrivier": 1.00, "kokstad": 1.50,
+        "koukamma": 1.00, "langeberg": 1.00,
+        "letsemeng": 1.00, "ll energy": 1.00,
+        "lukhanji": 1.10, "makana": 1.00,
+        "maluti a phofung": 1.00, "mamusa": 1.10,
+        "maquassi hills": 1.50, "mbombela": 1.19,
+        "meter man": 1.10, "meter shack": 1.10, "midcity": 1.10,
+        "mogalecity": 1.00, "mogale city": 1.00,
+        "nationalrealestate": 1.15, "ndlambe": 1.15,
+        "newcastle": 1.00, "ngwathe": 1.00, "ontec": 1.00,
+        "prepaidmeter": 1.20, "prepaidworld": 1.20, "proteameter": 1.20,
+        "richterveld": 1.00, "rustenburg": 1.00,
+        "ruvick energy": 1.10, "scigrow": 1.10, "stsscaps": 1.20,
+        "thabachwe": 1.50, "theprepaidteam": 1.10,
+        "tswaing": 1.10, "umngeni": 1.00,
+        "urbanisecaps": 1.00, "urbtec": 1.00,
+        "utilities world": 1.00, "uvend": 1.10
+      }
+    },
+    "bill_payment": {
+      "default_fixed_fee": 190,
+      "default": 0
+    },
+    "fixed_fee_overrides": {
+      "dstv":        { "fixedFee": 330, "commission": 0 },
+      "multichoice": { "fixedFee": 330, "commission": 0 }
+    }
+  }
+}

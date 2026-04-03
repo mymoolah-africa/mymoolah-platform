@@ -2,8 +2,9 @@
 
 const { Product, ProductBrand, Supplier, ProductVariant, sequelize } = require('../models');
 const { Op } = require('sequelize');
-const supplierPricingService = require('./supplierPricingService');
 const notificationService = require('./notificationService');
+const productCatalogService = require('./productCatalogService');
+const commissionConfig = require('../config/supplier-commissions.json');
 const MobileMartAuthService = require('./mobilemartAuthService');
 const FlashAuthService = require('./flashAuthService');
 
@@ -131,51 +132,27 @@ class CatalogSynchronizationService {
   }
 
   /**
-   * Schedule lightweight cache refresh every 6 hours (00:00, 06:00, 12:00, 18:00 SAST).
-   * Runs ONLY mark-featured-data-products + refreshBestOffers (no supplier API calls).
-   * Reduces stale-cache window from 24h to 6h with negligible overhead.
+   * Schedule 6-hourly materialized view refresh (00:00, 06:00, 12:00, 18:00 SAST).
+   * No API sweep — refreshes v_best_offers from current product_variants data.
    */
   scheduleCacheRefresh() {
     const cron = require('node-cron');
 
     this.cacheRefreshCron = cron.schedule('0 */6 * * *', async () => {
-      console.log('🔄 Running 6-hourly cache refresh (featured + best-offers)...');
+      console.log('🔄 Running 6-hourly v_best_offers refresh...');
       const start = Date.now();
       try {
-        // 1. Re-curate featured data products
-        try {
-          const { execSync } = require('child_process');
-          const env = process.env.NODE_ENV === 'production' ? '--production' : '--staging';
-          execSync(`node scripts/mark-featured-data-products.js ${env}`, {
-            cwd: require('path').resolve(__dirname, '..'),
-            stdio: 'pipe',
-            timeout: 120000,
-          });
-          console.log('   ✅ Featured data products re-curated');
-        } catch (featErr) {
-          console.warn('   ⚠️ Featured curation skipped:', featErr.message);
-        }
-
-        // 2. Rebuild best-offers cache
-        try {
-          const { refreshBestOffers } = require('../scripts/refresh-vas-best-offers');
-          const { getClient, envName } = this._resolveClientGetter();
-          const result = await refreshBestOffers(getClient, envName);
-          console.log(`   ✅ vas_best_offers refreshed: ${result.rowsAffected} rows`);
-        } catch (boErr) {
-          console.warn('   ⚠️ Best-offers refresh skipped:', boErr.message);
-        }
-
-        console.log(`✅ 6-hourly cache refresh completed in ${Date.now() - start}ms`);
+        await productCatalogService.refreshView();
+        console.log(`✅ 6-hourly view refresh completed in ${Date.now() - start}ms`);
       } catch (error) {
-        console.error('❌ 6-hourly cache refresh failed:', error.message);
+        console.error('❌ 6-hourly view refresh failed:', error.message);
       }
     }, {
       timezone: 'Africa/Johannesburg',
       scheduled: true
     });
 
-    console.log('📅 6-hourly cache refresh scheduled: 0 */6 * * * (SAST)');
+    console.log('📅 6-hourly v_best_offers refresh scheduled: 0 */6 * * * (SAST)');
   }
 
   /**
@@ -216,33 +193,12 @@ class CatalogSynchronizationService {
         await this.sweepSupplierCatalog(supplier);
       }
 
-      // Update catalog cache
-      await this.updateCatalogCache();
-
-      // Re-run featured product curation FIRST (sets featured flags on data products).
-      // This MUST run before refreshBestOffers so the cache picks up curated flags.
+      // Refresh materialized view (replaces old mark-featured + best-offers pipeline)
       try {
-        const { execSync } = require('child_process');
-        const env = process.env.NODE_ENV === 'production' ? '--production' : '--staging';
-        execSync(`node scripts/mark-featured-data-products.js ${env}`, {
-          cwd: require('path').resolve(__dirname, '..'),
-          stdio: 'pipe',
-          timeout: 120000,
-        });
-        console.log('📊 Featured data products re-curated after catalog sweep');
-      } catch (featErr) {
-        console.warn('⚠️ Featured product curation skipped:', featErr.message);
-      }
-
-      // Refresh pre-computed best-offers table (banking-grade: one product per denomination, highest commission).
-      // Runs AFTER mark-featured so the cache respects curated featured flags.
-      try {
-        const { refreshBestOffers } = require('../scripts/refresh-vas-best-offers');
-        const { getClient, envName } = this._resolveClientGetter();
-        const result = await refreshBestOffers(getClient, envName);
-        console.log(`📊 vas_best_offers refreshed: ${result.rowsAffected} rows`);
-      } catch (boErr) {
-        console.warn('⚠️ vas_best_offers refresh skipped:', boErr.message);
+        await productCatalogService.refreshView();
+        console.log('📊 v_best_offers materialized view refreshed');
+      } catch (viewErr) {
+        console.warn('⚠️ v_best_offers refresh skipped:', viewErr.message);
       }
 
       // Log sweep results
@@ -441,159 +397,62 @@ class CatalogSynchronizationService {
    * Returns { commission, fixedFee, commissionType, pricingRate }.
    */
   getFlashContractualCommission(vasType, provider, productName) {
-    const p = (provider || '').toLowerCase();
-    const n = (productName || '').toLowerCase();
+    return this.getContractualCommission('FLASH', vasType, provider, productName);
+  }
 
-    // Fixed-amount commissions
-    if (n.includes('flash token'))                      return { commission: 0, fixedFee: 300, commissionType: 'fixed_amount', pricingRate: 0 };
-    if (n.includes('dstv') || p.includes('dstv'))       return { commission: 0, fixedFee: 300, commissionType: 'fixed_amount', pricingRate: 0 };
-    if (n.includes('municipality') || n.includes('metro') || p.includes('municipality'))
-      return { commission: 0, fixedFee: 200, commissionType: 'fixed_amount', pricingRate: 0 };
-
-    // Cellular (airtime + data): 3%
-    if (vasType === 'airtime' || vasType === 'data')    return { commission: 3.00, fixedFee: 0, commissionType: 'percentage', pricingRate: 3.00 };
-
-    // Electricity: 0.85%
-    if (vasType === 'electricity')                      return { commission: 0.85, fixedFee: 0, commissionType: 'percentage', pricingRate: 0.85 };
-
-    // Gift voucher product-specific rates
-    const giftRates = {
-      'amazon': 2.80, 'apple': 4.50, 'bettabets': 4.10, 'betway': 3.00,
-      'blu': 3.00, 'bolt': 3.50, 'easybet': 4.10, 'easyload': 3.50,
-      'ea fc mobile': 4.80, 'free fire': 3.50, 'gbets': 3.50, 'google play': 3.10,
-      'gold rush': 3.50, 'hollywoodbets': 3.00, 'lottostar': 3.50, 'netflix': 3.25,
-      'ott': 3.00, 'playstation': 3.50, 'pubg': 7.00, 'razer gold': 3.50,
-      'roblox': 6.00, 'showmax': 3.10, 'steam': 3.50, 'supabets': 3.80,
-      'takealot': 2.40, 'uber': 2.80, 'uber eats': 2.80,
-      'world sports betting': 3.50, 'yesplay': 3.00,
-    };
-    for (const [key, rate] of Object.entries(giftRates)) {
-      if (p.includes(key) || n.includes(key)) return { commission: rate, fixedFee: 0, commissionType: 'percentage', pricingRate: rate };
-    }
-
-    // Flash Pay bill_payment rates
-    const billRates = {
-      'nyaradzo': 4.10, 'ackermans': 2.50, 'pep': 2.50, 'talk360': 6.00,
-      'intercape': 5.00, 'ria sikhona': 0.40,
-    };
-    if (vasType === 'bill_payment') {
-      for (const [key, rate] of Object.entries(billRates)) {
-        if (p.includes(key) || n.includes(key)) return { commission: rate, fixedFee: 0, commissionType: 'percentage', pricingRate: rate };
-      }
-      return { commission: 2.50, fixedFee: 0, commissionType: 'percentage', pricingRate: 2.50 };
-    }
-
-    // 1Voucher / FNB Voucher: 1%
-    if (n.includes('1voucher') || n.includes('fnb voucher') || p.includes('1voucher'))
-      return { commission: 1.00, fixedFee: 0, commissionType: 'percentage', pricingRate: 1.00 };
-
-    // Default for vouchers
-    if (vasType === 'voucher')                          return { commission: 3.50, fixedFee: 0, commissionType: 'percentage', pricingRate: 3.50 };
-
-    return { commission: 2.50, fixedFee: 0, commissionType: 'percentage', pricingRate: 2.50 };
+  getMobileMartContractualCommission(vasType, provider, productName) {
+    return this.getContractualCommission('MOBILEMART', vasType, provider, productName);
   }
 
   /**
-   * Resolve MobileMart contractual commission for a product.
-   * Returns { commission, fixedFee, commissionType, pricingRate }.
-   * Rates from Annexure A (1 Aug 2024) — all incl. VAT unless stated.
+   * Unified commission lookup driven by config/supplier-commissions.json.
+   * Replaces the two 50-100 line hardcoded methods with a single config-driven resolver.
    */
-  getMobileMartContractualCommission(vasType, provider, productName) {
+  getContractualCommission(supplierCode, vasType, provider, productName) {
+    const config = commissionConfig[supplierCode];
+    if (!config) return { commission: 2.50, fixedFee: 0, commissionType: 'percentage', pricingRate: 2.50 };
+
     const p = (provider || '').toLowerCase();
     const n = (productName || '').toLowerCase();
 
-    // Network-specific airtime/data rates
-    if (vasType === 'airtime' || vasType === 'data') {
-      if (p.includes('vodacom'))                        return { commission: 4.50, fixedFee: 0, commissionType: 'percentage', pricingRate: 4.50 };
-      if (p.includes('mtn'))                            return { commission: 4.50, fixedFee: 0, commissionType: 'percentage', pricingRate: 4.50 };
-      if (p.includes('cell') && p.includes('c'))        return { commission: 4.80, fixedFee: 0, commissionType: 'percentage', pricingRate: 4.80 };
-      if (p.includes('telkom'))                         return { commission: 3.50, fixedFee: 0, commissionType: 'percentage', pricingRate: 3.50 };
-      return { commission: 4.50, fixedFee: 0, commissionType: 'percentage', pricingRate: 4.50 };
-    }
-
-    // DStv/Multichoice (fixed R3.30 incl. VAT)
-    if (n.includes('dstv') || p.includes('dstv') || n.includes('multichoice') || p.includes('multichoice'))
-      return { commission: 0, fixedFee: 330, commissionType: 'fixed_amount', pricingRate: 0 };
-
-    // Voucher product-specific rates
-    const voucherRates = {
-      'bok squad': 10.00, 'hollywood': 5.00, 'pubg': 5.00, 'showmax': 5.00,
-      'roblox': 4.50, 'spotify': 4.50, 'lottostar': 4.00, 'supabets': 4.00,
-      'sorbet': 4.00, 'ticketmaster': 4.00, 'itunes': 3.50, 'ott': 3.50,
-      'flybet': 3.50, 'netflix': 3.00, 'playstation': 3.00, 'fifa mobile': 3.00,
-      'razer gold': 2.50, 'free fire': 2.50, 'steam': 2.50, 'lottoland': 2.50,
-      'google': 2.20, 'uber': 2.00, 'pro shop': 2.00, 'blu voucher': 1.80,
-      'ringas': 1.80, 'cycle lab': 1.50, 'makro': 1.00, 'pick n pay': 1.00,
-    };
-    if (vasType === 'voucher' || vasType === 'gaming' || vasType === 'streaming') {
-      for (const [key, rate] of Object.entries(voucherRates)) {
-        if (p.includes(key) || n.includes(key)) return { commission: rate, fixedFee: 0, commissionType: 'percentage', pricingRate: rate };
+    // 1. Check fixed-fee overrides first (e.g., DStv, municipality, flash token)
+    const fixedOverrides = config.fixed_fee_overrides || {};
+    for (const [key, val] of Object.entries(fixedOverrides)) {
+      if (p.includes(key) || n.includes(key)) {
+        return { commission: val.commission || 0, fixedFee: val.fixedFee || 0, commissionType: 'fixed_amount', pricingRate: 0 };
       }
-      return { commission: 3.50, fixedFee: 0, commissionType: 'percentage', pricingRate: 3.50 };
     }
 
-    // Electricity: per-municipality rates from Annexure A (1 Aug 2024)
-    // Decision rule: if percentage > 0.85%, MobileMart wins over Flash's flat 0.85%.
-    // Fee-per-unit and transaction-fee providers have low effective rates, so Flash wins.
-    if (vasType === 'electricity') {
-      const ELEC_PCT_RATES = {
-        // Ontec percentage providers
-        'bluswitch': 1.40, 'centlec municipality': 1.30, 'centlec': 1.30,
-        // Syntell percentage providers (all 1.10-1.50%)
-        'makana municipality': 1.50, 'letsimeng municipality': 1.50,
-        'swellendam municipality': 1.20, 'langeberg municipality': 1.50,
-        'maluti a phofung municipality': 1.50, 'matjhabeng municipality': 1.50,
-        'prince albert municipality': 1.15, 'emthanjeni municipality': 1.10,
-        'kammiesberg municipality': 1.50, 'nama khoi municipality': 1.50,
-        'energy intelligence consortium': 1.50,
-        // Syntell private utilities (all 1.50%)
-        'private utilities 1': 1.50, 'private utilities 2': 1.50,
-        'private utilities 4': 1.50, 'private utilities 5': 1.50,
-        'private utilities 7': 1.50, 'private utilities 8': 1.50,
-        'private utilities 9': 1.50,
-        // Blue Label percentage providers > 0.85%
-        'eskom': 0.90, 'eskom online': 0.90,
-        'bela bela': 1.10, 'blueberry': 1.10, 'brohamca': 1.00,
-        'citiq': 1.10, 'city power': 0.85,
-        'dikgatlong': 1.50, 'ditsobotla': 1.30,
-        'gasegonyana': 1.25, 'greater letaba': 1.15,
-        'harrygwala': 1.00, 'is metering': 1.10,
-        'jager tech': 1.10, 'jager jhb': 1.00,
-        'jb marks': 1.00, 'northwest 405': 1.00,
-        'kgetlengrivier': 1.00, 'kokstad': 1.50,
-        'koukamma': 1.00, 'langeberg': 1.00,
-        'letsemeng': 1.00, 'll energy': 1.00,
-        'lukhanji': 1.10, 'makana': 1.00,
-        'maluti a phofung': 1.00, 'mamusa': 1.10,
-        'maquassi hills': 1.50, 'mbombela': 1.19,
-        'meter man': 1.10, 'meter shack': 1.10, 'midcity': 1.10,
-        'mogalecity': 1.00, 'mogale city': 1.00,
-        'nationalrealestate': 1.15, 'ndlambe': 1.15,
-        'newcastle': 1.00, 'ngwathe': 1.00, 'ontec': 1.00,
-        'prepaidmeter': 1.20, 'prepaidworld': 1.20, 'proteameter': 1.20,
-        'richterveld': 1.00, 'rustenburg': 1.00,
-        'ruvick energy': 1.10, 'scigrow': 1.10, 'stsscaps': 1.20,
-        'thabachwe': 1.50, 'theprepaidteam': 1.10,
-        'tswaing': 1.10, 'umngeni': 1.00,
-        'urbanisecaps': 1.00, 'urbtec': 1.00,
-        'utilities world': 1.00, 'uvend': 1.10,
-      };
+    // 2. Resolve VAS type config
+    const vtNorm = vasType === 'gaming' || vasType === 'streaming' ? 'voucher' : vasType;
+    const vtConfig = config[vtNorm];
+    if (!vtConfig) return { commission: 2.50, fixedFee: 0, commissionType: 'percentage', pricingRate: 2.50 };
 
-      const pk = p.replace(/\s*(municipality|local|metro|metropolitan)\s*/gi, ' ').trim();
-      for (const [key, rate] of Object.entries(ELEC_PCT_RATES)) {
-        if (pk.includes(key) || p.includes(key)) {
-          return { commission: rate, fixedFee: 0, commissionType: 'percentage', pricingRate: rate };
-        }
+    // 3. Check product-name overrides (substring match on provider or productName)
+    const prodOverrides = vtConfig.product_overrides || {};
+    for (const [key, rate] of Object.entries(prodOverrides)) {
+      if (p.includes(key) || n.includes(key)) {
+        return { commission: rate, fixedFee: 0, commissionType: 'percentage', pricingRate: rate };
       }
-
-      // Default for unknown or fee-based providers: low rate so Flash 0.85% wins
-      return { commission: 0.40, fixedFee: 0, commissionType: 'percentage', pricingRate: 0.40 };
     }
 
-    // Bill payment default R1.90 fixed
-    if (vasType === 'bill_payment') return { commission: 0, fixedFee: 190, commissionType: 'fixed_amount', pricingRate: 0 };
+    // 4. Check provider-name overrides (e.g., Vodacom 4.50%, Telkom 3.50%)
+    const provOverrides = vtConfig.provider_overrides || {};
+    const pk = p.replace(/\s*(municipality|local|metro|metropolitan)\s*/gi, ' ').trim();
+    for (const [key, rate] of Object.entries(provOverrides)) {
+      if (pk.includes(key) || p.includes(key)) {
+        return { commission: rate, fixedFee: 0, commissionType: 'percentage', pricingRate: rate };
+      }
+    }
 
-    return { commission: 4.50, fixedFee: 0, commissionType: 'percentage', pricingRate: 4.50 };
+    // 5. Fixed-fee default (e.g., MobileMart bill_payment R1.90 fixed)
+    if (vtConfig.default_fixed_fee) {
+      return { commission: vtConfig.default || 0, fixedFee: vtConfig.default_fixed_fee, commissionType: 'fixed_amount', pricingRate: 0 };
+    }
+
+    // 6. Percentage default
+    const rate = vtConfig.default || 2.50;
+    return { commission: rate, fixedFee: 0, commissionType: 'percentage', pricingRate: rate };
   }
 
   /**
@@ -1287,14 +1146,10 @@ class CatalogSynchronizationService {
   }
 
   /**
-   * Update catalog cache
+   * Refresh the v_best_offers materialized view after catalog changes.
    */
   async updateCatalogCache() {
-    console.log('🔄 Updating catalog cache...');
-    
-    // This would update Redis cache with latest catalog data
-    // For now, just log the action
-    console.log('✅ Catalog cache updated');
+    await productCatalogService.refreshView();
   }
 
   /**
@@ -1364,21 +1219,6 @@ class CatalogSynchronizationService {
     }
   }
 
-  /**
-   * Resolve the correct db-connection-helper client getter for the current environment.
-   * Uses MM_DEPLOYMENT_ENV (set in Cloud Run) with NODE_ENV as fallback.
-   */
-  _resolveClientGetter() {
-    const { getUATClient, getStagingClient, getProductionClient } = require('../scripts/db-connection-helper');
-    const mm = (process.env.MM_DEPLOYMENT_ENV || '').trim().toLowerCase();
-    if (mm === 'production' || (!mm && process.env.NODE_ENV === 'production')) {
-      return { getClient: getProductionClient, envName: 'Production' };
-    }
-    if (mm === 'staging') {
-      return { getClient: getStagingClient, envName: 'Staging' };
-    }
-    return { getClient: getUATClient, envName: 'UAT' };
-  }
 
   /**
    * Get service status
