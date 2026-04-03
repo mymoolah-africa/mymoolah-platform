@@ -2163,10 +2163,11 @@ router.get('/electricity/catalog', auth, async (req, res) => {
       meterType = 'Eskom'; // Default to Eskom for now
     }
 
-    const productCatalogService = require('../services/productCatalogService');
+    const ProductCatalogService = require('../services/productCatalogService');
+    const _pcs = new ProductCatalogService();
 
     const providerArg = meterType && meterType !== 'Global' ? meterType : null;
-    const result = await productCatalogService.getCatalog('electricity', { provider: providerArg });
+    const result = await _pcs.getCatalog('electricity', { provider: providerArg });
     const electricityVariants = result.products;
     
     // Extract unique supplier codes for providers list

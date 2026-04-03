@@ -3,8 +3,10 @@
 const { Product, ProductBrand, Supplier, ProductVariant, sequelize } = require('../models');
 const { Op } = require('sequelize');
 const notificationService = require('./notificationService');
-const productCatalogService = require('./productCatalogService');
+const ProductCatalogService = require('./productCatalogService');
 const commissionConfig = require('../config/supplier-commissions.json');
+
+const _catalogServiceInstance = new ProductCatalogService();
 const MobileMartAuthService = require('./mobilemartAuthService');
 const FlashAuthService = require('./flashAuthService');
 
@@ -142,7 +144,7 @@ class CatalogSynchronizationService {
       console.log('🔄 Running 6-hourly v_best_offers refresh...');
       const start = Date.now();
       try {
-        await productCatalogService.refreshView();
+        await _catalogServiceInstance.refreshView();
         console.log(`✅ 6-hourly view refresh completed in ${Date.now() - start}ms`);
       } catch (error) {
         console.error('❌ 6-hourly view refresh failed:', error.message);
@@ -195,7 +197,7 @@ class CatalogSynchronizationService {
 
       // Refresh materialized view (replaces old mark-featured + best-offers pipeline)
       try {
-        await productCatalogService.refreshView();
+        await _catalogServiceInstance.refreshView();
         console.log('📊 v_best_offers materialized view refreshed');
       } catch (viewErr) {
         console.warn('⚠️ v_best_offers refresh skipped:', viewErr.message);
@@ -1149,7 +1151,7 @@ class CatalogSynchronizationService {
    * Refresh the v_best_offers materialized view after catalog changes.
    */
   async updateCatalogCache() {
-    await productCatalogService.refreshView();
+    await _catalogServiceInstance.refreshView();
   }
 
   /**

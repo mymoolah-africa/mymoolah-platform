@@ -10,7 +10,9 @@
 
 const { ProductVariant, Product, Supplier } = require('../models');
 const { Op } = require('sequelize');
-const productCatalogService = require('./productCatalogService');
+const ProductCatalogService = require('./productCatalogService');
+
+const _catalogServiceInstance = new ProductCatalogService();
 
 class SupplierComparisonService {
     constructor() {
@@ -50,7 +52,7 @@ class SupplierComparisonService {
             };
 
             // Single path: productCatalogService handles all environments
-            const result = await productCatalogService.getCatalog(vasType, { provider, amount });
+            const result = await _catalogServiceInstance.getCatalog(vasType, { provider, amount });
             comparison.bestDeals = result.products;
 
             // Group products by supplier for the suppliers breakdown
