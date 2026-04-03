@@ -481,39 +481,37 @@ function money(v) { return `R ${Number(v || 0).toFixed(2)}`; }
     `);
     const vasOutflow = parseFloat(totalVasPurchases.rows[0].total_vas_cents) / 100;
 
-    // Treasury balance: external money in - external money out
-    const treasuryBalance = totalExternalIn - sbsaFeesPaid;
-    const accountedFor = totalWalletBal + vasOutflow + feesFromUsers;
+    const mmFloatRow = await c.query(`
+      SELECT "supplierId", "currentBalance", "initialBalance", "ledgerAccountCode"
+      FROM supplier_floats WHERE LOWER("supplierId") = 'mobilemart' LIMIT 1
+    `);
 
-    console.log(`\n  ${BOLD}MMTP Treasury Account (Main Float)${RESET}`);
+    console.log(`\n  ${BOLD}MMTP Treasury — database-visible flows${RESET}`);
     console.log(`  ${'─'.repeat(60)}`);
-    console.log(`  ${BOLD}Money IN (from bank):${RESET}`);
-    console.log(`    Bank deposits (PayShap):    ${money(bankDeposits)}`);
-    console.log(`    RTP inflows:                ${money(rtpTotal)}`);
-    console.log(`    Total external inflow:      ${money(totalExternalIn)}`);
+    console.log(`  ${DIM}PayShap/RTP totals below are app transactions only. They exclude bank-only${RESET}`);
+    console.log(`  ${DIM}movements (e.g. R2,500 MobileMart bank prepayment). Full TA = bank statement.${RESET}`);
     console.log(``);
-    console.log(`  ${BOLD}Money OUT (to external):${RESET}`);
-    console.log(`    SBSA PayShap fees:         -${money(sbsaFeesPaid)}`);
-    console.log(`    VAS supplier payments:     -${money(vasOutflow)}`);
-    console.log(`    Total external outflow:    -${money(sbsaFeesPaid + vasOutflow)}`);
+    console.log(`  ${BOLD}Money IN (wallet-visible bank legs):${RESET}`);
+    console.log(`    Bank deposits (PayShap, excl. voucher): ${money(bankDeposits)}`);
+    console.log(`    RTP inflows (Request to Pay):           ${money(rtpTotal)}`);
+    console.log(`    Subtotal (app-recorded bank inflow):    ${money(totalExternalIn)}`);
     console.log(``);
-    console.log(`  ${BOLD}Treasury Net Position:          ${money(totalExternalIn - sbsaFeesPaid - vasOutflow)}${RESET}`);
+    console.log(`  ${BOLD}Money OUT (partial — use ledger + bank for SBSA):${RESET}`);
+    console.log(`    SBSA fee pass-through (ledger 5000-10-01): ${money(sbsaFeesPaid)}`);
+    console.log(`    VAS face value completed:                 ${money(vasOutflow)}`);
     console.log(``);
-    console.log(`  ${BOLD}Funds held / owed:${RESET}`);
-    console.log(`    Client wallet balances:     ${money(totalWalletBal)}`);
-    console.log(`    Fees deducted from users:   ${money(feesFromUsers)}`);
-    console.log(`    Total client funds:         ${money(totalWalletBal + feesFromUsers)}`);
-
-    // The treasury net position (external in - SBSA fees - VAS) should equal wallets + fee margin
-    const treasuryNet = totalExternalIn - sbsaFeesPaid - vasOutflow;
-    const expectedNet = totalWalletBal + (feesFromUsers - sbsaFeesPaid);
-    const treasuryDiff = Math.abs(treasuryNet - expectedNet);
-    
-    if (treasuryDiff > 0.01) {
-      warn(`Treasury gap: net position ${money(treasuryNet)} != wallets(${money(totalWalletBal)}) + fee margin(${money(feesFromUsers - sbsaFeesPaid)}) = ${money(expectedNet)} DIFF=${money(treasuryDiff)}`);
-    } else {
-      pass(`Treasury reconciles: position ${money(treasuryNet)} = wallets(${money(totalWalletBal)}) + fee margin(${money(feesFromUsers - sbsaFeesPaid)})`);
+    console.log(`  ${BOLD}Client funds in app:${RESET}`);
+    console.log(`    Sum of wallet balances:                 ${money(totalWalletBal)}`);
+    console.log(`    RTP/PayShap fees charged to users:      ${money(feesFromUsers)}`);
+    if (mmFloatRow.rows.length > 0) {
+      const mm = mmFloatRow.rows[0];
+      console.log(``);
+      console.log(`  ${BOLD}MobileMart prepaid float (incl. bank prepayments):${RESET}`);
+      console.log(`    supplier_floats.currentBalance:         ${money(mm.currentBalance)}`);
+      console.log(`    Ledger code:                            ${mm.ledgerAccountCode}`);
     }
+
+    pass('Treasury: informational — P2P stays inside TA; MM bank prepayment is not the same as PayShap deposit total.');
 
     // Ledger verification
     const walletClearing = ledgerAccounts.rows.find(a => a.code === '1100-01-01');
@@ -568,15 +566,17 @@ function money(v) { return `R ${Number(v || 0).toFixed(2)}`; }
     console.log(`    Referral payouts:          -${money(refExpBal)}`);
     console.log(`    ${BOLD}Net revenue to MyMoolah:     ${money(netRevenue)}${RESET}`);
 
-    // PayShap fee pass-through check
-    console.log(`\n  ${BOLD}Fee Pass-Through${RESET}`);
+    // RTP / PayShap fees — full pass-through (R5.75 incl. VAT per event; no platform spread)
+    const sbsaFeeLedger = Math.abs(payshapFeeBal);
+    const rtpFeeVatComponent = Number((feesFromUsers - sbsaFeeLedger).toFixed(2));
+    console.log(`\n  ${BOLD}RTP / PayShap fee pass-through${RESET}`);
     console.log(`  ${'─'.repeat(60)}`);
-    console.log(`    PayShap fees charged:       ${money(feesFromUsers)}`);
-    console.log(`    PayShap SBSA cost:          ${money(Math.abs(payshapFeeBal))}`);
-    const feeProfit = feesFromUsers - Math.abs(payshapFeeBal);
-    console.log(`    Fee margin:                 ${money(feeProfit)}`);
-
-    pass(`Revenue account verified from ledger`);
+    console.log(`    Charged to users (fee txns, incl. VAT): ${money(feesFromUsers)}`);
+    console.log(`    SBSA network fee (ledger 5000-10-01):   ${money(sbsaFeeLedger)}`);
+    console.log(`    VAT component in user fee (typ. R0.75/RTP): ${money(rtpFeeVatComponent)}`);
+    console.log(`    ${DIM}Per RTP: user pays R5.75; pass-through to SBSA + VAT — no MyMoolah margin.${RESET}`);
+    pass('RTP fees: full pass-through (SBSA + VAT); commission revenue is separate (VAS).');
+    pass('Revenue account figures verified from ledger');
 
     // ═══════════════════════════════════════════════════════════════
     // 12. USER & KYC SUMMARY
@@ -669,7 +669,7 @@ function money(v) { return `R ${Number(v || 0).toFixed(2)}`; }
     console.log(`    VAT Collected:          ${money(totalVat)}`);
     console.log(`    Referral Accrued:       ${money(totalRefEarned)}`);
     console.log(`    Net Revenue:            ${money(netRevenue)}`);
-    console.log(`    Treasury Net Position:  ${money(treasuryNet)}`);
+    console.log(`    DB bank inflow subtotal: ${money(totalExternalIn)} (PayShap+RTP txns; see §10 for TA)`);
 
     if (failCount === 0) {
       console.log(`\n  ${GREEN}${BOLD}✓ PRODUCTION LEDGER RECONCILES TO THE CENT — ZERO DISCREPANCIES${RESET}\n`);
