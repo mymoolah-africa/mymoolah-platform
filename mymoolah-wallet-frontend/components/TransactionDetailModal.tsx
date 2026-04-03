@@ -43,9 +43,16 @@ export function TransactionDetailModal({ isOpen, onClose, transaction }: Transac
                              transaction.metadata?.operationType === 'eezi_airtime_token' ||
                              transaction.description?.toLowerCase().includes('eeziairtime');
 
+  const isEeziPowerToken = transaction.metadata?.isEeziPowerToken === true ||
+                           transaction.metadata?.operationType === 'eezi_power_token' ||
+                           transaction.description?.toLowerCase().includes('eezipower');
+
+  const isEeziToken = isEeziAirtimeToken || isEeziPowerToken;
+  const eeziTokenLabel = isEeziPowerToken ? 'eeziPower' : 'eeziAirtime';
+
   const handleCopyToken = () => {
     let tokenToCopy: string | undefined;
-    if (isEeziAirtimeToken && transaction.metadata?.pin) {
+    if (isEeziToken && transaction.metadata?.pin) {
       tokenToCopy = `*130*3621*3*${transaction.metadata.pin.replace(/\D/g, '')}#`;
     } else {
       tokenToCopy = transaction.metadata?.electricityToken || transaction.metadata?.pin;
@@ -370,14 +377,14 @@ export function TransactionDetailModal({ isOpen, onClose, transaction }: Transac
             </>
           )}
 
-          {/* eeziAirtime Token PIN (if available) */}
-          {isEeziAirtimeToken && transaction.metadata?.pin && (
+          {/* eeziAirtime / eeziPower Token PIN (if available) */}
+          {isEeziToken && transaction.metadata?.pin && (
             <>
               <div style={{
                 padding: '1rem',
-                backgroundColor: '#f0fdf4',
+                backgroundColor: isEeziPowerToken ? '#fffbeb' : '#f0fdf4',
                 borderRadius: '12px',
-                border: '2px dashed #86BE41'
+                border: `2px dashed ${isEeziPowerToken ? '#f59e0b' : '#86BE41'}`
               }}>
                 <div style={{ textAlign: 'center' }}>
                   <p style={{
@@ -386,7 +393,7 @@ export function TransactionDetailModal({ isOpen, onClose, transaction }: Transac
                     color: '#6b7280',
                     marginBottom: '8px'
                   }}>
-                    Your eeziAirtime PIN
+                    Your {eeziTokenLabel} PIN
                   </p>
                   <p style={{
                     fontFamily: 'Monaco, Courier, monospace',
@@ -405,7 +412,9 @@ export function TransactionDetailModal({ isOpen, onClose, transaction }: Transac
                     marginBottom: '1rem',
                     lineHeight: 1.4
                   }}>
-                    Dial *130*3621*3*[PIN]# from the phone you want to top up. From the on-screen menu, choose airtime or a data bundle.
+                    {isEeziPowerToken
+                      ? 'Use this PIN to load prepaid electricity on any supported meter.'
+                      : 'Dial *130*3621*3*[PIN]# from the phone you want to top up. From the on-screen menu, choose airtime or a data bundle.'}
                   </p>
                   <Button
                     onClick={handleCopyToken}
@@ -419,8 +428,8 @@ export function TransactionDetailModal({ isOpen, onClose, transaction }: Transac
                       borderRadius: '12px',
                       width: '100%',
                       backgroundColor: '#ffffff',
-                      border: '2px solid #86BE41',
-                      color: '#16a34a'
+                      border: `2px solid ${isEeziPowerToken ? '#f59e0b' : '#86BE41'}`,
+                      color: isEeziPowerToken ? '#d97706' : '#16a34a'
                     }}
                   >
                     <Copy style={{ width: '16px', height: '16px', marginRight: '8px' }} />

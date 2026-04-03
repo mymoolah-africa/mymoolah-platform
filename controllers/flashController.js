@@ -1616,19 +1616,23 @@ class FlashController {
             }
 
             // ── VAS records ──
+            const eeziLabel = isEeziPower ? 'eeziPower' : 'eeziAirtime';
+            const eeziSupplierProductId = isEeziPower ? 'FLASH_EEZI_POWER_TOKEN' : 'FLASH_EEZI_AIRTIME_TOKEN';
+            const eeziVasType = isEeziPower ? 'electricity' : 'airtime';
+
             const [vasProduct] = await VasProduct.findOrCreate({
-                where: { supplierId: 'FLASH', supplierProductId: 'FLASH_EEZI_AIRTIME_TOKEN' },
+                where: { supplierId: 'FLASH', supplierProductId: eeziSupplierProductId },
                 defaults: {
                     supplierId: 'FLASH',
-                    supplierProductId: 'FLASH_EEZI_AIRTIME_TOKEN',
-                    productName: 'eeziAirtime Token',
-                    vasType: 'airtime',
+                    supplierProductId: eeziSupplierProductId,
+                    productName: `${eeziLabel} Token`,
+                    vasType: eeziVasType,
                     transactionType: 'voucher',
                     provider: 'Flash',
                     networkType: 'local',
                     predefinedAmounts: null,
-                    minAmount: 200,
-                    maxAmount: 99900,
+                    minAmount: isEeziPower ? 2000 : 200,
+                    maxAmount: isEeziPower ? 100000 : 99900,
                     commission: commissionRatePct || 0,
                     fixedFee: 0,
                     isPromotional: false,
@@ -1643,10 +1647,10 @@ class FlashController {
                 userId: req.user.id,
                 walletId: wallet.walletId,
                 vasProductId: vasProduct.id,
-                vasType: 'airtime',
+                vasType: eeziVasType,
                 transactionType: 'voucher',
                 supplierId: 'FLASH',
-                supplierProductId: 'FLASH_EEZI_AIRTIME_TOKEN',
+                supplierProductId: eeziSupplierProductId,
                 amount: faceValueCents,
                 fee: 0,
                 totalAmount: totalChargeCents,
@@ -1678,10 +1682,10 @@ class FlashController {
             try {
                 await ledgerService.postJournalEntry({
                     reference: `EEZI-${reference}`,
-                    description: `eeziAirtime R${faceValueRand} (Flash eezi-voucher)`,
+                    description: `${eeziLabel} R${faceValueRand} (Flash eezi-voucher)`,
                     lines: [
-                        { accountCode: LEDGER_ACCOUNT_CLIENT_FLOAT, dc: 'debit', amount: faceValueRand, memo: 'User wallet debit (eeziAirtime)' },
-                        { accountCode: LEDGER_ACCOUNT_FLASH_FLOAT, dc: 'credit', amount: faceValueRand, memo: 'Flash float consumed (eezi-voucher)' }
+                        { accountCode: LEDGER_ACCOUNT_CLIENT_FLOAT, dc: 'debit', amount: faceValueRand, memo: `User wallet debit (${eeziLabel})` },
+                        { accountCode: LEDGER_ACCOUNT_FLASH_FLOAT, dc: 'credit', amount: faceValueRand, memo: `Flash float consumed (${eeziLabel})` }
                     ]
                 });
                 // Sync SupplierFloat (operational balance) with ledger
@@ -1702,18 +1706,19 @@ class FlashController {
                 amount: -(faceValueCents / 100),
                 type: 'payment',
                 status: 'completed',
-                description: `eeziAirtime R${(faceValueCents / 100).toFixed(0)} Token`,
+                description: `${eeziLabel} R${(faceValueCents / 100).toFixed(0)} Token`,
                 currency: wallet.currency,
                 fee: 0,
                 metadata: {
                     vasTransactionId: vasTransaction.id,
-                    vasType: 'airtime',
+                    vasType: eeziVasType,
                     pin: eeziPin,
                     reference: reference,
                     supplierCode: 'FLASH',
-                    operationType: 'eezi_airtime_token',
+                    operationType: isEeziPower ? 'eezi_power_token' : 'eezi_airtime_token',
                     grossAmount: faceValueCents / 100,
-                    isEeziAirtimeToken: true
+                    isEeziAirtimeToken: !isEeziPower,
+                    isEeziPowerToken: isEeziPower
                 }
             });
 
