@@ -1,5 +1,27 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-03 - Referral System Banking-Grade Fix
+
+### Stable Referral Codes (Critical)
+- **`migrations/20260403_01_add_referral_code_to_users.js`** — Added `referral_code` column (unique, indexed) to `users` table. Each user gets a stable code generated once on first access, persisted forever.
+- **`services/referralService.js`** — Rewrote `generateReferralCode()`: returns existing `users.referral_code` if present, otherwise generates and persists `REF-XXXXXX`. Rewrote `processSignup()`: dual-path matching — first checks `referrals` table (SMS invite flow), then `users.referral_code` (copy/share flow). Fixed `sendReferralInvite()`: SMS contains stable user code, invite row gets derived unique code.
+- **`controllers/referralController.js`** — Dashboard uses `Promise.all()` for parallel data fetching. Share URL corrected to `wallet.mymoolah.africa/register`. All error responses hardened (no `error.message` leaking).
+- **`services/ussdMenuService.js`** — Fixed `handleReferralCode()`: was querying non-existent `referral_codes` table, now queries `users.referral_code`.
+- **`mymoolah-wallet-frontend/services/apiService.ts`** — Removed dead `getReferralCode()` method that called non-existent `/referrals/code` endpoint.
+- **`models/User.js`** — Added `referral_code` field definition.
+
+### Previous Issue
+- Referral code changed on every page load (generated randomly, never saved)
+- Codes shared via copy button could not be used for signup (not in DB)
+- USSD referral code lookup always failed (queried non-existent table)
+- Error responses leaked `error.message` internals
+
+### Requires
+- Migration: `./scripts/run-migrations-master.sh [uat|staging|production]`
+- Backend redeployment
+
+---
+
 ## 2026-04-02 - RTP Discovery Bank Reconciliation & CdtrRefInf.Ref Fix
 
 ### RTP Pain.013 Remittance Reference Fix (Critical)

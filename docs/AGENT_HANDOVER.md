@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-02 15:30  
-**Latest Feature**: **RTP Discovery Bank Reconciliation & CdtrRefInf.Ref Fix** — Live R10 RTP to Discovery Bank reconciled across all ledgers (wallet R4.25, SBSA fee R5.75 = R5.00 ex-VAT + R0.75 VAT, journal balanced DR=CR=R10.00). Fixed critical bug: `CdtrRefInf.Ref` in Pain.013 was using user-provided description text instead of creditor's MSISDN from DB. Now always uses `"{CreditorName}: {creditorPhoneNumber}"` sourced from `users.phoneNumber`, ensuring deposit notification service can auto-match inbound credits to the correct wallet. Applied to both `initiateRtpRequest` and `retryRtpAsPbac` paths. Wallet: R554.25, Commission revenue: R6.50, VAT payable: R1.60.  
-**Document Version**: 2.68.0  
-**Session logs**: `docs/session_logs/2026-04-02_1530_rtp-discovery-bank-reconciliation-reference-fix.md`  
+**Last Updated**: 2026-04-03 09:00  
+**Latest Feature**: **Referral System Banking-Grade Fix** — Referral codes were ephemeral (new random code on every page load, never saved). Fixed: `users.referral_code` column added (migration `20260403_01`), code generated once and persisted forever. `processSignup()` now accepts both SMS invite codes and stable user codes. USSD referral code lookup fixed (queried non-existent table). Dead frontend code removed. Error responses hardened. Requires migration + redeployment.  
+**Document Version**: 2.69.0  
+**Session logs**: `docs/session_logs/2026-04-03_0900_referral-system-banking-grade-fix.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -100,7 +100,10 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (April 2, 2026 - 15:30)**
+### **Latest Achievement (April 3, 2026 - 09:00)**
+**Referral System Banking-Grade Fix** — Complete audit and fix of referral system. Core bug: `generateReferralCode()` generated new random code on every call, never persisting it. Codes displayed on Referral page changed every refresh; copied codes couldn't be used for signup. Fixed: added `referral_code` column to `users` table (migration `20260403_01`), code generated once and reused forever. `processSignup()` now dual-path: matches SMS invite codes first, then stable user codes. USSD `handleReferralCode()` fixed (queried non-existent `referral_codes` table). Dead `getReferralCode()` removed from frontend apiService. Controller dashboard parallelized with `Promise.all()`. All error responses hardened (no `error.message` leak). Share URL corrected to `wallet.mymoolah.africa/register`. Zero linter errors. **Requires migration + redeployment.** Session log: `docs/session_logs/2026-04-03_0900_referral-system-banking-grade-fix.md`.
+
+### **Previous Achievement (April 2, 2026 - 15:30)**
 **RTP Discovery Bank Reconciliation & CdtrRefInf.Ref Fix** — (1) Live R10 RTP to Discovery Bank reconciled across all production ledgers: wallet credited R4.25 (R10 - R5.75 fee), SBSA fee correctly split (R5.00 ex-VAT + R0.75 VAT), journal entry #5 balanced (DR R10.00 = CR R10.00), tax transaction recorded as pass-through (net VAT R0). (2) Fixed critical `CdtrRefInf.Ref` bug: Pain.013 remittance info was using user-provided `description`/`reference` text instead of creditor's MSISDN from DB. This would break wallet auto-crediting via the deposit notification service. Now always uses `"{CreditorName}: {creditorPhoneNumber}"` from `users.phoneNumber`. Applied to both `initiateRtpRequest()` and `retryRtpAsPbac()`. User description preserved in RTP metadata as `userDescription`. **Requires redeployment.** Session log: `docs/session_logs/2026-04-02_1530_rtp-discovery-bank-reconciliation-reference-fix.md`.
 
 ### **Previous Achievement (April 1, 2026 - 18:50)**
