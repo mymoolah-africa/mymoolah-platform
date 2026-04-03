@@ -172,6 +172,12 @@ module.exports = (sequelize, DataTypes) => {
         max: 2,
       },
     },
+    referral_code: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+      unique: true,
+      comment: 'Stable referral code for this user (REF-XXXXXX)',
+    },
     createdAt: {
       type: DataTypes.DATE,
       allowNull: false,

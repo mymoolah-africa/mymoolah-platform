@@ -18,46 +18,46 @@ const crypto = require('crypto');
 const { Referral, ReferralChain, User, UserReferralStats } = require('../models');
 const { Op } = require('sequelize');
 
-// Fraud prevention limits
 const LIMITS = {
   maxReferralsPerDay: 10,
   maxReferralsPerMonth: 100,
   minAccountAgeDays: 30,
-  minTransactionHistoryCents: 10000 // R100
+  minTransactionHistoryCents: 10000
 };
 
 class ReferralService {
   /**
-   * Generate unique referral code for user
-   * Format: REF-XXXXXX (6 random uppercase alphanumeric)
+   * Get or create a stable referral code for a user.
+   * Persisted on users.referral_code — generated once, reused forever.
+   * Format: REF-XXXXXX (6 hex chars, uppercase)
    */
   async generateReferralCode(userId) {
-    // Check if user already has a code
-    const existing = await Referral.findOne({
-      where: { referrerUserId: userId },
-      order: [['created_at', 'DESC']]
+    const user = await User.findByPk(userId, {
+      attributes: ['id', 'referral_code']
     });
-    
-    // Generate unique code
+    if (!user) throw new Error('User not found');
+
+    if (user.referral_code) return user.referral_code;
+
     let code;
     let attempts = 0;
     const maxAttempts = 10;
-    
+
     while (attempts < maxAttempts) {
       const randomPart = crypto.randomBytes(3).toString('hex').toUpperCase().substring(0, 6);
       code = `REF-${randomPart}`;
-      
-      // Check uniqueness
-      const exists = await Referral.findOne({ where: { referralCode: code } });
-      if (!exists) break;
-      
+
+      const duplicate = await User.findOne({ where: { referral_code: code } });
+      if (!duplicate) break;
+
       attempts++;
     }
-    
+
     if (attempts >= maxAttempts) {
       throw new Error('Failed to generate unique referral code');
     }
-    
+
+    await user.update({ referral_code: code });
     return code;
   }
 
@@ -88,94 +88,114 @@ class ReferralService {
       }
     }
     
-    // 3. Generate referral code
-    const code = await this.generateReferralCode(userId);
-    
-    // 4. Create referral record
+    // 3. Get user's stable referral code
+    const userCode = await this.generateReferralCode(userId);
+
+    // 4. Create invite-specific code derived from the stable code
+    const inviteCode = `${userCode}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
+
+    // 5. Create referral record
     const referral = await Referral.create({
       referrerUserId: userId,
-      referralCode: code,
+      referralCode: inviteCode,
       refereePhoneNumber: phoneNumber,
       status: 'pending',
       invitedAt: new Date(),
       invitationChannel: 'sms',
-      signupBonusAmount: 50.00 // R50 signup bonus
+      signupBonusAmount: 50.00
     });
     
-    // 5. Send SMS via MyMobileAPI
+    // 6. Send SMS with the user's stable code (not the invite-specific one)
     try {
       const smsService = require('./smsService');
       if (smsService.isConfigured()) {
-        // Get referrer's name for personalization
         const referrer = await User.findByPk(userId, {
           attributes: ['firstName', 'lastName']
         });
-        const referrerName = referrer 
-          ? `${referrer.firstName} ${referrer.lastName}`.trim() 
+        const referrerName = referrer
+          ? `${referrer.firstName} ${referrer.lastName}`.trim()
           : 'A friend';
-        
-        await smsService.sendReferralInvite(referrerName, phoneNumber, code, language);
+
+        await smsService.sendReferralInvite(referrerName, phoneNumber, userCode, language);
         await referral.update({ smsSentAt: new Date() });
-        console.log(`✅ Referral SMS sent to ${phoneNumber}`);
+        console.log(`[referral] SMS sent to ${phoneNumber.substring(0, 6)}***`);
       } else {
-        console.warn('⚠️ SMS service not configured - referral invitation not sent');
+        console.warn('[referral] SMS service not configured');
       }
     } catch (smsError) {
-      console.error('⚠️ Failed to send referral SMS:', smsError.message);
-      // Don't fail referral creation if SMS fails
+      console.error('[referral] SMS send failed:', smsError.message);
     }
-    
-    // 6. Update user stats
+
+    // 7. Update user stats
     await this.incrementReferralCount(userId);
-    
+
     return {
       success: true,
-      referralCode: code,
+      referralCode: userCode,
       referralId: referral.id,
       message: 'Referral invitation will be sent via SMS'
     };
   }
 
   /**
-   * Process signup with referral code
-   * Called during user registration
+   * Process signup with referral code.
+   * Matches against: (1) pending invite rows in `referrals`, then
+   * (2) stable user code on `users.referral_code`.
    */
   async processSignup(referralCode, newUserId) {
     if (!referralCode) return null;
-    
-    // Find referral
-    const referral = await Referral.findOne({
-      where: {
-        referralCode: referralCode.toUpperCase(),
-        status: 'pending'
-      }
+
+    const code = referralCode.toUpperCase().trim();
+
+    // Path 1: match a pending invite row (SMS invite flow)
+    const invite = await Referral.findOne({
+      where: { referralCode: code, status: 'pending' }
     });
-    
-    if (!referral) {
-      console.warn(`Invalid or expired referral code: ${referralCode}`);
+
+    if (invite) {
+      await invite.update({
+        refereeUserId: newUserId,
+        status: 'signed_up',
+        signedUpAt: new Date()
+      });
+      await this.buildReferralChain(newUserId, invite.referrerUserId);
+      console.log(`[referral] signup via invite: ${code} -> User ${newUserId}`);
+      return { success: true, referral: invite, bonusAmount: invite.signupBonusAmount };
+    }
+
+    // Path 2: match a user's stable referral code (copy/share flow)
+    const referrer = await User.findOne({
+      where: { referral_code: code },
+      attributes: ['id']
+    });
+
+    if (!referrer) {
+      console.warn(`[referral] invalid code: ${code}`);
       return null;
     }
-    
-    // Update referral with new user
-    await referral.update({
+
+    if (referrer.id === newUserId) {
+      console.warn(`[referral] self-referral blocked: ${code}`);
+      return null;
+    }
+
+    const referral = await Referral.create({
+      referrerUserId: referrer.id,
       refereeUserId: newUserId,
+      referralCode: `${code}-SIGNUP-${newUserId}`,
+      refereePhoneNumber: 'via-code',
       status: 'signed_up',
-      signedUpAt: new Date()
+      invitedAt: new Date(),
+      signedUpAt: new Date(),
+      invitationChannel: 'referral_code',
+      signupBonusAmount: 50.00
     });
-    
-    // Build referral chain for new user
-    await this.buildReferralChain(newUserId, referral.referrerUserId);
-    
-    // Pay signup bonus (optional - can be done after first transaction instead)
-    // await this.paySignupBonus(referral);
-    
-    console.log(`✅ Referral signup processed: ${referralCode} → User ${newUserId}`);
-    
-    return {
-      success: true,
-      referral: referral,
-      bonusAmount: referral.signupBonusAmount
-    };
+
+    await this.buildReferralChain(newUserId, referrer.id);
+    await this.incrementReferralCount(referrer.id);
+
+    console.log(`[referral] signup via stable code: ${code} -> User ${newUserId} (referrer ${referrer.id})`);
+    return { success: true, referral, bonusAmount: referral.signupBonusAmount };
   }
 
   /**

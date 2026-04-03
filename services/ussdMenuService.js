@@ -479,13 +479,13 @@ async function handleChangePinConfirm(session, input) {
 async function handleReferralCode(session) {
   try {
     const [rows] = await sequelize.query(
-      `SELECT code FROM referral_codes WHERE "userId" = $1 AND active = true LIMIT 1`,
+      `SELECT referral_code FROM users WHERE id = $1 LIMIT 1`,
       { bind: [session.data.userId] }
     );
-    if (rows.length) {
-      return endSession(`Your referral code:\n${rows[0].code}\nShare it to earn rewards!`);
+    if (rows.length && rows[0].referral_code) {
+      return endSession(`Your referral code:\n${rows[0].referral_code}\nShare it to earn rewards!`);
     }
-    return endSession('No referral code found.\nUse the app to get one.');
+    return endSession('No referral code yet.\nOpen the app to get one.');
   } catch {
     return endSession('Referral service unavailable.');
   }

@@ -20,18 +20,14 @@ class ReferralController {
   async getDashboard(req, res) {
     try {
       const userId = req.user.id;
-      
-      // Get referral code
-      const code = await referralService.generateReferralCode(userId);
-      
-      // Get stats
-      const stats = await referralService.getUserStats(userId);
-      
-      // Get pending earnings
-      const pending = await referralPayoutService.getPendingEarnings(userId);
-      
-      // Get recent earnings (last 10)
-      const earnings = await referralEarningsService.getMonthEarnings(userId);
+
+      const [code, stats, pending, earnings] = await Promise.all([
+        referralService.generateReferralCode(userId),
+        referralService.getUserStats(userId),
+        referralPayoutService.getPendingEarnings(userId),
+        referralEarningsService.getMonthEarnings(userId)
+      ]);
+
       const recentEarnings = earnings.earnings.slice(0, 10).map(e => ({
         id: e.id,
         amount: e.earnedAmountCents / 100,
@@ -40,11 +36,11 @@ class ReferralController {
         createdAt: e.createdAt,
         status: e.status
       }));
-      
+
       res.json({
         success: true,
         referralCode: code,
-        shareUrl: `https://app.mymoolah.africa/signup?ref=${code}`,
+        shareUrl: `https://wallet.mymoolah.africa/register?ref=${code}`,
         stats: {
           totalReferrals: stats.totalReferrals || 0,
           activeReferrals: stats.activeReferrals || 0,
@@ -61,11 +57,10 @@ class ReferralController {
         recentEarnings
       });
     } catch (error) {
-      console.error('Error getting referral dashboard:', error);
+      console.error('[referral] dashboard error:', error.message);
       res.status(500).json({
         success: false,
-        error: 'Failed to get referral dashboard',
-        message: error.message
+        error: 'Failed to load referral dashboard'
       });
     }
   }
@@ -78,18 +73,17 @@ class ReferralController {
     try {
       const userId = req.user.id;
       const code = await referralService.generateReferralCode(userId);
-      
+
       res.json({
         success: true,
         referralCode: code,
-        signupUrl: `https://app.mymoolah.africa/signup?ref=${code}`
+        signupUrl: `https://wallet.mymoolah.africa/register?ref=${code}`
       });
     } catch (error) {
-      console.error('Error getting referral code:', error);
+      console.error('[referral] code error:', error.message);
       res.status(500).json({
         success: false,
-        error: 'Failed to get referral code',
-        message: error.message
+        error: 'Failed to get referral code'
       });
     }
   }
@@ -253,11 +247,10 @@ class ReferralController {
         }
       });
     } catch (error) {
-      console.error('Error getting referral stats:', error);
+      console.error('[referral] stats error:', error.message);
       res.status(500).json({
         success: false,
-        error: 'Failed to get referral stats',
-        message: error.message
+        error: 'Failed to get referral stats'
       });
     }
   }
@@ -290,11 +283,10 @@ class ReferralController {
         count: earnings.count
       });
     } catch (error) {
-      console.error('Error getting referral earnings:', error);
+      console.error('[referral] earnings error:', error.message);
       res.status(500).json({
         success: false,
-        error: 'Failed to get referral earnings',
-        message: error.message
+        error: 'Failed to get referral earnings'
       });
     }
   }
@@ -332,11 +324,10 @@ class ReferralController {
         }
       });
     } catch (error) {
-      console.error('Error getting referral network:', error);
+      console.error('[referral] network error:', error.message);
       res.status(500).json({
         success: false,
-        error: 'Failed to get referral network',
-        message: error.message
+        error: 'Failed to get referral network'
       });
     }
   }
@@ -365,11 +356,10 @@ class ReferralController {
         }))
       });
     } catch (error) {
-      console.error('Error getting pending earnings:', error);
+      console.error('[referral] pending error:', error.message);
       res.status(500).json({
         success: false,
-        error: 'Failed to get pending earnings',
-        message: error.message
+        error: 'Failed to get pending earnings'
       });
     }
   }

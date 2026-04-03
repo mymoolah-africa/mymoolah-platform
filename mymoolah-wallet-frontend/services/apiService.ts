@@ -1003,17 +1003,6 @@ class ApiService {
   }
 
   /**
-   * Get user's referral code
-   */
-  async getReferralCode(): Promise<{ referralCode: string; shareUrl: string }> {
-    const response = await this.request<{
-      referralCode: string;
-      shareUrl: string;
-    }>('/api/v1/referrals/code');
-    return response.data!;
-  }
-
-  /**
    * Get user's referral network (referrals by level)
    */
   async getReferralNetwork(): Promise<ReferralNetwork> {
