@@ -1,5 +1,42 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-03 - VAS Catalog Production Deployment, Biller Telecoms Fix, eeziPower Label Fix
+
+### VAS Catalog Simplification → Production
+- **`migrations/20260403_02_create_product_selection_rules.js`** — Applied to production. 60 rules seeded (8 price brackets x 7 data product types + airtime/electricity/voucher/bill_payment).
+- **`migrations/20260403_03_create_v_best_offers_view.js`** — Applied to production. Materialized view with 197 rows. Auto-refreshes after each catalog sweep.
+- Both staging and production now use the unified `productCatalogService.getCatalog()` → `v_best_offers` view architecture.
+
+### Telecoms Biller Category Fix
+- **`routes/overlayServices.js`** — Added `'telcos'` to `BILLER_CATEGORY_MAP.telecoms` keyword list. MobileMart's `mobilemart_content_creator: "telcos"` was not matched, causing 35 telecoms billers (Telkom, Cell C, Virgin Mobile, VUMA, Herotel) to appear under "Other" instead of "Telecoms".
+
+### eeziPower Label Fix (Backend + Frontend)
+- **`controllers/flashController.js`** — eeziPower purchases were hardcoded as "eeziAirtime". Now uses `isEeziPower` flag to set correct labels:
+  - `vasType`: `'electricity'` (was `'airtime'`)
+  - `supplierProductId`: `'FLASH_EEZI_POWER_TOKEN'` (was `'FLASH_EEZI_AIRTIME_TOKEN'`)
+  - `description`: `'eeziPower R20 Token'` (was `'eeziAirtime R20 Token'`)
+  - `operationType`: `'eezi_power_token'` (was `'eezi_airtime_token'`)
+  - Ledger memos use correct product name
+- **`mymoolah-wallet-frontend/components/TransactionDetailModal.tsx`** — Detects eeziPower tokens via `metadata.isEeziPowerToken` or `operationType`. Shows "Your eeziPower PIN" with amber styling and electricity redemption instructions (vs green/USSD for eeziAirtime).
+
+### Requires
+- Backend redeployment (both staging and production)
+- Wallet frontend rebuild and redeployment
+
+---
+
+## 2026-04-03 - VAS Catalog Simplification (Staging)
+
+### Architecture Change
+- Replaced 6 services, 2 standalone scripts, 3 cron schedules, and 3,400+ lines with:
+  - `v_best_offers` materialized view (single SQL source of truth)
+  - `product_selection_rules` table (configurable bracket x type matrix)
+  - `config/supplier-commissions.json` (externalized commission rates)
+  - `productCatalogService.getCatalog()` (unified entry point)
+- Deprecated (not deleted): `bestOfferService.js`, `catalogDisplayPolicy.js`, `productComparisonService.js`, `supplierPricingService.js`, `scripts/refresh-vas-best-offers.js`, `scripts/mark-featured-data-products.js`
+
+---
+
 ## 2026-04-03 - Referral System Banking-Grade Fix
 
 ### Stable Referral Codes (Critical)

@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-03 14:00  
-**Latest Feature**: **VAS Catalog Simplification (Staging)** — Replaced 8+ tables, 6 services, 2 scripts, 3,400+ lines of catalog pipeline with a single materialized view (`v_best_offers`), `product_selection_rules` table, externalized commission config (`config/supplier-commissions.json`), and unified `productCatalogService.js`. Staging only — production unchanged. 34/34 regression tests passed. Requires backend restart on staging Codespaces to activate new code paths.  
-**Document Version**: 2.70.0  
-**Session logs**: `docs/session_logs/2026-04-03_1400_vas-catalog-simplification.md`  
+**Last Updated**: 2026-04-03 15:00  
+**Latest Feature**: **VAS Catalog Simplification (Staging + Production)** — Replaced 8+ tables, 6 services, 2 scripts, 3,400+ lines of catalog pipeline with a single materialized view (`v_best_offers`), `product_selection_rules` table, externalized commission config (`config/supplier-commissions.json`), and unified `productCatalogService.js`. Applied to both staging and production. Also fixed: Telecoms biller category empty (added `'telcos'` keyword), eeziPower mislabelled as eeziAirtime (backend + frontend). Requires backend + wallet redeployment.  
+**Document Version**: 2.71.0  
+**Session logs**: `docs/session_logs/2026-04-03_1500_vas-catalog-production-biller-eezipower-fix.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -100,7 +100,10 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (April 3, 2026 - 09:00)**
+### **Latest Achievement (April 3, 2026 - 15:00)**
+**VAS Catalog Simplification (Staging + Production) + Biller Telecoms Fix + eeziPower Label Fix** — (1) Applied VAS Catalog Simplification to production: ran migrations `20260403_02` (product_selection_rules, 60 rules) and `20260403_03` (v_best_offers materialized view, 197 rows). 8/9 regression tests passed. (2) Fixed empty Telecoms biller category: MobileMart's `mobilemart_content_creator: "telcos"` wasn't in `BILLER_CATEGORY_MAP` — added keyword, unlocking 35 telecoms billers. (3) Fixed eeziPower purchases mislabelled as "eeziAirtime": backend now uses correct labels/vasType/metadata per `isEeziPower` flag; frontend `TransactionDetailModal` shows "Your eeziPower PIN" with amber styling and electricity instructions. Session logs: `docs/session_logs/2026-04-03_1500_vas-catalog-production-biller-eezipower-fix.md`, `docs/session_logs/2026-04-03_1400_vas-catalog-simplification.md`.
+
+### **Previous Achievement (April 3, 2026 - 09:00)**
 **Referral System Banking-Grade Fix** — Complete audit and fix of referral system. Core bug: `generateReferralCode()` generated new random code on every call, never persisting it. Codes displayed on Referral page changed every refresh; copied codes couldn't be used for signup. Fixed: added `referral_code` column to `users` table (migration `20260403_01`), code generated once and reused forever. `processSignup()` now dual-path: matches SMS invite codes first, then stable user codes. USSD `handleReferralCode()` fixed (queried non-existent `referral_codes` table). Dead `getReferralCode()` removed from frontend apiService. Controller dashboard parallelized with `Promise.all()`. All error responses hardened (no `error.message` leak). Share URL corrected to `wallet.mymoolah.africa/register`. Zero linter errors. **Requires migration + redeployment.** Session log: `docs/session_logs/2026-04-03_0900_referral-system-banking-grade-fix.md`.
 
 ### **Previous Achievement (April 2, 2026 - 15:30)**
@@ -676,16 +679,14 @@ You're part of a **banking-grade software system** where:
 
 ## 🎯 **CURRENT SESSION SUMMARY**
 
-**Session Status**: ✅ **COMPLETE** — RTP Discovery Bank Reconciliation & CdtrRefInf.Ref Fix  
-**Last Session**: 2026-04-02 15:30 — Live RTP reconciliation and remittance reference fix
+**Session Status**: ✅ **COMPLETE** — VAS Catalog Production Deployment, Biller Telecoms Fix, eeziPower Label Fix  
+**Last Session**: 2026-04-03 15:00 — Production migrations, biller fix, eeziPower label fix
 
-### **Most Recent Work (2026-04-02 15:30)**
-- **Live RTP reconciliation**: André sent R10 RTP to Discovery Bank on production. Full double-entry ledger reconciliation performed — all amounts correctly allocated (R4.25 wallet, R5.75 fee, journal balanced).
-- **CdtrRefInf.Ref fix**: Pain.013 `remittanceInfo` was using user-provided `description`/`reference` text. Fixed to always use creditor's MSISDN from `users.phoneNumber` in DB. Critical for deposit notification service wallet auto-matching.
-- **Both code paths fixed**: `initiateRtpRequest()` and `retryRtpAsPbac()` in `standardbankRtpService.js`.
-- **Discovery Bank confirmed working**: RTP submitted, payer notified on Discovery app, approved, wallet credited. Bank code `679000` correctly resolved.
-- **Balance auto-refresh delay**: Notification created correctly with `reason: "balance_refresh"` but took ~1 minute to reflect. Minor UX issue in polling/deduplication logic.
-- **Prior RTP (ID 1) correctly rejected**: First attempt declined by André on Discovery app — no amounts posted, correct notification sent.
+### **Most Recent Work (2026-04-03 15:00)**
+- **VAS Catalog Simplification → Production**: Ran migrations `20260403_02` (product_selection_rules, 60 rules) and `20260403_03` (v_best_offers materialized view, 197 rows). Both staging and production now use the simplified catalog architecture.
+- **Telecoms biller fix**: MobileMart's bill payment API uses `mobilemart_content_creator: "telcos"` — this keyword was missing from `BILLER_CATEGORY_MAP.telecoms`. Added it, unlocking 35 telecoms billers (Telkom, Cell C, Virgin Mobile, VUMA fibre, Herotel, etc.).
+- **eeziPower label fix**: Backend `flashController.js` was hardcoding "eeziAirtime" for both eeziAirtime and eeziPower purchases. Now uses `isEeziPower` flag to set correct labels, vasType (`electricity` vs `airtime`), supplierProductId, and metadata. Frontend `TransactionDetailModal.tsx` detects eeziPower tokens and shows "Your eeziPower PIN" with amber styling and electricity redemption instructions.
+- **Regression tests**: 8/9 passed on production. The 1 expected limitation (postgres admin can't refresh mymoolah_app-owned view) is irrelevant — Cloud Run connects as mymoolah_app.
 
 ### **Previous Work (2026-04-02 13:30)**
 - **Electricity purchase fix**: Created `vas_products` table migration (`20260402_01`) and `processingTime` column migration (`20260402_02`). Reconciled R200 and R100 failed purchases. R150 electricity purchase completed end-to-end with automated commission and VAT.
@@ -735,20 +736,20 @@ You're part of a **banking-grade software system** where:
 - PayShap RTP: Standard Bank ✅ | Discovery Bank ✅ (Peach DECOMMISSIONED). Creditor MSISDN auto-resolved in CdtrRefInf.Ref ✅
 - Peach Payments: ARCHIVED (2026-03-21). See `routes/peach.js` for reactivation steps.
 - Production: `api-mm.mymoolah.africa`, `wallet.mymoolah.africa` — live
-- **Production redeploy required** — RTP CdtrRefInf.Ref fix (commit `0a990d56`)
+- **Production redeploy required** — VAS catalog simplification, Telecoms biller fix, eeziPower label fix (commits `580bcddf`, `c30213d3`, `b5e974b1`, `9e90bd63`). Migrations already applied.
 - Production wallet (User 1): R554.25 | MobileMart float: R2,200 | Flash float: R875
 - Commission revenue: R6.50 | VAT control: R1.60
 
 ### **Next Agent Actions**
 1. Read `docs/CURSOR_2.0_RULES_FINAL.md` (MANDATORY)
-2. Read this file and recent session logs (especially `2026-04-02_1530_rtp-discovery-bank-reconciliation-reference-fix.md`)
-3. **DEPLOY REQUIRED** — RTP CdtrRefInf.Ref fix (commit `0a990d56`). The fix ensures `CdtrRefInf.Ref` uses the creditor's phone number from DB, not user input. Deploy to production via `./scripts/deploy-backend.sh --production`.
-4. **Test RTP after deployment** — Send another RTP to verify the reference now contains the auto-resolved MSISDN (e.g. `"Andre Botes: 0825571055"` without manually typing the phone number).
-5. **Balance auto-refresh UX**: Investigate why the balance didn't auto-refresh for ~1 minute after RTP paid notification. The 10s polling in `MoolahContext.tsx` with `window.__processedTxnNotifIds` deduplication may skip a refresh cycle under certain timing.
-6. **Confirm 1Voucher product code with Flash** — Code `311` rejected (error 2283). Need Flash to confirm correct product code.
-7. **Continue API testing**: bill payments, eeziCash, referral system, AI support chat
-8. **Add more brand logos**: As André sources them — Steam, Netflix, Google Play, Roblox, MTN, CellC, Telkom (same Vite import pattern)
-9. **Future refactor (tech debt)**: Extract airtime/electricity/biller purchase logic from overlayServices.js into service classes (~9-13 hours, 1-2 sessions)
+2. Read this file and recent session logs (especially `2026-04-03_1500_vas-catalog-production-biller-eezipower-fix.md` and `2026-04-03_1400_vas-catalog-simplification.md`)
+3. **VAS Catalog is now live on both staging and production** — `v_best_offers` materialized view auto-refreshes after each catalog sweep. Commission config in `config/supplier-commissions.json`. Product selection rules in `product_selection_rules` table.
+4. **Deprecated files** (header comments added, not deleted): `bestOfferService.js`, `catalogDisplayPolicy.js`, `productComparisonService.js`, `supplierPricingService.js`, `scripts/refresh-vas-best-offers.js`, `scripts/mark-featured-data-products.js`. Can be deleted once production is stable.
+5. **Frontend display tech debt**: (a) Airtime success modal shows "Vodacom Airtime - R2" with redundant "- R2" suffix; (b) VAS purchases show "Money Sent" as transaction type instead of "Purchase" or similar.
+6. **Balance auto-refresh UX**: Investigate why the balance didn't auto-refresh for ~1 minute after RTP paid notification. The 10s polling in `MoolahContext.tsx` with `window.__processedTxnNotifIds` deduplication may skip a refresh cycle under certain timing.
+7. **Confirm 1Voucher product code with Flash** — Code `311` rejected (error 2283). Need Flash to confirm correct product code.
+8. **Continue API testing**: bill payments, eeziCash, referral system, AI support chat
+9. **Add more brand logos**: As André sources them — Steam, Netflix, Google Play, Roblox, MTN, CellC, Telkom (same Vite import pattern)
 10. Do NOT reactivate Peach Payments without explicit approval from André
 11. Do NOT add `RmtInf.Ustrd` to Pain.013 — SBSA rejects it
 12. npm audit: 9 remaining (5 low, 4 moderate) — all in transitive deps, cannot safely fix
@@ -760,6 +761,9 @@ You're part of a **banking-grade software system** where:
 
 | Date | Update |
 |------|--------|
+| Apr 3 (15:00) | **VAS Catalog Production + Biller Telecoms + eeziPower Fix**: Applied VAS catalog simplification migrations to production (product_selection_rules + v_best_offers view, 197 rows). Fixed empty Telecoms biller category (added `'telcos'` to keyword map, 35 billers unlocked). Fixed eeziPower mislabelled as eeziAirtime in backend records and frontend transaction modal. Session log: `docs/session_logs/2026-04-03_1500_vas-catalog-production-biller-eezipower-fix.md` |
+| Apr 3 (14:00) | **VAS Catalog Simplification (Staging)**: Replaced 6 services, 2 scripts, 3 cron schedules with single `v_best_offers` materialized view + `product_selection_rules` table + `config/supplier-commissions.json`. Unified `productCatalogService.getCatalog()` entry point. 34/34 regression tests passed. Session log: `docs/session_logs/2026-04-03_1400_vas-catalog-simplification.md` |
+| Apr 3 (09:00) | **Referral System Banking-Grade Fix**: Stable persistent referral codes, dual-path signup matching, USSD fix, dead frontend code removed. Session log: `docs/session_logs/2026-04-03_0900_referral-system-banking-grade-fix.md` |
 | Apr 2 (15:30) | **RTP Discovery Bank Reconciliation & CdtrRefInf.Ref Fix**: Live R10 RTP to Discovery Bank — full ledger reconciliation verified (wallet R4.25, fee R5.75, journal balanced R10=R10). Fixed critical `CdtrRefInf.Ref` bug: Pain.013 was using user-provided description instead of creditor's MSISDN from DB. Now auto-resolves phone from `users.phoneNumber`. Applied to `initiateRtpRequest` + `retryRtpAsPbac`. Requires redeployment. Session log: `docs/session_logs/2026-04-02_1530_rtp-discovery-bank-reconciliation-reference-fix.md` |
 | Apr 2 (13:30) | **Electricity Purchase Fix & Production Reconciliation**: Created `vas_products` table + `processingTime` column migrations. Reconciled R200 and R100 failed purchases. R150 electricity end-to-end. Wallet R550, MobileMart float R2200, Commission R6.50. Session log: `docs/session_logs/2026-04-02_1330_electricity-purchase-fix-production-reconciliation.md` |
 | Apr 1 (17:00) | **Production API Testing & Fixes (15+ issues)**: Comprehensive staging testing — registration (passport idType + walletId), KYC (rejection flow, self-healing status, POA validation with surname/address/date), password change (styled modals), payment requests (version column migration, encryption keys in deploy script), voucher purchases (errorData crash, ENUM mismatch). Migrations 20260401_01 + 20260401_02 applied to staging + production. Both environments deployed as `20260401_v1`. 1Voucher product code `311` rejected by Flash (data issue). Session log: `docs/session_logs/2026-04-01_1700_production-api-testing-fixes.md` |
