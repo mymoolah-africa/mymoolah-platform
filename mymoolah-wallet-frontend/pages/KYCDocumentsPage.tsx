@@ -36,7 +36,7 @@ interface DocumentUpload {
 }
 
 export function KYCDocumentsPage() {
-  const { user, updateKYCStatus } = useAuth();
+  const { user, updateKYCStatus, refreshUserStatus } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -212,6 +212,12 @@ export function KYCDocumentsPage() {
         } catch (statusError) {
           console.error('Failed to update KYC status in context:', statusError);
         }
+      }
+
+      if (refreshUserStatus) {
+        try {
+          await refreshUserStatus();
+        } catch (_) { /* non-critical */ }
       }
 
       navigate('/kyc/status');

@@ -137,6 +137,8 @@ export function KYCStatusPage() {
 
   const [rejectionModal, setRejectionModal] = useState<{ open: boolean; reason: string }>({ open: false, reason: '' });
   const pollBackoffRef = useRef(10_000);
+  const [statusBanner, setStatusBanner] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const prevStatusRef = useRef<KYCStatus | null>(null);
 
   const handleRefreshStatus = async () => {
     setIsRefreshing(true);
@@ -223,8 +225,14 @@ export function KYCStatusPage() {
   const stages = getStatusStages(currentStatus);
   const progressValue = getProgressValue(currentStatus);
 
+  // Fetch fresh status immediately on mount so page never relies on stale context
   useEffect(() => {
-    if (currentStatus === 'documents_uploaded' || currentStatus === 'under_review') {
+    handleRefreshStatus();
+  }, []);
+
+  // Poll while status is pending (incl. not_started to cover stale-context edge case)
+  useEffect(() => {
+    if (currentStatus === 'not_started' || currentStatus === 'documents_uploaded' || currentStatus === 'under_review') {
       let timer: ReturnType<typeof setTimeout>;
       const tick = () => {
         handleRefreshStatus();
@@ -237,6 +245,18 @@ export function KYCStatusPage() {
   }, [currentStatus]);
 
   const [initialStatus] = useState(currentStatus);
+
+  // Detect status transitions and show a banner
+  useEffect(() => {
+    if (prevStatusRef.current !== null && prevStatusRef.current !== currentStatus) {
+      if (currentStatus === 'verified') {
+        setStatusBanner({ type: 'success', message: 'Your identity has been verified successfully! Redirecting to dashboard...' });
+      } else if (currentStatus === 'rejected') {
+        setStatusBanner({ type: 'error', message: 'Verification could not be completed. Please review the feedback below.' });
+      }
+    }
+    prevStatusRef.current = currentStatus;
+  }, [currentStatus]);
 
   // When status becomes 'rejected', fetch the rejection reason and show modal
   useEffect(() => {
@@ -261,14 +281,13 @@ export function KYCStatusPage() {
     }
   }, [currentStatus]);
 
-  // Auto-navigate only when status transitions to verified during polling
-  // (not when user opens the page already verified)
+  // Auto-navigate when status transitions to verified during this session
   useEffect(() => {
     if (currentStatus === 'verified' && initialStatus !== 'verified' && refreshUserStatus) {
       refreshUserStatus().then(() => {
         setTimeout(() => {
           navigate('/dashboard');
-        }, 500);
+        }, 3000);
       });
     }
   }, [currentStatus, initialStatus, navigate, refreshUserStatus]);
@@ -285,6 +304,32 @@ export function KYCStatusPage() {
         message={rejectionModal.reason}
         type="warning"
       />
+      {/* Status transition banner */}
+      {statusBanner && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 64,
+            left: 0,
+            right: 0,
+            zIndex: 55,
+            padding: '12px 16px',
+            backgroundColor: statusBanner.type === 'success' ? '#16a34a' : '#dc2626',
+            color: '#fff',
+            textAlign: 'center',
+            fontFamily: 'Montserrat, sans-serif',
+            fontSize: '14px',
+            fontWeight: 600,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+            animation: 'slideDown 0.3s ease-out'
+          }}
+        >
+          {statusBanner.type === 'success' && <CheckCircle className="w-5 h-5 inline-block mr-2 align-text-bottom" />}
+          {statusBanner.type === 'error' && <AlertTriangle className="w-5 h-5 inline-block mr-2 align-text-bottom" />}
+          {statusBanner.message}
+        </div>
+      )}
+
       {/* Mobile Container */}
       <div className="max-w-sm mx-auto bg-gradient-to-br from-[#86BE41] to-[#2D8CCA] flex flex-col" style={{ minHeight: 'calc(100vh - 64px)' }}>
         {/* Header Section */}
@@ -808,6 +853,7 @@ export function KYCStatusPage() {
           </div>
         </div>
       </div>
+      <style>{`@keyframes slideDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }`}</style>
     </div>
   );
 }
