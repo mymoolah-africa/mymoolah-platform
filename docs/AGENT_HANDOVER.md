@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-04 22:00  
-**Latest Feature**: **Ledger Audit Complete Build** — Created 2 new ledger accounts (A Botes Loan 2400-01-01, Voucher Clearing 2500-01-01), comprehensive backfill-v2 script for all missing JEs since April 1, forward journal posting for P2P/wallet-RTP/voucher issue+redeem, audit script rebuilt with solvency check, and scheduled recon updated with solvency verification.  
-**Document Version**: 2.79.0  
-**Session logs**: `docs/session_logs/2026-04-04_2200_ledger-audit-complete-build.md`, `docs/session_logs/2026-04-04_1800_ledger-gap-fix-backfill-scheduled-recon.md`  
+**Last Updated**: 2026-04-04 23:00  
+**Latest Feature**: **Chart of Accounts Documentation (v2.80.0)** — Created `docs/CHART_OF_ACCOUNTS.md` as the single authoritative CoA reference: 28 accounts (24 migrated + 4 needing migration), 15 journal templates, Mojaloop settlement mapping, solvency rules, product registration checklist, reserved ranges for 10 future verticals, env var map, cross-references. Tech-debt updated with 3 new rows + 1 architectural decision.  
+**Document Version**: 2.80.0  
+**Session logs**: `docs/session_logs/2026-04-04_2300_chart-of-accounts.md`, `docs/session_logs/2026-04-04_2200_ledger-audit-complete-build.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -39,6 +39,7 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 | Run DB migrations | `docs/DATABASE_CONNECTION_GUIDE.md` |
 | Set up dev environment | `docs/DEVELOPMENT_GUIDE.md` |
 | Test in Codespaces | `docs/CODESPACES_TESTING_REQUIREMENT.md` |
+| Ledger Chart of Accounts | `docs/CHART_OF_ACCOUNTS.md` |
 | Deploy | `docs/DEPLOYMENT_GUIDE.md`, `docs/archive/deployment/GCP_PRODUCTION_DEPLOYMENT.md` |
 | API contracts | `docs/API_DOCUMENTATION.md` |
 | Recent chat context | `docs/session_logs/` (2-3 most recent) |
@@ -100,7 +101,10 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (April 3, 2026 - evening)**
+### **Latest Achievement (April 4, 2026 - 23:00)**
+**Chart of Accounts Documentation (v2.80.0)** — Created `docs/CHART_OF_ACCOUNTS.md` as the single authoritative Chart of Accounts for MMTP. 10 sections: (1) Purpose & ownership, (2) All 28 accounts (24 migrated + 4 code-referenced needing migrations), (3) 15 journal entry templates covering every financial flow, (4) Mojaloop settlement mapping with FSPIOP compliance matrix, (5) 8 solvency rules and balance equations, (6) Product registration checklist, (7) Reserved account ranges for 10 future verticals, (8) Full env var map (17 `LEDGER_ACCOUNT_*` vars), (9) Future product verticals (MoolahMove pass-through model + 5 draft misalignments in `internationalPaymentService.js`, TCIB with SARB Directive 1/2025 and per-corridor floats, lending, insurance, stokvels, loyalty, savings, merchant, MMF, subscriptions), (10) Cross-references to 15 related docs/files. Updated tech-debt register with 3 new rows (4 missing account migrations, internationalPaymentService misalignments, adService `2100-05-001` typo) and 1 architectural decision. Session log: `docs/session_logs/2026-04-04_2300_chart-of-accounts.md`.
+
+### **Previous Achievement (April 3, 2026 - evening)**
 **Production Full Audit Script + Treasury / Referral / Voucher / VAS Audit Refinements** — Added and hardened `scripts/production-full-audit.js` (db-connection-helper, multi-env). Wallet reconciliation fixed for positive stored amounts on outflows. Referral audit aligns `referral_earnings` with `REFERRAL-%` journal entries; production ledger topped up for two missing referral postings (manual, session log). Treasury section documents operator TA facts (**R2,500** MobileMart bank prepayment, P2P vs Flash), removes misleading balance equality check, shows MobileMart `supplier_floats`. RTP fees described as **R5.75 full pass-through** (no MM margin). Internal **MyMoolah** voucher legs scoped via metadata (`voucher_issue` / `standard`); outbound voucher payments listed separately. VAS completeness warnings cleared using `metadata.walletTransactionId` and commission JE timestamp proximity. Session log: `docs/session_logs/2026-04-03_2100_production-audit-treasury-referrals-vouchers-vas.md`.
 
 ### **Previous Achievement (April 3, 2026 - 15:00)**

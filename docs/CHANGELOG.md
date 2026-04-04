@@ -1,5 +1,31 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-04 - Chart of Accounts Documentation (v2.80.0)
+
+### Summary
+Created `docs/CHART_OF_ACCOUNTS.md` — the single authoritative Chart of Accounts
+reference for MMTP. 10 sections covering all 28 live/code-referenced accounts,
+15 journal entry templates, Mojaloop settlement mapping, solvency rules, product
+registration checklist, reserved ranges for 10 future verticals (lending, insurance,
+stokvels, loyalty, savings, merchant, MMF, subscriptions, TCIB, MoolahMove),
+environment variable map, and cross-references.
+
+### Key Additions
+- Documented all 24 migrated accounts + 4 code-referenced accounts needing migrations (`2200-03-01`, `2600-01-01`, `5100-02-01`, `1100-02-01`)
+- Documented MoolahMove as simple pass-through (ZAR→USDC via VALR, handoff to Yellow Card); noted 5 misalignments in `internationalPaymentService.js` vs canonical CoA
+- TCIB section: SARB Directive 1/2025, March 2027 migration deadline, per-corridor floats (`1200-20-XX`)
+- Added 3 tech-debt rows: 4 missing migrations, internationalPaymentService misalignments, adService `2100-05-001` typo
+- Added 1 architectural decision: CoA document is canonical reference
+
+### Files Modified
+- `docs/CHART_OF_ACCOUNTS.md` — NEW (canonical Chart of Accounts)
+- `.cursor/rules/tech-debt.mdc` — 3 new tech-debt rows + 1 architectural decision
+- `docs/CHANGELOG.md` — this entry
+- `docs/AGENT_HANDOVER.md` — session reference
+- `docs/session_logs/2026-04-04_2300_chart-of-accounts.md` — session log
+
+---
+
 ## 2026-04-04 - Ledger Audit Complete Build (v2.79.0)
 
 ### Summary
