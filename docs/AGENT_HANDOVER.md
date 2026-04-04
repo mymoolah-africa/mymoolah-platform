@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-04 15:10  
-**Latest Feature**: **KYC Fixes (PARTIAL)** — Fixed KYC ID bypass, driver's licence ID extraction (last-13-digits), error messages, processing overlay, notification redesign, profile refresh, reset script. **UNRESOLVED**: KYC status page stuck at "Under Review" after successful OCR. See `docs/session_logs/2026-04-04_1500_kyc-status-page-stuck-handoff.md` for debugging guide. **CRITICAL NEXT TASK**: Fix KYC status page polling/transition detection.  
-**Document Version**: 2.75.0  
-**Session logs**: `docs/session_logs/2026-04-04_1500_kyc-status-page-stuck-handoff.md`, `docs/session_logs/2026-04-04_1500_kyc-security-fix-and-notification-ux.md`, `docs/session_logs/2026-04-04_1130_staging-production-parity-fixes.md`  
+**Last Updated**: 2026-04-04 15:09  
+**Latest Feature**: **KYC Async Crash Recovery** — Fixed the "stuck at Under Review" bug: async IIFE catch block now calls `persistKycRejection` (was only logging), added 5-min stale safety net in `getKYCStatus`, fixed `manualVerifyKYC` static method bug, fixed `uploadDocument` userId security. **Requires redeployment to staging.**  
+**Document Version**: 2.76.0  
+**Session logs**: `docs/session_logs/2026-04-04_1509_kyc-async-crash-recovery-fixes.md`, `docs/session_logs/2026-04-04_1500_kyc-status-page-stuck-handoff.md`, `docs/session_logs/2026-04-04_1500_kyc-security-fix-and-notification-ux.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
