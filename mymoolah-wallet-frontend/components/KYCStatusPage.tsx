@@ -96,7 +96,7 @@ function formatRand(amount: number): string {
 }
 
 export function KYCStatusPage() {
-  const { user, refreshUserStatus } = useAuth();
+  const { user, refreshUserStatus, updateKYCStatus } = useAuth();
   const navigate = useNavigate();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [estimatedTime, setEstimatedTime] = useState('2-5 minutes');
@@ -167,6 +167,17 @@ export function KYCStatusPage() {
       pollBackoffRef.current = 5_000;
 
       const data = await response.json();
+
+      if (data.kycStatus === 'verified') {
+        if (updateKYCStatus) {
+          try { await updateKYCStatus('verified'); } catch (_) {}
+        }
+        if (refreshUserStatus) {
+          try { await refreshUserStatus(); } catch (_) {}
+        }
+        setTimeout(() => navigate('/dashboard'), 1500);
+        return;
+      }
 
       if (data.kycStatus === 'rejected' && data.kycRecord?.rejectionReason) {
         setRejectionModal({ open: true, reason: data.kycRecord.rejectionReason });
