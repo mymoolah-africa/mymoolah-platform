@@ -164,25 +164,123 @@ export function TopBanner() {
       </div>
 
       {open && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => setOpen(false)}>
-          <div style={{ maxWidth: 360, margin: '80px auto', background: '#fff', borderRadius: 12, padding: 16 }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 700, marginBottom: 8 }}>Notifications</h3>
-            {notifications.length === 0 ? (
-              <p style={{ color: '#6b7280' }}>You're all caught up.</p>
-            ) : (
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                {notifications.map(n => (
-                  <li key={n.id} style={{ padding: '10px 0', borderBottom: '1px solid #f1f5f9' }}>
-                    <div style={{ fontWeight: 600 }}>{n.title}</div>
-                    {n.message && <div style={{ color: '#6b7280', fontSize: 12 }}>{n.message}</div>}
-                    <div style={{ color: '#9ca3af', fontSize: 11 }}>{new Date(n.createdAt).toLocaleString('en-ZA')}</div>
-                    <div style={{ marginTop: 8 }}>
-                      <button onClick={() => { markRead(n.id); setOpen(false); }} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#f8fafc', cursor: 'pointer' }}>Read</button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.4)',
+            zIndex: 55,
+            animation: 'notifOverlayIn 0.2s ease-out'
+          }}
+          onClick={() => setOpen(false)}
+        >
+          <div
+            style={{
+              width: '100%',
+              maxWidth: 375,
+              margin: '0 auto',
+              paddingTop: 64,
+              height: '100%',
+              pointerEvents: 'none'
+            }}
+          >
+            <div
+              style={{
+                pointerEvents: 'auto',
+                background: '#ffffff',
+                borderRadius: '0 0 16px 16px',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+                maxHeight: 'calc(100vh - 140px)',
+                display: 'flex',
+                flexDirection: 'column',
+                animation: 'notifSlideDown 0.25s ease-out',
+                fontFamily: 'Montserrat, sans-serif',
+                overflow: 'hidden'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '14px 16px 10px',
+                borderBottom: '1px solid #f1f5f9'
+              }}>
+                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#1f2937' }}>Notifications</h3>
+                <button
+                  onClick={() => setOpen(false)}
+                  style={{
+                    width: 32, height: 32,
+                    borderRadius: '50%',
+                    border: 'none',
+                    background: '#f3f4f6',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 16,
+                    color: '#6b7280',
+                    fontFamily: 'Montserrat, sans-serif'
+                  }}
+                  aria-label="Close notifications"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Body */}
+              <div style={{ overflowY: 'auto', padding: '4px 0' }}>
+                {notifications.length === 0 ? (
+                  <div style={{
+                    padding: '32px 16px',
+                    textAlign: 'center',
+                    color: '#9ca3af'
+                  }}>
+                    <Bell style={{ width: 28, height: 28, margin: '0 auto 8px', opacity: 0.4 }} />
+                    <p style={{ margin: 0, fontSize: 14 }}>You're all caught up.</p>
+                  </div>
+                ) : (
+                  <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                    {notifications.map(n => {
+                      const isKYC = (n.title || '').toLowerCase().includes('kyc');
+                      const isPayment = (n.title || '').toLowerCase().includes('payment') || (n.title || '').toLowerCase().includes('money');
+                      const dotColor = isKYC ? '#16a34a' : isPayment ? '#2D8CCA' : '#86BE41';
+                      return (
+                        <li
+                          key={n.id}
+                          style={{
+                            padding: '12px 16px',
+                            borderBottom: '1px solid #f8fafc',
+                            display: 'flex',
+                            gap: 12,
+                            alignItems: 'flex-start',
+                            transition: 'background 0.15s',
+                            cursor: 'pointer'
+                          }}
+                          onClick={() => { markRead(n.id); setOpen(false); }}
+                        >
+                          <div style={{
+                            width: 10, height: 10,
+                            borderRadius: '50%',
+                            backgroundColor: dotColor,
+                            marginTop: 5,
+                            flexShrink: 0
+                          }} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: '#1f2937', marginBottom: 2 }}>{n.title}</div>
+                            {n.message && (
+                              <div style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.4, marginBottom: 4 }}>{n.message}</div>
+                            )}
+                            <div style={{ fontSize: 11, color: '#d1d5db' }}>{new Date(n.createdAt).toLocaleString('en-ZA')}</div>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -213,7 +311,11 @@ export function TopBanner() {
       )}
 
       <style>
-        {`@keyframes pulse { 0%{ transform: scale(1); opacity: .8 } 50%{ transform: scale(1.3); opacity: 1 } 100%{ transform: scale(1); opacity: .8 } }`}
+        {`
+          @keyframes pulse { 0%{ transform: scale(1); opacity: .8 } 50%{ transform: scale(1.3); opacity: 1 } 100%{ transform: scale(1); opacity: .8 } }
+          @keyframes notifOverlayIn { from { opacity: 0 } to { opacity: 1 } }
+          @keyframes notifSlideDown { from { opacity: 0; transform: translateY(-12px) } to { opacity: 1; transform: translateY(0) } }
+        `}
       </style>
     </header>
   );

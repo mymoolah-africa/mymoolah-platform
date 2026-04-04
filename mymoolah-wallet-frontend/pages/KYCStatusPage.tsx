@@ -288,7 +288,7 @@ export function KYCStatusPage() {
       refreshUserStatus().then(() => {
         setTimeout(() => {
           navigate('/dashboard');
-        }, 3000);
+        }, 1500);
       });
     }
   }, [currentStatus, initialStatus, navigate, refreshUserStatus]);

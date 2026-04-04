@@ -1,6 +1,6 @@
 // import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/apiService';
 import { ErrorModal } from './ui/ErrorModal';
@@ -89,6 +89,10 @@ function formatRegistrationDate(createdAt?: string): string {
 export function ProfilePage() {
   const navigate = useNavigate();
   const { user, logout, updateKYCStatus, requiresKYC, changePassword, refreshUserStatus } = useAuth();
+
+  useEffect(() => {
+    if (refreshUserStatus) refreshUserStatus().catch(() => {});
+  }, []);
   
   // State management
   const [isEditingProfile, setIsEditingProfile] = useState(false);
