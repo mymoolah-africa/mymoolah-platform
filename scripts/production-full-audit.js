@@ -976,7 +976,7 @@ function journalRefLinksVas(refs, vasTransactionId, vasTsKey, walletTxnId, maxDr
       WITH type_avg AS (
         SELECT type, AVG(ABS(amount)) as avg_amt, STDDEV(ABS(amount)) as std_amt
         FROM transactions WHERE status = 'completed'
-        GROUP BY type HAVING COUNT(*) >= 3
+        GROUP BY type HAVING COUNT(*) >= 20
       )
       SELECT t.id, t.type, t.amount, t.description, u."firstName", u."lastName",
              ta.avg_amt, t."createdAt"
