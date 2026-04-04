@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-03 21:00  
-**Latest Feature**: **Production Full Audit Script (`production-full-audit.js`)** — Runnable reconciliation for `--production` | `--staging` | `--uat`: double-entry, trial balance, wallets (correct sign for payment/send/purchase), supplier floats, commission/VAT, tax (incl. RTP pass-through), referrals vs `referral_earnings` + JEs, RTP JEs, treasury narrative (operator facts: R4k TA, **R2,500** MM bank prepayment, R1.5k PayShap wallet, R500 P2P not Flash), revenue + R5.75 fee pass-through wording, **MyMoolah-only** internal voucher legs vs outbound (`Voucher purchase -` / EasyPay), VAS completeness via `walletTransactionId` + JE timestamp drift. Production had two referral JEs posted manually to align ledger with `referral_earnings` (historical gap). Session log: `docs/session_logs/2026-04-03_2100_production-audit-treasury-referrals-vouchers-vas.md`.  
-**Document Version**: 2.72.0  
-**Session logs**: `docs/session_logs/2026-04-03_2100_production-audit-treasury-referrals-vouchers-vas.md`, `docs/session_logs/2026-04-03_1500_vas-catalog-production-biller-eezipower-fix.md`  
+**Last Updated**: 2026-04-04 11:30  
+**Latest Feature**: **Staging/Production Parity Fixes** — Rate limiters now identical for staging and production (removed all `STAGING` skip clauses); referral payout migrated from node-cron to Cloud Scheduler (fixes payouts not firing on Cloud Run min-instances=0); ProductVariant findOrCreate fixed to match unique index (fixes Hollywood Bets sync failure); KYC pages now show TopBanner with notification bell. After deploy, run `./scripts/setup-cloud-scheduler.sh --both` to create referral payout Cloud Scheduler jobs. Session log: `docs/session_logs/2026-04-04_1130_staging-production-parity-fixes.md`.  
+**Document Version**: 2.73.0  
+**Session logs**: `docs/session_logs/2026-04-04_1130_staging-production-parity-fixes.md`, `docs/session_logs/2026-04-03_2100_production-audit-treasury-referrals-vouchers-vas.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
