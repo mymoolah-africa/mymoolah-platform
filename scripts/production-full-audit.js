@@ -3,9 +3,7 @@
  * MyMoolah Production Full Audit — Banking-Grade Double-Entry Reconciliation
  *
  * Usage:
- *   node scripts/production-full-audit.js                 # defaults to production
- *   node scripts/production-full-audit.js --staging
- *   node scripts/production-full-audit.js --uat
+ *   node scripts/production-full-audit.js --production
  *
  * Checks (aligned with .agents/skills/auditing/SKILL.md v2.0.0):
  *
@@ -51,14 +49,15 @@ require('dotenv').config();
 const path = require('path');
 const dbHelper = require(path.resolve(__dirname, 'db-connection-helper'));
 
-const ENV_ARG = process.argv.find(a => ['--staging', '--uat', '--production'].includes(a));
-const ENV = ENV_ARG ? ENV_ARG.replace('--', '') : 'production';
+const ENV = 'production';
 
-const CLIENT_FN = {
-  production: 'getProductionClient',
-  staging: 'getStagingClient',
-  uat: 'getUATClient'
-}[ENV];
+if (!process.argv.includes('--production')) {
+  console.error('\x1b[31mERROR: This audit runs against production only.\x1b[0m');
+  console.error('\x1b[31m       Usage: node scripts/production-full-audit.js --production\x1b[0m');
+  process.exit(1);
+}
+
+const CLIENT_FN = 'getProductionClient';
 
 const RED = '\x1b[31m', GREEN = '\x1b[32m', YELLOW = '\x1b[33m', CYAN = '\x1b[36m';
 const BOLD = '\x1b[1m', DIM = '\x1b[2m', RESET = '\x1b[0m';
