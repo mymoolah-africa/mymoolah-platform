@@ -218,6 +218,22 @@ class KYCController {
         }
       }
 
+      // Set user status to 'under_review' BEFORE responding so the frontend
+      // polling loop sees a pollable status immediately
+      try {
+        const { sequelize: seq, Kyc: KycReset } = require('../models');
+        await seq.query(
+          'UPDATE users SET "kycStatus" = $1, "updatedAt" = NOW() WHERE id = $2',
+          { bind: ['under_review', userId] }
+        );
+        await KycReset.update(
+          { status: 'pending', rejectionReason: null, reviewedAt: null },
+          { where: { userId } }
+        ).catch(() => {});
+      } catch (resetErr) {
+        console.warn('⚠️  Non-fatal: failed to reset kycStatus before 202:', resetErr.message);
+      }
+
       // Return immediately to prevent mobile app timeout (10s), process async
       res.status(202).json({
         success: true,
@@ -279,14 +295,8 @@ class KYCController {
           const wallet = await Wallet.findOne({ where: { userId: userId } });
           let currentTier = user?.kyc_tier ?? null;
 
-          // Reset any previous KYC rejection so old data doesn't leak into
-          // the new attempt while async OCR is still running
-          try {
-            await Kyc.update(
-              { status: 'pending', rejectionReason: null, reviewedAt: null },
-              { where: { userId } }
-            );
-          } catch (resetErr) { /* Non-fatal — record may not exist yet */ }
+          // kycStatus and KYC record already reset to 'under_review'/'pending'
+          // before the 202 response (see above)
 
           // --- Phase 1: Process identity document if provided ---
           if (identityUrl) {

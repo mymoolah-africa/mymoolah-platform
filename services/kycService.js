@@ -1578,7 +1578,27 @@ Return JSON only:
       
       const documentType = this.determineDocumentType(ocrResults);
       const registeredId = normalizeIdDigits(user.idNumber || '');
-      const docIdForMatch = normalizeIdDigits(ocrResults.idNumber || ocrResults.licenseNumber || '');
+      
+      // Build the document ID for matching
+      // For driver's licences, the OCR may return a prefixed value like "02/6411055084084"
+      // We try idNumber first, then licenseNumber as fallback
+      let docIdForMatch = normalizeIdDigits(ocrResults.idNumber || ocrResults.licenseNumber || '');
+      
+      // For SA documents: if the normalized digits are longer than 13,
+      // extract the last 13 digits (the SA ID portion)
+      if (docIdForMatch.length > 13 && registeredId.length === 13) {
+        const last13 = docIdForMatch.slice(-13);
+        console.log(`ℹ️  Extracted last 13 digits from ${docIdForMatch.length}-digit value: ${last13}`);
+        docIdForMatch = last13;
+      }
+      
+      // If idNumber didn't yield a usable value, try licenseNumber directly
+      if (!docIdForMatch && ocrResults.licenseNumber) {
+        docIdForMatch = normalizeIdDigits(ocrResults.licenseNumber);
+        if (docIdForMatch.length > 13 && registeredId.length === 13) {
+          docIdForMatch = docIdForMatch.slice(-13);
+        }
+      }
       
       console.log('🔍 ID/Passport number comparison:', {
         registeredId: registeredId,
@@ -1720,15 +1740,16 @@ Return JSON only:
           validation.issues.push('Your temporary ID certificate has expired. Please upload a current, valid temporary ID.');
         }
       } else if (documentType === 'sa_driving_license') {
-        // SA Driver's License: Only validate the ID number (13 digits), NOT the license number format
-        // The ID number is the last 13 digits (prefix characters are ignored)
-        // License number format (AB123456CD) is NOT used for KYC validation
-        const isIdNumberFormat = /^\d{13}$/.test(rawIdForFormat);
+        // SA Driver's License: Validate the 13-digit SA ID number
+        // The OCR may return it with a prefix (e.g., "02/6411055084084") -- extract last 13 digits
+        const allDigitsFromId = rawIdForFormat.replace(/\D/g, '');
+        const idFor13Check = allDigitsFromId.length >= 13 ? allDigitsFromId.slice(-13) : allDigitsFromId;
+        const isIdNumberFormat = /^\d{13}$/.test(idFor13Check);
         
         if (!isIdNumberFormat) {
-          validation.issues.push('Invalid South African ID number on driving license. Expected 13-digit ID number (prefix characters are ignored).');
-        } else if (!isValidSouthAfricanId(rawId)) {
-          validation.issues.push('Invalid South African ID number (checksum validation failed).');
+          validation.issues.push('We could not read a valid 13-digit SA ID number from your driver\'s licence. Please upload a clearer photo.');
+        } else if (!isValidSouthAfricanId(idFor13Check)) {
+          validation.issues.push('The ID number on your driver\'s licence did not pass validation. Please upload a clearer photo.');
         }
         
         // Check if driving license is still valid (not expired)

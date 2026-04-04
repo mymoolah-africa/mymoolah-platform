@@ -137,7 +137,7 @@ export function KYCStatusPage() {
 
   const [rejectionModal, setRejectionModal] = useState<{ open: boolean; reason: string }>({ open: false, reason: '' });
 
-  const pollBackoffRef = useRef(10_000);
+  const pollBackoffRef = useRef(5_000);
   const [statusBanner, setStatusBanner] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const prevStatusRef = useRef<KYCStatus | null>(null);
 
@@ -165,7 +165,7 @@ export function KYCStatusPage() {
         throw new Error('Failed to fetch KYC status');
       }
 
-      pollBackoffRef.current = 10_000;
+      pollBackoffRef.current = 5_000;
 
       const data = await response.json();
 
@@ -231,9 +231,9 @@ export function KYCStatusPage() {
     handleRefreshStatus();
   }, []);
 
-  // Poll while status is pending (incl. not_started to cover stale-context edge case)
+  // Poll while status is pending or rejected (rejected covers re-upload from a previous failure)
   useEffect(() => {
-    if (currentStatus === 'not_started' || currentStatus === 'documents_uploaded' || currentStatus === 'under_review') {
+    if (currentStatus === 'not_started' || currentStatus === 'documents_uploaded' || currentStatus === 'under_review' || currentStatus === 'rejected') {
       let timer: ReturnType<typeof setTimeout>;
       const tick = () => {
         handleRefreshStatus();
