@@ -22,7 +22,7 @@
 #   1. Deletes all KYC records for the specified user
 #   2. Resets wallet kycVerified to false
 #   3. Resets user kycStatus to 'not_started', kyc_tier to NULL
-#   4. Clears idNumber, idType, idVerified
+#   4. Resets idVerified to false (preserves idNumber and idType from registration)
 #
 ###############################################################################
 
@@ -47,7 +47,7 @@ const { getStagingClient } = require('./scripts/db-connection-helper');
     console.log('Wallets updated:', wallet.rowCount);
 
     const user = await client.query(
-      'UPDATE users SET \"kycStatus\" = \$1, kyc_tier = NULL, \"idNumber\" = NULL, \"idType\" = NULL, \"idVerified\" = false WHERE id = \$2',
+      'UPDATE users SET \"kycStatus\" = \$1, kyc_tier = NULL, \"idVerified\" = false WHERE id = \$2',
       ['not_started', ${USER_ID}]
     );
     console.log('User updated:', user.rowCount);
@@ -55,7 +55,7 @@ const { getStagingClient } = require('./scripts/db-connection-helper');
     await client.query('COMMIT');
 
     const verify = await client.query(
-      'SELECT id, \"firstName\", \"lastName\", \"phoneNumber\", \"kycStatus\", kyc_tier, \"idVerified\" FROM users WHERE id = \$1',
+      'SELECT id, \"firstName\", \"lastName\", \"phoneNumber\", \"kycStatus\", kyc_tier, \"idVerified\", \"idNumber\", \"idType\" FROM users WHERE id = \$1',
       [${USER_ID}]
     );
     if (verify.rows.length > 0) {
@@ -64,6 +64,8 @@ const { getStagingClient } = require('./scripts/db-connection-helper');
       console.log('=== STAGING USER AFTER RESET ===');
       console.log('ID:', r.id, '|', r.firstName, r.lastName);
       console.log('Phone:', r.phoneNumber);
+      console.log('ID Number:', r.idNumber || '(not set)');
+      console.log('ID Type:', r.idType || '(not set)');
       console.log('KYC Status:', r.kycStatus);
       console.log('KYC Tier:', r.kyc_tier);
       console.log('ID Verified:', r.idVerified);

@@ -305,32 +305,6 @@ export function KYCStatusPage() {
         message={rejectionModal.reason}
         type="warning"
       />
-      {/* Status transition banner */}
-      {statusBanner && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 64,
-            left: 0,
-            right: 0,
-            zIndex: 55,
-            padding: '12px 16px',
-            backgroundColor: statusBanner.type === 'success' ? '#16a34a' : '#dc2626',
-            color: '#fff',
-            textAlign: 'center',
-            fontFamily: 'Montserrat, sans-serif',
-            fontSize: '14px',
-            fontWeight: 600,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-            animation: 'slideDown 0.3s ease-out'
-          }}
-        >
-          {statusBanner.type === 'success' && <CheckCircle className="w-5 h-5 inline-block mr-2 align-text-bottom" />}
-          {statusBanner.type === 'error' && <AlertTriangle className="w-5 h-5 inline-block mr-2 align-text-bottom" />}
-          {statusBanner.message}
-        </div>
-      )}
-
       {/* Mobile Container */}
       <div className="max-w-sm mx-auto bg-gradient-to-br from-[#86BE41] to-[#2D8CCA] flex flex-col" style={{ minHeight: 'calc(100vh - 64px)' }}>
         {/* Header Section */}

@@ -1556,13 +1556,13 @@ Return JSON only:
       
       // CRITICAL: ID/Passport/License number is required
       if (!idNumber && !licenseNumber) {
-        validation.issues.push('ID/Passport/License number not found on document');
+        validation.issues.push('We could not read an ID or passport number from your document. Please upload a clearer photo with the full document visible.');
         return validation;
       }
       
       // CRITICAL: Surname is required (can be extracted from fullName if surname field missing)
       if (!surname && !fullName) {
-        validation.issues.push('Surname not found on document (required for validation)');
+        validation.issues.push('We could not read a surname from your document. Please upload a clearer photo with all text visible.');
         return validation;
       }
       
@@ -1619,11 +1619,11 @@ Return JSON only:
       // Applies to: SA ID, Passport, Driver's License, Temporary ID Certificate
       if (!registeredId) {
         console.warn('⚠️  No ID number on file for user:', userId);
-        validation.issues.push('No ID number found on your registration. Please contact support to update your profile before verifying.');
+        validation.issues.push('Your ID number is not yet on your profile. Please update your profile with your SA ID number, then try again.');
         return validation;
       }
       if (!docIdForMatch) {
-        validation.issues.push('ID/Passport/License number not found on document');
+        validation.issues.push('We could not read an ID or passport number from your document. Please upload a clearer photo with the full document visible.');
         return validation;
       }
       if (registeredId !== docIdForMatch) {
@@ -1631,7 +1631,7 @@ Return JSON only:
           registered: registeredId,
           document: docIdForMatch
         });
-        validation.issues.push(`ID/Passport/License number mismatch: Document shows "${ocrResults.idNumber || ocrResults.licenseNumber}" but registration shows "${user.idNumber}"`);
+        validation.issues.push('The ID number on this document does not match the ID number on your MyMoolah account. Please upload your own identity document.');
         return validation;
       }
       console.log('✅ ID/Passport number matches');
@@ -1671,13 +1671,12 @@ Return JSON only:
           const similarity = jaroWinkler(docLastNorm, userLastNorm);
           const threshold = 0.999; // Very strict for surname
           if (similarity < threshold) {
-            validation.issues.push(`Surname mismatch: Document shows "${surnameForCompare}" but registration shows "${user.lastName}"`);
-            // Surname mismatch is critical - fail immediately
+            validation.issues.push('The surname on this document does not match the surname on your MyMoolah account. Please upload your own identity document.');
             return validation;
           }
         }
       } else if (!surnameForCompare) {
-        validation.issues.push('Surname not found on document');
+        validation.issues.push('We could not read a surname from your document. Please upload a clearer photo with all text visible.');
         return validation;
       }
 
@@ -1718,7 +1717,7 @@ Return JSON only:
         // Check if temporary ID is still valid (not expired)
         const expiryDate = ocrResults.expiryDate || ocrResults.temporaryIdExpiryDate;
         if (expiryDate && !isTemporaryIDValid(expiryDate)) {
-          validation.issues.push('Temporary ID certificate has expired. Please use a valid, unexpired temporary ID.');
+          validation.issues.push('Your temporary ID certificate has expired. Please upload a current, valid temporary ID.');
         }
       } else if (documentType === 'sa_driving_license') {
         // SA Driver's License: Only validate the ID number (13 digits), NOT the license number format
@@ -1744,12 +1743,12 @@ Return JSON only:
           expiry.setHours(0, 0, 0, 0);
           
           if (expiry <= today) {
-            validation.issues.push('Driving license has expired. Please use a valid, unexpired license.');
+            validation.issues.push('Your driver\'s licence has expired. Please upload a valid, non-expired driver\'s licence.');
           } else {
             console.log('✅ Driving license expiration date is valid');
           }
         } else {
-          validation.issues.push('Driving license expiration date not found. Please ensure the license shows valid dates.');
+          validation.issues.push('We could not read the expiry date on your driver\'s licence. Please upload a clearer photo showing the full licence card.');
         }
       } else if (documentType === 'passport') {
         // Use raw value for passport validation (preserve alphanumeric)
@@ -1763,16 +1762,16 @@ Return JSON only:
         const expiryDate = ocrResults.expiryDate || ocrResults.passportExpiryDate || ocrResults.dateOfExpiry || ocrResults.validTo || ocrResults.validToDate;
         if (expiryDate) {
           if (!isPassportValid(expiryDate)) {
-            validation.issues.push('Passport has expired. Please use a valid, unexpired passport.');
+            validation.issues.push('Your passport has expired. Please upload a valid, non-expired passport.');
           } else {
             console.log('✅ Passport expiration date is valid');
           }
         } else {
           // Expiration date is MANDATORY for passport validation
-          validation.issues.push('Passport expiration date not found. Please ensure the passport shows expiry date.');
+          validation.issues.push('We could not read the expiry date on your passport. Please upload a clearer photo showing the full data page.');
         }
       } else {
-        validation.issues.push('Unable to determine document type (ID, Temporary ID, Passport, or Driving License)');
+        validation.issues.push('We could not identify your document type. Please upload a clear photo of your SA ID, passport, driver\'s licence, or temporary ID.');
       }
 
       // Enhanced confidence calculation - only ID Number and Surname are critical

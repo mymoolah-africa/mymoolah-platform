@@ -41,6 +41,7 @@ export function KYCDocumentsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [processingPhase, setProcessingPhase] = useState<'idle' | 'uploading' | 'verifying'>('idle');
   const [kycRetryCount, setKycRetryCount] = useState(0);
   const [kycFeedback, setKycFeedback] = useState<{
     title: string;
@@ -127,6 +128,7 @@ export function KYCDocumentsPage() {
     setError('');
     setIsLoading(true);
     setUploadProgress(0);
+    setProcessingPhase('uploading');
 
     try {
       if (needsIdentity && !documents.identity.file) {
@@ -139,8 +141,10 @@ export function KYCDocumentsPage() {
 
       for (let i = 0; i <= 100; i += 10) {
         setUploadProgress(i);
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise(resolve => setTimeout(resolve, 150));
       }
+
+      setProcessingPhase('verifying');
 
       const formData = new FormData();
       if (documents.identity.file) {
@@ -226,6 +230,7 @@ export function KYCDocumentsPage() {
       setError(err instanceof Error ? err.message : 'Upload failed. Please try again.');
     } finally {
       setIsLoading(false);
+      setProcessingPhase('idle');
     }
   };
 
@@ -708,33 +713,75 @@ export function KYCDocumentsPage() {
               </CardContent>
             </Card>
 
-            {/* Upload Progress */}
-            {isLoading && uploadProgress > 0 && (
-              <Card className="bg-white border border-gray-200" style={{ 
-                borderRadius: 'var(--mobile-border-radius)',
-                boxShadow: 'var(--mobile-shadow)'
+            {/* Processing Overlay */}
+            {isLoading && processingPhase !== 'idle' && (
+              <div style={{
+                position: 'fixed',
+                inset: 0,
+                zIndex: 60,
+                backgroundColor: 'rgba(0,0,0,0.5)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                animation: 'fadeIn 0.2s ease-out'
               }}>
-                <CardContent style={{ paddingTop: '1.5rem' }}>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span style={{ 
-                        fontFamily: 'Montserrat, sans-serif', 
-                        fontSize: 'var(--mobile-font-small)', 
-                        fontWeight: 'var(--font-weight-medium)' 
+                <div style={{
+                  background: '#ffffff',
+                  borderRadius: 16,
+                  padding: '32px 28px',
+                  maxWidth: 320,
+                  width: '90%',
+                  textAlign: 'center',
+                  boxShadow: '0 12px 40px rgba(0,0,0,0.2)',
+                  fontFamily: 'Montserrat, sans-serif'
+                }}>
+                  <div style={{
+                    width: 56,
+                    height: 56,
+                    margin: '0 auto 16px',
+                    border: '4px solid #e5e7eb',
+                    borderTopColor: '#2D8CCA',
+                    borderRadius: '50%',
+                    animation: 'spin 0.8s linear infinite'
+                  }} />
+                  <h3 style={{
+                    fontSize: 16,
+                    fontWeight: 700,
+                    color: '#1f2937',
+                    margin: '0 0 8px'
+                  }}>
+                    {processingPhase === 'uploading' ? 'Uploading Document...' : 'Verifying Your Identity'}
+                  </h3>
+                  <p style={{
+                    fontSize: 13,
+                    color: '#6b7280',
+                    margin: 0,
+                    lineHeight: 1.5
+                  }}>
+                    {processingPhase === 'uploading'
+                      ? 'Please wait while we upload your document.'
+                      : 'Please wait, we\'re processing your document. This may take a few moments.'}
+                  </p>
+                  {processingPhase === 'uploading' && (
+                    <div style={{ marginTop: 16 }}>
+                      <div style={{
+                        height: 6,
+                        backgroundColor: '#e5e7eb',
+                        borderRadius: 3,
+                        overflow: 'hidden'
                       }}>
-                        {identityAlreadyVerified ? 'Uploading Proof of Address...' : 'Uploading ID Document...'}
-                      </span>
-                      <span style={{ 
-                        fontFamily: 'Montserrat, sans-serif', 
-                        fontSize: 'var(--mobile-font-small)' 
-                      }}>
-                        {uploadProgress}%
-                      </span>
+                        <div style={{
+                          height: '100%',
+                          width: `${uploadProgress}%`,
+                          background: 'linear-gradient(90deg, #86BE41, #2D8CCA)',
+                          borderRadius: 3,
+                          transition: 'width 0.15s ease'
+                        }} />
+                      </div>
                     </div>
-                    <Progress value={uploadProgress} className="h-2" />
-                  </div>
-                </CardContent>
-              </Card>
+                  )}
+                </div>
+              </div>
             )}
 
             {/* Submit Button */}
@@ -850,6 +897,10 @@ export function KYCDocumentsPage() {
           </DialogContent>
         </Dialog>
       )}
+      <style>{`
+        @keyframes spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }
+        @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+      `}</style>
     </div>
   );
 }
