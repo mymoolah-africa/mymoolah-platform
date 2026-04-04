@@ -132,9 +132,9 @@ function money(v) { return `R ${Number(v || 0).toFixed(2)}`; }
     console.log(`${BOLD}A. RTP Test Entries (PayShap inflows)...${RESET}`);
 
     const rtpRows = await c.query(`
-      SELECT id, amount, status, "createdAt", "transactionId", metadata
+      SELECT id, amount, status, "createdAt", "merchantTransactionId", metadata
       FROM standard_bank_rtp_requests
-      WHERE status = 'Paid'
+      WHERE status = 'paid'
       ORDER BY "createdAt"
     `);
 
