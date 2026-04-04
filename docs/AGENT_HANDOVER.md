@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-04 15:00  
-**Latest Feature**: **KYC Security Fix & Notification UX** — Fixed critical KYC bypass where missing `user.idNumber` skipped ID validation (allowing wrong-person documents). Redesigned notification popup as slide-down panel matching 375px wallet width with animations. Profile page now refreshes user status on mount (fixes stale "KYC Required" badge). KYC auto-nav delay reduced to 1.5s. Session log: `docs/session_logs/2026-04-04_1500_kyc-security-fix-and-notification-ux.md`.  
-**Document Version**: 2.74.0  
-**Session logs**: `docs/session_logs/2026-04-04_1500_kyc-security-fix-and-notification-ux.md`, `docs/session_logs/2026-04-04_1130_staging-production-parity-fixes.md`  
+**Last Updated**: 2026-04-04 15:10  
+**Latest Feature**: **KYC Fixes (PARTIAL)** — Fixed KYC ID bypass, driver's licence ID extraction (last-13-digits), error messages, processing overlay, notification redesign, profile refresh, reset script. **UNRESOLVED**: KYC status page stuck at "Under Review" after successful OCR. See `docs/session_logs/2026-04-04_1500_kyc-status-page-stuck-handoff.md` for debugging guide. **CRITICAL NEXT TASK**: Fix KYC status page polling/transition detection.  
+**Document Version**: 2.75.0  
+**Session logs**: `docs/session_logs/2026-04-04_1500_kyc-status-page-stuck-handoff.md`, `docs/session_logs/2026-04-04_1500_kyc-security-fix-and-notification-ux.md`, `docs/session_logs/2026-04-04_1130_staging-production-parity-fixes.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
