@@ -67,16 +67,22 @@ class KYCController {
           await wallet.verifyKYC('ai_system');
         }
 
-        const { User } = require('../models');
+        const { User, sequelize: seq } = require('../models');
         const user = await User.findByPk(userId);
         if (user) {
           let newTier;
           if (documentType === 'id_document') {
             newTier = (user.kyc_tier != null && user.kyc_tier >= 1) ? user.kyc_tier : 1;
-            await user.update({ kycStatus: 'verified', kyc_tier: newTier });
+            await seq.query(
+              'UPDATE users SET "kycStatus" = $1, "kyc_tier" = $2, "kycVerifiedAt" = NOW(), "updatedAt" = NOW() WHERE id = $3',
+              { bind: ['verified', newTier, userId] }
+            );
           } else if (documentType === 'proof_of_address' && user.kyc_tier >= 1) {
             newTier = 2;
-            await user.update({ kyc_tier: newTier });
+            await seq.query(
+              'UPDATE users SET "kyc_tier" = $1, "updatedAt" = NOW() WHERE id = $2',
+              { bind: [newTier, userId] }
+            );
           }
 
           if (newTier !== undefined && wallet) {
@@ -323,14 +329,19 @@ class KYCController {
                 });
               }
               currentTier = 1;
-              if (user) {
-                // Only set kycStatus to 'verified' now if there's no POA to process.
-                // Otherwise defer until all phases complete so the frontend keeps polling.
-                if (!addressUrl) {
-                  await user.update({ kycStatus: 'verified', kyc_tier: 1 });
-                } else {
-                  await user.update({ kyc_tier: 1 });
-                }
+              // Raw SQL avoids Sequelize re-validating the encrypted idNumber field
+              // on the stale user instance (afterFind decrypts → marks as changed →
+              // len validator fails on re-validation during save).
+              if (!addressUrl) {
+                await sequelize.query(
+                  'UPDATE users SET "kycStatus" = $1, "kyc_tier" = $2, "kycVerifiedAt" = NOW(), "updatedAt" = NOW() WHERE id = $3',
+                  { bind: ['verified', 1, userId] }
+                );
+              } else {
+                await sequelize.query(
+                  'UPDATE users SET "kyc_tier" = $1, "updatedAt" = NOW() WHERE id = $2',
+                  { bind: [1, userId] }
+                );
               }
               console.log('✅ User KYC: Tier 1 (ID verified)');
             } else {
@@ -349,9 +360,10 @@ class KYCController {
                                   (addressResult.validation.isValid || addressResult.status === 'approved');
               if (addressValid) {
                 currentTier = 2;
-                if (user) {
-                  await user.update({ kyc_tier: 2 });
-                }
+                await sequelize.query(
+                  'UPDATE users SET "kyc_tier" = $1, "updatedAt" = NOW() WHERE id = $2',
+                  { bind: [2, userId] }
+                );
                 if (wallet) {
                   const tier2Limits = getWalletDefaults(2);
                   await wallet.update({
@@ -474,9 +486,10 @@ class KYCController {
           && finalKycStatus !== 'verified' && finalKycStatus !== 'rejected') {
         console.log('🔧 Self-healing: wallet verified + tier', user.kyc_tier, 'but kycStatus is', finalKycStatus, '— correcting to verified');
         finalKycStatus = 'verified';
-        if (user) {
-          user.update({ kycStatus: 'verified' }).catch(err => console.error('Self-heal user.kycStatus update failed:', err.message));
-        }
+        sequelize.query(
+          'UPDATE users SET "kycStatus" = $1, "updatedAt" = NOW() WHERE id = $2',
+          { bind: ['verified', user.id] }
+        ).catch(err => console.error('Self-heal user.kycStatus update failed:', err.message));
       }
 
       // Self-healing: KYC record rejected but user.kycStatus not updated
@@ -485,9 +498,10 @@ class KYCController {
           && finalKycStatus !== 'documents_uploaded') {
         console.log('🔧 Self-healing: KYC record is rejected but user.kycStatus is', finalKycStatus, '— correcting to rejected');
         finalKycStatus = 'rejected';
-        if (user) {
-          user.update({ kycStatus: 'rejected' }).catch(err => console.error('Self-heal user.kycStatus update failed:', err.message));
-        }
+        sequelize.query(
+          'UPDATE users SET "kycStatus" = $1, "updatedAt" = NOW() WHERE id = $2',
+          { bind: ['rejected', user.id] }
+        ).catch(err => console.error('Self-heal user.kycStatus update failed:', err.message));
       }
 
       // Self-healing: under_review stuck for more than 5 minutes
@@ -502,10 +516,10 @@ class KYCController {
             console.log('🔧 Self-healing: under_review stuck for', mins, 'min — setting rejected for retry');
             finalKycStatus = 'rejected';
             const staleMsg = 'Document processing timed out. Please try uploading again.';
-            if (user) {
-              user.update({ kycStatus: 'rejected' }).catch(err =>
-                console.error('Self-heal stale under_review user update failed:', err.message));
-            }
+            sequelize.query(
+              'UPDATE users SET "kycStatus" = $1, "updatedAt" = NOW() WHERE id = $2',
+              { bind: ['rejected', user.id] }
+            ).catch(err => console.error('Self-heal stale under_review user update failed:', err.message));
             if (kycRecord && kycRecord.status !== 'rejected') {
               kycRecord.update({
                 status: 'rejected',
