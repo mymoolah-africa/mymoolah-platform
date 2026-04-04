@@ -1,5 +1,35 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-04 - Ledger Gap Fix, Backfill Script, Scheduled Recon (v2.78.0)
+
+### Summary
+Fixed R800.13 wallet-vs-ledger discrepancy. Root cause: MobileMart VAS purchases, referral payouts, and some deposits did not post face-value journal entries to the general ledger. Added forward JE posting to all VAS paths, created backfill script for historical data, and built a scheduled reconciliation service.
+
+### Ledger Fixes (Forward)
+- **overlayServices.js**: Added `postFaceValueJournal()` helper — posts DR 2100-01-01 (Client Float), CR Supplier Float for airtime/data, electricity, and bill payment purchases
+- **productPurchaseService.js**: Added face-value JE posting for voucher purchases (same pattern)
+- **referralPayoutService.js**: Added payout JE — DR 2200-03-01 (Referral Payable), CR 2100-01-01 (Client Float)
+
+### Backfill Script
+- `scripts/backfill-missing-journal-entries.js`: Idempotent script that finds deposits, VAS purchases, and referral payouts without matching JEs and posts the missing entries
+- Supports `--dry-run`, `--production`, `--staging`, `--uat` flags
+- Uses unique BACKFILL-* reference prefixes for audit trail separation
+
+### Scheduled Reconciliation Service
+- `services/scheduledReconService.js`: Automated checks — trial balance, wallet vs txn flow, wallet aggregate vs ledger, supplier floats, commission integrity, negative wallets
+- Wired to `/api/v1/reconciliation/scheduled-recon` endpoint with Cloud Scheduler OIDC auth
+- Persists results to recon_runs table and emails alerts on failure
+
+### Files Modified
+- `routes/overlayServices.js` — face-value JE posting in 3 VAS paths
+- `services/referralPayoutService.js` — referral payout JE posting
+- `services/productPurchaseService.js` — voucher face-value JE posting
+- `routes/reconciliation.js` — scheduled recon endpoint
+- `services/scheduledReconService.js` — NEW
+- `scripts/backfill-missing-journal-entries.js` — NEW
+
+---
+
 ## 2026-04-04 - KYC Verification Fix & Auto-Navigate Removal (v2.77.0)
 
 ### Summary

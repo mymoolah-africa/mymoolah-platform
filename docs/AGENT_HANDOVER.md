@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-04 16:45  
-**Latest Feature**: **KYC Full Fix** — Fixed Sequelize `idNumber` validation crash (`user.update()` → raw SQL), removed auto-navigate from KYC status page (users can view tier info & upload POA), hardened KYC reset scripts (preserve registration data, audit trail). KYC Tier 1 (ID) and Tier 2 (POA) both verified working on staging.  
-**Document Version**: 2.77.0  
-**Session logs**: `docs/session_logs/2026-04-04_1530_kyc-verification-fix-and-auto-navigate.md`, `docs/session_logs/2026-04-04_1509_kyc-async-crash-recovery-fixes.md`, `docs/session_logs/2026-04-04_1500_kyc-status-page-stuck-handoff.md`  
+**Last Updated**: 2026-04-04 18:00  
+**Latest Feature**: **Ledger Gap Fix + Scheduled Recon** — Fixed R800.13 wallet-vs-ledger discrepancy by adding face-value JE posting to all VAS purchase paths (overlayServices, productPurchaseService), referral payout JE posting, backfill script for historical missing JEs, and scheduled reconciliation service wired to Cloud Scheduler.  
+**Document Version**: 2.78.0  
+**Session logs**: `docs/session_logs/2026-04-04_1800_ledger-gap-fix-backfill-scheduled-recon.md`, `docs/session_logs/2026-04-04_1530_kyc-verification-fix-and-auto-navigate.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
