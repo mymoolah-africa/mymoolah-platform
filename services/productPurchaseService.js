@@ -284,6 +284,32 @@ class ProductPurchaseService {
               transaction: null // No transaction needed here (already committed)
             });
 
+            // STEP 1B: Post face-value journal (DR client float, CR supplier float)
+            try {
+              const ledgerService = require('./ledgerService');
+              const { SupplierFloat } = require('../models');
+              const { Op } = require('sequelize');
+              const LEDGER_ACCOUNT_CLIENT_FLOAT = process.env.LEDGER_ACCOUNT_CLIENT_FLOAT || '2100-01-01';
+              const supplierCode = (product.supplier.code || '').toUpperCase();
+              const supplierFloat = await SupplierFloat.findOne({
+                where: { supplierId: { [Op.iLike]: supplierCode } }
+              });
+              if (supplierFloat?.ledgerAccountCode) {
+                const faceAmountRand = Number((pricing.totalAmount / 100).toFixed(2));
+                await ledgerService.postJournalEntry({
+                  reference: `VAS-FACE-${walletTransaction.transactionId}`,
+                  description: `Voucher face value R${faceAmountRand} (${supplierCode})`,
+                  lines: [
+                    { accountCode: LEDGER_ACCOUNT_CLIENT_FLOAT, dc: 'debit', amount: faceAmountRand, memo: `Client float debit (voucher)` },
+                    { accountCode: supplierFloat.ledgerAccountCode, dc: 'credit', amount: faceAmountRand, memo: `Supplier float consumed (voucher)` }
+                  ]
+                });
+                await supplierFloat.updateBalance(faceAmountRand, 'debit');
+              }
+            } catch (fvErr) {
+              console.error('[productPurchaseService] Face-value journal failed (non-blocking):', fvErr.message);
+            }
+
             // STEP 2: Update wallet transaction metadata with commission info
             if (commissionResult) {
               const existingMetadata = walletTransaction.metadata || {};

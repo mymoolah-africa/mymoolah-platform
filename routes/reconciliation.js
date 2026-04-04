@@ -393,4 +393,41 @@ router.get('/analytics/summary', authenticateToken, async (req, res) => {
   }
 });
 
+/**
+ * @route   POST /api/v1/reconciliation/scheduled-recon
+ * @desc    Cloud Scheduler-triggered internal reconciliation.
+ *          Checks wallet vs ledger, supplier floats, commission integrity.
+ * @access  Cloud Scheduler only (OIDC token)
+ */
+const { verifyCloudSchedulerToken } = require('../middleware/cloudSchedulerAuth');
+
+router.post('/scheduled-recon', verifyCloudSchedulerToken, async (req, res) => {
+  const startTime = Date.now();
+  const triggeredBy = req.schedulerAuth ? req.schedulerAuth.email : 'unknown';
+  logger.info(`Scheduled reconciliation triggered by: ${triggeredBy}`);
+
+  try {
+    const scheduledReconService = require('../services/scheduledReconService');
+    const report = await scheduledReconService.runFullRecon();
+    const durationMs = Date.now() - startTime;
+
+    logger.info(`Scheduled recon completed in ${durationMs}ms — verdict: ${report.verdict}`);
+
+    res.json({
+      success: true,
+      message: `Reconciliation ${report.verdict}`,
+      data: { durationMs, triggeredBy, ...report },
+    });
+  } catch (error) {
+    const durationMs = Date.now() - startTime;
+    logger.error(`Scheduled recon failed after ${durationMs}ms:`, error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Reconciliation failed',
+      message: error.message,
+      data: { durationMs, triggeredBy },
+    });
+  }
+});
+
 module.exports = router;

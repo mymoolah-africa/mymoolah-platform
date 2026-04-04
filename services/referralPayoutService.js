@@ -137,6 +137,23 @@ class ReferralPayoutService {
               referralPayout: true
             }
           });
+
+          // Post journal entry: DR Referral Payable, CR Client Float
+          try {
+            const ledgerService = require('./ledgerService');
+            const LEDGER_ACCOUNT_CLIENT_FLOAT = process.env.LEDGER_ACCOUNT_CLIENT_FLOAT || '2100-01-01';
+            const LEDGER_ACCOUNT_REFERRAL_PAYABLE = process.env.LEDGER_ACCOUNT_REFERRAL_PAYABLE || '2200-03-01';
+            await ledgerService.postJournalEntry({
+              reference: `REFERRAL-PAYOUT-${transactionId}`,
+              description: `Referral payout to user ${userId} (${earnings.length} earnings)`,
+              lines: [
+                { accountCode: LEDGER_ACCOUNT_REFERRAL_PAYABLE, dc: 'debit', amount: totalRand, memo: 'Clear referral commission payable' },
+                { accountCode: LEDGER_ACCOUNT_CLIENT_FLOAT, dc: 'credit', amount: totalRand, memo: 'Wallet credit (referral payout)' }
+              ]
+            });
+          } catch (ledgerErr) {
+            console.error(`⚠️ Referral payout ledger posting failed for user ${userId} (non-blocking):`, ledgerErr.message);
+          }
           
           // Mark earnings as paid
           await ReferralEarning.update(

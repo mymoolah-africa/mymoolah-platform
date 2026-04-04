@@ -106,6 +106,48 @@ async function allocateCommissionAndVat({
   }
 }
 
+/**
+ * Post face-value journal entry: DR Client Float, CR Supplier Float.
+ * Called after a successful VAS purchase to record the face-value movement
+ * in the general ledger (separate from commission/VAT which is handled by
+ * allocateCommissionAndVat).
+ */
+async function postFaceValueJournal({ amount, supplierCode, transactionId, vasType }) {
+  try {
+    const ledgerService = require('../services/ledgerService');
+    const { SupplierFloat } = require('../models');
+    const LEDGER_ACCOUNT_CLIENT_FLOAT = process.env.LEDGER_ACCOUNT_CLIENT_FLOAT || '2100-01-01';
+
+    const normalizedSupplier = (supplierCode || '').toUpperCase();
+    const supplierFloat = await SupplierFloat.findOne({
+      where: { supplierId: { [Op.iLike]: normalizedSupplier } }
+    });
+    const supplierFloatCode = supplierFloat?.ledgerAccountCode;
+    if (!supplierFloatCode) {
+      console.warn(`[postFaceValueJournal] No float account for supplier ${normalizedSupplier} — skipped`);
+      return;
+    }
+
+    const amountRand = Number(Number(amount).toFixed(2));
+    if (amountRand <= 0) return;
+
+    await ledgerService.postJournalEntry({
+      reference: `VAS-FACE-${transactionId}`,
+      description: `VAS face value: ${vasType} R${amountRand} (${normalizedSupplier})`,
+      lines: [
+        { accountCode: LEDGER_ACCOUNT_CLIENT_FLOAT, dc: 'debit', amount: amountRand, memo: `Client float debit (${vasType})` },
+        { accountCode: supplierFloatCode, dc: 'credit', amount: amountRand, memo: `Supplier float consumed (${vasType})` }
+      ]
+    });
+
+    if (supplierFloat) {
+      await supplierFloat.updateBalance(amountRand, 'debit');
+    }
+  } catch (err) {
+    console.error('[postFaceValueJournal] Failed (non-blocking):', err.message);
+  }
+}
+
 // ========================================
 // AIRTIME & DATA OVERLAY ENDPOINTS
 // ========================================
@@ -1969,6 +2011,14 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
               idempotencyKey,
               purchaserUserId: req.user.id,
             });
+
+            // STEP 1B: Post face-value journal (DR client float, CR supplier float)
+            await postFaceValueJournal({
+              amount: normalizedAmount,
+              supplierCode: supplier,
+              transactionId: committedLedgerTransaction?.transactionId || idempotencyKey,
+              vasType: type,
+            });
             
             // STEP 2: Reload vas_transaction to get updated commission metadata
             await committedVasTransaction.reload();
@@ -2710,6 +2760,13 @@ router.post('/electricity/purchase', auth, async (req, res) => {
       purchaserUserId: req.user.id,
     });
 
+    await postFaceValueJournal({
+      amount: amount,
+      supplierCode: transaction.supplierId,
+      transactionId: ledgerTransaction?.transactionId || idempotencyKey,
+      vasType: 'electricity',
+    });
+
     // Check if beneficiary is a MyMoolah user
     const { User } = require('../models');
     const beneficiaryUser = await User.findOne({
@@ -3423,6 +3480,13 @@ router.post('/bills/pay', auth, async (req, res) => {
       walletTransactionId: ledgerTransaction.transactionId,
       idempotencyKey,
       purchaserUserId: req.user.id,
+    });
+
+    await postFaceValueJournal({
+      amount: amount,
+      supplierCode: transaction.supplierId,
+      transactionId: ledgerTransaction?.transactionId || idempotencyKey,
+      vasType: 'bill_payment',
     });
 
     // Check if beneficiary is a MyMoolah user
