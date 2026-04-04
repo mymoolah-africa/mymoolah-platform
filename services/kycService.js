@@ -1617,21 +1617,24 @@ Return JSON only:
       
       // CRITICAL CHECK 1: ID Number must match exactly
       // Applies to: SA ID, Passport, Driver's License, Temporary ID Certificate
-      if (registeredId && docIdForMatch) {
-        if (registeredId !== docIdForMatch) {
-          console.warn('⚠️  ID/Passport number mismatch:', {
-            registered: registeredId,
-            document: docIdForMatch
-          });
-          validation.issues.push(`ID/Passport/License number mismatch: Document shows "${ocrResults.idNumber || ocrResults.licenseNumber}" but registration shows "${user.idNumber}"`);
-          return validation;
-        } else {
-          console.log('✅ ID/Passport number matches');
-        }
-      } else if (!docIdForMatch) {
+      if (!registeredId) {
+        console.warn('⚠️  No ID number on file for user:', userId);
+        validation.issues.push('No ID number found on your registration. Please contact support to update your profile before verifying.');
+        return validation;
+      }
+      if (!docIdForMatch) {
         validation.issues.push('ID/Passport/License number not found on document');
         return validation;
       }
+      if (registeredId !== docIdForMatch) {
+        console.warn('⚠️  ID/Passport number mismatch:', {
+          registered: registeredId,
+          document: docIdForMatch
+        });
+        validation.issues.push(`ID/Passport/License number mismatch: Document shows "${ocrResults.idNumber || ocrResults.licenseNumber}" but registration shows "${user.idNumber}"`);
+        return validation;
+      }
+      console.log('✅ ID/Passport number matches');
 
       // CRITICAL CHECK 2: Surname must match exactly
       // For driver's license: name is in CAPS format "INITIALS SURNAME" (e.g., "A SMITH")
