@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-04 15:09  
-**Latest Feature**: **KYC Async Crash Recovery** — Fixed the "stuck at Under Review" bug: async IIFE catch block now calls `persistKycRejection` (was only logging), added 5-min stale safety net in `getKYCStatus`, fixed `manualVerifyKYC` static method bug, fixed `uploadDocument` userId security. **Requires redeployment to staging.**  
-**Document Version**: 2.76.0  
-**Session logs**: `docs/session_logs/2026-04-04_1509_kyc-async-crash-recovery-fixes.md`, `docs/session_logs/2026-04-04_1500_kyc-status-page-stuck-handoff.md`, `docs/session_logs/2026-04-04_1500_kyc-security-fix-and-notification-ux.md`  
+**Last Updated**: 2026-04-04 16:45  
+**Latest Feature**: **KYC Full Fix** — Fixed Sequelize `idNumber` validation crash (`user.update()` → raw SQL), removed auto-navigate from KYC status page (users can view tier info & upload POA), hardened KYC reset scripts (preserve registration data, audit trail). KYC Tier 1 (ID) and Tier 2 (POA) both verified working on staging.  
+**Document Version**: 2.77.0  
+**Session logs**: `docs/session_logs/2026-04-04_1530_kyc-verification-fix-and-auto-navigate.md`, `docs/session_logs/2026-04-04_1509_kyc-async-crash-recovery-fixes.md`, `docs/session_logs/2026-04-04_1500_kyc-status-page-stuck-handoff.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---

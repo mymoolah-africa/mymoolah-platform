@@ -1,5 +1,37 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-04 - KYC Verification Fix & Auto-Navigate Removal (v2.77.0)
+
+### Summary
+Fixed critical KYC verification bug where document uploads always failed with `SequelizeValidationError: Validation len on idNumber failed`. Root cause: Sequelize's `afterFind` decryption hook marks `idNumber` as "changed", and subsequent `user.update()` re-validates the encrypted ciphertext against plaintext length rules. Also removed auto-navigate from KYC status page and hardened reset scripts.
+
+### Bug Fixes
+- **KYC verification crash**: Replaced all 7 `user.update()` calls in `kycController.js` with parameterized raw SQL — bypasses Sequelize ORM validation on encrypted `idNumber` field while maintaining banking-grade security (bind variables, no string interpolation)
+- **KYC status page auto-close**: Removed unconditional `navigate('/dashboard')` from `handleRefreshStatus()` and the auto-navigate `useEffect` — users can now view their tier info, limits, and upload POA at any time
+- **KYC async crash recovery** (from earlier in session): Catch block now calls `persistKycRejection()` instead of silently swallowing errors; added 5-min stale safety net; fixed `manualVerifyKYC` static method bug; fixed `uploadDocument` userId security
+
+### Script Improvements
+- **KYC reset scripts**: `DELETE FROM kyc` replaced with `UPDATE kyc SET status = 'reset'` — preserves audit trail and OCR data
+- Registration data (`idNumber`, `idType`, names, phone) never touched by reset scripts
+- Wallet limits reset to Tier 0 defaults
+- Production script shows user state preview before confirmation
+- PII masked in output (ID numbers show last 4 chars only)
+
+### Files Modified
+- `controllers/kycController.js` — raw SQL for user updates
+- `mymoolah-wallet-frontend/pages/KYCStatusPage.tsx` — remove auto-navigate
+- `mymoolah-wallet-frontend/components/KYCStatusPage.tsx` — remove auto-navigate
+- `scripts/reset-kyc-production.sh` — preserve registration data
+- `scripts/reset-kyc-staging.sh` — preserve registration data
+
+### Testing
+- Staging: ID verification (Tier 1) with driver's licence — verified
+- Staging: POA verification (Tier 2) with tax invoice — verified
+- KYC status page stays open when already verified — confirmed
+- Denise's production record (user 6) verified intact
+
+---
+
 ## 2026-04-03 - Auditing Skill v2.0.0 — World-Class Banking-Grade Upgrade
 
 ### Summary
