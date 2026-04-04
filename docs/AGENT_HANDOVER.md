@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-04 11:30  
-**Latest Feature**: **Staging/Production Parity Fixes** — Rate limiters now identical for staging and production (removed all `STAGING` skip clauses); referral payout migrated from node-cron to Cloud Scheduler (fixes payouts not firing on Cloud Run min-instances=0); ProductVariant findOrCreate fixed to match unique index (fixes Hollywood Bets sync failure); KYC pages now show TopBanner with notification bell. After deploy, run `./scripts/setup-cloud-scheduler.sh --both` to create referral payout Cloud Scheduler jobs. Session log: `docs/session_logs/2026-04-04_1130_staging-production-parity-fixes.md`.  
-**Document Version**: 2.73.0  
-**Session logs**: `docs/session_logs/2026-04-04_1130_staging-production-parity-fixes.md`, `docs/session_logs/2026-04-03_2100_production-audit-treasury-referrals-vouchers-vas.md`  
+**Last Updated**: 2026-04-04 15:00  
+**Latest Feature**: **KYC Security Fix & Notification UX** — Fixed critical KYC bypass where missing `user.idNumber` skipped ID validation (allowing wrong-person documents). Redesigned notification popup as slide-down panel matching 375px wallet width with animations. Profile page now refreshes user status on mount (fixes stale "KYC Required" badge). KYC auto-nav delay reduced to 1.5s. Session log: `docs/session_logs/2026-04-04_1500_kyc-security-fix-and-notification-ux.md`.  
+**Document Version**: 2.74.0  
+**Session logs**: `docs/session_logs/2026-04-04_1500_kyc-security-fix-and-notification-ux.md`, `docs/session_logs/2026-04-04_1130_staging-production-parity-fixes.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
