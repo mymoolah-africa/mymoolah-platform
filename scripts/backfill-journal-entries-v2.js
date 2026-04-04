@@ -14,11 +14,11 @@
  *
  * IDEMPOTENT: Uses unique reference patterns; skips if reference already exists.
  * NON-DESTRUCTIVE: Only INSERTs into journal_entries + journal_lines.
+ * PRODUCTION ONLY: All entries are production facts (real bank transactions).
  *
  * Usage:
- *   node scripts/backfill-journal-entries-v2.js --staging
+ *   node scripts/backfill-journal-entries-v2.js --production --dry-run
  *   node scripts/backfill-journal-entries-v2.js --production
- *   node scripts/backfill-journal-entries-v2.js --staging --dry-run
  */
 
 require('dotenv').config();
@@ -29,11 +29,14 @@ const ENV_ARG = process.argv.find(a => ['--staging', '--uat', '--production'].in
 const ENV = ENV_ARG ? ENV_ARG.replace('--', '') : 'production';
 const DRY_RUN = process.argv.includes('--dry-run');
 
-const CLIENT_FN = {
-  production: 'getProductionClient',
-  staging: 'getStagingClient',
-  uat: 'getUATClient'
-}[ENV];
+if (ENV !== 'production') {
+  console.error('\x1b[31mERROR: This backfill script contains production-specific entries (director loan,\x1b[0m');
+  console.error('\x1b[31m       float top-ups, DEP-TXN1 correction). It must only run against production.\x1b[0m');
+  console.error('\x1b[31m       Usage: node scripts/backfill-journal-entries-v2.js --production [--dry-run]\x1b[0m');
+  process.exit(1);
+}
+
+const CLIENT_FN = 'getProductionClient';
 
 const GREEN = '\x1b[32m', RED = '\x1b[31m', YELLOW = '\x1b[33m', CYAN = '\x1b[36m';
 const BOLD = '\x1b[1m', DIM = '\x1b[2m', RESET = '\x1b[0m';

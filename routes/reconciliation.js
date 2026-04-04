@@ -402,6 +402,11 @@ router.get('/analytics/summary', authenticateToken, async (req, res) => {
 const { verifyCloudSchedulerToken } = require('../middleware/cloudSchedulerAuth');
 
 router.post('/scheduled-recon', verifyCloudSchedulerToken, async (req, res) => {
+  const isProduction = process.env.MM_DEPLOYMENT_ENV === 'production' || process.env.NODE_ENV === 'production';
+  if (!isProduction) {
+    return res.json({ success: true, message: 'Scheduled recon skipped — production only', data: { verdict: 'SKIP' } });
+  }
+
   const startTime = Date.now();
   const triggeredBy = req.schedulerAuth ? req.schedulerAuth.email : 'unknown';
   logger.info(`Scheduled reconciliation triggered by: ${triggeredBy}`);
