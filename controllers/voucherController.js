@@ -611,6 +611,21 @@ exports.issueVoucher = async (req, res) => {
           }
         }, { transaction: t });
 
+        // Post voucher issue journal: DR Client Float / CR Voucher Clearing
+        try {
+          const ledgerService = require('../services/ledgerService');
+          await ledgerService.postJournalEntry({
+            reference: `VOUCHER-ISSUE-${transactionId}`,
+            description: `Voucher issued ${amount.toFixed(2)} — code ${voucherCode}`,
+            lines: [
+              { accountCode: '2100-01-01', dc: 'debit', amount, memo: 'Wallet debit for voucher issue' },
+              { accountCode: '2500-01-01', dc: 'credit', amount, memo: 'Voucher clearing — unredeemed' }
+            ]
+          });
+        } catch (jeErr) {
+          console.error('Journal entry failed for voucher issue:', jeErr.message);
+        }
+
         return { voucher, transactionId };
       });
 
@@ -1795,6 +1810,21 @@ exports.redeemVoucher = async (req, res) => {
             redeemedBy: req.user.id
           }
         }, { transaction: t });
+
+        // Post voucher redeem journal: DR Voucher Clearing / CR Client Float
+        try {
+          const ledgerService = require('../services/ledgerService');
+          await ledgerService.postJournalEntry({
+            reference: `VOUCHER-REDEEM-${transactionId}`,
+            description: `Voucher redeemed ${redemptionAmount.toFixed(2)} — code ${voucher.voucherCode}`,
+            lines: [
+              { accountCode: '2500-01-01', dc: 'debit', amount: redemptionAmount, memo: 'Clear voucher clearing on redeem' },
+              { accountCode: '2100-01-01', dc: 'credit', amount: redemptionAmount, memo: 'Wallet credit for voucher redemption' }
+            ]
+          });
+        } catch (jeErr) {
+          console.error('Journal entry failed for voucher redeem:', jeErr.message);
+        }
 
         // Reconciliation for legacy vouchers (issuer was not debited on issue)
         try {

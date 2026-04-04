@@ -281,11 +281,27 @@ module.exports = {
         description: receiverDesc,
         metadata: { 
           counterpartyIdentifier: payer.phoneNumber,
-          requestId: pr.id, // Add requestId for idempotency
-          paymentRequestId: pr.id // Alias for clarity
+          requestId: pr.id,
+          paymentRequestId: pr.id
         },
         currency: requesterWallet.currency,
       }, { transaction: t });
+
+      // Post wallet-to-wallet RTP journal entry (DR/CR Client Float — audit trail)
+      try {
+        const ledgerService = require('../services/ledgerService');
+        await ledgerService.postJournalEntry({
+          reference: `PR-${senderTransactionId}`,
+          description: `Wallet RTP ${parseFloat(pr.amount).toFixed(2)} — ${payer.firstName} to ${requester.firstName}`,
+          lines: [
+            { accountCode: '2100-01-01', dc: 'debit', amount: parseFloat(pr.amount), memo: `Payer wallet debit (${payer.phoneNumber})` },
+            { accountCode: '2100-01-01', dc: 'credit', amount: parseFloat(pr.amount), memo: `Requester wallet credit (${requester.phoneNumber})` }
+          ]
+        });
+      } catch (jeErr) {
+        console.error('Journal entry failed for wallet RTP:', jeErr.message);
+      }
+
       } catch (dbError) {
         // If database constraint violation, rollback and return error
         if (dbError.name === 'SequelizeUniqueConstraintError') {

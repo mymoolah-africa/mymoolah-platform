@@ -406,6 +406,21 @@ class WalletController {
       // NOTE: Do NOT create Beneficiary records for wallet-to-wallet sends.
       // Beneficiaries are reserved for 3rd-party bank account payments only.
 
+      // Post P2P journal entry (DR/CR Client Float — audit trail, net zero)
+      try {
+        const ledgerService = require('../services/ledgerService');
+        await ledgerService.postJournalEntry({
+          reference: `P2P-${senderTransactionId}`,
+          description: `P2P transfer ${parseFloat(amount).toFixed(2)} — ${senderUser.firstName} to ${receiver.firstName}`,
+          lines: [
+            { accountCode: '2100-01-01', dc: 'debit', amount: parseFloat(amount), memo: `Sender wallet debit (${senderUser.phoneNumber})` },
+            { accountCode: '2100-01-01', dc: 'credit', amount: parseFloat(amount), memo: `Receiver wallet credit (${receiver.phoneNumber})` }
+          ]
+        });
+      } catch (jeErr) {
+        console.error('Journal entry failed for P2P transfer:', jeErr.message);
+      }
+
       // Create notification for receiver (non-blocking)
       try {
         await notificationService.createNotification(

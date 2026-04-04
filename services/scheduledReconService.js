@@ -58,6 +58,7 @@ class ScheduledReconService {
     await this._checkSupplierFloats();
     await this._checkCommissionIntegrity();
     await this._checkNegativeWallets();
+    await this._checkSolvency();
 
     const elapsedMs = Date.now() - startMs;
     const verdict = this.failCount > 0 ? 'FAIL' : this.warnCount > 0 ? 'WARN' : 'PASS';
@@ -221,6 +222,47 @@ class ScheduledReconService {
       }
     } else {
       this._pass('NEGATIVE_WALLET', 'No negative wallet balances');
+    }
+  }
+
+  // ─── 7. SOLVENCY CHECK — Client Float <= Bank + Supplier Floats ──
+  async _checkSolvency() {
+    const [bankRow] = await sequelize.query(`
+      SELECT
+        COALESCE(SUM(CASE WHEN jl.dc = 'debit' THEN jl.amount ELSE 0 END), 0) -
+        COALESCE(SUM(CASE WHEN jl.dc = 'credit' THEN jl.amount ELSE 0 END), 0) AS balance
+      FROM journal_lines jl
+      JOIN ledger_accounts la ON la.id = jl."accountId"
+      WHERE la.code = '1100-01-01'
+    `, { type: sequelize.QueryTypes.SELECT });
+    const bankBal = parseFloat(bankRow?.balance || 0);
+
+    const supplierFloatRows = await sequelize.query(`
+      SELECT
+        COALESCE(SUM(CASE WHEN jl.dc = 'debit' THEN jl.amount ELSE 0 END), 0) -
+        COALESCE(SUM(CASE WHEN jl.dc = 'credit' THEN jl.amount ELSE 0 END), 0) AS balance
+      FROM journal_lines jl
+      JOIN ledger_accounts la ON la.id = jl."accountId"
+      WHERE la.code LIKE '1200-10-%'
+    `, { type: sequelize.QueryTypes.SELECT });
+    const totalFloats = parseFloat(supplierFloatRows[0]?.balance || 0);
+
+    const [clientRow] = await sequelize.query(`
+      SELECT
+        COALESCE(SUM(CASE WHEN jl.dc = 'credit' THEN jl.amount ELSE 0 END), 0) -
+        COALESCE(SUM(CASE WHEN jl.dc = 'debit' THEN jl.amount ELSE 0 END), 0) AS balance
+      FROM journal_lines jl
+      JOIN ledger_accounts la ON la.id = jl."accountId"
+      WHERE la.code = '2100-01-01'
+    `, { type: sequelize.QueryTypes.SELECT });
+    const clientFloat = parseFloat(clientRow?.balance || 0);
+
+    const backingAssets = bankBal + totalFloats;
+
+    if (clientFloat <= backingAssets + 0.01) {
+      this._pass('SOLVENCY', `Client Float R${clientFloat.toFixed(2)} <= Bank R${bankBal.toFixed(2)} + Floats R${totalFloats.toFixed(2)} = R${backingAssets.toFixed(2)}`);
+    } else {
+      this._fail('SOLVENCY', `Client Float R${clientFloat.toFixed(2)} > Bank R${bankBal.toFixed(2)} + Floats R${totalFloats.toFixed(2)} = R${backingAssets.toFixed(2)} — UNDERFUNDED R${(clientFloat - backingAssets).toFixed(2)}`);
     }
   }
 

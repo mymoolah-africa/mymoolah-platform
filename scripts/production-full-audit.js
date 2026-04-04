@@ -691,8 +691,111 @@ function journalRefLinksVas(refs, vasTransactionId, vasTsKey, walletTxnId, maxDr
     const clientFloatBal = clientFloat ? (parseFloat(clientFloat.cr) - parseFloat(clientFloat.dr)) : 0;
 
     console.log(`\n  ${BOLD}Ledger Cross-Check:${RESET}`);
-    console.log(`    User Wallet Clearing (1100-01-01):  ${money(walletClearingBal)}`);
+    console.log(`    Bank (1100-01-01):                  ${money(walletClearingBal)}`);
     console.log(`    Client Float Liability (2100-01-01): ${money(clientFloatBal)}`);
+
+    // ─── 10b. SOLVENCY CHECK — Client funds fully backed ───
+    section('Solvency Check — Client Float <= Bank + Supplier Floats');
+
+    const supplierFloatLedgerBals = await c.query(`
+      SELECT la.code, la.name,
+             COALESCE(SUM(CASE WHEN jl.dc = 'debit' THEN jl.amount ELSE 0 END), 0) -
+             COALESCE(SUM(CASE WHEN jl.dc = 'credit' THEN jl.amount ELSE 0 END), 0) as balance
+      FROM ledger_accounts la
+      LEFT JOIN journal_lines jl ON jl."accountId" = la.id
+      WHERE la.code LIKE '1200-10-%'
+      GROUP BY la.code, la.name
+    `);
+    let totalSupplierFloatLedger = 0;
+    supplierFloatLedgerBals.rows.forEach(sf => {
+      const bal = parseFloat(sf.balance);
+      if (bal !== 0) {
+        console.log(`    ${sf.code} ${sf.name}: ${money(bal)}`);
+      }
+      totalSupplierFloatLedger += bal;
+    });
+    console.log(`    ${BOLD}Total supplier floats (ledger): ${money(totalSupplierFloatLedger)}${RESET}`);
+
+    const backingAssets = walletClearingBal + totalSupplierFloatLedger;
+    console.log(`    Bank + Supplier Floats = ${money(backingAssets)}`);
+    console.log(`    Client Float Liability = ${money(clientFloatBal)}`);
+
+    if (clientFloatBal <= backingAssets + 0.01) {
+      pass(`Solvency: Client Float (${money(clientFloatBal)}) <= Bank + Supplier Floats (${money(backingAssets)}) — funds fully backed`, 'ACCURACY');
+    } else {
+      fail(`Solvency: Client Float (${money(clientFloatBal)}) > Bank + Supplier Floats (${money(backingAssets)}) — UNDERFUNDED by ${money(clientFloatBal - backingAssets)}`, 'ACCURACY');
+    }
+
+    // ─── 10c. A BOTES LOAN ACCOUNT (2400-01-01) ───
+    section('A Botes Loan Account (2400-01-01)');
+    const botesLoanAcct = ledgerAccounts.rows.find(a => a.code === '2400-01-01');
+    if (botesLoanAcct) {
+      const botesLoanBal = parseFloat(botesLoanAcct.cr) - parseFloat(botesLoanAcct.dr);
+      console.log(`    A Botes Loan Account balance: ${money(botesLoanBal)}`);
+      if (botesLoanBal >= 0) {
+        pass(`A Botes Loan Account (2400-01-01): balance ${money(botesLoanBal)} (liability — amount owed)`, 'ACCURACY');
+      } else {
+        warn(`A Botes Loan Account (2400-01-01): negative balance ${money(botesLoanBal)} — overpaid?`, 'ACCURACY');
+      }
+    } else {
+      warn('A Botes Loan Account (2400-01-01) not found in ledger — migration needed', 'ACCURACY');
+    }
+
+    // ─── 10d. VOUCHER CLEARING (2500-01-01) ───
+    section('Voucher Clearing (2500-01-01)');
+    const voucherClearingAcct = ledgerAccounts.rows.find(a => a.code === '2500-01-01');
+    if (voucherClearingAcct) {
+      const vcBal = parseFloat(voucherClearingAcct.cr) - parseFloat(voucherClearingAcct.dr);
+      console.log(`    Voucher Clearing balance: ${money(vcBal)}`);
+
+      const activeVouchers = await c.query(`
+        SELECT COUNT(*) as cnt, COALESCE(SUM(balance), 0) as total_balance
+        FROM vouchers WHERE status = 'active' AND balance > 0
+      `);
+      const activeVBal = parseFloat(activeVouchers.rows[0].total_balance);
+      const vcDiff = Math.abs(vcBal - activeVBal);
+      console.log(`    Active voucher balances (vouchers table): ${money(activeVBal)}`);
+
+      if (vcDiff < 0.01) {
+        pass(`Voucher Clearing (${money(vcBal)}) matches active voucher balances (${money(activeVBal)})`, 'ACCURACY');
+      } else if (vcBal === 0 && activeVBal === 0) {
+        pass(`Voucher Clearing: zero balance — all vouchers fully redeemed`, 'ACCURACY');
+      } else {
+        warn(`Voucher Clearing (${money(vcBal)}) vs active vouchers (${money(activeVBal)}) DIFF=${money(vcDiff)}`, 'ACCURACY');
+      }
+    } else {
+      warn('Voucher Clearing (2500-01-01) not found in ledger — migration needed', 'ACCURACY');
+    }
+
+    // ─── 10e. P2P JOURNAL COMPLETENESS ───
+    section('P2P / Wallet RTP Journal Completeness');
+    const p2pSendTxns = await c.query(`
+      SELECT t.id, t."transactionId", t.amount, t."userId",
+             u."firstName", u."lastName"
+      FROM transactions t
+      JOIN users u ON u.id = t."userId"
+      WHERE t.type = 'send' AND t.status = 'completed'
+      ORDER BY t."createdAt"
+    `);
+
+    const allJeRefsForP2P = await c.query(`SELECT reference FROM journal_entries WHERE reference LIKE 'P2P-%' OR reference LIKE 'PR-%' OR reference LIKE 'BACKFILL-P2P-%'`);
+    const p2pRefSet = new Set(allJeRefsForP2P.rows.map(r => r.reference));
+
+    let p2pMissing = 0;
+    p2pSendTxns.rows.forEach(s => {
+      const hasJE = p2pRefSet.has(`P2P-${s.transactionId}`) ||
+                    p2pRefSet.has(`BACKFILL-P2P-TXN${s.id}`) ||
+                    [...p2pRefSet].some(r => r.includes(s.transactionId));
+      if (!hasJE) {
+        warn(`P2P TXN#${s.id} (${s.firstName} ${s.lastName}, ${money(s.amount)}) — no matching journal entry`, 'COMPLETENESS');
+        p2pMissing++;
+      }
+    });
+    if (p2pMissing === 0 && p2pSendTxns.rows.length > 0) {
+      pass(`All ${p2pSendTxns.rows.length} P2P/wallet-RTP send transactions have matching journal entries`, 'COMPLETENESS');
+    } else if (p2pSendTxns.rows.length === 0) {
+      pass('No P2P send transactions to verify', 'COMPLETENESS');
+    }
 
     // ═══════════════════════════════════════════════════════════════
     // 11. MYMOOLAH REVENUE ACCOUNT
