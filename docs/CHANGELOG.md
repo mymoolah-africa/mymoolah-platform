@@ -1,5 +1,44 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-04 - Ledger Audit Complete Build (v2.79.0)
+
+### Summary
+Built the complete ledger audit system. Created 2 new ledger accounts (A Botes Loan Account, Voucher Clearing), comprehensive backfill-v2 script for all missing journal entries since April 1, forward journal posting for P2P transfers, wallet-to-wallet RTP, and voucher issue/redeem, rebuilt audit script with solvency checks, and updated the scheduled recon service.
+
+### New Ledger Accounts (Migration)
+- **2400-01-01**: A Botes Loan Account — tracks director loan capital injection (liability, credit normal)
+- **2500-01-01**: Voucher Clearing — tracks unredeemed internal voucher balances (liability, credit normal)
+
+### Backfill-v2 Script
+- `scripts/backfill-journal-entries-v2.js`: Posts missing JEs for RTP tests (2x R10), director's loan (R4,000), corrects DEP-TXN1 (R1,500 source from loan not bank), MobileMart float top-up (R2,500), P2P transfers (5 txns), voucher issue/redeem
+- Supports `--dry-run`, `--staging`, `--production` flags
+- All entries idempotent with unique BACKFILL-* references
+
+### Forward Journal Posting
+- **walletController.js**: P2P send now posts DR/CR 2100-01-01 journal (audit trail)
+- **requestController.js**: Wallet-to-wallet RTP (payment request approval) now posts DR/CR 2100-01-01 journal
+- **voucherController.js**: Issue posts DR 2100-01-01 / CR 2500-01-01; Redeem posts reverse
+
+### Audit Script Enhancements
+- **Solvency check**: Client Float <= Bank + All Supplier Floats
+- **A Botes Loan Account verification**: Balance tracked and verified
+- **Voucher Clearing verification**: Cross-checked against active voucher balances
+- **P2P journal completeness**: Every send transaction verified against P2P/PR/BACKFILL journal references
+
+### Scheduled Recon Service
+- Added `_checkSolvency()` method: verifies client funds are fully backed by bank + supplier floats
+
+### Files Modified
+- `migrations/20260404_01_create_botes_loan_and_voucher_clearing_accounts.js` — NEW
+- `scripts/backfill-journal-entries-v2.js` — NEW
+- `controllers/walletController.js` — P2P journal posting
+- `controllers/requestController.js` — Wallet RTP journal posting
+- `controllers/voucherController.js` — Voucher issue/redeem journal posting
+- `scripts/production-full-audit.js` — 5 new audit checks
+- `services/scheduledReconService.js` — Solvency check
+
+---
+
 ## 2026-04-04 - Ledger Gap Fix, Backfill Script, Scheduled Recon (v2.78.0)
 
 ### Summary
