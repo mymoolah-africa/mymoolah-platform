@@ -11,15 +11,25 @@ stokvels, loyalty, savings, merchant, MMF, subscriptions, TCIB, MoolahMove),
 environment variable map, and cross-references.
 
 ### Key Additions
-- Documented all 24 migrated accounts + 4 code-referenced accounts needing migrations (`2200-03-01`, `2600-01-01`, `5100-02-01`, `1100-02-01`)
+- Documented all 28 accounts (24 previously migrated + 4 newly migrated)
 - Documented MoolahMove as simple pass-through (ZAR→USDC via VALR, handoff to Yellow Card); noted 5 misalignments in `internationalPaymentService.js` vs canonical CoA
 - TCIB section: SARB Directive 1/2025, March 2027 migration deadline, per-corridor floats (`1200-20-XX`)
-- Added 3 tech-debt rows: 4 missing migrations, internationalPaymentService misalignments, adService `2100-05-001` typo
+- Added tech-debt rows: internationalPaymentService misalignments, adService `2100-05-001` typo
 - Added 1 architectural decision: CoA document is canonical reference
+
+### Migration: 20260405_01_seed_missing_ledger_accounts
+Created and applied migration for 4 accounts previously referenced in code without migrations:
+- `1100-02-01` — SBSA Statement Reconciliation Account (asset/debit)
+- `2200-03-01` — Referral Commission Payable (liability/credit)
+- `2600-01-01` — Unallocated Deposits / Suspense (liability/credit)
+- `5100-02-01` — Referral Expense (expense/debit)
+
+All 4 already existed in staging and production (manually created). Migration recorded in `SequelizeMeta`.
 
 ### Files Modified
 - `docs/CHART_OF_ACCOUNTS.md` — NEW (canonical Chart of Accounts)
-- `.cursor/rules/tech-debt.mdc` — 3 new tech-debt rows + 1 architectural decision
+- `migrations/20260405_01_seed_missing_ledger_accounts.js` — NEW (4 missing accounts)
+- `.cursor/rules/tech-debt.mdc` — tech-debt rows + architectural decision; missing migrations RESOLVED
 - `docs/CHANGELOG.md` — this entry
 - `docs/AGENT_HANDOVER.md` — session reference
 - `docs/session_logs/2026-04-04_2300_chart-of-accounts.md` — session log
