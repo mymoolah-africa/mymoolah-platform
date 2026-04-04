@@ -23,7 +23,22 @@ class ReferralPayoutService {
     
     console.log(`💰 Starting daily referral payout batch: ${batchId}`);
     
-    // 1. Create batch record
+    // Idempotency: if today's batch already ran, return its result
+    const existingBatch = await ReferralPayout.findOne({ where: { batchId } });
+    if (existingBatch) {
+      console.log(`✅ Payout batch ${batchId} already exists (status: ${existingBatch.status}) — skipping duplicate run`);
+      return {
+        success: true,
+        batchId,
+        duplicate: true,
+        existingStatus: existingBatch.status,
+        totalUsers: existingBatch.totalUsers || 0,
+        totalAmountCents: existingBatch.totalAmountCents || 0,
+        totalAmountRand: (existingBatch.totalAmountCents || 0) / 100,
+        totalEarningsCount: existingBatch.totalEarningsCount || 0,
+      };
+    }
+    
     const batch = await ReferralPayout.create({
       batchId,
       payoutDate: new Date(),
