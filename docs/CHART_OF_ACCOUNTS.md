@@ -60,7 +60,7 @@ and receivables. Normal side: **debit** (increases on debit, decreases on credit
 | Code | Name | Normal | Migration | Used By | Notes |
 |------|------|--------|-----------|---------|-------|
 | `1100-01-01` | Standard Bank Current Account | debit | `20260207120003`, `20260224_03` | walletController, rtpService, rppService, overlayServices, backfill scripts | Primary operating bank account; all external fund movements clear through here |
-| `1100-02-01` | SBSA Statement Reconciliation Account | debit | **NEEDS MIGRATION** | `sbsaStatementService.js` (`SBSA_MAIN_ACCOUNT_CODE`) | MT940/MT942 statement balance tracking; env var `SBSA_MAIN_ACCOUNT_CODE` defaults to this code |
+| `1100-02-01` | SBSA Statement Reconciliation Account | debit | `20260405_01` | `sbsaStatementService.js` (`SBSA_MAIN_ACCOUNT_CODE`) | MT940/MT942 statement balance tracking; env var `SBSA_MAIN_ACCOUNT_CODE` defaults to this code |
 | `1200-01-01` | Client Float — General | debit | `20260224_03` | — | General-purpose client float pool (not currently posted to; reserved) |
 | `1200-05-01` | Interchange Receivable | debit | `20260224_03` | — | PayShap interchange (reserved for future use) |
 | `1200-10-01` | Zapper Float Account | debit | `20260224_03` | `qrPaymentController.js` | Zapper QR payment float |
@@ -85,11 +85,11 @@ clearing accounts, and funds held on behalf of others. Normal side: **credit**
 | `2100-05-01` | Merchant Ad Float | credit | `20260224_03` | `adService.js` | Watch-to-Earn merchant prefunded float; **note**: `adService.js` also references `2100-05-001` (extra digit) — known cosmetic bug, should be `2100-05-01` |
 | `2200-01-01` | MM Commission Clearing | credit | `20260224_03` | `commissionVatService.js`, `qrPaymentController.js` | Commission holding before recognition |
 | `2200-02-01` | Supplier Clearing Account | credit | `20260224_03` | — | Supplier settlement netting (reserved) |
-| `2200-03-01` | Referral Commission Payable | credit | **NEEDS MIGRATION** | `referralPayoutService.js`, `backfill-missing-journal-entries.js` | Accrued referral commissions awaiting payout; env var `LEDGER_ACCOUNT_REFERRAL_PAYABLE` defaults to this code |
+| `2200-03-01` | Referral Commission Payable | credit | `20260405_01` | `referralPayoutService.js`, `backfill-missing-journal-entries.js` | Accrued referral commissions awaiting payout; env var `LEDGER_ACCOUNT_REFERRAL_PAYABLE` defaults to this code |
 | `2300-10-01` | VAT Control Account | credit | `20260224_03` | `commissionVatService.js`, `standardbankRtpService.js`, `standardbankRppService.js` | Output VAT payable to SARS (15%); canonical VAT account for all flows |
 | `2400-01-01` | A Botes Loan Account | credit | `20260404_01` | `backfill-journal-entries-v2.js`, `production-full-audit.js` | Director loan capital injection; DR Bank / CR this account on injection |
 | `2500-01-01` | Voucher Clearing | credit | `20260404_01` | `voucherController.js`, `backfill-journal-entries-v2.js`, `production-full-audit.js` | Internal MM voucher liability; balance = unredeemed voucher value; zero when all redeemed |
-| `2600-01-01` | Unallocated Deposits / Suspense | credit | **NEEDS MIGRATION** | `standardbankDepositNotificationService.js` | Deposits that cannot be matched to a user wallet; env var `LEDGER_ACCOUNT_UNALLOCATED` defaults to this code; must be manually resolved within 24h |
+| `2600-01-01` | Unallocated Deposits / Suspense | credit | `20260405_01` | `standardbankDepositNotificationService.js` | Deposits that cannot be matched to a user wallet; env var `LEDGER_ACCOUNT_UNALLOCATED` defaults to this code; must be manually resolved within 24h |
 
 ### 2.3 Equity (3xxx-xx-xx)
 
@@ -116,7 +116,7 @@ Expense accounts track costs incurred. Normal side: **debit**
 | Code | Name | Normal | Migration | Used By | Notes |
 |------|------|--------|-----------|---------|-------|
 | `5000-10-01` | Cost of Sales: PayShap SBSA Fee | debit | `20260224_03`, `20260224_02` | `standardbankRtpService.js`, `standardbankRppService.js` | SBSA fee per PayShap RPP/RTP transaction (R5.00 ex-VAT per txn) |
-| `5100-02-01` | Referral Expense | debit | **NEEDS MIGRATION** | `production-full-audit.js` | Referral commission expense; currently referenced only in audit reconciliation — accrual posting path TBD |
+| `5100-02-01` | Referral Expense | debit | `20260405_01` | `production-full-audit.js` | Referral commission expense; currently referenced only in audit reconciliation — accrual posting path TBD |
 | `5100-03-01` | Ad Reward Expense | debit | `20260224_03` | `adService.js` | Watch-to-Earn user reward payout (R2–R3 per view) |
 
 ### 2.6 Clearing / Suspense (9xxx-xx-xx)
