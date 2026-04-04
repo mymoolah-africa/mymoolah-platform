@@ -152,6 +152,19 @@ function money(v) { return `R ${Number(v || 0).toFixed(2)}`; }
         continue;
       }
 
+      // Skip RTPs that already have JEs from the forward standardbankRtpService (SBSA-RTP-* refs)
+      const hasExistingRtpJE = [...refSet].some(r =>
+        r.includes(`SBSA-RTP-`) && (
+          r.includes(String(rtp.id)) ||
+          (rtp.merchantTransactionId && r.includes(rtp.merchantTransactionId))
+        )
+      );
+      if (hasExistingRtpJE) {
+        console.log(`  ${DIM}SKIP${RESET}  RTP #${rtp.id} ${money(grossAmount)} — already has SBSA-RTP journal entry`);
+        skipped++;
+        continue;
+      }
+
       await postJE(ref,
         `Backfill: PayShap RTP ${money(grossAmount)} — SBSA fee ${money(sbsaFee)}, net wallet credit ${money(netWalletCredit)}`,
         [
