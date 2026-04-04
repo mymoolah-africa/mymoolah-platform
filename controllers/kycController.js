@@ -12,7 +12,8 @@ class KYCController {
   // Upload KYC document
   async uploadDocument(req, res) {
     try {
-      const { userId, documentType } = req.body;
+      const userId = req.user?.id || req.body.userId;
+      const { documentType } = req.body;
       const documentFile = req.file;
 
       if (!documentFile) {
@@ -391,6 +392,22 @@ class KYCController {
           }
         } catch (kycError) {
           console.error('❌ KYC processing error (async):', kycError);
+          console.error('❌ KYC async stack:', kycError?.stack);
+          try {
+            await persistKycRejection(userId,
+              'Document processing encountered an error. Please try uploading again.',
+              identityUrl ? 'id_document' : 'proof_of_address');
+          } catch (recoveryErr) {
+            console.error('❌ KYC error recovery also failed:', recoveryErr.message);
+            // Last resort: raw SQL so the user is never stuck at under_review
+            try {
+              const { sequelize: fallbackSeq } = require('../models');
+              await fallbackSeq.query(
+                'UPDATE users SET "kycStatus" = $1, "updatedAt" = NOW() WHERE id = $2',
+                { bind: ['rejected', userId] }
+              );
+            } catch (_) { /* truly nothing left to try */ }
+          }
         }
       })();
       
@@ -473,6 +490,34 @@ class KYCController {
         }
       }
 
+      // Self-healing: under_review stuck for more than 5 minutes
+      // (async OCR processing crashed without recovery — user should retry)
+      if (finalKycStatus === 'under_review') {
+        const checkTime = kycRecord?.updatedAt || kycRecord?.createdAt || user?.updatedAt;
+        if (checkTime) {
+          const elapsedMs = Date.now() - new Date(checkTime).getTime();
+          const STALE_THRESHOLD_MS = 5 * 60 * 1000;
+          if (elapsedMs > STALE_THRESHOLD_MS) {
+            const mins = Math.round(elapsedMs / 60000);
+            console.log('🔧 Self-healing: under_review stuck for', mins, 'min — setting rejected for retry');
+            finalKycStatus = 'rejected';
+            const staleMsg = 'Document processing timed out. Please try uploading again.';
+            if (user) {
+              user.update({ kycStatus: 'rejected' }).catch(err =>
+                console.error('Self-heal stale under_review user update failed:', err.message));
+            }
+            if (kycRecord && kycRecord.status !== 'rejected') {
+              kycRecord.update({
+                status: 'rejected',
+                rejectionReason: staleMsg,
+                reviewedAt: new Date()
+              }).catch(err =>
+                console.error('Self-heal stale under_review KYC record failed:', err.message));
+            }
+          }
+        }
+      }
+
       const isVerified = finalKycStatus === 'verified' || wallet.kycVerified === true;
 
       const currentKycTier = user?.kyc_tier != null ? user.kyc_tier : null;
@@ -528,7 +573,14 @@ class KYCController {
         });
       }
 
-      await Wallet.verifyKYC(walletId, verifiedBy || 'support_team');
+      const wallet = await Wallet.findOne({ where: { walletId } });
+      if (!wallet) {
+        return res.status(404).json({
+          error: 'WALLET_NOT_FOUND',
+          message: 'Wallet not found'
+        });
+      }
+      await wallet.verifyKYC(verifiedBy || 'support_team');
 
       res.json({
         success: true,
