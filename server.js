@@ -323,10 +323,7 @@ const limiter = rateLimit({
   validate: {
     trustProxy: false // Disable validation - we handle proxy manually
   },
-  // In development, staging, and for CORS preflight, skip limiting to avoid false CORS failures during polling
-  skip: (req) => req.method === 'OPTIONS' || 
-    (process.env.NODE_ENV && process.env.NODE_ENV !== 'production') ||
-    process.env.STAGING === 'true',
+  skip: (req) => req.method === 'OPTIONS',
   handler: (req, res) => {
     res.status(429).json({
       success: false,
@@ -347,9 +344,7 @@ const authLimiter = rateLimit({
     trustProxy: false // Disable validation - we handle proxy manually
   },
   keyGenerator: (req) => getClientIP(req) + '-auth',
-  skip: (req) => req.method === 'OPTIONS' || 
-    (process.env.NODE_ENV && process.env.NODE_ENV !== 'production') ||
-    process.env.STAGING === 'true',
+  skip: (req) => req.method === 'OPTIONS',
   handler: (req, res) => {
     res.status(429).json({
       success: false,
@@ -370,9 +365,7 @@ const financialLimiter = rateLimit({
     trustProxy: false
   },
   keyGenerator: (req) => getClientIP(req) + '-financial',
-  skip: (req) => req.method === 'OPTIONS' || req.method === 'GET' ||
-    (process.env.NODE_ENV && process.env.NODE_ENV !== 'production') ||
-    process.env.STAGING === 'true',
+  skip: (req) => req.method === 'OPTIONS' || req.method === 'GET',
   handler: (req, res) => {
     res.status(429).json({
       success: false,
@@ -383,17 +376,16 @@ const financialLimiter = rateLimit({
 });
 
 // Wallet/dashboard read limiter (GET requests: balance, transactions, notifications polling)
+// 300/min gives generous headroom for 10-second polling across all dashboard endpoints
 const walletReadLimiter = rateLimit({
   windowMs: 1 * 60 * 1000,
-  max: process.env.NODE_ENV === 'production' ? 120 : 1000,
+  max: 300,
   message: 'Too many read requests',
   standardHeaders: true,
   legacyHeaders: false,
   validate: { trustProxy: false },
   keyGenerator: (req) => getClientIP(req) + '-wallet-read',
-  skip: (req) => req.method !== 'GET' || req.method === 'OPTIONS' ||
-    (process.env.NODE_ENV && process.env.NODE_ENV !== 'production') ||
-    process.env.STAGING === 'true',
+  skip: (req) => req.method !== 'GET' || req.method === 'OPTIONS',
   handler: (req, res) => {
     res.status(429).json({
       success: false,
@@ -767,30 +759,35 @@ const initializeBackgroundServices = async () => {
       console.error('❌ Failed to start Catalog Synchronization Service:', catalogErr.message);
     }
     
-    // Start Daily Referral Payout (runs every day at 2:00 AM SAST)
+    // Start Daily Referral Payout
+    // CATALOG_SYNC_MODE=scheduler → Cloud Scheduler calls /api/v1/referrals/scheduled-payout via HTTP
+    // Otherwise → node-cron fallback (local dev / Codespaces)
     try {
-      const cron = require('node-cron');
-      const referralPayoutService = require('./services/referralPayoutService');
-      
-      // Schedule daily referral payout: every day at 2:00 AM SAST
-      cron.schedule('0 2 * * *', async () => {
-        console.log('💰 Running scheduled daily referral payout...');
-        try {
-          const result = await referralPayoutService.processDailyPayouts();
-          if (result.success) {
-            console.log(`✅ Daily referral payout complete: ${result.totalUsers} users, R${result.totalAmountRand.toFixed(2)} paid, ${result.totalEarningsCount} earnings processed`);
-          } else {
-            console.error('❌ Daily referral payout failed:', result.error);
+      if (process.env.CATALOG_SYNC_MODE === 'scheduler') {
+        console.log('📅 Referral payout mode: Cloud Scheduler (node-cron disabled — payout triggered via HTTP POST to /api/v1/referrals/scheduled-payout)');
+      } else {
+        const cron = require('node-cron');
+        const referralPayoutService = require('./services/referralPayoutService');
+        
+        cron.schedule('0 2 * * *', async () => {
+          console.log('💰 Running scheduled daily referral payout...');
+          try {
+            const result = await referralPayoutService.processDailyPayouts();
+            if (result.success) {
+              console.log(`✅ Daily referral payout complete: ${result.totalUsers} users, R${result.totalAmountRand.toFixed(2)} paid, ${result.totalEarningsCount} earnings processed`);
+            } else {
+              console.error('❌ Daily referral payout failed:', result.error);
+            }
+          } catch (error) {
+            console.error('❌ Daily referral payout error:', error.message);
+            console.error(error.stack);
           }
-        } catch (error) {
-          console.error('❌ Daily referral payout error:', error.message);
-          console.error(error.stack);
-        }
-      }, {
-        timezone: 'Africa/Johannesburg'
-      });
-      
-      console.log('✅ Daily referral payout scheduler started (every day at 2:00 AM SAST)');
+        }, {
+          timezone: 'Africa/Johannesburg'
+        });
+        
+        console.log('✅ Daily referral payout scheduler started via node-cron (every day at 2:00 AM SAST)');
+      }
     } catch (error) {
       console.error('❌ Failed to start daily referral payout scheduler:', error.message);
     }

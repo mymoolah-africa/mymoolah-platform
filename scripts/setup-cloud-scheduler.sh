@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Setup Cloud Scheduler jobs for catalog synchronization
-# Replaces node-cron which gets killed by Cloud Run instance recycling
+# Setup Cloud Scheduler jobs for MyMoolah scheduled tasks
+# Replaces node-cron which gets killed by Cloud Run instance recycling (min-instances=0)
+#
+# Jobs created:
+#   1. catalog-sweep-{env}     — 02:00 SAST daily (Flash + MobileMart catalog sync)
+#   2. referral-payout-{env}   — 02:15 SAST daily (credit pending referral earnings to wallets)
 #
 # Usage:
 #   ./scripts/setup-cloud-scheduler.sh --staging
@@ -24,19 +28,20 @@ PRODUCTION_SA="mymoolah-production-sa@${PROJECT_ID}.iam.gserviceaccount.com"
 log() { echo "$(date '+%H:%M:%S') [INFO] $*"; }
 err() { echo "$(date '+%H:%M:%S') [ERROR] $*" >&2; exit 1; }
 
-create_scheduler_job() {
-  local env="$1"
-  local service_url="$2"
-  local sa="$3"
-  local job_name="catalog-sweep-${env}"
-  local endpoint="${service_url}/api/v1/catalog-sync/scheduled-sweep"
+create_http_job() {
+  local job_name="$1"
+  local endpoint="$2"
+  local schedule="$3"
+  local sa="$4"
+  local service_url="$5"
+  local description="$6"
+  local deadline="${7:-1800s}"
 
   log "Creating Cloud Scheduler job: ${job_name}"
   log "  Endpoint: ${endpoint}"
-  log "  Schedule: 0 2 * * * (02:00 SAST daily)"
+  log "  Schedule: ${schedule}"
   log "  SA: ${sa}"
 
-  # Delete existing job if it exists (idempotent)
   gcloud scheduler jobs delete "${job_name}" \
     --location="${SCHEDULER_LOCATION}" \
     --project="${PROJECT_ID}" \
@@ -45,21 +50,47 @@ create_scheduler_job() {
   gcloud scheduler jobs create http "${job_name}" \
     --location="${SCHEDULER_LOCATION}" \
     --project="${PROJECT_ID}" \
-    --schedule="0 2 * * *" \
+    --schedule="${schedule}" \
     --time-zone="Africa/Johannesburg" \
     --uri="${endpoint}" \
     --http-method=POST \
     --oidc-service-account-email="${sa}" \
     --oidc-token-audience="${service_url}" \
-    --attempt-deadline=1800s \
+    --attempt-deadline="${deadline}" \
     --max-retry-attempts=3 \
     --min-backoff=60s \
     --max-backoff=600s \
-    --description="Daily catalog sweep for ${env} — sweeps Flash + MobileMart catalogs, deactivates stale products, refreshes best-offers cache" \
+    --description="${description}" \
     || err "Failed to create scheduler job: ${job_name}"
 
   log "Cloud Scheduler job created: ${job_name}"
   echo ""
+}
+
+create_all_jobs_for_env() {
+  local env="$1"
+  local service_url="$2"
+  local sa="$3"
+
+  # 1. Catalog sweep — 02:00 SAST daily
+  create_http_job \
+    "catalog-sweep-${env}" \
+    "${service_url}/api/v1/catalog-sync/scheduled-sweep" \
+    "0 2 * * *" \
+    "${sa}" \
+    "${service_url}" \
+    "Daily catalog sweep for ${env} — sweeps Flash + MobileMart catalogs, deactivates stale products, refreshes best-offers cache" \
+    "1800s"
+
+  # 2. Referral payout — 02:15 SAST daily (staggered 15 min after catalog sweep)
+  create_http_job \
+    "referral-payout-${env}" \
+    "${service_url}/api/v1/referrals/scheduled-payout" \
+    "15 2 * * *" \
+    "${sa}" \
+    "${service_url}" \
+    "Daily referral payout for ${env} — credits pending referral earnings to user wallets" \
+    "300s"
 }
 
 ENVIRONMENT=""
@@ -83,11 +114,11 @@ echo "========================================"
 echo ""
 
 if [ "$ENVIRONMENT" == "staging" ] || [ "$ENVIRONMENT" == "both" ]; then
-  create_scheduler_job "staging" "$STAGING_SERVICE_URL" "$STAGING_SA"
+  create_all_jobs_for_env "staging" "$STAGING_SERVICE_URL" "$STAGING_SA"
 fi
 
 if [ "$ENVIRONMENT" == "production" ] || [ "$ENVIRONMENT" == "both" ]; then
-  create_scheduler_job "production" "$PRODUCTION_SERVICE_URL" "$PRODUCTION_SA"
+  create_all_jobs_for_env "production" "$PRODUCTION_SERVICE_URL" "$PRODUCTION_SA"
 fi
 
 echo "========================================"
@@ -96,6 +127,8 @@ echo "  gcloud scheduler jobs list --location=${SCHEDULER_LOCATION} --project=${
 echo ""
 log "Test a job manually:"
 echo "  gcloud scheduler jobs run catalog-sweep-staging --location=${SCHEDULER_LOCATION} --project=${PROJECT_ID}"
+echo "  gcloud scheduler jobs run referral-payout-staging --location=${SCHEDULER_LOCATION} --project=${PROJECT_ID}"
 echo "  gcloud scheduler jobs run catalog-sweep-production --location=${SCHEDULER_LOCATION} --project=${PROJECT_ID}"
+echo "  gcloud scheduler jobs run referral-payout-production --location=${SCHEDULER_LOCATION} --project=${PROJECT_ID}"
 echo "========================================"
 echo ""

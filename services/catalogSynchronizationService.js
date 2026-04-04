@@ -546,7 +546,7 @@ class CatalogSynchronizationService {
       };
 
       const [variant, variantCreated] = await ProductVariant.findOrCreate({
-        where: { productId: baseProduct.id, supplierId: supplier.id, supplierProductId: productCode },
+        where: { productId: baseProduct.id, supplierId: supplier.id },
         defaults: variantData,
         transaction: tx,
       });
@@ -991,12 +991,11 @@ class CatalogSynchronizationService {
       // Map to ProductVariant
       const variantData = this.mapMobileMartToProductVariant(mmProduct, normalizedType, supplier.id, product.id);
       
-      // Create or update ProductVariant
+      // Create or update ProductVariant (match on unique constraint fields)
       const [productVariant, variantCreated] = await ProductVariant.findOrCreate({
         where: {
           productId: product.id,
           supplierId: supplier.id,
-          supplierProductId: mmProduct.merchantProductId
         },
         defaults: variantData,
         transaction

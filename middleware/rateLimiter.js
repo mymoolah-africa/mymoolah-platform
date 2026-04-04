@@ -16,41 +16,33 @@ const getClientIP = (req) => {
 };
 
 // Rate limiter for authentication endpoints (stricter)
-// With trust proxy disabled, we manually extract IP from X-Forwarded-For header
-// This prevents express-rate-limit from throwing ValidationError
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // limit each IP to 5 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 20,
   message: {
     error: 'Too many authentication attempts, please try again later.',
     retryAfter: '15 minutes'
   },
   standardHeaders: true,
   legacyHeaders: false,
-  validate: {
-    trustProxy: false // Disable validation - we handle proxy manually
-  },
+  validate: { trustProxy: false },
   keyGenerator: (req) => getClientIP(req) + '-auth',
-  skip: (req) => process.env.STAGING === 'true', // Skip entirely in staging for testing
+  skip: (req) => req.method === 'OPTIONS',
 });
 
 // General API rate limiter
-// With trust proxy disabled, we manually extract IP from X-Forwarded-For header
-// This prevents express-rate-limit from throwing ValidationError
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 500,
   message: {
     error: 'Too many requests from this IP, please try again later.',
     retryAfter: '15 minutes'
   },
   standardHeaders: true,
   legacyHeaders: false,
-  validate: {
-    trustProxy: false // Disable validation - we handle proxy manually
-  },
+  validate: { trustProxy: false },
   keyGenerator: (req) => getClientIP(req),
-  skip: (req) => process.env.STAGING === 'true', // Skip entirely in staging for testing
+  skip: (req) => req.method === 'OPTIONS',
 });
 
 module.exports = {

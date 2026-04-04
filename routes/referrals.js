@@ -11,8 +11,54 @@ const express = require('express');
 const router = express.Router();
 const referralController = require('../controllers/referralController');
 const auth = require('../middleware/auth');
+const { verifyCloudSchedulerToken } = require('../middleware/cloudSchedulerAuth');
 
-// All routes require authentication
+/**
+ * @route   POST /api/v1/referrals/scheduled-payout
+ * @desc    Cloud Scheduler-triggered daily referral payout. Runs synchronously
+ *          within the HTTP request so Cloud Run keeps the instance alive.
+ *          Authenticated via GCP OIDC token (not JWT).
+ * @access  Cloud Scheduler only (OIDC token)
+ */
+router.post('/scheduled-payout', verifyCloudSchedulerToken, async (req, res) => {
+  const startTime = Date.now();
+  const triggeredBy = req.schedulerAuth
+    ? req.schedulerAuth.email
+    : 'unknown';
+
+  console.log(`💰 Cloud Scheduler referral payout triggered by: ${triggeredBy}`);
+
+  try {
+    const referralPayoutService = require('../services/referralPayoutService');
+    const result = await referralPayoutService.processDailyPayouts();
+
+    const durationMs = Date.now() - startTime;
+    console.log(`✅ Cloud Scheduler referral payout completed in ${durationMs}ms`);
+
+    res.json({
+      success: true,
+      message: 'Referral payout completed',
+      data: {
+        durationMs,
+        triggeredBy,
+        completedAt: new Date().toISOString(),
+        ...result,
+      },
+    });
+  } catch (error) {
+    const durationMs = Date.now() - startTime;
+    console.error(`❌ Cloud Scheduler referral payout failed after ${durationMs}ms:`, error.message);
+
+    res.status(500).json({
+      success: false,
+      error: 'Referral payout failed',
+      message: error.message,
+      data: { durationMs, triggeredBy },
+    });
+  }
+});
+
+// All remaining routes require JWT authentication
 router.use(auth);
 
 /**

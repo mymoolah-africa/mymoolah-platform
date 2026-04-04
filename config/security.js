@@ -116,11 +116,13 @@ class SecurityConfig {
       // (should only be sent on logout endpoints)
     };
 
-    // Enhanced Rate Limiting Configuration for Banking Applications
+    // Banking-grade rate limiting — identical for staging and production.
+    // Values set at the high end of ISO 27001 / PCI DSS / Mojaloop best practice
+    // to maximise performance while maintaining brute-force and abuse protection.
     this.rateLimits = {
       general: {
         windowMs: 15 * 60 * 1000, // 15 minutes
-        max: process.env.NODE_ENV === 'production' ? 1500 : 5000,
+        max: 3000,
         message: 'Too many requests from this IP',
         standardHeaders: true,
         legacyHeaders: false,
@@ -129,7 +131,7 @@ class SecurityConfig {
       },
       auth: {
         windowMs: 15 * 60 * 1000, // 15 minutes
-        max: process.env.NODE_ENV === 'production' ? 15 : 50,
+        max: 20,
         message: 'Too many authentication attempts',
         standardHeaders: true,
         legacyHeaders: false,
@@ -138,7 +140,7 @@ class SecurityConfig {
       },
       api: {
         windowMs: 15 * 60 * 1000, // 15 minutes
-        max: process.env.NODE_ENV === 'production' ? 200 : 2000,
+        max: 500,
         message: 'API rate limit exceeded',
         standardHeaders: true,
         legacyHeaders: false,
@@ -147,7 +149,7 @@ class SecurityConfig {
       },
       financial: {
         windowMs: 1 * 60 * 1000, // 1 minute
-        max: process.env.NODE_ENV === 'production' ? 10 : 100,
+        max: 30,
         message: 'Too many financial transactions',
         standardHeaders: true,
         legacyHeaders: false,

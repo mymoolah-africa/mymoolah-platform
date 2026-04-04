@@ -7,22 +7,42 @@
  *   node scripts/production-full-audit.js --staging
  *   node scripts/production-full-audit.js --uat
  *
- * Checks:
+ * Checks (aligned with .agents/skills/auditing/SKILL.md v2.0.0):
+ *
+ *  STRUCTURAL:
  *   1. Double-entry: every journal entry debits === credits
+ *   1b. Orphaned journal lines (no parent JournalEntry)
  *   2. Trial balance: sum of all debits === sum of all credits across all accounts
+ *
+ *  ACCURACY:
  *   3. Wallet reconciliation: wallet.balance matches net transaction flow
- *       — MyMoolah-issued vouchers only (`purchaseType=voucher_issue` / `voucherType=standard`):
- *         internal legs, no VAT, no platform tx fee on those lines.
- *         EasyPay / digital-overlay / 3rd-party vouchers use other descriptions (e.g. `Voucher purchase - …`)
- *         and are outbound supplier flows — commission/VAT rules apply there, not here.
+ *   3b. Negative wallet balance detection (material weakness)
+ *   3c. Wallet aggregate vs ledger account 2100-01-01
  *   4. Float reconciliation: supplier_floats.currentBalance matches ledger
+ *
+ *  COMPLETENESS:
  *   5. Commission audit: VAS commission journal entries match expected rates
+ *   5b. Duplicate journal entry references (idempotency gap)
  *   6. VAT audit: tax_transactions match journal VAT lines
  *   7. Referral audit: referral earnings match journal entries
  *   8. RTP / deposit audit
  *   9. VAS transaction completeness
+ *
+ *  TREASURY / REVENUE:
  *  10. MMTP Treasury Account reconciliation
  *  11. MyMoolah Revenue Account summary
+ *
+ *  COMPLIANCE (FICA / POPIA / SARB):
+ *  14. FICA CDD gap detection — transacting users without approved KYC
+ *  15. FICA CTR threshold — daily aggregate cash deposits > R24,999.99
+ *
+ *  ANOMALY DETECTION:
+ *  16. Unusually large transactions (> 3x average for type)
+ *
+ *  AUDIT TRAIL:
+ *  17. Hash chain integrity verification (recon_audit_trail)
+ *
+ *  INFORMATIONAL:
  *  12. User + KYC summary
  *  13. Full transaction timeline
  */
@@ -45,9 +65,13 @@ const BOLD = '\x1b[1m', DIM = '\x1b[2m', RESET = '\x1b[0m';
 
 let passCount = 0, failCount = 0, warnCount = 0;
 
-function pass(msg) { passCount++; console.log(`  ${GREEN}PASS${RESET}  ${msg}`); }
-function fail(msg) { failCount++; console.log(`  ${RED}FAIL${RESET}  ${msg}`); }
-function warn(msg) { warnCount++; console.log(`  ${YELLOW}WARN${RESET}  ${msg}`); }
+const CATEGORIES = ['STRUCTURAL', 'ACCURACY', 'COMPLETENESS', 'ANOMALIES', 'COMPLIANCE', 'AUDIT_TRAIL'];
+const sectionResults = {};
+CATEGORIES.forEach(cat => { sectionResults[cat] = { pass: 0, warn: 0, fail: 0 }; });
+
+function pass(msg, cat) { passCount++; if (cat && sectionResults[cat]) sectionResults[cat].pass++; console.log(`  ${GREEN}PASS${RESET}  ${msg}`); }
+function fail(msg, cat) { failCount++; if (cat && sectionResults[cat]) sectionResults[cat].fail++; console.log(`  ${RED}FAIL${RESET}  ${msg}`); }
+function warn(msg, cat) { warnCount++; if (cat && sectionResults[cat]) sectionResults[cat].warn++; console.log(`  ${YELLOW}WARN${RESET}  ${msg}`); }
 function header(title) { console.log(`\n${BOLD}${CYAN}${'═'.repeat(70)}${RESET}`); console.log(`${BOLD}${CYAN}  ${title}${RESET}`); console.log(`${CYAN}${'═'.repeat(70)}${RESET}`); }
 function section(title) { console.log(`\n  ${BOLD}${title}${RESET}`); console.log(`  ${'─'.repeat(60)}`); }
 function money(v) { return `R ${Number(v || 0).toFixed(2)}`; }
@@ -104,13 +128,29 @@ function journalRefLinksVas(refs, vasTransactionId, vasTsKey, walletTxnId, maxDr
       const cr = parseFloat(je.total_cr);
       const diff = Math.abs(dr - cr);
       if (diff > 0.001) {
-        fail(`JE #${je.id} [${je.reference}]: DR=${money(dr)} CR=${money(cr)} DIFF=${money(diff)}`);
+        fail(`JE #${je.id} [${je.reference}]: DR=${money(dr)} CR=${money(cr)} DIFF=${money(diff)}`, 'STRUCTURAL');
         allBalanced = false;
       } else {
-        pass(`JE #${je.id} [${je.reference}]: DR=${money(dr)} = CR=${money(cr)} (${je.line_count} lines)`);
+        pass(`JE #${je.id} [${je.reference}]: DR=${money(dr)} = CR=${money(cr)} (${je.line_count} lines)`, 'STRUCTURAL');
       }
     });
-    if (allBalanced) pass(`ALL ${jeBalance.rows.length} journal entries are balanced (debits = credits)`);
+    if (allBalanced) pass(`ALL ${jeBalance.rows.length} journal entries are balanced (debits = credits)`, 'STRUCTURAL');
+
+    // ─── 1b. ORPHANED JOURNAL LINES ───
+    section('Orphaned Journal Lines');
+    const orphanedLines = await c.query(`
+      SELECT jl.id, jl."entryId", jl.amount, jl.dc
+      FROM journal_lines jl
+      LEFT JOIN journal_entries je ON je.id = jl."entryId"
+      WHERE je.id IS NULL
+    `);
+    if (orphanedLines.rows.length > 0) {
+      orphanedLines.rows.forEach(ol => {
+        fail(`Orphaned journal line #${ol.id}: entryId=${ol.entryId} ${ol.dc} ${money(ol.amount)} — no parent JournalEntry`, 'STRUCTURAL');
+      });
+    } else {
+      pass(`No orphaned journal lines (all ${jeBalance.rows.length} entries have valid lines)`, 'STRUCTURAL');
+    }
 
     // ═══════════════════════════════════════════════════════════════
     // 2. TRIAL BALANCE — Total debits across ALL accounts = total credits
@@ -127,9 +167,9 @@ function journalRefLinksVas(refs, vasTransactionId, vasTsKey, walletTxnId, maxDr
     const tbCr = parseFloat(trialBalance.rows[0].total_cr);
     const tbDiff = Math.abs(tbDr - tbCr);
     if (tbDiff > 0.001) {
-      fail(`Trial Balance: Total DR=${money(tbDr)} != Total CR=${money(tbCr)} DIFF=${money(tbDiff)}`);
+      fail(`Trial Balance: Total DR=${money(tbDr)} != Total CR=${money(tbCr)} DIFF=${money(tbDiff)}`, 'STRUCTURAL');
     } else {
-      pass(`Trial Balance: Total DR=${money(tbDr)} = Total CR=${money(tbCr)}`);
+      pass(`Trial Balance: Total DR=${money(tbDr)} = Total CR=${money(tbCr)}`, 'STRUCTURAL');
     }
 
     section('Ledger Account Balances');
@@ -158,40 +198,67 @@ function journalRefLinksVas(refs, vasTransactionId, vasTsKey, walletTxnId, maxDr
     // ═══════════════════════════════════════════════════════════════
     header('3. WALLET RECONCILIATION');
 
-    const wallets = await c.query(`
-      SELECT w."walletId", w.balance, w."userId",
-             u."firstName", u."lastName"
+    const walletRecon = await c.query(`
+      SELECT w."walletId", w.balance, w."userId", u."firstName", u."lastName",
+             COALESCE(SUM(CASE
+               WHEN t.type IN ('send','payment','purchase') THEN -ABS(t.amount)
+               ELSE t.amount
+             END), 0) as net_flow
       FROM wallets w
       JOIN users u ON u.id = w."userId"
+      LEFT JOIN transactions t ON t."walletId" = w."walletId" AND t.status = 'completed'
+      GROUP BY w."walletId", w.balance, w."userId", u."firstName", u."lastName"
       ORDER BY w."userId"
     `);
 
-    for (const w of wallets.rows) {
-      const txnSum = await c.query(`
-        SELECT COALESCE(SUM(
-          CASE
-            WHEN type IN ('send', 'payment', 'purchase') THEN -ABS(amount)
-            ELSE amount
-          END
-        ), 0) as net_flow
-        FROM transactions
-        WHERE "walletId" = $1 AND status = 'completed'
-      `, [w.walletId]);
-
+    walletRecon.rows.forEach(w => {
       const walletBal = parseFloat(w.balance);
-      const netFlow = parseFloat(txnSum.rows[0].net_flow);
+      const netFlow = parseFloat(w.net_flow);
       const diff = Math.abs(walletBal - netFlow);
 
       if (diff > 0.01) {
-        fail(`${w.firstName} ${w.lastName} (${w.walletId}): wallet=${money(walletBal)} vs txn_net=${money(netFlow)} DIFF=${money(diff)}`);
+        fail(`${w.firstName} ${w.lastName} (${w.walletId}): wallet=${money(walletBal)} vs txn_net=${money(netFlow)} DIFF=${money(diff)}`, 'ACCURACY');
       } else {
-        pass(`${w.firstName} ${w.lastName} (${w.walletId}): wallet=${money(walletBal)} = txn_net=${money(netFlow)}`);
+        pass(`${w.firstName} ${w.lastName} (${w.walletId}): wallet=${money(walletBal)} = txn_net=${money(netFlow)}`, 'ACCURACY');
       }
-    }
+    });
 
-    // Total wallets balance
     const totalWallets = await c.query(`SELECT COALESCE(SUM(balance), 0) as total FROM wallets`);
     console.log(`\n  ${BOLD}Total wallet balances: ${money(totalWallets.rows[0].total)}${RESET}`);
+
+    // ─── 3b. NEGATIVE WALLET BALANCES (material weakness) ───
+    section('Negative Wallet Balances');
+    const negativeWallets = await c.query(`
+      SELECT w."walletId", w.balance, u."firstName", u."lastName"
+      FROM wallets w JOIN users u ON u.id = w."userId"
+      WHERE w.balance < 0
+    `);
+    if (negativeWallets.rows.length > 0) {
+      negativeWallets.rows.forEach(nw => {
+        fail(`MATERIAL WEAKNESS: ${nw.firstName} ${nw.lastName} (${nw.walletId}) has negative balance ${money(nw.balance)}`, 'ACCURACY');
+      });
+    } else {
+      pass(`No negative wallet balances detected (all ${walletRecon.rows.length} wallets >= R0.00)`, 'ACCURACY');
+    }
+
+    // ─── 3c. WALLET AGGREGATE vs LEDGER 2100-01-01 ───
+    section('Wallet Aggregate vs Ledger');
+    const walletAggregate = parseFloat(totalWallets.rows[0].total);
+    const walletLedgerAcct = await c.query(`
+      SELECT
+        COALESCE(SUM(CASE WHEN jl.dc = 'credit' THEN jl.amount ELSE 0 END), 0) -
+        COALESCE(SUM(CASE WHEN jl.dc = 'debit' THEN jl.amount ELSE 0 END), 0) as ledger_balance
+      FROM journal_lines jl
+      JOIN ledger_accounts la ON la.id = jl."accountId"
+      WHERE la.code = '2100-01-01'
+    `);
+    const walletLedgerBal = parseFloat(walletLedgerAcct.rows[0].ledger_balance || 0);
+    const walletLedgerDiff = Math.abs(walletAggregate - walletLedgerBal);
+    if (walletLedgerDiff > 0.01) {
+      fail(`Wallet aggregate (${money(walletAggregate)}) != Ledger 2100-01-01 (${money(walletLedgerBal)}) DIFF=${money(walletLedgerDiff)}`, 'ACCURACY');
+    } else {
+      pass(`Wallet aggregate (${money(walletAggregate)}) = Ledger 2100-01-01 (${money(walletLedgerBal)})`, 'ACCURACY');
+    }
 
     // MyMoolah-issued vouchers only (portal "MyMoolah Voucher" — not EasyPay / overlay catalog)
     const mmVoucherTxns = await c.query(`
@@ -216,7 +283,7 @@ function journalRefLinksVas(refs, vasTransactionId, vasTsKey, walletTxnId, maxDr
         const feeStr = t.fee != null && parseFloat(t.fee) !== 0 ? money(t.fee) : 'R 0.00';
         console.log(`    TXN#${String(t.id).padEnd(4)} ${dt}  ${t.type.padEnd(10)} ${money(t.amount).padStart(10)}  fee ${feeStr}  code ${voucherCode}  ${t.firstName} ${t.lastName}`);
       });
-      pass('MyMoolah voucher issue/redeem: bookkeeping-only legs; not RTP/PayShap (no R5.75 fee).');
+      pass('MyMoolah voucher issue/redeem: bookkeeping-only legs; not RTP/PayShap (no R5.75 fee).', 'ACCURACY');
     }
 
     // Outbound voucher purchases (digital overlay catalog, EasyPay paths — not MM issue/redeem)
@@ -241,7 +308,7 @@ function journalRefLinksVas(refs, vasTransactionId, vasTsKey, walletTxnId, maxDr
         const dt = new Date(t.createdAt).toISOString().replace('T', ' ').substring(0, 19);
         console.log(`    TXN#${String(t.id).padEnd(4)} ${dt}  ${t.type.padEnd(10)} ${money(t.amount).padStart(10)}  ${(t.description || '').substring(0, 55)}`);
       });
-      pass('Outbound voucher txns listed for context (audit uses supplier/commission rules for these).');
+      pass('Outbound voucher txns listed for context (audit uses supplier/commission rules for these).', 'ACCURACY');
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -271,9 +338,9 @@ function journalRefLinksVas(refs, vasTransactionId, vasTsKey, walletTxnId, maxDr
       if (current > 0 || spent > 0) {
         console.log(`  ${f.supplierId}: balance=${money(current)} | VAS spend=${money(spent)} | ledger=${f.ledgerAccountCode}`);
         if (spent > 0 && current > 0) {
-          pass(`${f.supplierId}: float funded and active (balance=${money(current)}, total VAS spend=${money(spent)})`);
+          pass(`${f.supplierId}: float funded and active (balance=${money(current)}, total VAS spend=${money(spent)})`, 'ACCURACY');
         } else if (current > 0) {
-          pass(`${f.supplierId}: float funded (balance=${money(current)}, no VAS transactions yet)`);
+          pass(`${f.supplierId}: float funded (balance=${money(current)}, no VAS transactions yet)`, 'ACCURACY');
         }
       } else {
         console.log(`  ${DIM}SKIP  ${f.supplierId}: balance=R0, no VAS transactions (not funded or zeroed)${RESET}`);
@@ -312,11 +379,27 @@ function journalRefLinksVas(refs, vasTransactionId, vasTsKey, walletTxnId, maxDr
       const netDiff = Math.abs(rev - expectedNet);
 
       if (vatDiff > 0.01 || netDiff > 0.01) {
-        warn(`${je.reference}: gross=${money(gross)} net=${money(rev)}(exp ${money(expectedNet)}) vat=${money(vat)}(exp ${money(expectedVat)})`);
+        warn(`${je.reference}: gross=${money(gross)} net=${money(rev)}(exp ${money(expectedNet)}) vat=${money(vat)}(exp ${money(expectedVat)})`, 'COMPLETENESS');
       } else {
-        pass(`${je.reference}: gross=${money(gross)} = net(${money(rev)}) + VAT(${money(vat)})`);
+        pass(`${je.reference}: gross=${money(gross)} = net(${money(rev)}) + VAT(${money(vat)})`, 'COMPLETENESS');
       }
     });
+
+    // ─── 5b. DUPLICATE JOURNAL REFERENCES (idempotency gap) ───
+    section('Duplicate Journal References');
+    const dupRefs = await c.query(`
+      SELECT reference, COUNT(*) as cnt
+      FROM journal_entries
+      GROUP BY reference
+      HAVING COUNT(*) > 1
+    `);
+    if (dupRefs.rows.length > 0) {
+      dupRefs.rows.forEach(d => {
+        fail(`Duplicate JE reference "${d.reference}" appears ${d.cnt} times — idempotency gap`, 'COMPLETENESS');
+      });
+    } else {
+      pass(`All ${jeBalance.rows.length} journal entry references are unique (idempotency intact)`, 'COMPLETENESS');
+    }
 
     console.log(`\n  ${BOLD}Commission Summary:${RESET}`);
     console.log(`    Gross commission:   ${money(totalCommGross)}`);
@@ -345,14 +428,14 @@ function journalRefLinksVas(refs, vasTransactionId, vasTsKey, walletTxnId, maxDr
         // RTP fee VAT is a pass-through (output VAT = input VAT, net payable = R0)
         if ((t.taxTransactionId && t.taxTransactionId.includes('RTP-FEE')) ||
             (t.businessContext === 'wallet_user' && tax === 0 && total > base)) {
-          pass(`${t.taxTransactionId}: base=${money(base)} VAT pass-through (input=output, net=R0, total=${money(total)})`);
+          pass(`${t.taxTransactionId}: base=${money(base)} VAT pass-through (input=output, net=R0, total=${money(total)})`, 'COMPLETENESS');
         } else {
-          warn(`${t.taxTransactionId}: base=${money(base)} rate=${rate} tax=${money(tax)} expected=${money(expectedTax)}`);
+          warn(`${t.taxTransactionId}: base=${money(base)} rate=${rate} tax=${money(tax)} expected=${money(expectedTax)}`, 'COMPLETENESS');
           taxOk = false;
         }
       }
     });
-    if (taxOk) pass(`All ${taxTxns.rows.length} tax transactions have correct tax calculations`);
+    if (taxOk) pass(`All ${taxTxns.rows.length} tax transactions have correct tax calculations`, 'COMPLETENESS');
 
     // ═══════════════════════════════════════════════════════════════
     // 7. REFERRAL AUDIT
@@ -407,14 +490,14 @@ function journalRefLinksVas(refs, vasTransactionId, vasTsKey, walletTxnId, maxDr
         const hasJE = jeRef && refJeMap[jeRef] !== undefined;
         if (hasJE) {
           totalRefJournalled += refJeMap[jeRef];
-          pass(`Earning: ${re.earner_name} earns ${money(earnedR)} (L${re.level} ${re.percentage}%) from ${re.txn_user_name} TXN#${re.transaction_id} — JE: ${jeRef}`);
+          pass(`Earning: ${re.earner_name} earns ${money(earnedR)} (L${re.level} ${re.percentage}%) from ${re.txn_user_name} TXN#${re.transaction_id} — JE: ${jeRef}`, 'COMPLETENESS');
         } else {
           const anyJeMatch = refJE.rows.find(j => j.reference.includes(String(re.transaction_id)));
           if (anyJeMatch) {
             totalRefJournalled += parseFloat(anyJeMatch.amount);
-            pass(`Earning: ${re.earner_name} earns ${money(earnedR)} (L${re.level} ${re.percentage}%) from ${re.txn_user_name} TXN#${re.transaction_id} — JE: ${anyJeMatch.reference}`);
+            pass(`Earning: ${re.earner_name} earns ${money(earnedR)} (L${re.level} ${re.percentage}%) from ${re.txn_user_name} TXN#${re.transaction_id} — JE: ${anyJeMatch.reference}`, 'COMPLETENESS');
           } else {
-            warn(`Earning: ${re.earner_name} earns ${money(earnedR)} (L${re.level} ${re.percentage}%) from ${re.txn_user_name} TXN#${re.transaction_id} — NO JOURNAL ENTRY`);
+            warn(`Earning: ${re.earner_name} earns ${money(earnedR)} (L${re.level} ${re.percentage}%) from ${re.txn_user_name} TXN#${re.transaction_id} — NO JOURNAL ENTRY`, 'COMPLETENESS');
           }
         }
       });
@@ -425,9 +508,9 @@ function journalRefLinksVas(refs, vasTransactionId, vasTsKey, walletTxnId, maxDr
     console.log(`    Journal entries posted:     ${money(totalRefJournalled)}`);
     const refDiff = Math.abs(totalRefEarned - totalRefJournalled);
     if (refDiff > 0.001) {
-      warn(`Referral ledger gap: ${money(refDiff)} in earnings not yet journalled`);
+      warn(`Referral ledger gap: ${money(refDiff)} in earnings not yet journalled`, 'COMPLETENESS');
     } else {
-      pass(`All referral earnings have matching journal entries`);
+      pass(`All referral earnings have matching journal entries`, 'COMPLETENESS');
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -458,9 +541,9 @@ function journalRefLinksVas(refs, vasTransactionId, vasTsKey, walletTxnId, maxDr
       const feePassThrough = fee + vat;
       const diff = Math.abs(inflow - total);
       if (diff > 0.01) {
-        fail(`${r.reference}: inflow=${money(inflow)} != wallet(${money(wallet)}) + fee(${money(fee)}) + vat(${money(vat)}) = ${money(total)}`);
+        fail(`${r.reference}: inflow=${money(inflow)} != wallet(${money(wallet)}) + fee(${money(fee)}) + vat(${money(vat)}) = ${money(total)}`, 'COMPLETENESS');
       } else {
-        pass(`${r.reference}: inflow=${money(inflow)} = wallet(${money(wallet)}) + SBSA(${money(fee)}) + VAT(${money(vat)}) — RTP fee ${money(feePassThrough)} full pass-through (no platform margin)`);
+        pass(`${r.reference}: inflow=${money(inflow)} = wallet(${money(wallet)}) + SBSA(${money(fee)}) + VAT(${money(vat)}) — RTP fee ${money(feePassThrough)} full pass-through (no platform margin)`, 'COMPLETENESS');
       }
     });
     console.log(`\n  ${DIM}RTP: principal stays in TA; only the fee leg leaves as pass-through to SBSA. User sees R5.75 incl. VAT per RTP.${RESET}`);
@@ -507,11 +590,11 @@ function journalRefLinksVas(refs, vasTransactionId, vasTsKey, walletTxnId, maxDr
       });
 
       if (hasJournal) {
-        pass(`VAS ${v.transactionId}: ${v.firstName} ${v.vasType} R${amountR} — wallet txn: ${hasWalletTxn ? 'YES' : 'linked'}, journal: YES`);
+        pass(`VAS ${v.transactionId}: ${v.firstName} ${v.vasType} R${amountR} — wallet txn: ${hasWalletTxn ? 'YES' : 'linked'}, journal: YES`, 'COMPLETENESS');
       } else if (hasWalletTxn) {
-        pass(`VAS ${v.transactionId}: ${v.firstName} ${v.vasType} R${amountR} — wallet txn: YES, journal: separate ref pattern`);
+        pass(`VAS ${v.transactionId}: ${v.firstName} ${v.vasType} R${amountR} — wallet txn: YES, journal: separate ref pattern`, 'COMPLETENESS');
       } else {
-        warn(`VAS ${v.transactionId}: ${v.firstName} ${v.vasType} R${amountR} — no journal or wallet txn linked`);
+        warn(`VAS ${v.transactionId}: ${v.firstName} ${v.vasType} R${amountR} — no journal or wallet txn linked`, 'COMPLETENESS');
       }
     });
 
@@ -599,7 +682,7 @@ function journalRefLinksVas(refs, vasTransactionId, vasTsKey, walletTxnId, maxDr
       console.log(`    Ledger code:                            ${mm.ledgerAccountCode}`);
     }
 
-    pass('Treasury: informational — P2P stays inside TA; MM bank prepayment is not the same as PayShap deposit total.');
+    pass('Treasury: informational — P2P stays inside TA; MM bank prepayment is not the same as PayShap deposit total.', 'ACCURACY');
 
     // Ledger verification
     const walletClearing = ledgerAccounts.rows.find(a => a.code === '1100-01-01');
@@ -663,8 +746,8 @@ function journalRefLinksVas(refs, vasTransactionId, vasTsKey, walletTxnId, maxDr
     console.log(`    SBSA network fee (ledger 5000-10-01):   ${money(sbsaFeeLedger)}`);
     console.log(`    VAT component in user fee (typ. R0.75/RTP): ${money(rtpFeeVatComponent)}`);
     console.log(`    ${DIM}Per RTP: user pays R5.75; pass-through to SBSA + VAT — no MyMoolah margin.${RESET}`);
-    pass('RTP fees: full pass-through (SBSA + VAT); commission revenue is separate (VAS).');
-    pass('Revenue account figures verified from ledger');
+    pass('RTP fees: full pass-through (SBSA + VAT); commission revenue is separate (VAS).', 'COMPLETENESS');
+    pass('Revenue account figures verified from ledger', 'COMPLETENESS');
 
     // ═══════════════════════════════════════════════════════════════
     // 12. USER & KYC SUMMARY
@@ -737,15 +820,149 @@ function journalRefLinksVas(refs, vasTransactionId, vasTsKey, walletTxnId, maxDr
     });
 
     // ═══════════════════════════════════════════════════════════════
-    // FINAL SUMMARY
+    // 14. FICA COMPLIANCE CHECKS
     // ═══════════════════════════════════════════════════════════════
+    header('14. FICA COMPLIANCE (CDD / CTR)');
+
+    section('CDD Gap Detection — transacting users without approved KYC');
+    const ficaCDD = await c.query(`
+      SELECT u.id, u."firstName", u."lastName", u."kycStatus",
+             COUNT(t.id) as txn_count
+      FROM users u
+      JOIN transactions t ON t."userId" = u.id AND t.status = 'completed'
+      WHERE u."kycStatus" IS NULL OR u."kycStatus" NOT IN ('approved','verified')
+      GROUP BY u.id, u."firstName", u."lastName", u."kycStatus"
+      HAVING COUNT(t.id) > 0
+      ORDER BY COUNT(t.id) DESC
+    `);
+    if (ficaCDD.rows.length > 0) {
+      ficaCDD.rows.forEach(u => {
+        warn(`FICA CDD gap: ${u.firstName} ${u.lastName} (user #${u.id}) has ${u.txn_count} completed txns but KYC="${u.kycStatus || 'none'}"`, 'COMPLIANCE');
+      });
+    } else {
+      pass('All transacting users have approved/verified KYC — FICA s.21 CDD satisfied', 'COMPLIANCE');
+    }
+
+    section('CTR Threshold — daily aggregate cash > R24,999.99 (FICA s.28)');
+    const ficaCTR = await c.query(`
+      SELECT t."userId", u."firstName", u."lastName",
+             DATE(t."createdAt") as txn_date,
+             SUM(t.amount) as daily_total
+      FROM transactions t
+      JOIN users u ON u.id = t."userId"
+      WHERE t.type IN ('deposit','receive') AND t.status = 'completed'
+      GROUP BY t."userId", u."firstName", u."lastName", DATE(t."createdAt")
+      HAVING SUM(t.amount) > 24999.99
+      ORDER BY SUM(t.amount) DESC
+    `);
+    if (ficaCTR.rows.length > 0) {
+      ficaCTR.rows.forEach(r => {
+        warn(`CTR threshold: ${r.firstName} ${r.lastName} received ${money(r.daily_total)} on ${r.txn_date} — CTR filing may be required under FICA s.28`, 'COMPLIANCE');
+      });
+    } else {
+      pass('No daily aggregate cash receipts exceed R24,999.99 — no CTR filings required', 'COMPLIANCE');
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // 15. ANOMALY DETECTION
+    // ═══════════════════════════════════════════════════════════════
+    header('15. ANOMALY DETECTION');
+
+    section('Unusually large transactions (> 3x average for type)');
+    const anomalies = await c.query(`
+      WITH type_avg AS (
+        SELECT type, AVG(ABS(amount)) as avg_amt, STDDEV(ABS(amount)) as std_amt
+        FROM transactions WHERE status = 'completed'
+        GROUP BY type HAVING COUNT(*) >= 3
+      )
+      SELECT t.id, t.type, t.amount, t.description, u."firstName", u."lastName",
+             ta.avg_amt, t."createdAt"
+      FROM transactions t
+      JOIN users u ON u.id = t."userId"
+      JOIN type_avg ta ON ta.type = t.type
+      WHERE t.status = 'completed' AND ABS(t.amount) > ta.avg_amt * 3
+      ORDER BY ABS(t.amount) DESC
+    `);
+    if (anomalies.rows.length > 0) {
+      anomalies.rows.forEach(a => {
+        const dt = new Date(a.createdAt).toISOString().substring(0, 10);
+        warn(`Anomaly: TXN#${a.id} ${a.firstName} ${a.lastName} ${a.type} ${money(a.amount)} on ${dt} (avg for type: ${money(a.avg_amt)}) — ${(a.description || '').substring(0, 40)}`, 'ANOMALIES');
+      });
+    } else {
+      pass('No transactions exceed 3x average for their type — no statistical anomalies', 'ANOMALIES');
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // 16. AUDIT TRAIL INTEGRITY
+    // ═══════════════════════════════════════════════════════════════
+    header('16. AUDIT TRAIL HASH CHAIN INTEGRITY');
+
+    const auditTableExists = await c.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables
+        WHERE table_name = 'recon_audit_trail'
+      ) as exists
+    `);
+
+    if (!auditTableExists.rows[0].exists) {
+      warn('Audit trail table (recon_audit_trail) does not exist — hash chain verification skipped', 'AUDIT_TRAIL');
+    } else {
+      const auditCount = await c.query(`SELECT COUNT(*) as cnt FROM recon_audit_trail`);
+      if (parseInt(auditCount.rows[0].cnt) === 0) {
+        warn('Audit trail table exists but is empty — no hash chain to verify', 'AUDIT_TRAIL');
+      } else {
+        const chainCheck = await c.query(`
+          SELECT a1.event_id, a1.event_hash, a1.previous_event_hash,
+                 LAG(a1.event_hash) OVER (ORDER BY a1.ord ASC) as expected_prev
+          FROM recon_audit_trail a1
+          ORDER BY a1.ord ASC
+        `);
+        let chainBroken = false;
+        chainCheck.rows.forEach((row, idx) => {
+          if (idx === 0) return;
+          if (row.previous_event_hash !== row.expected_prev) {
+            fail(`Hash chain break at event ${row.event_id}: previous_hash=${row.previous_event_hash} but expected=${row.expected_prev}`, 'AUDIT_TRAIL');
+            chainBroken = true;
+          }
+        });
+        if (!chainBroken) {
+          pass(`Audit trail hash chain intact — ${chainCheck.rows.length} events verified`, 'AUDIT_TRAIL');
+        }
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // FINAL SUMMARY — Structured Per-Section PASS/WARN/FAIL Report
+    // ═══════════════════════════════════════════════════════════════
+    const auditTimestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
+
     console.log(`\n${BOLD}${CYAN}╔══════════════════════════════════════════════════════════════════╗${RESET}`);
-    console.log(`${BOLD}${CYAN}║  AUDIT SUMMARY — ${ENV.toUpperCase()} ${' '.repeat(Math.max(0, 44 - ENV.length))}║${RESET}`);
+    console.log(`${BOLD}${CYAN}║  AUDIT REPORT — MyMoolah Treasury Platform                      ║${RESET}`);
+    console.log(`${BOLD}${CYAN}║  Environment: ${ENV.toUpperCase().padEnd(49)}║${RESET}`);
+    console.log(`${BOLD}${CYAN}║  Generated:  ${auditTimestamp.padEnd(50)}║${RESET}`);
     console.log(`${BOLD}${CYAN}╚══════════════════════════════════════════════════════════════════╝${RESET}`);
 
-    console.log(`\n  ${GREEN}PASSED: ${passCount}${RESET}`);
-    if (warnCount > 0) console.log(`  ${YELLOW}WARNINGS: ${warnCount}${RESET}`);
-    if (failCount > 0) console.log(`  ${RED}FAILED: ${failCount}${RESET}`);
+    function sectionVerdict(cat) {
+      const s = sectionResults[cat];
+      if (s.fail > 0) return `${RED}FAIL${RESET}`;
+      if (s.warn > 0) return `${YELLOW}WARN${RESET}`;
+      return `${GREEN}PASS${RESET}`;
+    }
+
+    console.log(`\n  ${BOLD}Per-Section Results:${RESET}`);
+    console.log(`  ${'─'.repeat(60)}`);
+    console.log(`  STRUCTURAL:     ${sectionVerdict('STRUCTURAL')}  (JE balance, orphans, trial balance, dup refs)`);
+    console.log(`  COMPLETENESS:   ${sectionVerdict('COMPLETENESS')}  (commission, VAT, referrals, RTP, VAS)`);
+    console.log(`  ACCURACY:       ${sectionVerdict('ACCURACY')}  (wallet recon, float, negative balances, ledger)`);
+    console.log(`  ANOMALIES:      ${sectionVerdict('ANOMALIES')}  (large txns, statistical outliers)`);
+    console.log(`  COMPLIANCE:     ${sectionVerdict('COMPLIANCE')}  (FICA CDD, CTR threshold)`);
+    console.log(`  AUDIT TRAIL:    ${sectionVerdict('AUDIT_TRAIL')}  (hash chain integrity)`);
+    console.log(`  ${'─'.repeat(60)}`);
+
+    const overallVerdict = failCount > 0 ? `${RED}${BOLD}FAIL${RESET}` : warnCount > 0 ? `${YELLOW}${BOLD}WARN${RESET}` : `${GREEN}${BOLD}PASS${RESET}`;
+    console.log(`\n  OVERALL: ${overallVerdict} with ${warnCount} warning(s) and ${failCount} failure(s)`);
+
+    console.log(`\n  ${BOLD}Totals:${RESET}  ${GREEN}PASSED: ${passCount}${RESET}  ${warnCount > 0 ? YELLOW + 'WARNINGS: ' + warnCount + RESET : ''}  ${failCount > 0 ? RED + 'FAILED: ' + failCount + RESET : ''}`);
 
     console.log(`\n  ${BOLD}Key Metrics:${RESET}`);
     console.log(`    Users:                  ${userSummary.rows.length}`);
@@ -759,8 +976,10 @@ function journalRefLinksVas(refs, vasTransactionId, vasTsKey, walletTxnId, maxDr
     console.log(`    Net Revenue:            ${money(netRevenue)}`);
     console.log(`    DB bank inflow subtotal: ${money(totalExternalIn)} (PayShap+RTP txns; see §10 for TA)`);
 
-    if (failCount === 0) {
-      console.log(`\n  ${GREEN}${BOLD}✓ PRODUCTION LEDGER RECONCILES TO THE CENT — ZERO DISCREPANCIES${RESET}\n`);
+    if (failCount === 0 && warnCount === 0) {
+      console.log(`\n  ${GREEN}${BOLD}✓ PRODUCTION LEDGER RECONCILES TO THE CENT — ZERO DISCREPANCIES, ZERO WARNINGS${RESET}\n`);
+    } else if (failCount === 0) {
+      console.log(`\n  ${YELLOW}${BOLD}✓ LEDGER RECONCILES — ${warnCount} WARNING(S) REQUIRE REVIEW${RESET}\n`);
     } else {
       console.log(`\n  ${RED}${BOLD}✗ ${failCount} DISCREPANCIES FOUND — REVIEW ABOVE${RESET}\n`);
     }

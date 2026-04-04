@@ -275,7 +275,7 @@ export function KYCStatusPage() {
   }, [currentStatus, initialStatus, navigate, refreshUserStatus]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#86BE41] to-[#2D8CCA]">
+    <div style={{ minHeight: 'calc(100vh - 64px)' }} className="bg-gradient-to-br from-[#86BE41] to-[#2D8CCA]">
       <ErrorModal
         isOpen={rejectionModal.open}
         onClose={() => {
@@ -287,7 +287,7 @@ export function KYCStatusPage() {
         type="warning"
       />
       {/* Mobile Container */}
-      <div className="max-w-sm mx-auto bg-gradient-to-br from-[#86BE41] to-[#2D8CCA] min-h-screen flex flex-col">
+      <div className="max-w-sm mx-auto bg-gradient-to-br from-[#86BE41] to-[#2D8CCA] flex flex-col" style={{ minHeight: 'calc(100vh - 64px)' }}>
         {/* Header Section */}
         <div style={{ padding: 'var(--mobile-padding)', paddingTop: '2rem', paddingBottom: '1.5rem' }}>
           {/* Back Button */}

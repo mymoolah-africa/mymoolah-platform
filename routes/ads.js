@@ -43,12 +43,12 @@ const adViewLimiter = rateLimit({
     trustProxy: false
   },
   keyGenerator: (req) => `${req.user.id}-ad-views`,
-  skip: (req) => process.env.NODE_ENV === 'development' || process.env.STAGING === 'true',
+  skip: (req) => process.env.NODE_ENV === 'development',
   handler: (req, res) => {
     res.status(429).json({
       success: false,
       error: 'Maximum 5 ads per hour. Please try again later.',
-      retryAfter: 3600 // 1 hour in seconds
+      retryAfter: 3600
     });
   }
 });
@@ -69,12 +69,12 @@ const adEngagementLimiter = rateLimit({
     trustProxy: false
   },
   keyGenerator: (req) => `${req.user.id}-ad-engagements`,
-  skip: (req) => process.env.NODE_ENV === 'development' || process.env.STAGING === 'true',
+  skip: (req) => process.env.NODE_ENV === 'development',
   handler: (req, res) => {
     res.status(429).json({
       success: false,
       error: 'Maximum 10 engagements per day. Please try again tomorrow.',
-      retryAfter: 86400 // 24 hours in seconds
+      retryAfter: 86400
     });
   }
 });
