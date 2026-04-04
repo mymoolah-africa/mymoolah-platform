@@ -176,7 +176,6 @@ export function KYCStatusPage() {
         if (refreshUserStatus) {
           try { await refreshUserStatus(); } catch (_) {}
         }
-        setTimeout(() => navigate('/dashboard'), 1500);
         return;
       }
 
@@ -293,16 +292,13 @@ export function KYCStatusPage() {
     }
   }, [currentStatus]);
 
-  // Auto-navigate when status transitions to verified during this session
+  // Refresh context when status transitions to verified (no auto-navigate —
+  // user must be able to view their tier info and limits at any time)
   useEffect(() => {
     if (currentStatus === 'verified' && initialStatus !== 'verified' && refreshUserStatus) {
-      refreshUserStatus().then(() => {
-        setTimeout(() => {
-          navigate('/dashboard');
-        }, 1500);
-      });
+      refreshUserStatus().catch(() => {});
     }
-  }, [currentStatus, initialStatus, navigate, refreshUserStatus]);
+  }, [currentStatus, initialStatus, refreshUserStatus]);
 
   return (
     <div style={{ minHeight: 'calc(100vh - 64px)' }} className="bg-gradient-to-br from-[#86BE41] to-[#2D8CCA]">
