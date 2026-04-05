@@ -1,5 +1,65 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-05 - Electricity Commission-Based Supplier Comparison (v2.81.0)
+
+### Summary
+Refactored the electricity purchase flow to use the `v_best_offers` materialized view
+for commission-based supplier selection — the same pattern already used by airtime and
+data. Previously, the electricity endpoint was hardcoded to use whichever supplier was
+enabled via environment variables (`MOBILEMART_LIVE_INTEGRATION` / `FLASH_LIVE_INTEGRATION`),
+ignoring commission rates entirely. Now the system automatically selects the supplier
+paying the highest commission for each electricity purchase.
+
+### Key Changes
+
+**Backend (`routes/overlayServices.js`)**:
+- Electricity purchase endpoint now accepts optional `productId` (ProductVariant ID)
+- Resolves supplier from `ProductVariant` record (with `Supplier` association)
+- Circuit breaker + failover: if primary supplier circuit is OPEN, proactively swaps
+- Supplier-specific minimum amounts: R30 for MobileMart, R10 for Flash
+- Backward compatible: falls back to env-var routing if `productId` absent
+- Correct `supplierId` flows to `postFaceValueJournal` and `allocateCommissionAndVat`
+
+**Backend (`services/productCatalogService.js`)**:
+- Added `'electricity'` to the `_getFromView()` condition (one-line change)
+- Electricity catalog now queries `v_best_offers` instead of raw `product_variants`
+
+**Backend (`services/mobilemartAuthService.js`)**:
+- Timeout increased from 30s to 60s (configurable via `MOBILEMART_REQUEST_TIMEOUT`)
+- Retry mechanism added for MobileMart and Flash API calls (1 retry after 2s delay)
+
+**Frontend (`ElectricityOverlay.tsx`)**:
+- Stores winning ProductVariant ID from catalog response
+- Sends `productId` in purchase payload
+- Dynamic min/max amounts from catalog API (no more hardcoded R20/R2000)
+- Error modal for failed purchases (timeout vs general error distinction)
+- Fixed token delivery notice: removed incorrect SMS mention
+
+**Frontend (`overlayService.ts`)**:
+- Added `productId` to electricity purchase payload type
+- Added `ElectricityProduct` interface, `minAmount`/`maxAmount` to `ElectricityCatalog`
+
+### Deployment
+- Deployed as `20260405_v2` to both staging and production
+- Backend: `mymoolah-backend-production-00105-8jz`
+- Wallet: `mymoolah-wallet-production-00029-vr8`
+- Verified: R30 MobileMart production purchase succeeded (token `58302326064655072709`)
+
+### Known Issues
+- `tax_transactions` FK constraint warning on commission persistence (non-blocking)
+- `v_best_offers` may need a catalog sweep cycle before electricity rows appear
+
+### Files Modified
+- `routes/overlayServices.js` — electricity purchase refactor + catalog min amount
+- `services/productCatalogService.js` — electricity routed through `_getFromView`
+- `services/mobilemartAuthService.js` — 60s timeout
+- `mymoolah-wallet-frontend/components/overlays/ElectricityOverlay.tsx` — variant ID + dynamic min/max
+- `mymoolah-wallet-frontend/services/overlayService.ts` — type updates
+- `docs/AGENT_HANDOVER.md` — v2.81.0
+- `docs/session_logs/2026-04-05_1800_electricity-supplier-comparison.md` — session log
+
+---
+
 ## 2026-04-04 - Chart of Accounts Documentation (v2.80.0)
 
 ### Summary

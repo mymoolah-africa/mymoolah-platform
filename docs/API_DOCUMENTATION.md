@@ -1,6 +1,6 @@
-**Last Updated**: March 4, 2026
-**Version**: 2.11.28 - eeziAirtime PIN Fixes & Staging/Production Migrations
-**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **EEZIAIRTIME PIN & COPY** ✅ **EASYPAY** ✅ **RECONCILIATION LIVE** ✅ **REFERRAL SYSTEM LIVE** ✅ **OTP SYSTEM LIVE** ✅ **MOBILEMART INTEGRATED**
+**Last Updated**: April 5, 2026
+**Version**: 2.81.0 - Electricity Commission-Based Supplier Comparison
+**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **EEZIAIRTIME PIN & COPY** ✅ **EASYPAY** ✅ **RECONCILIATION LIVE** ✅ **REFERRAL SYSTEM LIVE** ✅ **OTP SYSTEM LIVE** ✅ **MOBILEMART INTEGRATED** ✅ **ELECTRICITY SUPPLIER COMPARISON**
 
 ---
 
@@ -573,6 +573,122 @@ GET /api/v1/transactions/type/:type
 ```
 
 **Description**: Retrieves transactions filtered by type (airtime, data, electricity, etc.).
+
+---
+
+## ⚡ **ELECTRICITY OVERLAY API**
+
+### **Electricity Purchase Flow**
+
+The electricity overlay allows users to purchase prepaid electricity tokens. The system uses commission-based supplier selection via the `v_best_offers` materialized view to automatically route each purchase to the supplier (Flash or MobileMart) paying the highest commission.
+
+**Flow**: Select beneficiary → Fetch catalog → Enter amount → Confirm → Purchase → Token displayed
+
+#### **1. Get Electricity Catalog**
+```http
+GET /api/v1/overlay/electricity/catalog?beneficiaryId=:id
+```
+
+**Description**: Returns the electricity product catalog for a beneficiary's meter. The response includes the winning supplier (highest commission), dynamic minimum/maximum amounts, and suggested denominations. Products are sorted by commission (best first).
+
+**Query Parameters**:
+- `beneficiaryId` (required if no `meterNumber`): User's saved electricity beneficiary ID
+- `meterNumber` (required if no `beneficiaryId`): Meter number for direct lookup
+
+**Response Example**:
+```json
+{
+  "success": true,
+  "data": {
+    "beneficiary": {
+      "id": 42,
+      "label": "Home Electricity",
+      "identifier": "04285639987",
+      "meterType": "City of Cape Town"
+    },
+    "meterValid": true,
+    "providers": ["MOBILEMART", "FLASH"],
+    "minAmount": 30,
+    "maxAmount": 2000,
+    "suggestedAmounts": [30, 50, 100, 200, 500, 1000, 2000],
+    "products": [
+      {
+        "id": "1234",
+        "supplierProductId": "ELEC_COCT",
+        "name": "Electricity",
+        "minAmount": 30,
+        "maxAmount": 2000,
+        "commission": 0.85,
+        "supplier": "Flash",
+        "supplierCode": "FLASH",
+        "description": ""
+      }
+    ]
+  }
+}
+```
+
+**Important**: The `products[0].id` is the `ProductVariant` ID of the winning supplier. The frontend must send this as `productId` in the purchase request to enable commission-based routing.
+
+#### **2. Purchase Electricity**
+```http
+POST /api/v1/overlay/electricity/purchase
+```
+
+**Description**: Purchases a prepaid electricity token. If `productId` is provided, the backend resolves the supplier from the `ProductVariant` record. If omitted (backward compatibility), the backend falls back to environment variable-based supplier selection.
+
+**Request Body**:
+```json
+{
+  "beneficiaryId": 42,
+  "amount": 50,
+  "idempotencyKey": "elec-uuid-v4-here",
+  "acceptTerms": true,
+  "productId": "1234"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `beneficiaryId` | integer | Yes | Saved electricity beneficiary ID |
+| `amount` | number | Yes | Amount in ZAR (min: R10 Flash / R30 MobileMart, max: R2000) |
+| `idempotencyKey` | string | Yes | UUID v4 for idempotent purchase |
+| `acceptTerms` | boolean | Yes | Must be `true` |
+| `productId` | string | No | ProductVariant ID from catalog. Enables commission-based supplier routing. |
+
+**Supplier Routing Logic**:
+1. If `productId` is provided → resolve `ProductVariant` → use that supplier
+2. If supplier's circuit breaker is OPEN → failover to alternative supplier
+3. If `productId` is absent or variant not found → fall back to env-var routing
+
+**Success Response** (`200`):
+```json
+{
+  "success": true,
+  "data": {
+    "transactionId": "txn-uuid",
+    "token": "58302326064655072709",
+    "units": 7.3,
+    "unitType": "kWh",
+    "amount": 50,
+    "supplier": "MOBILEMART",
+    "meterNumber": "04285639987"
+  }
+}
+```
+
+**Error Responses**:
+- `400`: Invalid amount, missing fields, or amount below supplier minimum
+- `402`: Insufficient wallet balance
+- `404`: Beneficiary not found
+- `409`: Duplicate idempotency key
+- `500`: Supplier API error
+- `504`: Supplier API timeout (after retry)
+
+**Ledger Journal Entries** (per purchase):
+1. **Face value**: DR `2100-01-01` (Client Float) / CR `1200-10-04` or `1200-10-05` (Flash or MobileMart Float)
+2. **Commission**: DR `2200-01-01` (Commission Clearing) / CR `4000-10-01` (Commission Revenue)
+3. **VAT on commission**: DR `2200-01-01` (Commission Clearing) / CR `2300-10-01` (VAT Control)
 
 ---
 

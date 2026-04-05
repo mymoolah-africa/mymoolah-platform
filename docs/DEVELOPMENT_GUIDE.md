@@ -45,11 +45,13 @@ Wallet and overlay **list** endpoints decide whether to show **every active supp
 | **`MM_DEPLOYMENT_ENV=production`** | Best-offers mode (even if `NODE_ENV` is not production). |
 | **`MM_DEPLOYMENT_ENV=staging`** (or `uat`, `development`, `dev`, `test`) | Full multi-supplier catalog for QA. |
 
-**Code:** `services/catalogDisplayPolicy.js` — consumed by `supplierComparisonService.js` (vouchers, airtime, data, international pin via compare API), `routes/overlayServices.js` (airtime/data `VasProduct` dedupe, electricity catalog, bill search/categories).
+**Code:** `services/productCatalogService.js` — `getCatalog()` routes airtime, data, and electricity through `_getFromView()` which queries the `v_best_offers` materialized view. Vouchers, bill payments, and other VAS types fall through to `_getFromVariants()` which queries `product_variants` directly.
 
-**After changing variants**, production still runs `scripts/refresh-vas-best-offers.js` (also triggered after catalog sweep) so `vas_best_offers` includes `electricity` and `bill_payment` rows where applicable.
+**View refresh**: The `v_best_offers` materialized view is refreshed automatically after each Cloud Scheduler catalog sweep (`POST /api/v1/catalog-sync/scheduled-sweep`, daily at 02:00 SAST). It can also be manually refreshed via `POST /api/v1/catalog-sync/refresh-best-offers` (admin auth required).
 
-This does **not** change supplier credentials, auth, or purchase APIs — **display policy only**.
+**Electricity supplier routing** (v2.81.0): The electricity purchase endpoint accepts an optional `productId` (ProductVariant ID) from the catalog. If provided, the backend resolves the supplier from the `ProductVariant` record and routes to that supplier's API. Circuit breaker and failover are applied. If `productId` is absent, the endpoint falls back to environment variable routing (`MOBILEMART_LIVE_INTEGRATION` / `FLASH_LIVE_INTEGRATION`). Supplier-specific minimums: R30 MobileMart, R10 Flash.
+
+This does **not** change supplier credentials, auth, or purchase APIs — **catalog and routing only**.
 
 ### **Core System Design**
 

@@ -30,6 +30,7 @@ alwaysApply: true
 | 4 ledger accounts used in code but missing idempotent migrations | `2200-03-01`, `2600-01-01`, `5100-02-01`, `1100-02-01` | Medium — RESOLVED: Migration `20260405_01_seed_missing_ledger_accounts.js` created. Run on UAT → staging → production. | RESOLVED Apr 2026 |
 | `internationalPaymentService.js` uses wrong column name and non-canonical accounts | `services/internationalPaymentService.js` | Medium — `account_code` should be `code`; `2300-01-01` should be `2300-10-01`; `1200-10-07` used for Yellow Card but is PayShap Outbound | Fix when MoolahMove Phase 2 begins. See `docs/CHART_OF_ACCOUNTS.md` Section 9.1 misalignment table. |
 | `adService.js` references `2100-05-001` (extra digit) instead of `2100-05-01` | `services/adService.js`, `scripts/seed-watch-to-earn.js` | Low — ledger posting fails silently; core Watch-to-Earn flow unaffected | Fix to `2100-05-01` (the migrated account code) |
+| `tax_transactions` FK constraint violation on electricity commission | `services/commissionVatService.js`, `routes/overlayServices.js` | Low — commission JEs still posted correctly; only the `tax_transactions` audit record fails to persist | Investigate timing: `tax_transactions.originalTransactionId` references a `transactions` row that may not be committed yet when the tax record is inserted. Ensure the parent transaction is committed before inserting the tax record, or defer tax persistence. |
 
 ## Architectural Decisions Log
 
@@ -64,6 +65,7 @@ alwaysApply: true
 | Raw SQL for User updates in KYC controller (not Sequelize ORM) | Apr 2026 | `User.afterFind` decrypts `idNumber` → marks as changed → `user.update()` re-validates encrypted ciphertext against `len:[5,20]` → crash. All 7 `user.update()` calls in `kycController.js` converted to parameterized raw SQL. Same pattern as the final status update that already used raw SQL. Banking-grade security maintained via bind variables. |
 | KYC reset scripts preserve audit trail | Apr 2026 | `DELETE FROM kyc` replaced with `UPDATE kyc SET status = 'reset'`. Registration data (idNumber, idType, names, phone) never modified. Wallet limits reset to Tier 0 defaults. |
 | `docs/CHART_OF_ACCOUNTS.md` is canonical CoA reference | Apr 2026 | Single authoritative document for all ledger accounts, journal templates, solvency rules, reserved ranges, env var map, and future product verticals. All new financial products MUST register accounts here before code is written. Cross-references auditing skill, migrations, and SETTLEMENTS.md. |
+| Electricity uses commission-based supplier selection via `v_best_offers` | Apr 2026 | Same pattern as airtime/data. Frontend sends winning `productId` (ProductVariant ID) from catalog; backend resolves supplier, applies circuit breaker + failover. Backward compatible: omitting `productId` falls back to env-var routing. MobileMart min R30, Flash min R10. |
 
 ## Rule: When to Add Here
 

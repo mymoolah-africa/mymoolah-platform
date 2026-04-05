@@ -119,6 +119,7 @@ Never `pm2 restart all`, never `node server.js`, never `npm start`.
 | `check-proxies-cs.sh` missing | Low — bash error only |
 | npm audit: 9 vulnerabilities (5 low, 4 moderate) | Low — transitive deps |
 | RTP balance auto-refresh can miss a polling cycle | Low — cosmetic delay, `MoolahContext.tsx` dedup logic |
+| `tax_transactions` FK constraint on electricity commission | Low — commission JEs posted; audit record fails |
 
 ---
 
