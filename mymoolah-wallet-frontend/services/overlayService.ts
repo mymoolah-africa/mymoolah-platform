@@ -72,6 +72,18 @@ export interface AirtimeDataCatalog {
   bestDealSku?: string;
 }
 
+export interface ElectricityProduct {
+  id: string;
+  supplierProductId: string | null;
+  name: string;
+  minAmount: number;
+  maxAmount: number;
+  commission: number;
+  supplier: string;
+  supplierCode: string | null;
+  description: string;
+}
+
 export interface ElectricityCatalog {
   beneficiary: {
     id: string;
@@ -82,6 +94,7 @@ export interface ElectricityCatalog {
   meterValid: boolean;
   providers: string[];
   suggestedAmounts: number[];
+  products?: ElectricityProduct[];
 }
 
 export interface Biller {
@@ -341,6 +354,7 @@ export const electricityService = {
   // Purchase electricity
   async purchase(data: {
     beneficiaryId: string;
+    productId?: string;
     amount: number;
     idempotencyKey: string;
   }): Promise<PurchaseResult> {

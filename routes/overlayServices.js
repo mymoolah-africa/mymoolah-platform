@@ -2280,10 +2280,11 @@ router.get('/electricity/catalog', auth, async (req, res) => {
         suggestedAmounts: cappedAmounts.length > 0 ? cappedAmounts : [globalMinAmount, 50, 100, 200, 500, 1000, 2000].filter(amount => amount >= globalMinAmount),
         maxAmount: 2000, // Maximum allowed amount for electricity
         products: electricityVariants.map(variant => ({
-          id: variant.supplierProductId || variant.id?.toString(),
+          id: variant.id?.toString(),
+          supplierProductId: variant.supplierProductId || null,
           name: variant.productName || 'Electricity',
-          minAmount: (variant.minAmount || 2000) / 100, // Convert cents to rand, default R20
-          maxAmount: (variant.maxAmount || 200000) / 100, // Convert cents to rand, default R2000
+          minAmount: (variant.minAmount || 2000) / 100,
+          maxAmount: (variant.maxAmount || 200000) / 100,
           commission: variant.commission || 0,
           supplier: variant.supplier || variant.supplierCode || 'Unknown',
           supplierCode: variant.supplierCode || null,
@@ -2310,7 +2311,7 @@ router.get('/electricity/catalog', auth, async (req, res) => {
  */
 router.post('/electricity/purchase', auth, async (req, res) => {
   try {
-    const { beneficiaryId, amount, idempotencyKey, acceptTerms } = req.body;
+    const { beneficiaryId, productId, amount, idempotencyKey, acceptTerms } = req.body;
     
     if (!beneficiaryId || !amount || !idempotencyKey) {
       return res.status(400).json({
@@ -2332,7 +2333,7 @@ router.post('/electricity/purchase', auth, async (req, res) => {
       where: { 
         id: beneficiaryId, 
         userId: req.user.id,
-        accountType: 'electricity' // Ensure it's an electricity beneficiary
+        accountType: 'electricity'
       }
     });
 
@@ -2345,10 +2346,8 @@ router.post('/electricity/purchase', auth, async (req, res) => {
 
     const meterNumber = beneficiary.identifier;
 
-    // Simulate electricity purchase using database
-    const { VasTransaction, VasProduct, Wallet } = require('../models');
+    const { VasTransaction, VasProduct, Wallet, ProductVariant } = require('../models');
     
-    // Validate amount (R20 minimum, R2,000 maximum for electricity)
     const minAmount = 20;
     const maxAmount = 2000;
     
@@ -2379,16 +2378,87 @@ router.post('/electricity/purchase', auth, async (req, res) => {
       });
     }
 
-    // Determine which supplier API to use
+    // ─── Resolve supplier from ProductVariant or fall back to env vars ───
+    let supplier = null;
+    let supplierProductCode = null;
+    let productVariant = null;
+    let failoverUsed = false;
+
     const useMobileMartAPI = process.env.MOBILEMART_LIVE_INTEGRATION === 'true';
     const useFlashAPI = process.env.FLASH_LIVE_INTEGRATION === 'true';
+
+    if (productId) {
+      const variantId = /^\d+$/.test(productId.toString()) ? parseInt(productId, 10) : null;
+      if (variantId) {
+        productVariant = await ProductVariant.findOne({
+          where: { id: variantId, status: 'active' },
+          include: [
+            { model: require('../models').Supplier, as: 'supplier', attributes: ['id', 'code', 'name'] },
+            { model: require('../models').Product, as: 'product', attributes: ['id', 'name', 'type'] }
+          ]
+        });
+
+        if (productVariant) {
+          supplier = productVariant.supplier?.code || null;
+          supplierProductCode = productVariant.supplierProductId;
+          console.log(`[Electricity] Resolved ProductVariant ${variantId}: supplier=${supplier}, supplierProductId=${supplierProductCode}`);
+        } else {
+          console.warn(`[Electricity] ProductVariant ${variantId} not found or inactive — falling back to env-var routing`);
+        }
+      }
+    }
+
+    // Fallback: derive supplier from env vars (backward compatibility for old app versions)
+    if (!supplier) {
+      supplier = useMobileMartAPI ? 'MOBILEMART' : (useFlashAPI ? 'FLASH' : null);
+      console.log(`[Electricity] No productId — using env-var fallback: supplier=${supplier}`);
+    }
+
+    // ─── Circuit Breaker Pre-Check ─────────────────────────────────────
+    const supplierCircuitBreaker = require('../services/supplierCircuitBreaker');
+    const supplierFailoverSvc = require('../services/supplierFailoverService');
+    const amountInCentsValue = Math.round(Number(amount) * 100);
+
+    if (supplier && supplierCircuitBreaker.isOpen(supplier)) {
+      console.log(`[CircuitBreaker] ${supplier} circuit OPEN for electricity — finding alternative`);
+      if (productVariant) {
+        const alternatives = await supplierFailoverSvc.findAlternativeVariants(productVariant, amountInCentsValue);
+        const viableAlt = alternatives.find(a => {
+          const altCode = a.supplier?.code;
+          if (!altCode) return false;
+          if (altCode === 'FLASH' && !useFlashAPI) return false;
+          if (altCode === 'MOBILEMART' && !useMobileMartAPI) return false;
+          return !supplierCircuitBreaker.isOpen(altCode);
+        });
+
+        if (viableAlt) {
+          console.log(`[CircuitBreaker] Switching electricity from ${supplier} → ${viableAlt.supplier.code} (variant ${viableAlt.id})`);
+          supplier = viableAlt.supplier.code;
+          supplierProductCode = viableAlt.supplierProductId;
+          productVariant = viableAlt;
+          failoverUsed = true;
+        } else {
+          console.warn(`[CircuitBreaker] No viable alternative for ${supplier} — proceeding despite OPEN circuit`);
+        }
+      } else {
+        // No productVariant to failover from — try the other supplier
+        const altSupplier = supplier === 'MOBILEMART' ? 'FLASH' : 'MOBILEMART';
+        const altEnabled = altSupplier === 'FLASH' ? useFlashAPI : useMobileMartAPI;
+        if (altEnabled && !supplierCircuitBreaker.isOpen(altSupplier)) {
+          console.log(`[CircuitBreaker] Switching electricity from ${supplier} → ${altSupplier} (env-var fallback)`);
+          supplier = altSupplier;
+          failoverUsed = true;
+        }
+      }
+    }
+
     let electricityToken;
     let mobileMartTransactionId;
     let mobileMartResponse;
     let flashTransactionId;
     let flashResponse;
 
-    if (useMobileMartAPI) {
+    if (supplier === 'MOBILEMART' && useMobileMartAPI) {
       // PRODUCTION/STAGING: Use real MobileMart API with retry on timeout
       const MAX_RETRIES = 1;
       let lastError = null;
@@ -2398,26 +2468,34 @@ router.post('/electricity/purchase', auth, async (req, res) => {
           const MobileMartAuthService = require('../services/mobilemartAuthService');
           const mobileMartService = new MobileMartAuthService();
 
-          // Step 1: Get utility products to find merchantProductId
-          if (attempt === 0) console.log('📞 MobileMart: Getting utility products...');
-          else console.log(`🔄 MobileMart: Retry attempt ${attempt} — getting utility products...`);
+          // Step 1: Resolve merchantProductId from variant or fetch from API
+          let merchantProductId = supplierProductCode || null;
 
-          const productsResponse = await mobileMartService.makeAuthenticatedRequest(
-            'GET',
-            '/utility/products'
-          );
-          const products = productsResponse.products || productsResponse || [];
-          const utilityProduct = products[0];
+          if (merchantProductId) {
+            if (attempt === 0) console.log(`📞 MobileMart: Using resolved merchantProductId=${merchantProductId} from ProductVariant`);
+            else console.log(`🔄 MobileMart: Retry attempt ${attempt} — using resolved merchantProductId=${merchantProductId}`);
+          } else {
+            if (attempt === 0) console.log('📞 MobileMart: No variant — fetching utility products from API...');
+            else console.log(`🔄 MobileMart: Retry attempt ${attempt} — fetching utility products...`);
 
-          if (!utilityProduct || !utilityProduct.merchantProductId) {
-            throw new Error('No utility products available from MobileMart');
+            const productsResponse = await mobileMartService.makeAuthenticatedRequest(
+              'GET',
+              '/utility/products'
+            );
+            const products = productsResponse.products || productsResponse || [];
+            const utilityProduct = products[0];
+
+            if (!utilityProduct || !utilityProduct.merchantProductId) {
+              throw new Error('No utility products available from MobileMart');
+            }
+            merchantProductId = utilityProduct.merchantProductId;
+            console.log(`✅ Found utility product: ${utilityProduct.name || 'Electricity'} (${merchantProductId})`);
           }
-          console.log(`✅ Found utility product: ${utilityProduct.name || 'Electricity'} (${utilityProduct.merchantProductId})`);
 
           // Step 2: Prevend - validate meter and get prevendTransactionId
           const prevendRequestId = `PRE_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
           const prevendParams = new URLSearchParams({
-            merchantProductId: utilityProduct.merchantProductId,
+            merchantProductId: merchantProductId,
             requestId: prevendRequestId,
             meterNumber: meterNumber,
             amount: amount.toString()
@@ -2524,17 +2602,20 @@ router.post('/electricity/purchase', auth, async (req, res) => {
           }
         });
       }
-    } else if (useFlashAPI) {
+    } else if (supplier === 'FLASH' && useFlashAPI) {
       // PRODUCTION/STAGING: Use real Flash API with retry on timeout
       const FLASH_MAX_RETRIES = 1;
       let flashLastError = null;
+
+      // Derive service provider from beneficiary's meterType for Flash
+      const flashServiceProvider = (beneficiary.metadata?.meterType || 'ESKOM').toUpperCase().replace(/\s+/g, '_');
 
       for (let attempt = 0; attempt <= FLASH_MAX_RETRIES; attempt++) {
         try {
           const FlashAuthService = require('../services/flashAuthService');
           const flashService = new FlashAuthService();
 
-          if (attempt === 0) console.log('📞 Flash: Looking up meter...');
+          if (attempt === 0) console.log(`📞 Flash: Looking up meter (provider=${flashServiceProvider})...`);
           else console.log(`🔄 Flash: Retry attempt ${attempt} — looking up meter...`);
 
           const lookupResponse = await flashService.makeAuthenticatedRequest(
@@ -2542,7 +2623,7 @@ router.post('/electricity/purchase', auth, async (req, res) => {
             '/prepaid-utilities/lookup',
             {
               meterNumber: meterNumber,
-              serviceProvider: 'ESKOM'
+              serviceProvider: flashServiceProvider
             }
           );
           console.log('✅ Flash Meter Lookup Response:', JSON.stringify(lookupResponse, null, 2));
@@ -2652,10 +2733,7 @@ router.post('/electricity/purchase', auth, async (req, res) => {
       flashResponse = null;
     }
 
-    // If we get here, meter is valid and purchase succeeded - create database records
-    // Create electricity transaction
-    const amountInCentsValue = Math.round(Number(amount) * 100);
-
+    // If we get here, meter is valid and purchase succeeded — create database records
     const wallet = await Wallet.findOne({ where: { userId: req.user.id } });
     if (!wallet) {
       return res.status(404).json({
@@ -2664,9 +2742,9 @@ router.post('/electricity/purchase', auth, async (req, res) => {
       });
     }
 
-    // Determine supplier based on API mode
-    const supplierId = useMobileMartAPI ? 'MOBILEMART' : (useFlashAPI ? 'FLASH' : 'flash');
-    const supplierProductId = useMobileMartAPI ? 'MOBILEMART_UTILITY' : (useFlashAPI ? 'FLASH_ELECTRICITY_PREPAID' : 'FLASH_ELECTRICITY_PREPAID');
+    // Derive supplier from resolved ProductVariant (or env-var fallback)
+    const supplierId = (supplier || 'FLASH').toUpperCase();
+    const supplierProductId = supplierProductCode || (supplierId === 'MOBILEMART' ? 'MOBILEMART_UTILITY' : 'FLASH_ELECTRICITY_PREPAID');
 
     const [vasProduct] = await VasProduct.findOrCreate({
       where: {
@@ -2712,20 +2790,28 @@ router.post('/electricity/purchase', auth, async (req, res) => {
       mobileNumber: beneficiary.identifier,
       status: 'completed',
       reference: idempotencyKey,
-      supplierReference: mobileMartTransactionId,
+      supplierReference: mobileMartTransactionId || flashTransactionId || null,
       metadata: {
         beneficiaryId,
         type: 'electricity',
         userId: req.user.id,
-        simulated: !useMobileMartAPI,
+        simulated: (!useMobileMartAPI && !useFlashAPI),
         meterNumber: beneficiary.identifier,
         meterType: beneficiary.metadata?.meterType || 'Prepaid',
         amountCents: amountInCentsValue,
+        resolvedSupplier: supplierId,
+        failoverUsed,
+        productVariantId: productVariant?.id || null,
         processedAt: new Date().toISOString(),
-        ...(useMobileMartAPI && mobileMartResponse ? {
+        ...(mobileMartResponse ? {
           mobilemartResponse: mobileMartResponse,
           mobilemartTransactionId: mobileMartTransactionId,
           mobilemartFulfilled: true
+        } : {}),
+        ...(flashResponse ? {
+          flashResponse: flashResponse,
+          flashTransactionId: flashTransactionId,
+          flashFulfilled: true
         } : {})
       }
     });
@@ -2758,12 +2844,12 @@ router.post('/electricity/purchase', auth, async (req, res) => {
         channel: 'overlay_services',
         electricityToken: electricityToken,
         purchasedAt: new Date().toISOString(),
-        useMobileMartAPI,
-        useFlashAPI,
-        ...(useMobileMartAPI && mobileMartTransactionId ? {
+        failoverUsed,
+        productVariantId: productVariant?.id || null,
+        ...(mobileMartTransactionId ? {
           mobilemartTransactionId: mobileMartTransactionId
         } : {}),
-        ...(useFlashAPI && flashTransactionId ? {
+        ...(flashTransactionId ? {
           flashTransactionId: flashTransactionId
         } : {})
       },

@@ -46,6 +46,7 @@ export function ElectricityOverlay() {
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [beneficiaryToRemove, setBeneficiaryToRemove] = useState<ElectricityBeneficiary | null>(null);
   const [beneficiaryIsMyMoolahUser, setBeneficiaryIsMyMoolahUser] = useState(false);
+  const [bestProductId, setBestProductId] = useState<string | null>(null);
   const [showEeziPowerModal, setShowEeziPowerModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorModalTitle, setErrorModalTitle] = useState('Purchase Failed');
@@ -82,6 +83,11 @@ export function ElectricityOverlay() {
         // Load catalog for selected beneficiary
         const catalogData = await electricityService.getCatalog(normalized.id);
         setCatalog(catalogData);
+
+        // Store the winning product variant ID (first product is the best-commission winner from v_best_offers)
+        if (catalogData.products && catalogData.products.length > 0) {
+          setBestProductId(catalogData.products[0].id);
+        }
         
         setCurrentStep('amount');
         setLoadingState('idle');
@@ -108,11 +114,15 @@ export function ElectricityOverlay() {
       
       const idempotencyKey = generateIdempotencyKey();
       
-      const result = await electricityService.purchase({
+      const purchasePayload: Parameters<typeof electricityService.purchase>[0] = {
         beneficiaryId: selectedBeneficiary.id,
         amount: parseFloat(amount),
         idempotencyKey
-      });
+      };
+      if (bestProductId) {
+        purchasePayload.productId = bestProductId;
+      }
+      const result = await electricityService.purchase(purchasePayload);
       
       setTransactionRef(result.reference);
       setElectricityToken(result.token || `${Math.random().toString().slice(2, 6)}-${Math.random().toString().slice(2, 6)}-${Math.random().toString().slice(2, 6)}-${Math.random().toString().slice(2, 6)}`);

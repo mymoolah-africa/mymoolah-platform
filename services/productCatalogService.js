@@ -412,7 +412,7 @@ class ProductCatalogService {
   async getCatalog(vasType, options = {}) {
     const { provider, amount, bracket, limit } = options;
 
-    if (vasType === 'data' || vasType === 'airtime') {
+    if (vasType === 'data' || vasType === 'airtime' || vasType === 'electricity') {
       return this._getFromView(vasType, provider, bracket, limit);
     }
 
