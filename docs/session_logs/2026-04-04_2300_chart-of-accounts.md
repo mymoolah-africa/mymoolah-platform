@@ -61,6 +61,7 @@ to both staging and production — all 4 accounts already existed in both enviro
 
 ## Files Modified
 - `docs/CHART_OF_ACCOUNTS.md` — NEW: 28 accounts, 15 journal templates, 10 sections
+- `docs/CHART_OF_ACCOUNTS_VISUAL.html` — NEW: Print-ready HTML/PDF Chart of Accounts
 - `migrations/20260405_01_seed_missing_ledger_accounts.js` — NEW: 4 missing accounts
 - `.cursor/rules/tech-debt.mdc` — 3 new tech-debt rows + 1 architectural decision; missing migrations marked RESOLVED
 - `docs/CHANGELOG.md` — v2.80.0 entry for CoA documentation
@@ -106,7 +107,27 @@ to both staging and production — all 4 accounts already existed in both enviro
 
 ---
 
+## Continuation: Audit Analysis + Visual CoA (5 Apr 2026)
+
+### Production Audit Discrepancy
+Ran `scripts/production-full-audit.js --production` which returned overall **FAIL**:
+- **FAIL**: Wallet aggregate (R 872.88) != Ledger 2100-01-01 (R 922.88) — DIFF = R 50.00
+- **Root cause**: TXN#33 (R50.00 electricity purchase) had its commission journal posted (JE#39)
+  but the face-value journal entry (DR 2100-01-01 / CR 1200-10-XX) was missing. This left
+  the Client Float Liability R50.00 higher than the sum of actual wallet balances.
+- **Next step**: Backfill the missing R50.00 journal entry AND investigate why the forward
+  posting path silently failed.
+
+### Visual Chart of Accounts
+- Created `docs/CHART_OF_ACCOUNTS_VISUAL.html` — a polished, print-ready HTML document
+  with the full CoA. Open in browser, Cmd+P to save as PDF. Color-coded categories,
+  journal templates, solvency rules, reserved ranges, and cross-references.
+
+---
+
 ## Next Steps
+- [ ] Backfill missing R50.00 JE for TXN#33 on production (DR 2100-01-01 / CR supplier float)
+- [ ] Investigate why electricity purchase forward posting failed silently for TXN#33
 - [ ] Fix `adService.js` `2100-05-001` → `2100-05-01` (low priority, cosmetic)
 - [ ] Fix `internationalPaymentService.js` misalignments when MoolahMove Phase 2 begins
 - [ ] Create `4100-01-07` (MoolahMove Fee Revenue) migration when Phase 2 begins

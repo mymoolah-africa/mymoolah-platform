@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-05 18:10  
-**Latest Feature**: **Electricity Commission-Based Supplier Comparison (v2.81.0)** — Refactored electricity purchase flow to use `v_best_offers` materialized view for commission-based supplier selection (same pattern as airtime/data). Added ProductVariant routing, circuit breaker + failover, supplier-specific min amounts (R30 MobileMart, R10 Flash), dynamic frontend min/max, and 60s timeout + retry. Deployed `20260405_v2` to both staging and production. Verified successful R30 purchase on production.  
-**Document Version**: 2.81.0  
+**Last Updated**: 2026-04-05 23:00  
+**Latest Feature**: **Visual Chart of Accounts + Production Audit Analysis** — Created `docs/CHART_OF_ACCOUNTS_VISUAL.html` (print-ready HTML/PDF CoA). Analysed production audit: R50.00 discrepancy in Wallet vs Ledger caused by missing face-value JE for TXN#33 (electricity purchase). Commission JE posted but transaction JE silently failed. Backfill + root cause investigation pending.  
+**Document Version**: 2.81.1  
 **Session logs**: `docs/session_logs/2026-04-05_1800_electricity-supplier-comparison.md`, `docs/session_logs/2026-04-04_2300_chart-of-accounts.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 

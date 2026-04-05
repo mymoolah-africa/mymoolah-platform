@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MyMoolah Treasury Platform — Chart of Accounts</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --mm-green: #00A86B;
+    --mm-green-dark: #008755;
+    --mm-green-light: #E8F8F0;
+    --mm-navy: #1A2332;
+    --mm-slate: #374151;
+    --mm-gray: #6B7280;
+    --mm-gray-light: #F3F4F6;
+    --mm-border: #E5E7EB;
+    --mm-white: #FFFFFF;
+    --mm-red: #DC2626;
+    --mm-amber: #D97706;
+    --mm-blue: #2563EB;
+    --asset-bg: #EFF6FF;
+    --asset-border: #BFDBFE;
+    --liability-bg: #FEF3C7;
+    --liability-border: #FDE68A;
+    --revenue-bg: #ECFDF5;
+    --revenue-border: #A7F3D0;
+    --expense-bg: #FEF2F2;
+    --expense-border: #FECACA;
+    --clearing-bg: #F3F4F6;
+    --clearing-border: #D1D5DB;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Montserrat', -apple-system, sans-serif;
+    color: var(--mm-navy);
+    background: var(--mm-white);
+    font-size: 11px;
+    line-height: 1.5;
+  }
+
+  @media print {
+    body { font-size: 9.5px; }
+    .page-break { page-break-before: always; }
+    .no-print { display: none; }
+    .header-bar { position: static; }
+    section { page-break-inside: avoid; }
+    table { page-break-inside: auto; }
+    tr { page-break-inside: avoid; }
+  }
+
+  .header-bar {
+    background: linear-gradient(135deg, var(--mm-navy) 0%, #2d3748 100%);
+    color: white;
+    padding: 32px 48px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  .header-bar h1 {
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    margin-bottom: 4px;
+  }
+
+  .header-bar .subtitle {
+    font-size: 13px;
+    font-weight: 400;
+    opacity: 0.8;
+  }
+
+  .header-bar .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .header-bar .logo-icon {
+    width: 40px;
+    height: 40px;
+    background: var(--mm-green);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 800;
+    color: white;
+  }
+
+  .header-meta {
+    text-align: right;
+    font-size: 10px;
+    opacity: 0.7;
+    line-height: 1.6;
+  }
+
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 32px 48px;
+  }
+
+  .info-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  .info-card {
+    background: var(--mm-gray-light);
+    border-radius: 8px;
+    padding: 14px 16px;
+    text-align: center;
+  }
+
+  .info-card .label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--mm-gray);
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .info-card .value {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--mm-navy);
+  }
+
+  .info-card .value.green { color: var(--mm-green); }
+
+  h2 {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--mm-navy);
+    margin: 28px 0 12px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--mm-green);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  h2 .section-num {
+    background: var(--mm-green);
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  h3 {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--mm-slate);
+    margin: 18px 0 8px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0 18px;
+    font-size: 10.5px;
+  }
+
+  thead th {
+    background: var(--mm-navy);
+    color: white;
+    padding: 8px 10px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 9.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  thead th:first-child { border-radius: 6px 0 0 0; }
+  thead th:last-child { border-radius: 0 6px 0 0; }
+
+  tbody td {
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--mm-border);
+    vertical-align: top;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: 2px solid var(--mm-border);
+  }
+
+  tbody tr:hover { background: var(--mm-gray-light); }
+
+  .code {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+    font-size: 10.5px;
+    color: var(--mm-green-dark);
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+
+  .badge-asset { background: var(--asset-bg); color: var(--mm-blue); border: 1px solid var(--asset-border); }
+  .badge-liability { background: var(--liability-bg); color: var(--mm-amber); border: 1px solid var(--liability-border); }
+  .badge-revenue { background: var(--revenue-bg); color: var(--mm-green-dark); border: 1px solid var(--revenue-border); }
+  .badge-expense { background: var(--expense-bg); color: var(--mm-red); border: 1px solid var(--expense-border); }
+  .badge-clearing { background: var(--clearing-bg); color: var(--mm-gray); border: 1px solid var(--clearing-border); }
+  .badge-live { background: #ECFDF5; color: #059669; border: 1px solid #A7F3D0; }
+  .badge-debit { background: #EFF6FF; color: #1D4ED8; }
+  .badge-credit { background: #FEF3C7; color: #B45309; }
+
+  .journal-block {
+    background: #F8FAFC;
+    border: 1px solid var(--mm-border);
+    border-left: 3px solid var(--mm-green);
+    border-radius: 0 6px 6px 0;
+    padding: 12px 16px;
+    margin: 8px 0 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    line-height: 1.7;
+    white-space: pre;
+    overflow-x: auto;
+  }
+
+  .journal-block .ref {
+    color: var(--mm-gray);
+    font-size: 9px;
+  }
+
+  .journal-block .dr { color: var(--mm-blue); }
+  .journal-block .cr { color: var(--mm-green-dark); }
+
+  .solvency-box {
+    background: linear-gradient(135deg, #F0FDF4 0%, #ECFDF5 100%);
+    border: 1px solid #BBF7D0;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 10px 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    line-height: 1.8;
+  }
+
+  .solvency-box.critical {
+    background: linear-gradient(135deg, #FEF2F2 0%, #FFF1F2 100%);
+    border-color: #FECACA;
+  }
+
+  .rule-label {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 700;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+
+  .rule-label.critical { color: var(--mm-red); }
+  .rule-label.standard { color: var(--mm-green-dark); }
+
+  .range-table tbody td:first-child {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+    color: var(--mm-green-dark);
+  }
+
+  .env-table tbody td:first-child {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px;
+    color: var(--mm-slate);
+  }
+
+  .footer {
+    margin-top: 40px;
+    padding: 20px 48px;
+    background: var(--mm-gray-light);
+    border-top: 1px solid var(--mm-border);
+    display: flex;
+    justify-content: space-between;
+    font-size: 9px;
+    color: var(--mm-gray);
+  }
+
+  .toc {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px 24px;
+    margin: 12px 0 24px;
+  }
+
+  .toc a {
+    text-decoration: none;
+    color: var(--mm-slate);
+    font-size: 11px;
+    padding: 4px 0;
+    display: flex;
+    gap: 8px;
+  }
+
+  .toc a:hover { color: var(--mm-green); }
+  .toc .num { color: var(--mm-green); font-weight: 700; min-width: 18px; }
+
+  .category-header {
+    background: var(--mm-green-light);
+    padding: 4px 10px;
+    font-weight: 700;
+    font-size: 10px;
+    color: var(--mm-green-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .category-header.asset { background: var(--asset-bg); color: var(--mm-blue); }
+  .category-header.liability { background: var(--liability-bg); color: var(--mm-amber); }
+  .category-header.revenue { background: var(--revenue-bg); color: var(--mm-green-dark); }
+  .category-header.expense { background: var(--expense-bg); color: var(--mm-red); }
+  .category-header.clearing { background: var(--clearing-bg); color: var(--mm-gray); }
+
+  .note {
+    background: #FFFBEB;
+    border: 1px solid #FDE68A;
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 10px;
+    color: #92400E;
+    margin: 10px 0;
+  }
+
+  .cross-ref {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 4px 16px;
+    font-size: 10px;
+  }
+
+  .cross-ref dt {
+    font-weight: 600;
+    color: var(--mm-slate);
+    padding: 3px 0;
+  }
+
+  .cross-ref dd {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px;
+    color: var(--mm-gray);
+    padding: 3px 0;
+    border-bottom: 1px solid var(--mm-border);
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header-bar">
+  <div>
+    <div class="logo">
+      <div class="logo-icon">M</div>
+      MyMoolah Treasury Platform
+    </div>
+    <h1 style="margin-top:12px;">Chart of Accounts</h1>
+    <div class="subtitle">Canonical Ledger Reference — Banking-Grade Double-Entry Accounting</div>
+  </div>
+  <div class="header-meta">
+    Document Version: 1.0.0<br>
+    Classification: Internal — Financial Architecture<br>
+    Last Updated: 5 April 2026<br>
+    Owner: MyMoolah Treasury / Finance
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- SUMMARY CARDS -->
+  <div class="info-bar">
+    <div class="info-card">
+      <div class="label">Total Accounts</div>
+      <div class="value">28</div>
+    </div>
+    <div class="info-card">
+      <div class="label">Migrated</div>
+      <div class="value green">28</div>
+    </div>
+    <div class="info-card">
+      <div class="label">Journal Templates</div>
+      <div class="value">15</div>
+    </div>
+    <div class="info-card">
+      <div class="label">Future Verticals</div>
+      <div class="value">10</div>
+    </div>
+  </div>
+
+  <!-- TABLE OF CONTENTS -->
+  <div class="toc">
+    <a href="#s1"><span class="num">1</span> Assets (1xxx)</a>
+    <a href="#s6"><span class="num">6</span> Solvency Rules</a>
+    <a href="#s2"><span class="num">2</span> Liabilities (2xxx)</a>
+    <a href="#s7"><span class="num">7</span> Reserved Ranges</a>
+    <a href="#s3"><span class="num">3</span> Revenue (4xxx) &amp; Expenses (5xxx)</a>
+    <a href="#s8"><span class="num">8</span> Environment Variables</a>
+    <a href="#s4"><span class="num">4</span> Clearing / Suspense (9xxx)</a>
+    <a href="#s9"><span class="num">9</span> Future Verticals</a>
+    <a href="#s5"><span class="num">5</span> Journal Entry Templates</a>
+    <a href="#s10"><span class="num">10</span> Cross-References</a>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- SECTION 1: ASSETS -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <h2 id="s1"><span class="section-num">1</span> Assets (1xxx-xx-xx)</h2>
+  <p style="margin-bottom:10px;color:var(--mm-gray);font-size:10.5px;">
+    Resources controlled by MMTP — bank balances, float holdings, and receivables.
+    Normal side: <strong>debit</strong> (increases on debit, decreases on credit).
+  </p>
+
+  <table>
+    <thead>
+      <tr><th>Code</th><th>Account Name</th><th>Normal</th><th>Migration</th><th>Primary Usage</th></tr>
+    </thead>
+    <tbody>
+      <tr class="category-header asset" style="background:var(--asset-bg);">
+        <td colspan="5" style="border:none;padding:5px 10px;">Bank Accounts</td>
+      </tr>
+      <tr>
+        <td class="code">1100-01-01</td>
+        <td>Standard Bank Current Account</td>
+        <td><span class="badge badge-debit">Debit</span></td>
+        <td><span class="badge badge-live">Live</span></td>
+        <td>Primary operating bank; all external fund movements</td>
+      </tr>
+      <tr>
+        <td class="code">1100-02-01</td>
+        <td>SBSA Statement Reconciliation Account</td>
+        <td><span class="badge badge-debit">Debit</span></td>
+        <td><span class="badge badge-live">Live</span></td>
+        <td>MT940/MT942 statement balance tracking</td>
+      </tr>
+      <tr class="category-header asset" style="background:var(--asset-bg);">
+        <td colspan="5" style="border:none;padding:5px 10px;">Client &amp; Interchange</td>
+      </tr>
+      <tr>
+        <td class="code">1200-01-01</td>
+        <td>Client Float — General</td>
+        <td><span class="badge badge-debit">Debit</span></td>
+        <td><span class="badge badge-live">Live</span></td>
+        <td>General-purpose client float pool (reserved)</td>
+      </tr>
+      <tr>
+        <td class="code">1200-05-01</td>
+        <td>Interchange Receivable</td>
+        <td><span class="badge badge-debit">Debit</span></td>
+        <td><span class="badge badge-live">Live</span></td>
+        <td>PayShap interchange (reserved)</td>
+      </tr>
+      <tr class="category-header asset" style="background:var(--asset-bg);">
+        <td colspan="5" style="border:none;padding:5px 10px;">Supplier &amp; Partner Floats</td>
+      </tr>
+      <tr>
+        <td class="code">1200-10-01</td>
+        <td>Zapper Float Account</td>
+        <td><span class="badge badge-debit">Debit</span></td>
+        <td><span class="badge badge-live">Live</span></td>
+        <td>Zapper QR payment float</td>
+      </tr>
+      <tr>
+        <td class="code">1200-10-02</td>
+        <td>EasyPay Top-up Float Account</td>
+        <td><span class="badge badge-debit">Debit</span></td>
+        <td><span class="badge badge-live">Live</span></td>
+        <td>EasyPay cash-in / deposit voucher float</td>
+      </tr>
+      <tr>
+        <td class="code">1200-10-03</td>
+        <td>EasyPay Cash-out Float Account</td>
+        <td><span class="badge badge-debit">Debit</span></td>
+        <td><span class="badge badge-live">Live</span></td>
+        <td>EasyPay cash-out (eeziPay) float</td>
+      </tr>
+      <tr>
+        <td class="code">1200-10-04</td>
+        <td>Flash Float Account</td>
+        <td><span class="badge badge-debit">Debit</span></td>
+        <td><span class="badge badge-live">Live</span></td>
+        <td>Flash VAS (airtime, data, electricity, vouchers)</td>
+      </tr>
+      <tr>
+        <td class="code">1200-10-05</td>
+        <td>MobileMart Float Account</td>
+        <td><span class="badge badge-debit">Debit</span></td>
+        <td><span class="badge badge-live">Live</span></td>
+        <td>MobileMart VAS (airtime, data, electricity, billers)</td>
+      </tr>
+      <tr>
+        <td class="code">1200-10-06</td>
+        <td>DT Mercury / VALR Float Account</td>
+        <td><span class="badge badge-debit">Debit</span></td>
+        <td><span class="badge badge-live">Live</span></td>
+        <td>USDC/ZAR trades via VALR</td>
+      </tr>
+      <tr>
+        <td class="code">1200-10-07</td>
+        <td>PayShap Outbound Float</td>
+        <td><span class="badge badge-debit">Debit</span></td>
+        <td><span class="badge badge-live">Live</span></td>
+        <td>PayShap RPP outbound</td>
+      </tr>
+      <tr>
+        <td class="code">1200-10-10</td>
+        <td>NFC Deposit Float Account</td>
+        <td><span class="badge badge-debit">Debit</span></td>
+        <td><span class="badge badge-live">Live</span></td>
+        <td>NFC acquiring float (Halo Dot Phase 1)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- SECTION 2: LIABILITIES -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <h2 id="s2"><span class="section-num">2</span> Liabilities (2xxx-xx-xx)</h2>
+  <p style="margin-bottom:10px;color:var(--mm-gray);font-size:10.5px;">
+    Obligations MMTP owes — user wallet balances, payables, clearing, and funds held on behalf of others.
+    Normal side: <strong>credit</strong> (increases on credit, decreases on debit).
+  </p>
+
+  <table>
+    <thead>
+      <tr><th>Code</th><th>Account Name</th><th>Normal</th><th>Migration</th><th>Primary Usage</th></tr>
+    </thead>
+    <tbody>
+      <tr class="category-header liability" style="background:var(--liability-bg);">
+        <td colspan="5" style="border:none;padding:5px 10px;">Client Obligations</td>
+      </tr>
+      <tr>
+        <td class="code">2100-01-01</td>
+        <td><strong>Client Float Liability</strong></td>
+        <td><span class="badge badge-credit">Credit</span></td>
+        <td><span class="badge badge-live">Live</span></td>
+        <td>Aggregate user wallet balances — core account</td>
+      </tr>
+      <tr>
+        <td class="code">2100-02-01</td>
+        <td>Client Clearing Account</td>
+        <td><span class="badge badge-credit">Credit</span></td>
+        <td><span class="badge badge-live">Live</span></td>
+        <td>Settlement clearing (reserved)</td>
+      </tr>
+      <tr>
+        <td class="code">2100-05-01</td>
+        <td>Merchant Ad Float</td>
+        <td><span class="badge badge-credit">Credit</span></td>
+        <td><span class="badge badge-live">Live</span></td>
+        <td>Watch-to-Earn merchant prefunded float</td>
+      </tr>
+      <tr class="category-header liability" style="background:var(--liability-bg);">
+        <td colspan="5" style="border:none;padding:5px 10px;">Commission &amp; Supplier</td>
+      </tr>
+      <tr>
+        <td class="code">2200-01-01</td>
+        <td>MM Commission Clearing</td>
+        <td><span class="badge badge-credit">Credit</span></td>
+        <td><span class="badge badge-live">Live</span></td>
+        <td>Commission holding before recognition</td>
+      </tr>
+      <tr>
+        <td class="code">2200-02-01</td>
+        <td>Supplier Clearing Account</td>
+        <td><span class="badge badge-credit">Credit</span></td>
+        <td><span class="badge badge-live">Live</span></td>
+        <td>Supplier settlement netting (reserved)</td>
+      </tr>
+      <tr>
+        <td class="code">2200-03-01</td>
+        <td>Referral Commission Payable</td>
+        <td><span class="badge badge-credit">Credit</span></td>
+        <td><span class="badge badge-live">Live</span></td>
+        <td>Accrued referral commissions awaiting payout</td>
+      </tr>
+      <tr class="category-header liability" style="background:var(--liability-bg);">
+        <td colspan="5" style="border:none;padding:5px 10px;">Tax, Loans, Vouchers, Suspense</td>
+      </tr>
+      <tr>
+        <td class="code">2300-10-01</td>
+        <td>VAT Control Account</td>
+        <td><span class="badge badge-credit">Credit</span></td>
+        <td><span class="badge badge-live">Live</span></td>
+        <td>Output VAT payable to SARS (15%)</td>
+      </tr>
+      <tr>
+        <td class="code">2400-01-01</td>
+        <td>A Botes Loan Account</td>
+        <td><span class="badge badge-credit">Credit</span></td>
+        <td><span class="badge badge-live">Live</span></td>
+        <td>Director loan capital injection</td>
+      </tr>
+      <tr>
+        <td class="code">2500-01-01</td>
+        <td>Voucher Clearing</td>
+        <td><span class="badge badge-credit">Credit</span></td>
+        <td><span class="badge badge-live">Live</span></td>
+        <td>Internal MM voucher liability</td>
+      </tr>
+      <tr>
+        <td class="code">2600-01-01</td>
+        <td>Unallocated Deposits / Suspense</td>
+        <td><span class="badge badge-credit">Credit</span></td>
+        <td><span class="badge badge-live">Live</span></td>
+        <td>Deposits pending user identification</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- SECTION 3: REVENUE & EXPENSES -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <h2 id="s3"><span class="section-num">3</span> Revenue &amp; Expenses</h2>
+
+  <h3>Revenue (4xxx) — Normal side: credit</h3>
+  <table>
+    <thead>
+      <tr><th>Code</th><th>Account Name</th><th>Normal</th><th>Migration</th><th>Primary Usage</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="code">4000-10-01</td>
+        <td>Commission Revenue</td>
+        <td><span class="badge badge-credit">Credit</span></td>
+        <td><span class="badge badge-live">Live</span></td>
+        <td>VAS commission income (airtime, data, electricity, billers)</td>
+      </tr>
+      <tr>
+        <td class="code">4000-20-01</td>
+        <td>Transaction Fee Revenue</td>
+        <td><span class="badge badge-credit">Credit</span></td>
+        <td><span class="badge badge-live">Live</span></td>
+        <td>PayShap / RTP transaction fee markup</td>
+      </tr>
+      <tr>
+        <td class="code">4100-01-06</td>
+        <td>USDC Fee Revenue</td>
+        <td><span class="badge badge-credit">Credit</span></td>
+        <td><span class="badge badge-live">Live</span></td>
+        <td>7.5% USDC send transaction fee</td>
+      </tr>
+      <tr>
+        <td class="code">4100-05-01</td>
+        <td>Ad Revenue</td>
+        <td><span class="badge badge-credit">Credit</span></td>
+        <td><span class="badge badge-live">Live</span></td>
+        <td>Watch-to-Earn ad view revenue</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Expenses (5xxx) — Normal side: debit</h3>
+  <table>
+    <thead>
+      <tr><th>Code</th><th>Account Name</th><th>Normal</th><th>Migration</th><th>Primary Usage</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="code">5000-10-01</td>
+        <td>Cost of Sales: PayShap SBSA Fee</td>
+        <td><span class="badge badge-debit">Debit</span></td>
+        <td><span class="badge badge-live">Live</span></td>
+        <td>SBSA fee per RPP/RTP (R5.00 ex-VAT)</td>
+      </tr>
+      <tr>
+        <td class="code">5100-02-01</td>
+        <td>Referral Expense</td>
+        <td><span class="badge badge-debit">Debit</span></td>
+        <td><span class="badge badge-live">Live</span></td>
+        <td>Referral commission expense recognition</td>
+      </tr>
+      <tr>
+        <td class="code">5100-03-01</td>
+        <td>Ad Reward Expense</td>
+        <td><span class="badge badge-debit">Debit</span></td>
+        <td><span class="badge badge-live">Live</span></td>
+        <td>Watch-to-Earn user payout (R2–R3/view)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- SECTION 4: CLEARING -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <h2 id="s4"><span class="section-num">4</span> Clearing / Suspense (9xxx-xx-xx)</h2>
+
+  <table>
+    <thead>
+      <tr><th>Code</th><th>Account Name</th><th>Type</th><th>Normal</th><th>Primary Usage</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="code">9999-00-01</td>
+        <td>USDC Fee Clearing / Suspense</td>
+        <td><span class="badge badge-liability">Liability</span></td>
+        <td><span class="badge badge-credit">Credit</span></td>
+        <td>Stages USDC fee before recognition</td>
+      </tr>
+      <tr>
+        <td class="code">9999-00-02</td>
+        <td>USDC Fee Recognition</td>
+        <td><span class="badge badge-asset">Asset</span></td>
+        <td><span class="badge badge-debit">Debit</span></td>
+        <td>Fee recognition clearing</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="page-break"></div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- SECTION 5: JOURNAL TEMPLATES -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <h2 id="s5"><span class="section-num">5</span> Journal Entry Templates</h2>
+  <p style="margin-bottom:14px;color:var(--mm-gray);font-size:10.5px;">
+    All journals posted via <code>ledgerService.postJournalEntry()</code>. Every entry enforces: debits = credits, atomic transaction, unique reference.
+  </p>
+
+  <h3>EasyPay Deposit (Cash-In)</h3>
+  <div class="journal-block"><span class="ref">Reference: DEP-{transactionId}</span>
+<span class="dr">DR  1100-01-01  Standard Bank Current Account    R{amount}</span>
+<span class="cr">CR  2100-01-01  Client Float Liability            R{amount}</span></div>
+
+  <h3>PayShap RTP Inbound (Paid Callback)</h3>
+  <div class="journal-block"><span class="ref">Reference: SBSA-RTP-{rtpId}      Fee: R5.75 (R5.00 + R0.75 VAT) — full pass-through</span>
+<span class="dr">DR  1100-01-01  Standard Bank Current Account    R{gross}</span>
+<span class="cr">CR  2100-01-01  Client Float Liability            R{net}        (gross − R5.75)</span>
+<span class="cr">CR  5000-10-01  Cost of Sales: PayShap SBSA Fee   R{sbsaFee}    (R5.00 ex-VAT)</span>
+<span class="cr">CR  2300-10-01  VAT Control Account               R{vat}        (R0.75)</span></div>
+
+  <h3>VAS Purchase (Airtime / Data / Electricity / Bills)</h3>
+  <div class="journal-block"><span class="ref">Reference: VAS-{transactionId}      Face value + commission split</span>
+<span class="dr">DR  2100-01-01  Client Float Liability           R{faceValue}</span>
+<span class="cr">CR  1200-10-XX  Supplier Float Account           R{faceValue}</span>
+
+<span class="ref">Commission (if applicable):</span>
+<span class="dr">DR  2200-01-01  MM Commission Clearing           R{commExVat}</span>
+<span class="cr">CR  4000-10-01  Commission Revenue               R{commExVat}</span>
+<span class="cr">CR  2300-10-01  VAT Control Account              R{commVat}</span></div>
+
+  <h3>P2P Transfer (Wallet-to-Wallet)</h3>
+  <div class="journal-block"><span class="ref">Reference: P2P-{senderTransactionId}      Net-zero on 2100-01-01 (audit trail)</span>
+<span class="dr">DR  2100-01-01  Client Float Liability           R{amount}  (sender)</span>
+<span class="cr">CR  2100-01-01  Client Float Liability           R{amount}  (receiver)</span></div>
+
+  <h3>Voucher Issue / Redeem</h3>
+  <div class="journal-block"><span class="ref">Issue:  VOUCHER-ISSUE-{txnId}          Redeem: VOUCHER-REDEEM-{txnId}</span>
+<span class="ref">Issue:</span>
+<span class="dr">DR  2100-01-01  Client Float Liability           R{amount}</span>
+<span class="cr">CR  2500-01-01  Voucher Clearing                 R{amount}</span>
+
+<span class="ref">Redeem:</span>
+<span class="dr">DR  2500-01-01  Voucher Clearing                 R{amount}</span>
+<span class="cr">CR  2100-01-01  Client Float Liability           R{amount}</span></div>
+
+  <h3>Director Loan &amp; Wallet Allocation</h3>
+  <div class="journal-block"><span class="ref">Capital injection:  DIRECTOR-LOAN-{date}</span>
+<span class="dr">DR  1100-01-01  Standard Bank Current Account    R{amount}</span>
+<span class="cr">CR  2400-01-01  A Botes Loan Account             R{amount}</span>
+
+<span class="ref">Wallet allocation:  LOAN-ALLOC-{date}</span>
+<span class="dr">DR  2400-01-01  A Botes Loan Account             R{amount}</span>
+<span class="cr">CR  2100-01-01  Client Float Liability           R{amount}</span></div>
+
+  <h3>Referral Payout / Supplier Float Top-Up / Unallocated Deposit</h3>
+  <div class="journal-block"><span class="ref">Referral:   REFERRAL-PAYOUT-{txnId}</span>
+<span class="dr">DR  2200-03-01  Referral Commission Payable      R{amount}</span>
+<span class="cr">CR  2100-01-01  Client Float Liability           R{amount}</span>
+
+<span class="ref">Float top-up: FLOAT-TOPUP-{supplier}-{date}</span>
+<span class="dr">DR  1200-10-XX  Supplier Float Account           R{amount}</span>
+<span class="cr">CR  1100-01-01  Standard Bank Current Account    R{amount}</span>
+
+<span class="ref">Unallocated: SBSA-UNALLOC-{txnId}    (resolve → DR suspense / CR client float)</span>
+<span class="dr">DR  1100-01-01  Standard Bank Current Account    R{amount}</span>
+<span class="cr">CR  2600-01-01  Unallocated Deposits / Suspense  R{amount}</span></div>
+
+  <div class="page-break"></div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- SECTION 6: SOLVENCY RULES -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <h2 id="s6"><span class="section-num">6</span> Solvency Rules &amp; Balance Equations</h2>
+
+  <div class="solvency-box critical">
+    <div class="rule-label critical">CRITICAL — Client Fund Safeguarding (SARB Requirement)</div>
+    Client Float Liability (2100-01-01)  ≤  Bank (1100-01-01) + Σ Supplier Floats (1200-10-XX)
+    <div style="margin-top:4px;font-family:Montserrat;font-size:9px;color:#991B1B;">
+      Users' funds must be fully backed. If violated: HALT deposits/withdrawals.
+    </div>
+  </div>
+
+  <div class="solvency-box critical">
+    <div class="rule-label critical">CRITICAL — Wallet Aggregate Integrity</div>
+    Σ (wallets.balance)  =  Net credit balance of 2100-01-01      Tolerance: R0.01
+  </div>
+
+  <div class="solvency-box critical">
+    <div class="rule-label critical">CRITICAL — Trial Balance (Zero Variance)</div>
+    Σ (debit-normal balances)  −  Σ (credit-normal balances)  =  0      Tolerance: R0.01
+  </div>
+
+  <div class="solvency-box">
+    <div class="rule-label standard">Journal Entry Balance</div>
+    For every JournalEntry:  Σ debit lines  =  Σ credit lines      (enforced at write time)
+  </div>
+
+  <div class="solvency-box">
+    <div class="rule-label standard">Voucher Cover</div>
+    Net credit balance of 2500-01-01  =  Σ (active unredeemed voucher amounts)
+  </div>
+
+  <div class="solvency-box">
+    <div class="rule-label standard">No Negative Wallets</div>
+    For all wallets:  balance ≥ 0      (enforced by Wallet.debit() + SELECT FOR UPDATE)
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- SECTION 7: RESERVED RANGES -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <h2 id="s7"><span class="section-num">7</span> Reserved Account Ranges</h2>
+
+  <table class="range-table">
+    <thead>
+      <tr><th>Range</th><th>Allocation</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>1100-01-xx</td><td>Bank Accounts — Standard Bank</td><td><span class="badge badge-live">Live</span></td></tr>
+      <tr><td>1200-10-01..10</td><td>Supplier / Partner Floats</td><td><span class="badge badge-live">Live</span></td></tr>
+      <tr><td>1200-10-11..20</td><td>Supplier Floats — Expansion</td><td>Reserved</td></tr>
+      <tr><td>1200-20-xx</td><td>TCIB Corridor Floats (SARB 2027)</td><td>Reserved</td></tr>
+      <tr><td>1300-xx-xx</td><td>Lending Receivables</td><td>Reserved</td></tr>
+      <tr><td>1400-xx-xx</td><td>Insurance Assets</td><td>Reserved</td></tr>
+      <tr><td>1500-xx-xx</td><td>Investment Assets (MMF)</td><td>Reserved</td></tr>
+      <tr><td>2700-xx-xx</td><td>Stokvel Pools</td><td>Reserved</td></tr>
+      <tr><td>2800-xx-xx</td><td>Savings Goals</td><td>Reserved</td></tr>
+      <tr><td>3000-xx-xx</td><td>Equity (Retained Earnings, Capital)</td><td>Reserved</td></tr>
+      <tr><td>4200-xx-xx</td><td>Lending Interest Income</td><td>Reserved</td></tr>
+      <tr><td>4300-xx-xx</td><td>Insurance Premium Income</td><td>Reserved</td></tr>
+      <tr><td>4400-xx-xx</td><td>Subscription Revenue</td><td>Reserved</td></tr>
+      <tr><td>5200-xx-xx</td><td>Lending Provisions / Bad Debt</td><td>Reserved</td></tr>
+      <tr><td>5300-xx-xx</td><td>Insurance Claims Expense</td><td>Reserved</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- SECTION 8: ENV VARS -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <h2 id="s8"><span class="section-num">8</span> Environment Variable Map</h2>
+
+  <table class="env-table">
+    <thead>
+      <tr><th>Environment Variable</th><th>Default</th><th>Account</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>LEDGER_ACCOUNT_CLIENT_FLOAT</td><td class="code">2100-01-01</td><td>Client Float Liability</td></tr>
+      <tr><td>LEDGER_ACCOUNT_BANK</td><td class="code">1100-01-01</td><td>Standard Bank Current Account</td></tr>
+      <tr><td>LEDGER_ACCOUNT_UNALLOCATED</td><td class="code">2600-01-01</td><td>Unallocated Deposits / Suspense</td></tr>
+      <tr><td>LEDGER_ACCOUNT_REFERRAL_PAYABLE</td><td class="code">2200-03-01</td><td>Referral Commission Payable</td></tr>
+      <tr><td>LEDGER_ACCOUNT_PAYSHAP_SBSA_COST</td><td class="code">5000-10-01</td><td>Cost of Sales: PayShap SBSA Fee</td></tr>
+      <tr><td>LEDGER_ACCOUNT_NFC_FLOAT</td><td class="code">1200-10-10</td><td>NFC Deposit Float Account</td></tr>
+      <tr><td>LEDGER_ACCOUNT_FLASH_FLOAT</td><td class="code">1200-10-04</td><td>Flash Float Account</td></tr>
+      <tr><td>LEDGER_ACCOUNT_ZAPPER_FLOAT</td><td class="code">1200-10-01</td><td>Zapper Float Account</td></tr>
+      <tr><td>LEDGER_ACCOUNT_MOBILEMART_FLOAT</td><td class="code">1200-10-05</td><td>MobileMart Float Account</td></tr>
+      <tr><td>LEDGER_ACCOUNT_USDC_FEE_CLEARING</td><td class="code">9999-00-01</td><td>USDC Fee Clearing / Suspense</td></tr>
+      <tr><td>SBSA_MAIN_ACCOUNT_CODE</td><td class="code">1100-02-01</td><td>SBSA Statement Reconciliation</td></tr>
+    </tbody>
+  </table>
+
+  <div class="page-break"></div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- SECTION 9: FUTURE VERTICALS -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <h2 id="s9"><span class="section-num">9</span> Future Product Verticals</h2>
+
+  <table>
+    <thead>
+      <tr><th>Vertical</th><th>Key Accounts (Reserved)</th><th>Regulatory</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>MoolahMove</strong> (International Remittance)</td>
+        <td class="code">1200-10-06 (VALR), 4100-01-07 (Fee Rev)</td>
+        <td>SARB EFT Directive, Travel Rule</td>
+        <td>Skeleton — awaiting Yellow Card KYB</td>
+      </tr>
+      <tr>
+        <td><strong>TCIB</strong> (Real-Time Clearing)</td>
+        <td class="code">1200-20-01..05 (Corridor Floats)</td>
+        <td>SARB Directive 1/2025 — deadline Mar 2027</td>
+        <td>Reserved — planning</td>
+      </tr>
+      <tr>
+        <td><strong>Lending</strong> (Micro-Loans / BNPL)</td>
+        <td class="code">1300-xx, 4200-xx, 5200-xx</td>
+        <td>NCA, NCR registration</td>
+        <td>Reserved</td>
+      </tr>
+      <tr>
+        <td><strong>Insurance</strong> (Funeral / Device)</td>
+        <td class="code">1400-xx, 4300-xx, 5300-xx</td>
+        <td>FSCA licence, PPR</td>
+        <td>Reserved</td>
+      </tr>
+      <tr>
+        <td><strong>Stokvels</strong> (Savings Groups)</td>
+        <td class="code">2700-xx, 4500-xx</td>
+        <td>SARB Exemption Notice 6/2023</td>
+        <td>Reserved</td>
+      </tr>
+      <tr>
+        <td><strong>Loyalty / Cashback</strong></td>
+        <td class="code">2100-06-xx, 4100-06-xx</td>
+        <td>—</td>
+        <td>Reserved</td>
+      </tr>
+      <tr>
+        <td><strong>Savings Goals</strong></td>
+        <td class="code">2800-xx</td>
+        <td>—</td>
+        <td>Reserved</td>
+      </tr>
+      <tr>
+        <td><strong>Merchant Services</strong></td>
+        <td class="code">2100-07-xx, 4100-07-xx</td>
+        <td>PASA / PSP licensing</td>
+        <td>Reserved</td>
+      </tr>
+      <tr>
+        <td><strong>MMF / Investments</strong></td>
+        <td class="code">1500-xx, 4600-xx</td>
+        <td>FSCA, CISCA</td>
+        <td>Reserved</td>
+      </tr>
+      <tr>
+        <td><strong>Subscriptions</strong></td>
+        <td class="code">4400-xx</td>
+        <td>—</td>
+        <td>Reserved</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <strong>MoolahMove Architecture Note:</strong> Simple pass-through model — MMTP buys USDC via VALR (1200-10-06), pushes to Yellow Card. Local fiat payout is Yellow Card's obligation after handoff. Do NOT use 1200-10-07 (PayShap Outbound) for Yellow Card. See <code>docs/CHART_OF_ACCOUNTS.md</code> Section 9.1 for 5 known misalignments in <code>internationalPaymentService.js</code>.
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- SECTION 10: CROSS-REFERENCES -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <h2 id="s10"><span class="section-num">10</span> Cross-References</h2>
+
+  <dl class="cross-ref">
+    <dt>Canonical CoA (Markdown)</dt>
+    <dd>docs/CHART_OF_ACCOUNTS.md</dd>
+    <dt>Settlement &amp; Float Model</dt>
+    <dd>docs/SETTLEMENTS.md</dd>
+    <dt>Auditing Skill</dt>
+    <dd>.agents/skills/auditing/SKILL.md</dd>
+    <dt>Core Account Migration</dt>
+    <dd>migrations/20260224_03_seed_core_ledger_accounts.js</dd>
+    <dt>Loan &amp; Voucher Migration</dt>
+    <dd>migrations/20260404_01_create_botes_loan_and_voucher_clearing_accounts.js</dd>
+    <dt>Missing Accounts Migration</dt>
+    <dd>migrations/20260405_01_seed_missing_ledger_accounts.js</dd>
+    <dt>Ledger Service</dt>
+    <dd>services/ledgerService.js — postJournalEntry()</dd>
+    <dt>Production Audit Script</dt>
+    <dd>scripts/production-full-audit.js</dd>
+    <dt>Scheduled Recon Service</dt>
+    <dd>services/scheduledReconService.js</dd>
+    <dt>Commission Config</dt>
+    <dd>config/supplier-commissions.json</dd>
+    <dt>Tech Debt Register</dt>
+    <dd>.cursor/rules/tech-debt.mdc</dd>
+  </dl>
+
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <div>MyMoolah Treasury Platform — Chart of Accounts v1.0.0</div>
+  <div>Internal — Banking-Grade Financial Architecture</div>
+  <div>Generated: 5 April 2026</div>
+</div>
+
+</body>
+</html>
