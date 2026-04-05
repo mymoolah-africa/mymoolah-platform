@@ -99,8 +99,11 @@ export function ElectricityOverlay() {
     })();
   };
 
+  const catalogMin = catalog?.minAmount || 20;
+  const catalogMax = catalog?.maxAmount || 2000;
+
   const handleAmountNext = () => {
-    if (amount && parseFloat(amount) >= 20) {
+    if (amount && parseFloat(amount) >= catalogMin) {
       setCurrentStep('confirm');
     }
   };
@@ -244,7 +247,7 @@ export function ElectricityOverlay() {
       id: 'token-delivery',
       type: 'info' as const,
       title: 'Token Delivery',
-      description: 'Your electricity token will be delivered via SMS and in-app notification'
+      description: 'Your electricity token will be displayed on screen and saved in your notifications'
     });
     
     return notices;
@@ -661,11 +664,11 @@ export function ElectricityOverlay() {
                 onChange={setAmount}
                 currency="ZAR"
                 currencySymbol="R"
-                min={20}
-                max={2000}
+                min={catalogMin}
+                max={catalogMax}
                 suggestedAmounts={catalog.suggestedAmounts}
                 placeholder="0.00"
-                helperText="Minimum R20, Maximum R2000"
+                helperText={`Minimum R${catalogMin}, Maximum R${catalogMax}`}
                 showEstimatedUnits={true}
                 estimatedUnits={getEstimatedUnits(amount)}
                 required={true}
@@ -692,14 +695,14 @@ export function ElectricityOverlay() {
             
             <Button
               onClick={handleAmountNext}
-              disabled={!amount || parseFloat(amount) < 20 || selectedBeneficiary?.metadata?.isValid === false}
+              disabled={!amount || parseFloat(amount) < catalogMin || selectedBeneficiary?.metadata?.isValid === false}
               style={{
                 flex: '2',
                 minHeight: '44px',
-                background: (!amount || parseFloat(amount) < 20 || selectedBeneficiary?.metadata?.isValid === false) 
+                background: (!amount || parseFloat(amount) < catalogMin || selectedBeneficiary?.metadata?.isValid === false) 
                   ? '#e2e8f0' 
                   : 'linear-gradient(135deg, #86BE41 0%, #2D8CCA 100%)',
-                color: (!amount || parseFloat(amount) < 20 || selectedBeneficiary?.metadata?.isValid === false) 
+                color: (!amount || parseFloat(amount) < catalogMin || selectedBeneficiary?.metadata?.isValid === false) 
                   ? '#6b7280' 
                   : '#ffffff',
                 border: 'none',

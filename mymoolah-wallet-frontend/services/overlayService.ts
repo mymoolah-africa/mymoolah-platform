@@ -93,6 +93,8 @@ export interface ElectricityCatalog {
   };
   meterValid: boolean;
   providers: string[];
+  minAmount?: number;
+  maxAmount?: number;
   suggestedAmounts: number[];
   products?: ElectricityProduct[];
 }

@@ -2228,10 +2228,12 @@ router.get('/electricity/catalog', auth, async (req, res) => {
     
     // Extract predefined amounts from products
     const suggestedAmounts = [];
-    let globalMinAmount = 20; // Default minimum for electricity
+    // MobileMart requires R30 minimum; Flash requires R10. Use the winning supplier's floor.
+    const winningSupplier = (electricityVariants[0]?.supplierCode || '').toUpperCase();
+    const supplierMinFloors = { MOBILEMART: 30, FLASH: 10 };
+    let globalMinAmount = supplierMinFloors[winningSupplier] || 20;
     
     electricityVariants.forEach(variant => {
-      // Update global minimum amount based on products (amounts are in cents)
       if (variant.minAmount) {
         const productMinRand = variant.minAmount / 100;
         globalMinAmount = Math.max(globalMinAmount, productMinRand);
@@ -2348,7 +2350,9 @@ router.post('/electricity/purchase', auth, async (req, res) => {
 
     const { VasTransaction, VasProduct, Wallet, ProductVariant } = require('../models');
     
-    const minAmount = 20;
+    // MobileMart requires R30 min; Flash accepts R10. Use R10 as floor, supplier-specific
+    // validation happens after supplier resolution. R2000 max is a MyMoolah business rule.
+    const minAmount = 10;
     const maxAmount = 2000;
     
     if (amount < minAmount) {
@@ -2450,6 +2454,18 @@ router.post('/electricity/purchase', auth, async (req, res) => {
           failoverUsed = true;
         }
       }
+    }
+
+    // Supplier-specific minimum amount validation
+    const supplierMinAmounts = { MOBILEMART: 30, FLASH: 10 };
+    const resolvedMinAmount = supplierMinAmounts[(supplier || '').toUpperCase()] || minAmount;
+    if (amount < resolvedMinAmount) {
+      return res.status(400).json({
+        success: false,
+        error: `Minimum electricity purchase for this supplier is R${resolvedMinAmount}`,
+        errorCode: 'AMOUNT_TOO_LOW',
+        minAmount: resolvedMinAmount
+      });
     }
 
     let electricityToken;
