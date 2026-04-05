@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-04 23:00  
-**Latest Feature**: **Chart of Accounts & Missing Account Migrations (v2.80.0)** — Created `docs/CHART_OF_ACCOUNTS.md` (canonical CoA: 28 accounts, 15 journal templates, 10 sections). Created and applied migration `20260405_01` for 4 accounts previously missing migrations (`1100-02-01`, `2200-03-01`, `2600-01-01`, `5100-02-01`) — applied to staging + production (all 4 already existed, migration recorded in SequelizeMeta).  
-**Document Version**: 2.80.0  
-**Session logs**: `docs/session_logs/2026-04-04_2300_chart-of-accounts.md`, `docs/session_logs/2026-04-04_2200_ledger-audit-complete-build.md`  
+**Last Updated**: 2026-04-05 18:10  
+**Latest Feature**: **Electricity Commission-Based Supplier Comparison (v2.81.0)** — Refactored electricity purchase flow to use `v_best_offers` materialized view for commission-based supplier selection (same pattern as airtime/data). Added ProductVariant routing, circuit breaker + failover, supplier-specific min amounts (R30 MobileMart, R10 Flash), dynamic frontend min/max, and 60s timeout + retry. Deployed `20260405_v2` to both staging and production. Verified successful R30 purchase on production.  
+**Document Version**: 2.81.0  
+**Session logs**: `docs/session_logs/2026-04-05_1800_electricity-supplier-comparison.md`, `docs/session_logs/2026-04-04_2300_chart-of-accounts.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
