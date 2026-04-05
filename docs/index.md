@@ -1,10 +1,10 @@
 # MyMoolah Treasury Platform - Documentation Index
 
-**Last Updated**: March 24, 2026  
+**Last Updated**: April 5, 2026  
 **Project Status**: 🚀 **PRODUCTION LIVE - api-mm.mymoolah.africa, wallet.mymoolah.africa**  
-**Version**: 2.28.0 - SBSA SOAP handler + H2H documentation sync  
+**Version**: 2.81.1 - Visual Chart of Accounts + Electricity Supplier Comparison  
 
-For recent work, see [CHANGELOG.md](./CHANGELOG.md) and [AGENT_HANDOVER.md](./AGENT_HANDOVER.md). **Mar 24, 2026**: SBSA SOAP credit notification handler built; H2H clarifications resolved (Open Internet, PGP not required, file names confirmed). EasyPay NPS/TPPP positioning in [EasyPay_API_Integration_Guide.md](./integrations/EasyPay_API_Integration_Guide.md) §1.4. See session logs: [SBSA SOAP handler](./session_logs/2026-03-24_0900_sbsa-soap-credit-notification-handler.md), [EasyPay legal](./session_logs/2026-03-24_1530_easypay-tppp-legal-response-draft.md).
+For recent work, see [CHANGELOG.md](./CHANGELOG.md) and [AGENT_HANDOVER.md](./AGENT_HANDOVER.md). **Apr 5, 2026**: Canonical Chart of Accounts (28 accounts, 15 journal templates, solvency rules), print-ready visual HTML/PDF, electricity supplier comparison via `v_best_offers`, full production ledger audit, Cloud Scheduler for catalog sync and referral payouts. See [CHART_OF_ACCOUNTS.md](./CHART_OF_ACCOUNTS.md) and [CHART_OF_ACCOUNTS_VISUAL.html](./CHART_OF_ACCOUNTS_VISUAL.html).
 
 ---
 
@@ -37,6 +37,9 @@ MyMoolah is a **full Treasury Platform** (wallet + general ledger + integrations
 - [**BANKING_GRADE_ARCHITECTURE.md**](./BANKING_GRADE_ARCHITECTURE.md) - Banking-grade architecture details
 - [**DOMAIN_MODEL.md**](./DOMAIN_MODEL.md) - Business domain model
 - [**FIGMA_INTEGRATION_COMPLETE.md**](./FIGMA_INTEGRATION_COMPLETE.md) - Frontend integration workflow
+- [**CHART_OF_ACCOUNTS.md**](./CHART_OF_ACCOUNTS.md) - Canonical Chart of Accounts (28 accounts, 15 journal templates, solvency rules)
+- [**CHART_OF_ACCOUNTS_VISUAL.html**](./CHART_OF_ACCOUNTS_VISUAL.html) - Print-ready PDF/HTML Chart of Accounts
+- [**SETTLEMENTS.md**](./SETTLEMENTS.md) - Float model and settlement architecture
 
 ### **💳 Cash-Out Services**
 - [**Cash-Out Overlay Services**](./CHANGELOG.md#-version-210---cash-out-services-integration-august-28-2025) - New cash-out overlay services integration
@@ -47,6 +50,8 @@ MyMoolah is a **full Treasury Platform** (wallet + general ledger + integrations
 - [**DATABASE_CONNECTION_GUIDE.md**](./DATABASE_CONNECTION_GUIDE.md) - Database connection and migration procedures
 - [**PERFORMANCE_OPTIMIZATION_COMPLETE.md**](./PERFORMANCE_OPTIMIZATION_COMPLETE.md) - Performance optimization summary
 - [**PERFORMANCE.md**](./PERFORMANCE.md) - Performance optimization strategies
+- [**RECONCILIATION_QUICK_START.md**](./RECONCILIATION_QUICK_START.md) - Reconciliation system quick start
+- [**RECONCILIATION_FRAMEWORK.md**](./RECONCILIATION_FRAMEWORK.md) - Full reconciliation architecture
 
 ---
 

@@ -1,12 +1,20 @@
 # 🏦 Banking-Grade Architecture for MyMoolah
 
-**Last Updated**: March 19, 2026
-**Version**: 2.11.29 - Documentation: Cursor rules/skills layering + VAS catalog context (`supplierComparisonService`, `vas_best_offers`); no architecture change
-**Status**: ✅ **PRODUCTION DB MIGRATED** ✅ **USDC DB-AGGREGATION ONLY (NO JS SUM)** ✅ **FLOAT MONITORING LIVE** ✅ **LEDGER INTEGRATION COMPLETE** ✅ **RECONCILIATION LIVE** ✅ **FLASH + MOBILEMART** ✅ **PEACH PAYMENTS INTEGRATED** ✅ **ZAPPER REVIEWED** ✅ **PRODUCTION READY**
+**Last Updated**: April 5, 2026
+**Version**: 2.81.1 - Chart of Accounts + Ledger Audit + Electricity Supplier Comparison
+**Status**: ✅ **PRODUCTION DB MIGRATED** ✅ **USDC DB-AGGREGATION ONLY (NO JS SUM)** ✅ **FLOAT MONITORING LIVE** ✅ **LEDGER INTEGRATION COMPLETE** ✅ **RECONCILIATION LIVE** ✅ **FLASH + MOBILEMART** ✅ **PEACH PAYMENTS INTEGRATED** ✅ **ZAPPER REVIEWED** ✅ **PRODUCTION READY** ✅ **CHART OF ACCOUNTS (28 ACCOUNTS)** ✅ **AUTOMATED LEDGER AUDIT** ✅ **CLOUD SCHEDULER** ✅ **ELECTRICITY SUPPLIER COMPARISON**
 
 ## Overview
 
 This document outlines the banking-grade architecture implemented for MyMoolah to handle **millions of customers and transactions** with enterprise-level performance, security, and scalability. The platform now includes **USDC Send with full API validation and DB-only aggregation for limits** (February 2026), **complete Peach Payments integration**, **comprehensive Zapper integration review**, and a **world-class automated reconciliation system** for multi-supplier transaction reconciliation (MobileMart + Flash configured, January 14, 2026).
+
+### Double-Entry Ledger & Chart of Accounts
+- **28 live ledger accounts** across 6 categories: Assets, Liabilities, Revenue, Expenses, Clearing/Suspense
+- **Canonical reference**: `docs/CHART_OF_ACCOUNTS.md` (10 sections, 15 journal templates, solvency rules)
+- **Visual reference**: `docs/CHART_OF_ACCOUNTS_VISUAL.html` (print-ready PDF)
+- **Automated production audit**: `scripts/production-full-audit.js` — wallet aggregate vs ledger, trial balance, supplier float, commission, VAT, referral, RTP reconciliation
+- **Commission config externalized**: `config/supplier-commissions.json` — no code changes needed for commission rate updates
+- **Cloud Scheduler**: Catalog sync (02:00 SAST) + referral payouts (02:15 SAST) — replaces node-cron for Cloud Run compatibility
 
 ## 🎯 Architecture Principles
 

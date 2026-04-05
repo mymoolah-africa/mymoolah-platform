@@ -1,6 +1,6 @@
 # Settlements & Float Model (Mojaloop/Banking Grade)
 
-Last Updated: 2026-01-15
+Last Updated: 2026-04-05
 
 ## Scope
 Closed‑loop settlement for MMTP using Mojaloop switch APIs. All product/service payments to Suppliers are settled from pre‑funded floats. Each Client also maintains a pre‑funded float with MMTP. MM earns configurable commissions/fees. This document defines accounts, flows, and journal patterns.
@@ -10,6 +10,8 @@ Closed‑loop settlement for MMTP using Mojaloop switch APIs. All product/servic
 - Pre‑funded: No overdrafts; Supplier and Client floats must have available balance before authorisation.
 - Mojaloop‑aligned: Clear payer/payee FSP roles, idempotency, end‑to‑end references, ISO‑like reason codes.
 - Banking‑grade: Double‑entry accounting, separation of concerns, reconciliation, and auditability.
+- Canonical accounts: See `docs/CHART_OF_ACCOUNTS.md` for the full Chart of Accounts (28 accounts, 15 journal templates, solvency rules, reserved ranges, environment variable map).
+- Visual reference: `docs/CHART_OF_ACCOUNTS_VISUAL.html` (print-ready PDF).
 
 ## Accounts (per entity)
 ### Supplier (per Supplier)
@@ -29,7 +31,7 @@ Closed‑loop settlement for MMTP using Mojaloop switch APIs. All product/servic
 - MM Promotions/Discounts Expense (if MM subsidises)
 - Interchange/Clearing Control (internal balancing)
 
-Note: Real chart-of-accounts naming should match models `LedgerAccount`, `JournalEntry`, `JournalLine`.
+Note: The canonical Chart of Accounts is documented in `docs/CHART_OF_ACCOUNTS.md`. Account codes follow the `XXXX-YY-ZZ` convention. See also `docs/CHART_OF_ACCOUNTS_VISUAL.html` for a printable reference.
 
 ## Configuration
 - Commission models: percentage, per‑unit, tiered; applied per Supplier and/or per Client.

@@ -1,7 +1,7 @@
 # Reconciliation System - Quick Start Guide
 
 **Version**: 1.0.0  
-**Date**: 2026-01-13  
+**Date**: 2026-04-05  
 **Status**: Production Ready
 
 For architecture, design principles, and framework details, see [RECONCILIATION_FRAMEWORK.md](./RECONCILIATION_FRAMEWORK.md).
@@ -20,6 +20,15 @@ The MyMoolah Transaction Platform (MMTP) Reconciliation System is a **banking-gr
 ✅ **Comprehensive Reports**: PDF, Excel, JSON formats  
 ✅ **Immutable Audit Trail**: Full compliance traceability  
 ✅ **High Performance**: <200ms per transaction  
+
+### Production Audit
+For a comprehensive production audit covering wallet aggregate vs ledger, trial balance, supplier floats, commission, VAT, referral, and RTP reconciliation:
+
+```bash
+node scripts/production-full-audit.js --production
+```
+
+See also: `docs/CHART_OF_ACCOUNTS.md` for the canonical ledger account reference.
 
 ---
 

@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Security Documentation
 
-**Last Updated**: March 19, 2026
-**Version**: 2.11.31 - Documentation cross-links (Cursor rules vs skills); no security control changes
-**Status**: ✅ **USDC API VALIDATION AT BOUNDARY** ✅ **USDC IDEMPOTENCY & VALR GUARDS** ✅ **EASYPAY STANDALONE VOUCHER UI SECURE** ✅ **RECONCILIATION SECURITY IMPLEMENTED** ⚠️ **CRITICAL PII EXPOSURE IDENTIFIED** 🔴 **ENCRYPTION AT REST REQUIRED** ✅ **STAGING/PRODUCTION DATABASES SECURED** ✅ **REFERRAL SYSTEM FRAUD PREVENTION ACTIVE** ✅ **RULE 12A DOCUMENTED** ✅ **DB CONNECTION HELPER PATTERN ESTABLISHED**
+**Last Updated**: April 5, 2026
+**Version**: 2.81.1 - Ledger audit, rate limiter unification, KYC raw SQL
+**Status**: ✅ **USDC API VALIDATION AT BOUNDARY** ✅ **USDC IDEMPOTENCY & VALR GUARDS** ✅ **EASYPAY STANDALONE VOUCHER UI SECURE** ✅ **RECONCILIATION SECURITY IMPLEMENTED** ⚠️ **CRITICAL PII EXPOSURE IDENTIFIED** 🔴 **ENCRYPTION AT REST REQUIRED** ✅ **STAGING/PRODUCTION DATABASES SECURED** ✅ **REFERRAL SYSTEM FRAUD PREVENTION ACTIVE** ✅ **RULE 12A DOCUMENTED** ✅ **DB CONNECTION HELPER PATTERN ESTABLISHED** ✅ **LEDGER AUDIT LIVE** ✅ **RATE LIMITERS UNIFIED** ✅ **KYC RAW SQL**
 
 ---
 
@@ -73,6 +73,9 @@ See: `docs/session_logs/2025-12-02_1220_msisdn-phonenumber-audit.md` for full au
 - ✅ **Input Validation**: Comprehensive data validation and sanitization
 - ✅ **Audit Logging**: Complete transaction and security event logging
 - ❌ **PII Protection**: Phone numbers NOT encrypted at rest (GDPR/POPIA violation)
+- ✅ **Ledger Audit (Apr 2026)**: Automated production audit (`scripts/production-full-audit.js`) — solvency checks, trial balance, wallet vs ledger reconciliation
+- ✅ **Rate Limiters Unified (Apr 2026)**: Staging no longer bypasses rate limiting — identical banking-grade thresholds in both environments (ISO 27001 / Mojaloop)
+- ✅ **KYC Raw SQL (Apr 2026)**: All `user.update()` calls in `kycController.js` converted to parameterized raw SQL — prevents Sequelize `afterFind` hook conflict with encrypted `idNumber` field
 
 ---
 

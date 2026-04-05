@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Architecture Documentation
 
-**Last Updated**: January 13, 2026  
-**Version**: 2.5.0 - Banking-Grade Reconciliation System
-**Status**: ✅ **RECONCILIATION LIVE** ✅ **PRODUCTION READY**
+**Last Updated**: April 5, 2026  
+**Version**: 2.81.1 - Chart of Accounts + Electricity Supplier Comparison + Ledger Audit
+**Status**: ✅ **CHART OF ACCOUNTS** ✅ **LEDGER AUDIT** ✅ **ELECTRICITY SUPPLIER COMPARISON** ✅ **CLOUD SCHEDULER**
 
 ---
 
@@ -17,6 +17,8 @@ The MyMoolah Treasury Platform is built on a **banking-grade, Mojaloop-compliant
 - **Microservices Architecture**: Scalable, maintainable service-oriented design
 - **Real-Time Processing**: Sub-second transaction processing with automatic supplier selection
 - **Automated Reconciliation**: Multi-supplier transaction reconciliation with self-healing (<200ms per transaction)
+- **Double-Entry Ledger**: 28 accounts, canonical Chart of Accounts (`docs/CHART_OF_ACCOUNTS.md`), solvency rules, automated production audit
+- **Cloud Scheduler**: Catalog sync + referral payouts via GCP Cloud Scheduler (replaces node-cron)
 
 ---
 

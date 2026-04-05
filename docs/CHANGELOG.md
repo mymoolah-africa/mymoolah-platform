@@ -1,5 +1,35 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-05 - Visual Chart of Accounts + Documentation Update (v2.81.1)
+
+### Summary
+Created `docs/CHART_OF_ACCOUNTS_VISUAL.html` — a print-ready HTML/PDF Chart of Accounts
+with color-coded account categories, journal entry templates, solvency rules, reserved
+ranges, and cross-references. Open in browser, Cmd+P to save as PDF.
+
+Analysed production audit results: R50.00 discrepancy in wallet aggregate vs ledger
+(`2100-01-01`), traced to a missing face-value journal entry for TXN#33 (R50.00
+electricity purchase). Commission journal posted but transaction JE silently failed.
+Backfill + root cause investigation pending.
+
+Updated all major documentation files to v2.81.1.
+
+### Files Modified
+- `docs/CHART_OF_ACCOUNTS_VISUAL.html` — NEW: Print-ready HTML/PDF Chart of Accounts
+- `docs/README.md` — Updated to v2.81.1
+- `docs/PROJECT_STATUS.md` — Updated to v2.81.1
+- `docs/index.md` — Added CoA references, updated version
+- `docs/BANKING_GRADE_ARCHITECTURE.md` — Added ledger/CoA section, updated version
+- `docs/architecture.md` — Added ledger principles, updated version
+- `docs/SECURITY.md` — Added audit/rate-limiter/KYC achievements, updated version
+- `docs/SETTLEMENTS.md` — Added CoA cross-references
+- `docs/DEVELOPMENT_GUIDE.md` — Updated version and status
+- `docs/RECONCILIATION_QUICK_START.md` — Added production audit section
+- `docs/CHANGELOG.md` — This entry
+- `docs/session_logs/2026-04-04_2300_chart-of-accounts.md` — Updated with audit analysis
+
+---
+
 ## 2026-04-05 - Electricity Commission-Based Supplier Comparison (v2.81.0)
 
 ### Summary

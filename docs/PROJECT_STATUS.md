@@ -1,16 +1,19 @@
 # MyMoolah Treasury Platform - Project Status
 
-**Last Updated**: March 24, 2026  
-**Version**: 2.28.0 - SBSA SOAP handler + H2H documentation sync  
-**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **CLOUD BUILD DEPLOYS** ✅ **LANGCHAIN RAG AI** ✅ **POPIA ENCRYPTION** ✅ **PASA T-PPP BADGE** ✅ **MARKDOWN CHAT** ✅ **UNIVERSAL MODALS** ✅ **PAYSHAP RTP** ✅ **RTP UETR FIX** ✅ **SFTP PORT 5022** ✅ **EBONF MESSAGE** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
+**Last Updated**: April 5, 2026  
+**Version**: 2.81.1 - Chart of Accounts + Electricity Supplier Comparison + Ledger Audit  
+**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **CHART OF ACCOUNTS** ✅ **ELECTRICITY SUPPLIER COMPARISON** ✅ **LEDGER AUDIT** ✅ **CLOUD SCHEDULER** ✅ **CLOUD BUILD DEPLOYS** ✅ **LANGCHAIN RAG AI** ✅ **POPIA ENCRYPTION** ✅ **PAYSHAP RTP** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
 
 ---
 
 ## 🎯 **CURRENT STATUS OVERVIEW**
 
-Production live at api-mm.mymoolah.africa and wallet.mymoolah.africa. **March 24:** SBSA SOAP credit notification handler built + H2H clarifications resolved (Open Internet, PGP not required, file names confirmed). EasyPay NPS/TPPP legal positioning documented. **March 23:** H2H statement pipeline fixes, environment isolation, VALR RMCP drafted. **March 19 PM:** Major documentation refresh — Cursor rules vs `.agents/skills`, VAS catalog context.
+Production live at api-mm.mymoolah.africa and wallet.mymoolah.africa. **April 5:** Visual Chart of Accounts HTML/PDF published; production audit analysis identified R50 discrepancy. **April 4:** Electricity commission-based supplier comparison deployed to staging + production (same pattern as airtime/data). **April 3:** Canonical `docs/CHART_OF_ACCOUNTS.md` — 28 accounts, 15 journal templates. Migration for 4 missing ledger accounts. **April 2:** Ledger audit complete build — forward JE posting, solvency checks, Cloud Scheduler recon. **April 1:** KYC raw SQL fix, rate limiter unification, commission config externalized. **March 30:** `v_best_offers` materialized view, eeziPower fix, telecoms biller keyword.
 
-### **📋 Latest: SBSA SOAP handler + H2H documentation sync (March 24, 2026)** ✅ **COMPLETE**
+### **📋 Latest: Chart of Accounts + Electricity Supplier Comparison + Ledger Audit (v2.79.0–v2.81.1, Mar 30–Apr 5, 2026)** ✅ **COMPLETE**
+Canonical Chart of Accounts (`docs/CHART_OF_ACCOUNTS.md`) with 28 ledger accounts, 15 journal templates, and interactive visual HTML reference. Electricity supplier comparison live (commission-based selection via `v_best_offers`, ProductVariant routing, circuit breaker + failover). Full ledger audit build: new accounts (A Botes Loan, Voucher Clearing), forward JE posting for VAS/deposits/referrals, solvency checks, Cloud Scheduler for catalog sync + referral payouts. Platform hardening: KYC raw SQL fix, rate limiter unification, commission config externalized to JSON, `v_best_offers` materialized view replaces 6 deprecated files. Production audit script: `scripts/production-full-audit.js`.
+
+### **📋 Previous: SBSA SOAP handler + H2H documentation sync (March 24, 2026)** ✅ **COMPLETE**
 Built SOAP XML parser (`sbsaSoapParser.js`) for SBSA real-time credit notifications. Webhook accepts both SOAP XML and JSON. Clarified with Colette: Open Internet (not VPN), PGP not required, file names/directories confirmed, SFTP username OWN11, MT942 every 15 min. All documentation updated. Awaiting SBSA test traffic before freeze (Thu Mar 27). Session logs: `docs/session_logs/2026-03-24_0900_sbsa-soap-credit-notification-handler.md`, `docs/session_logs/2026-03-24_1530_easypay-tppp-legal-response-draft.md`.
 
 ### **📋 Previous: EasyPay TPPP / NPS legal documentation (March 24, 2026)** ✅ **COMPLETE**

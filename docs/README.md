@@ -1,30 +1,45 @@
 # MyMoolah Treasury Platform
 
-**Last Updated**: March 30, 2026  
-**Version**: 2.28.0 - SBSA SOAP handler + H2H documentation sync  
-**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **POPIA ID ENCRYPTION** ✅ **LANGCHAIN RAG AI** ✅ **PASA T-PPP BADGE** ✅ **MARKDOWN CHAT** ✅ **RTP UETR FIX** ✅ **SFTP PORT 5022** ✅ **EBONF MESSAGE** — **SBSA (2026-03-30):** PayShap inbound sandbox 6/6; Pain.001 v3 SSVS passed; prod PayShap callback live; SFTP payments channel + prod inward queue with SBSA in flight
+**Last Updated**: April 5, 2026  
+**Version**: 2.81.1 - Chart of Accounts + Electricity Supplier Comparison + Ledger Audit  
+**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **CHART OF ACCOUNTS** ✅ **ELECTRICITY SUPPLIER COMPARISON** ✅ **LEDGER AUDIT** ✅ **CLOUD SCHEDULER** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **POPIA ID ENCRYPTION** ✅ **LANGCHAIN RAG AI** ✅ **PASA T-PPP BADGE**
 
-**Work in the last 7 days (Mar 24–30, 2026)**: **Mar 30** — SBSA Pain.001 v3 SSVS validation passed; PayShap inbound credit sandbox 6/6; production PayShap callback URL registered; SFTP payments channel enablement requested (Melanie Block); production PayShap inward queue under SBSA investigation (Louis Van Zyl); docs updated in `docs/SBSA_H2H_SETUP_GUIDE.md`. **Mar 24** — SBSA SOAP credit notification handler built; H2H clarifications resolved (Open Internet, PGP not required, file names confirmed); EasyPay NPS/TPPP legal positioning documented. **Mar 23** — H2H statement pipeline fixes, environment isolation, VALR RMCP, TCIB draft. **Mar 21** — PayShap RTP fix (Peach to SBSA), Peach decommission, UI updates. **Mar 19** — Cursor rules vs `.agents/skills`; VAS catalog notes; SBSA H2H MT940/MT942 session. **Mar 17** — SFTP 5022 + EBONF. See `docs/CHANGELOG.md` for full entries.
-
----
-
-## 🚀 **LATEST UPDATE: SBSA SOAP handler + H2H documentation sync (March 24, 2026)**
-
-### **📋 SBSA H2H Credit Notification Handler**
-- **Built**: `services/standardbank/sbsaSoapParser.js` — parses SBSA SOAP XML `SendTransactionNotificationAsync` messages
-- **Refactored**: Notification webhook (`POST /api/v1/standardbank/notification`) now accepts both SOAP XML and JSON (backward compatible)
-- **Clarified with Colette**: Open Internet (not VPN), PGP not required, file names/directories confirmed, SFTP username OWN11, MT942 every 15 min
-- **Status**: Awaiting SBSA test traffic before freeze (Thu Mar 27 → Apr 8)
-- **Session log**: `docs/session_logs/2026-03-24_0900_sbsa-soap-credit-notification-handler.md`
-
-### **📋 EasyPay TPPP / NPS legal positioning**
-- **Concern**: EasyPay legal (Mar 19) — multi-layered aggregation under NPS/TPPP rules.
-- **Response (documented)**: Single-creditor collection model (EasyPay → MyMoolah); post-settlement wallet/VAS under PASA TPPP + Standard Bank sponsor; Phase 1 cash-in vs Phase 2 cash-out.
-- **Where**: `docs/integrations/EasyPay_API_Integration_Guide.md` §1.4; `docs/session_logs/2026-03-24_1530_easypay-tppp-legal-response-draft.md`; `docs/CHANGELOG.md`.
+**Work in the last 7 days (Mar 30–Apr 5, 2026)**: **Apr 5** — Visual Chart of Accounts HTML/PDF; production audit analysis (R50 discrepancy found). **Apr 4** — Electricity commission-based supplier comparison live (ProductVariant routing, circuit breaker + failover, supplier-specific min amounts, dynamic frontend min/max). Deployed staging + production. **Apr 3** — Chart of Accounts documentation — canonical `docs/CHART_OF_ACCOUNTS.md` (28 accounts, 15 journal templates, 10 sections). Migration for 4 missing ledger accounts. **Apr 2** — Ledger audit complete build: new accounts (A Botes Loan, Voucher Clearing), backfill-v2 script, forward JE posting for VAS/deposits/referrals, solvency checks, scheduled recon via Cloud Scheduler, production full audit script. **Apr 1** — KYC verification fixes (raw SQL for user updates); rate limiters unified; referral payout migrated to Cloud Scheduler; commission config externalized to JSON. **Mar 30** — `v_best_offers` materialized view replaces 6 deprecated files + 3 tables; eeziPower distinguished from eeziAirtime; telecoms biller keyword fix. See `docs/CHANGELOG.md` for full entries.
 
 ---
 
-## **PREVIOUS: Documentation + agent tooling + VAS context (March 19, 2026)**
+## 🚀 **LATEST UPDATE: Chart of Accounts + Electricity Supplier Comparison + Ledger Audit (April 5, 2026)**
+
+### **📋 Chart of Accounts (v2.80.0–v2.81.1)**
+- **Canonical CoA**: `docs/CHART_OF_ACCOUNTS.md` — 28 ledger accounts, 15 journal entry templates, 10 sections covering all product verticals
+- **Visual reference**: `docs/CHART_OF_ACCOUNTS_VISUAL.html` — interactive HTML with collapsible account groups and journal flow diagrams
+- **Migration**: `20260405_01_seed_missing_ledger_accounts.js` — 4 missing accounts seeded (A Botes Loan, Voucher Clearing, and 2 others)
+- **Production audit**: `scripts/production-full-audit.js` — R50 discrepancy identified and under investigation
+
+### **📋 Electricity Supplier Comparison (v2.81.0)**
+- **Same pattern as airtime/data**: Commission-based supplier selection via `v_best_offers` materialized view
+- **ProductVariant routing**: Frontend sends winning `productId`; backend resolves supplier, applies circuit breaker + failover
+- **Supplier-specific minimums**: MobileMart R30, Flash R10; dynamic min/max enforced in frontend
+- **Backward compatible**: Omitting `productId` falls back to env-var routing
+- **Deployed**: Staging + production
+
+### **📋 Ledger Audit Build (v2.79.0)**
+- **New accounts**: A Botes Loan (`2200-03-01`), Voucher Clearing (`2100-06-01`)
+- **Forward JE posting**: VAS purchases, deposits, and referrals now post double-entry journal entries
+- **Solvency checks**: Automated asset vs liability validation
+- **Cloud Scheduler**: Catalog sync + referral payouts migrated from node-cron (Cloud Run kills idle instances)
+- **Automated recon**: `scripts/production-full-audit.js` for scheduled reconciliation
+
+### **📋 Platform Hardening (Mar 30–Apr 1)**
+- **KYC fixes**: Raw SQL for user updates in `kycController.js` (Sequelize `afterFind` hook conflict with encrypted `idNumber`)
+- **Rate limiters**: Staging bypass removed — identical banking-grade thresholds in all environments
+- **Commission config**: Externalized to `config/supplier-commissions.json` (150 lines of hardcoded if/else replaced)
+- **`v_best_offers`**: Materialized view replaces 6 deprecated files + 3 tables (8+ tables/6 services/3,400+ lines → 1 SQL view + 1 service)
+- **eeziPower**: Correctly distinguished from eeziAirtime (vasType, supplierProductId, labels, metadata)
+
+---
+
+## **PREVIOUS: SBSA SOAP handler + H2H documentation sync (March 24, 2026)**
 
 ### **📚 Docs sync**
 - Canonical docs updated: `AGENT_HANDOVER.md`, `CHANGELOG.md`, `PROJECT_STATUS.md`, `DEVELOPMENT_GUIDE.md`, `CURSOR_2.0_RULES_FINAL.md`, `CURSOR_SKILLS.md`, `AGENT_ROLE_TEMPLATE.md`
