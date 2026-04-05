@@ -2389,108 +2389,132 @@ router.post('/electricity/purchase', auth, async (req, res) => {
     let flashResponse;
 
     if (useMobileMartAPI) {
-      // PRODUCTION/STAGING: Use real MobileMart API
-      try {
-        const MobileMartAuthService = require('../services/mobilemartAuthService');
-        const mobileMartService = new MobileMartAuthService();
+      // PRODUCTION/STAGING: Use real MobileMart API with retry on timeout
+      const MAX_RETRIES = 1;
+      let lastError = null;
 
-        // Step 1: Get utility products to find merchantProductId
-        console.log('📞 MobileMart: Getting utility products...');
-        const productsResponse = await mobileMartService.makeAuthenticatedRequest(
-          'GET',
-          '/utility/products'
-        );
-        const products = productsResponse.products || productsResponse || [];
-        const utilityProduct = products[0]; // Use first available utility product
+      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          const MobileMartAuthService = require('../services/mobilemartAuthService');
+          const mobileMartService = new MobileMartAuthService();
 
-        if (!utilityProduct || !utilityProduct.merchantProductId) {
-          throw new Error('No utility products available from MobileMart');
-        }
-        console.log(`✅ Found utility product: ${utilityProduct.name || 'Electricity'} (${utilityProduct.merchantProductId})`);
+          // Step 1: Get utility products to find merchantProductId
+          if (attempt === 0) console.log('📞 MobileMart: Getting utility products...');
+          else console.log(`🔄 MobileMart: Retry attempt ${attempt} — getting utility products...`);
 
-        // Step 2: Prevend - validate meter and get prevendTransactionId
-        const prevendRequestId = `PRE_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-        const prevendParams = new URLSearchParams({
-          merchantProductId: utilityProduct.merchantProductId,
-          requestId: prevendRequestId,
-          meterNumber: meterNumber,
-          amount: amount.toString()
-        });
-        
-        console.log(`📞 MobileMart Prevend: ${prevendParams.toString()}`);
-        const prevendResponse = await mobileMartService.makeAuthenticatedRequest(
-          'GET',
-          `/utility/prevend?${prevendParams.toString()}`
-        );
-        console.log('✅ MobileMart Prevend Response:', JSON.stringify(prevendResponse, null, 2));
+          const productsResponse = await mobileMartService.makeAuthenticatedRequest(
+            'GET',
+            '/utility/products'
+          );
+          const products = productsResponse.products || productsResponse || [];
+          const utilityProduct = products[0];
 
-        const prevendTransactionId = prevendResponse.transactionId || prevendResponse.prevendTransactionId;
-        if (!prevendTransactionId) {
-          throw new Error('MobileMart prevend did not return transactionId');
-        }
-        console.log(`✅ Prevend Transaction ID: ${prevendTransactionId}`);
+          if (!utilityProduct || !utilityProduct.merchantProductId) {
+            throw new Error('No utility products available from MobileMart');
+          }
+          console.log(`✅ Found utility product: ${utilityProduct.name || 'Electricity'} (${utilityProduct.merchantProductId})`);
 
-        // Step 3: Purchase - complete the transaction
-        const purchasePayload = {
-          requestId: `ELEC_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
-          prevendTransactionId: prevendTransactionId,
-          tenderType: 'CreditCard'
-        };
-
-        console.log('📞 MobileMart Purchase Request:', JSON.stringify(purchasePayload, null, 2));
-        const purchaseResponse = await mobileMartService.makeAuthenticatedRequest(
-          'POST',
-          '/utility/purchase',
-          purchasePayload
-        );
-        console.log('✅ MobileMart Purchase Response:', JSON.stringify(purchaseResponse, null, 2));
-
-        // Extract electricity token from MobileMart response
-        mobileMartResponse = purchaseResponse;
-        mobileMartTransactionId = purchaseResponse.transactionId;
-        
-        // MobileMart utility response has tokens in additionalDetails.tokens array
-        // Tokens can be either strings or objects with token/value properties
-        if (purchaseResponse.additionalDetails && Array.isArray(purchaseResponse.additionalDetails.tokens)) {
-          const tokens = purchaseResponse.additionalDetails.tokens;
-          console.log('🔍 Raw tokens from MobileMart:', JSON.stringify(tokens, null, 2));
-          
-          // Extract token values (handle both string[] and object[] formats)
-          const tokenValues = tokens.map(t => {
-            if (typeof t === 'string') return t;
-            if (typeof t === 'object') return t.token || t.value || t.tokenValue || t.pin || JSON.stringify(t);
-            return String(t);
+          // Step 2: Prevend - validate meter and get prevendTransactionId
+          const prevendRequestId = `PRE_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+          const prevendParams = new URLSearchParams({
+            merchantProductId: utilityProduct.merchantProductId,
+            requestId: prevendRequestId,
+            meterNumber: meterNumber,
+            amount: amount.toString()
           });
           
-          electricityToken = tokenValues.join(' ');
-          console.log(`✅ Extracted electricity token: ${electricityToken}`);
-        } else {
-          // Fallback: use receipt number or first available token field
-          electricityToken = purchaseResponse.additionalDetails?.receiptNumber || 
-                            purchaseResponse.additionalDetails?.reference ||
-                            'TOKEN_PENDING';
-          console.log(`⚠️ No tokens array found, using fallback: ${electricityToken}`);
-        }
+          console.log(`📞 MobileMart Prevend: ${prevendParams.toString()}`);
+          const prevendResponse = await mobileMartService.makeAuthenticatedRequest(
+            'GET',
+            `/utility/prevend?${prevendParams.toString()}`
+          );
+          console.log('✅ MobileMart Prevend Response:', JSON.stringify(prevendResponse, null, 2));
 
-      } catch (apiError) {
-        console.error('❌ MobileMart API Error:', apiError.message);
-        console.error('❌ MobileMart Error Details:', {
-          error: apiError.message,
-          response: apiError.response?.data,
-          status: apiError.response?.status,
-          stack: apiError.stack
-        });
-        
-        // Extract MobileMart error details for frontend display
+          const prevendTransactionId = prevendResponse.transactionId || prevendResponse.prevendTransactionId;
+          if (!prevendTransactionId) {
+            throw new Error('MobileMart prevend did not return transactionId');
+          }
+          console.log(`✅ Prevend Transaction ID: ${prevendTransactionId}`);
+
+          // Step 3: Purchase - complete the transaction
+          const purchasePayload = {
+            requestId: `ELEC_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+            prevendTransactionId: prevendTransactionId,
+            tenderType: 'CreditCard'
+          };
+
+          console.log('📞 MobileMart Purchase Request:', JSON.stringify(purchasePayload, null, 2));
+          const purchaseResponse = await mobileMartService.makeAuthenticatedRequest(
+            'POST',
+            '/utility/purchase',
+            purchasePayload
+          );
+          console.log('✅ MobileMart Purchase Response:', JSON.stringify(purchaseResponse, null, 2));
+
+          // Extract electricity token from MobileMart response
+          mobileMartResponse = purchaseResponse;
+          mobileMartTransactionId = purchaseResponse.transactionId;
+          
+          if (purchaseResponse.additionalDetails && Array.isArray(purchaseResponse.additionalDetails.tokens)) {
+            const tokens = purchaseResponse.additionalDetails.tokens;
+            console.log('🔍 Raw tokens from MobileMart:', JSON.stringify(tokens, null, 2));
+            
+            const tokenValues = tokens.map(t => {
+              if (typeof t === 'string') return t;
+              if (typeof t === 'object') return t.token || t.value || t.tokenValue || t.pin || JSON.stringify(t);
+              return String(t);
+            });
+            
+            electricityToken = tokenValues.join(' ');
+            console.log(`✅ Extracted electricity token: ${electricityToken}`);
+          } else {
+            electricityToken = purchaseResponse.additionalDetails?.receiptNumber || 
+                              purchaseResponse.additionalDetails?.reference ||
+                              'TOKEN_PENDING';
+            console.log(`⚠️ No tokens array found, using fallback: ${electricityToken}`);
+          }
+
+          lastError = null;
+          break; // Success — exit retry loop
+
+        } catch (apiError) {
+          lastError = apiError;
+          const isTimeout = apiError.code === 'ECONNABORTED' || (apiError.message && apiError.message.includes('timeout'));
+
+          console.error(`❌ MobileMart API Error (attempt ${attempt + 1}/${MAX_RETRIES + 1}):`, apiError.message);
+          console.error('❌ MobileMart Error Details:', {
+            error: apiError.message,
+            response: apiError.response?.data,
+            status: apiError.response?.status,
+            isTimeout,
+            attempt: attempt + 1
+          });
+
+          if (isTimeout && attempt < MAX_RETRIES) {
+            console.log(`🔄 MobileMart prevend timed out — retrying in 2s (attempt ${attempt + 2}/${MAX_RETRIES + 1})...`);
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            continue;
+          }
+          // Non-timeout errors or final attempt — break out and return error
+          break;
+        }
+      }
+
+      if (lastError) {
+        const apiError = lastError;
+        const isTimeout = apiError.code === 'ECONNABORTED' || (apiError.message && apiError.message.includes('timeout'));
         const mobileMartError = apiError.response?.data || {};
-        const errorCode = mobileMartError.fulcrumErrorCode || mobileMartError.errorCode || 'UNKNOWN';
-        const errorMessage = mobileMartError.title || mobileMartError.detail || mobileMartError.message || apiError.message;
+        const errorCode = isTimeout ? 'TIMEOUT' : (mobileMartError.fulcrumErrorCode || mobileMartError.errorCode || 'UNKNOWN');
+        const errorMessage = isTimeout
+          ? 'The electricity provider is taking too long to respond. Please try again in a few minutes.'
+          : (mobileMartError.title || mobileMartError.detail || mobileMartError.message || apiError.message);
         
-        return res.status(500).json({
+        return res.status(isTimeout ? 504 : 500).json({
           success: false,
           error: 'Failed to purchase electricity from MobileMart',
           errorCode: `MOBILEMART_${errorCode}`,
           message: errorMessage,
+          isTimeout: isTimeout,
           details: {
             mobileMartErrorCode: errorCode,
             mobileMartError: errorMessage,
@@ -2501,83 +2525,105 @@ router.post('/electricity/purchase', auth, async (req, res) => {
         });
       }
     } else if (useFlashAPI) {
-      // PRODUCTION/STAGING: Use real Flash API
-      try {
-        const FlashAuthService = require('../services/flashAuthService');
-        const flashService = new FlashAuthService();
+      // PRODUCTION/STAGING: Use real Flash API with retry on timeout
+      const FLASH_MAX_RETRIES = 1;
+      let flashLastError = null;
 
-        // Step 1: Lookup meter to validate it exists
-        console.log('📞 Flash: Looking up meter...');
-        const lookupResponse = await flashService.makeAuthenticatedRequest(
-          'POST',
-          '/prepaid-utilities/lookup',
-          {
+      for (let attempt = 0; attempt <= FLASH_MAX_RETRIES; attempt++) {
+        try {
+          const FlashAuthService = require('../services/flashAuthService');
+          const flashService = new FlashAuthService();
+
+          if (attempt === 0) console.log('📞 Flash: Looking up meter...');
+          else console.log(`🔄 Flash: Retry attempt ${attempt} — looking up meter...`);
+
+          const lookupResponse = await flashService.makeAuthenticatedRequest(
+            'POST',
+            '/prepaid-utilities/lookup',
+            {
+              meterNumber: meterNumber,
+              serviceProvider: 'ESKOM'
+            }
+          );
+          console.log('✅ Flash Meter Lookup Response:', JSON.stringify(lookupResponse, null, 2));
+
+          if (!lookupResponse.isValid) {
+            throw new Error('Meter number not found or invalid');
+          }
+
+          const purchasePayload = {
+            reference: `ELEC_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+            accountNumber: process.env.FLASH_ACCOUNT_NUMBER || 'FLASH001234',
             meterNumber: meterNumber,
-            serviceProvider: 'ESKOM' // Default to ESKOM, can be made dynamic later
-          }
-        );
-        console.log('✅ Flash Meter Lookup Response:', JSON.stringify(lookupResponse, null, 2));
+            amount: Math.round(amount * 100),
+            productCode: 1,
+            serviceProvider: 'ESKOM',
+            metadata: {
+              source: 'ElectricityOverlay',
+              userId: req.user.id,
+              beneficiaryId: beneficiaryId
+            }
+          };
 
-        if (!lookupResponse.isValid) {
-          throw new Error('Meter number not found or invalid');
+          console.log('📞 Flash Purchase Request:', JSON.stringify(purchasePayload, null, 2));
+          const purchaseResponse = await flashService.makeAuthenticatedRequest(
+            'POST',
+            '/prepaid-utilities/purchase',
+            purchasePayload
+          );
+          console.log('✅ Flash Purchase Response:', JSON.stringify(purchaseResponse, null, 2));
+
+          flashResponse = purchaseResponse;
+          flashTransactionId = purchaseResponse.transactionId || purchaseResponse.reference;
+          
+          electricityToken = purchaseResponse.token || 
+                            purchaseResponse.tokenNumber ||
+                            purchaseResponse.pin ||
+                            purchaseResponse.serialNumber ||
+                            purchaseResponse.additionalDetails?.token ||
+                            'TOKEN_PENDING';
+          
+          console.log(`✅ Flash electricity token: ${electricityToken}`);
+          flashLastError = null;
+          break; // Success — exit retry loop
+
+        } catch (apiError) {
+          flashLastError = apiError;
+          const isTimeout = apiError.code === 'ECONNABORTED' || (apiError.message && apiError.message.includes('timeout'));
+
+          console.error(`❌ Flash API Error (attempt ${attempt + 1}/${FLASH_MAX_RETRIES + 1}):`, apiError.message);
+          console.error('❌ Flash Error Details:', {
+            error: apiError.message,
+            response: apiError.response?.data,
+            status: apiError.response?.status,
+            isTimeout,
+            attempt: attempt + 1
+          });
+
+          if (isTimeout && attempt < FLASH_MAX_RETRIES) {
+            console.log(`🔄 Flash timed out — retrying in 2s (attempt ${attempt + 2}/${FLASH_MAX_RETRIES + 1})...`);
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            continue;
+          }
+          break;
         }
+      }
 
-        // Step 2: Purchase prepaid utility (electricity)
-        const purchasePayload = {
-          reference: `ELEC_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
-          accountNumber: process.env.FLASH_ACCOUNT_NUMBER || 'FLASH001234',
-          meterNumber: meterNumber,
-          amount: Math.round(amount * 100), // Convert to cents
-          productCode: 1, // Flash prepaid utility product code
-          serviceProvider: 'ESKOM',
-          metadata: {
-            source: 'ElectricityOverlay',
-            userId: req.user.id,
-            beneficiaryId: beneficiaryId
-          }
-        };
-
-        console.log('📞 Flash Purchase Request:', JSON.stringify(purchasePayload, null, 2));
-        const purchaseResponse = await flashService.makeAuthenticatedRequest(
-          'POST',
-          '/prepaid-utilities/purchase',
-          purchasePayload
-        );
-        console.log('✅ Flash Purchase Response:', JSON.stringify(purchaseResponse, null, 2));
-
-        // Extract electricity token from Flash response
-        flashResponse = purchaseResponse;
-        flashTransactionId = purchaseResponse.transactionId || purchaseResponse.reference;
-        
-        // Flash returns token in various possible fields
-        electricityToken = purchaseResponse.token || 
-                          purchaseResponse.tokenNumber ||
-                          purchaseResponse.pin ||
-                          purchaseResponse.serialNumber ||
-                          purchaseResponse.additionalDetails?.token ||
-                          'TOKEN_PENDING';
-        
-        console.log(`✅ Flash electricity token: ${electricityToken}`);
-
-      } catch (apiError) {
-        console.error('❌ Flash API Error:', apiError.message);
-        console.error('❌ Flash Error Details:', {
-          error: apiError.message,
-          response: apiError.response?.data,
-          status: apiError.response?.status,
-          stack: apiError.stack
-        });
-        
-        // Extract Flash error details for frontend display
+      if (flashLastError) {
+        const apiError = flashLastError;
+        const isTimeout = apiError.code === 'ECONNABORTED' || (apiError.message && apiError.message.includes('timeout'));
         const flashError = apiError.response?.data || {};
-        const errorCode = flashError.errorCode || flashError.code || 'UNKNOWN';
-        const errorMessage = flashError.message || flashError.detail || apiError.message;
+        const errorCode = isTimeout ? 'TIMEOUT' : (flashError.errorCode || flashError.code || 'UNKNOWN');
+        const errorMessage = isTimeout
+          ? 'The electricity provider is taking too long to respond. Please try again in a few minutes.'
+          : (flashError.message || flashError.detail || apiError.message);
         
-        return res.status(500).json({
+        return res.status(isTimeout ? 504 : 500).json({
           success: false,
           error: 'Failed to purchase electricity from Flash',
           errorCode: `FLASH_${errorCode}`,
           message: errorMessage,
+          isTimeout: isTimeout,
           details: {
             flashErrorCode: errorCode,
             flashError: errorMessage,

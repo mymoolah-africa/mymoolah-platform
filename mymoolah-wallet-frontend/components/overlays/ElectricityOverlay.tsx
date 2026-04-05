@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Zap, CheckCircle, AlertTriangle, Copy, Share, Download } from 'lucide-react';
+import { ArrowLeft, Zap, CheckCircle, AlertTriangle, Copy, Share, Download, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -10,6 +10,7 @@ import { AmountInput } from './shared/AmountInput';
 import { ConfirmSheet } from './shared/ConfirmSheet';
 import { GlobalPinModal } from './shared/GlobalPinModal';
 import { apiService } from '../../services/apiService';
+import { ErrorModal } from '../ui/ErrorModal';
 import { 
   beneficiaryService, 
   electricityService, 
@@ -46,6 +47,9 @@ export function ElectricityOverlay() {
   const [beneficiaryToRemove, setBeneficiaryToRemove] = useState<ElectricityBeneficiary | null>(null);
   const [beneficiaryIsMyMoolahUser, setBeneficiaryIsMyMoolahUser] = useState(false);
   const [showEeziPowerModal, setShowEeziPowerModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorModalTitle, setErrorModalTitle] = useState('Purchase Failed');
+  const [errorModalMessage, setErrorModalMessage] = useState('');
 
   // Load beneficiaries on mount
   useEffect(() => {
@@ -117,8 +121,22 @@ export function ElectricityOverlay() {
       setShowSuccess(true);
     } catch (err: any) {
       console.error('Purchase failed:', err);
-      setError(err.response?.data?.message || 'Purchase failed');
-      setLoadingState('error');
+      const responseData = err.response?.data;
+      const isTimeout = responseData?.isTimeout || responseData?.errorCode?.includes('TIMEOUT');
+      
+      if (isTimeout) {
+        setErrorModalTitle('Provider Slow to Respond');
+        setErrorModalMessage(
+          'The electricity provider is taking too long to respond. Your wallet has not been charged. Please try again in a few minutes.'
+        );
+      } else {
+        setErrorModalTitle('Purchase Failed');
+        setErrorModalMessage(
+          responseData?.message || 'Something went wrong while processing your electricity purchase. Your wallet has not been charged. Please try again.'
+        );
+      }
+      setShowErrorModal(true);
+      setLoadingState('idle');
     }
   };
 
@@ -749,6 +767,15 @@ export function ElectricityOverlay() {
           }
         />
       )}
+
+      {/* Error Modal — user-friendly error messages for failed purchases */}
+      <ErrorModal
+        isOpen={showErrorModal}
+        onClose={() => setShowErrorModal(false)}
+        title={errorModalTitle}
+        message={errorModalMessage}
+        type="warning"
+      />
     </div>
   );
 }

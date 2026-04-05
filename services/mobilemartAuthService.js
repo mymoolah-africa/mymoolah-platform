@@ -216,11 +216,12 @@ class MobileMartAuthService {
                 console.log(`🔍 MobileMart Request: ${method.toUpperCase()} ${url}`);
             }
             
+            const requestTimeout = parseInt(process.env.MOBILEMART_REQUEST_TIMEOUT, 10) || 60000;
             const config = {
                 method: method.toLowerCase(),
                 url: url,
                 headers: headers,
-                timeout: 30000,
+                timeout: requestTimeout,
                 // Handle SSL certificate issues (for development/testing)
                 httpsAgent: process.env.NODE_ENV === 'production' ? undefined : 
                     new (require('https').Agent)({ rejectUnauthorized: false })
@@ -230,8 +231,6 @@ class MobileMartAuthService {
                 config.data = data;
             }
 
-    
-            
             const response = await axios(config);
             
             // Check for MobileMart API error response
@@ -284,11 +283,12 @@ class MobileMartAuthService {
                     const retryBase = (typeof endpoint === 'string' && endpoint.startsWith('/v2')) ? this.baseUrl : this.apiUrl;
                     const url = `${retryBase}${endpoint}`;
                     
+                    const retryTimeout = parseInt(process.env.MOBILEMART_REQUEST_TIMEOUT, 10) || 60000;
                     const config = {
                         method: method.toLowerCase(),
                         url: url,
                         headers: headers,
-                        timeout: 30000,
+                        timeout: retryTimeout,
                         // Handle SSL certificate issues (for development/testing)
                         httpsAgent: process.env.NODE_ENV === 'production' ? undefined : 
                             new (require('https').Agent)({ rejectUnauthorized: false })
