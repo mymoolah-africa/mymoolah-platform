@@ -310,6 +310,21 @@ class SmsService {
     return this.sendSms(phoneNumber, msg, { type: 'ussd', reference: `USSD-RECV-${Date.now()}` });
   }
 
+  async sendUssdEeziAirtimeSms(phoneNumber, pin, amount, recipient) {
+    const msg = `MyMoolah: Your eeziAirtime PIN: ${pin}. R${amount} for ${recipient}. Redeem at any Flash retailer or dial *130*${pin}#. Ref: USSD-EA-${Date.now()}`;
+    return this.sendSms(phoneNumber, msg.substring(0, 160), { type: 'ussd', reference: `USSD-EA-${Date.now()}` });
+  }
+
+  async sendUssdEeziPowerSms(phoneNumber, pin, amount) {
+    const msg = `MyMoolah: Your eeziPower PIN: ${pin}. R${amount}. Dial *130*${pin}# on your meter or visit any Flash retailer. Ref: USSD-EP-${Date.now()}`;
+    return this.sendSms(phoneNumber, msg.substring(0, 160), { type: 'ussd', reference: `USSD-EP-${Date.now()}` });
+  }
+
+  async sendUssdVoucherSms(phoneNumber, pin, amount, brandName) {
+    const msg = `MyMoolah: Your ${brandName} PIN: ${pin}. Amount: R${amount}. Dial *120*5616# for more. Ref: USSD-VCH-${Date.now()}`;
+    return this.sendSms(phoneNumber, msg.substring(0, 160), { type: 'ussd', reference: `USSD-VCH-${Date.now()}` });
+  }
+
   /**
    * Check if SMS service is configured
    * @returns {boolean} True if credentials are set

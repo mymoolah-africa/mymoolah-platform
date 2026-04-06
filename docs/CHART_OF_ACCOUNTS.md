@@ -105,6 +105,7 @@ Revenue accounts track income earned by MMTP. Normal side: **credit**
 |------|------|--------|-----------|---------|-------|
 | `4000-10-01` | Commission Revenue | credit | `20260224_03` | `commissionVatService.js`, `qrPaymentController.js`, `production-full-audit.js` | VAS commission income (airtime, data, electricity, billers, vouchers) |
 | `4000-20-01` | Transaction Fee Revenue | credit | `20260224_03` | `standardbankRppService.js` | PayShap / RTP transaction fee markup |
+| `4000-20-03` | SMS Fee Revenue | credit | `20260406_01` | `ussdMenuService.js` | Fee charged to users for USSD PIN-delivery SMS (R0.40 incl VAT) |
 | `4100-01-06` | USDC Fee Revenue | credit | `20260224_03`, `20260207120002` | `usdcTransactionService.js` | 7.5% USDC send transaction fee (VAT inclusive) |
 | `4100-05-01` | Ad Revenue | credit | `20260224_03` | `adService.js` | Watch-to-Earn ad view revenue (merchant pays per view) |
 
@@ -286,7 +287,20 @@ CR  2100-01-01  Client Float Liability           R{userReward}    (user payout)
 CR  4100-05-01  Ad Revenue                       R{mmMargin}      (MMTP margin)
 ```
 
-### 3.13 Supplier Float Top-Up
+### 3.13 USSD SMS Fee (PIN Delivery)
+
+User purchases a PIN-based product via USSD (eeziAirtime, eeziPower, voucher).
+SMS fee is charged separately for PIN delivery via SMS. R0.40 incl VAT (R0.35 ex-VAT).
+
+```
+Reference: SMS-FEE-TXN-USSD-{timestamp}-SMSFEE
+
+DR  2100-01-01  Client Float Liability           R0.40     (SMS fee wallet debit)
+CR  4000-20-03  SMS Fee Revenue                  R0.35     (fee revenue ex-VAT)
+CR  2300-10-01  VAT Control Account              R0.05     (VAT on SMS fee)
+```
+
+### 3.14 Supplier Float Top-Up
 
 MMTP tops up a supplier float via bank transfer (e.g., MobileMart R2,500 prepayment).
 
@@ -297,7 +311,7 @@ DR  1200-10-XX  Supplier Float Account           R{amount}
 CR  1100-01-01  Standard Bank Current Account    R{amount}
 ```
 
-### 3.14 Unallocated Deposit (Suspense)
+### 3.15 Unallocated Deposit (Suspense)
 
 Bank deposit received but reference cannot be matched to a user.
 
@@ -509,7 +523,7 @@ developed in parallel. Claim the next available code within your range.
 | `2800-xx-xx` | Savings Goals | Ring-fenced savings, goal targets | Reserved (Section 9.7) |
 | `3000-xx-xx` | Equity | Retained earnings, share capital | Reserved |
 | `4000-10-xx` | Commission Revenue | VAS commission income | **LIVE** (01 revenue) |
-| `4000-20-xx` | Transaction Fee Revenue | PayShap, payment fees | **LIVE** (01 fees) |
+| `4000-20-xx` | Transaction Fee Revenue | PayShap, payment fees, SMS fees | **LIVE** (01 PayShap fees, 03 SMS fees) |
 | `4100-01-xx` | Product Fee Revenue | USDC, MoolahMove, lending fees | **LIVE** (06 USDC); Reserved (07 MoolahMove) |
 | `4100-05-xx` | Ad Revenue | Watch-to-Earn, sponsorships | **LIVE** (01 ad revenue) |
 | `4200-xx-xx` | Lending Interest Income | Loan interest, late fees | Reserved (Section 9.3) |
@@ -550,6 +564,8 @@ sensible defaults. This allows per-environment overrides without code changes.
 | `LEDGER_ACCOUNT_MOBILEMART_FLOAT` | `1200-10-05` | MobileMart Float | migration scripts |
 | `LEDGER_ACCOUNT_USDC_FEE_CLEARING` | `9999-00-01` | USDC Fee Clearing / Suspense | usdcTransactionService |
 | `SBSA_MAIN_ACCOUNT_CODE` | `1100-02-01` | SBSA Statement Reconciliation | sbsaStatementService |
+| `LEDGER_ACCOUNT_SMS_FEE_REVENUE` | `4000-20-03` | SMS Fee Revenue | ussdMenuService |
+| `SMS_FEE_AMOUNT` | `0.40` | SMS fee ZAR (VAT incl) | ussdMenuService |
 
 **Notes:**
 

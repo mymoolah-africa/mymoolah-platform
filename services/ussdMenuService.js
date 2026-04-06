@@ -1,13 +1,35 @@
 'use strict';
 
-const { sequelize, Wallet, Transaction } = require('../models');
+const { sequelize, Wallet, Transaction, User } = require('../models');
 const ussdAuthService = require('./ussdAuthService');
 const { getLimitsForTier } = require('../config/kycTierLimits');
 const { encrypt, blindIndex } = require('../utils/fieldEncryption');
+const smsService = require('./smsService');
 
 const AIRTIME_AMOUNTS = [5, 10, 29, 55, 110];
 const DATA_AMOUNTS = [10, 29, 55, 110, 250];
 const CASHOUT_AMOUNTS = [50, 100, 200, 500];
+const EEZI_AIRTIME_AMOUNTS = [5, 10, 29, 55, 110];
+const EEZI_POWER_AMOUNTS = [20, 50, 100, 200, 500];
+const VOUCHER_AMOUNTS = [10, 25, 50, 100, 200];
+const BETTING_VOUCHER_AMOUNTS = [50, 100, 200, 500, 1000];
+
+const SMS_FEE_AMOUNT = parseFloat(process.env.SMS_FEE_AMOUNT || '0.40');
+const SMS_FEE_EX_VAT = parseFloat((SMS_FEE_AMOUNT / 1.15).toFixed(2));
+const SMS_FEE_VAT = parseFloat((SMS_FEE_AMOUNT - SMS_FEE_EX_VAT).toFixed(2));
+const LEDGER_ACCOUNT_SMS_FEE = process.env.LEDGER_ACCOUNT_SMS_FEE_REVENUE || '4000-20-03';
+const LEDGER_ACCOUNT_CLIENT_FLOAT = process.env.LEDGER_ACCOUNT_CLIENT_FLOAT || '2100-01-01';
+const LEDGER_ACCOUNT_VAT_CONTROL = process.env.LEDGER_ACCOUNT_VAT_CONTROL || '2300-10-01';
+const LEDGER_ACCOUNT_FLASH_FLOAT = process.env.LEDGER_ACCOUNT_FLASH_FLOAT || '1200-10-04';
+
+const VOUCHER_BRANDS = [
+  { key: '1voucher',  name: '1Voucher',       amounts: VOUCHER_AMOUNTS },
+  { key: 'ott',       name: 'OTT Voucher',    amounts: VOUCHER_AMOUNTS },
+  { key: 'blu',       name: 'Blu Voucher',     amounts: VOUCHER_AMOUNTS },
+  { key: 'betway',    name: 'Betway',          amounts: BETTING_VOUCHER_AMOUNTS },
+  { key: 'hollywood', name: 'Hollywood Bets',  amounts: BETTING_VOUCHER_AMOUNTS },
+  { key: 'supabets',  name: 'SupaBets',        amounts: BETTING_VOUCHER_AMOUNTS },
+];
 
 // ─── State machine ──────────────────────────────────────────────────────────
 
@@ -70,6 +92,17 @@ const STATE_HANDLERS = {
   CHANGE_PIN_CONFIRM: handleChangePinConfirm,
   REFERRAL_CODE: handleReferralCode,
   HELP: handleHelp,
+  SEND_MONEY_PHONE: handleSendMoneyPhone,
+  SEND_MONEY_AMOUNT: handleSendMoneyAmount,
+  SEND_MONEY_CONFIRM: handleSendMoneyConfirm,
+  AIRTIME_OTHERS_PHONE: handleAirtimeOthersPhone,
+  AIRTIME_OTHERS_AMOUNT: handleAirtimeOthersAmount,
+  AIRTIME_OTHERS_CONFIRM: handleAirtimeOthersConfirm,
+  ELECTRICITY_AMOUNT: handleElectricityAmount,
+  ELECTRICITY_CONFIRM: handleElectricityConfirm,
+  VOUCHER_BRAND: handleVoucherBrand,
+  VOUCHER_AMOUNT: handleVoucherAmount,
+  VOUCHER_CONFIRM: handleVoucherConfirm,
 };
 
 // ─── WELCOME ────────────────────────────────────────────────────────────────
@@ -244,16 +277,17 @@ async function handlePinEntry(session, input) {
 // ─── MAIN MENU ──────────────────────────────────────────────────────────────
 
 function mainMenuText() {
-  return 'MyMoolah\n1 Balance\n2 Buy airtime\n3 Buy data\n4 Cash out\n5 More\n0 Exit';
+  return 'MyMoolah\n1 Balance\n2 Send Money\n3 Buy Airtime\n4 Buy Data\n5 Cash Out\n6 More\n0 Exit';
 }
 
 async function handleMainMenu(session, input) {
   switch (input) {
     case '1': return handleBalance(session, input);
-    case '2': return continueSession(airtimeMenuText(), 'BUY_AIRTIME');
-    case '3': return continueSession(dataMenuText(), 'BUY_DATA');
-    case '4': return continueSession(cashOutMenuText(), 'CASH_OUT');
-    case '5': return continueSession(moreMenuText(), 'MORE_MENU');
+    case '2': return continueSession('Send Money\nEnter recipient phone number:', 'SEND_MONEY_PHONE');
+    case '3': return continueSession(airtimeMenuText(), 'BUY_AIRTIME');
+    case '4': return continueSession(dataMenuText(), 'BUY_DATA');
+    case '5': return continueSession(cashOutMenuText(), 'CASH_OUT');
+    case '6': return continueSession(moreMenuText(), 'MORE_MENU');
     case '0': return endSession('Thank you for using MyMoolah!');
     default: return continueSession('Invalid choice.\n' + mainMenuText(), 'MAIN_MENU');
   }
@@ -267,7 +301,73 @@ async function handleBalance(session) {
   return endSession(`Balance: R${bal}\nAvailable: R${bal}`);
 }
 
-// ─── BUY AIRTIME ────────────────────────────────────────────────────────────
+// ─── SEND MONEY (P2P) ──────────────────────────────────────────────────────
+
+async function handleSendMoneyPhone(session, input) {
+  if (input === '0') return continueSession(mainMenuText(), 'MAIN_MENU');
+  const phone = normalizePhoneNumber(input);
+  if (!phone) {
+    return continueSession('Invalid number. Enter SA\nphone number (e.g. 0821234567):', 'SEND_MONEY_PHONE');
+  }
+  if (phone === session.msisdn) {
+    return continueSession('Cannot send to yourself.\nEnter recipient phone number:', 'SEND_MONEY_PHONE');
+  }
+
+  const [rows] = await sequelize.query(
+    `SELECT id, "firstName", "lastName" FROM users WHERE "phoneNumber" = $1 LIMIT 1`,
+    { bind: [phone] }
+  );
+  if (!rows.length) {
+    return endSession('This number is not registered\non MyMoolah. Only existing\nMyMoolah users can receive.');
+  }
+  const receiver = rows[0];
+  const receiverName = `${receiver.firstName || ''} ${receiver.lastName || ''}`.trim();
+  return continueSession(
+    `Send to ${receiverName}\nEnter amount (R1+):`,
+    'SEND_MONEY_AMOUNT',
+    { receiverId: receiver.id, receiverName, receiverPhone: phone }
+  );
+}
+
+async function handleSendMoneyAmount(session, input) {
+  if (input === '0') return continueSession(mainMenuText(), 'MAIN_MENU');
+  const amount = parseFloat(input);
+  if (isNaN(amount) || amount < 1) {
+    return continueSession('Invalid amount. Min R1.\nEnter amount:', 'SEND_MONEY_AMOUNT');
+  }
+  const rounded = parseFloat(amount.toFixed(2));
+  return continueSession(
+    `Send R${rounded} to ${session.data.receiverName}?\n1 Yes\n2 No`,
+    'SEND_MONEY_CONFIRM',
+    { sendAmount: rounded }
+  );
+}
+
+async function handleSendMoneyConfirm(session, input) {
+  if (input === '2' || input === '0') return continueSession(mainMenuText(), 'MAIN_MENU');
+  if (input !== '1') return continueSession('1 Yes\n2 No', 'SEND_MONEY_CONFIRM');
+
+  const amount = session.data.sendAmount;
+  const userId = session.data.userId;
+  const receiverId = session.data.receiverId;
+
+  const balCheck = await checkBalanceAndLimits(userId, amount);
+  if (!balCheck.ok) return endSession(balCheck.message);
+
+  try {
+    const result = await sendMoneyToUser(userId, receiverId, amount, session.sessionId, session.msisdn, session.data.receiverPhone, session.data.receiverName);
+    if (result.success) {
+      const newBal = await getWalletBalance(userId);
+      return endSession(`R${amount} sent to ${session.data.receiverName}.\nBal: R${newBal}`);
+    }
+    return endSession(result.error || 'Transfer failed. Try again.');
+  } catch (err) {
+    console.error('[USSD] Send money error:', err.message);
+    return endSession('Service error. Try again later.');
+  }
+}
+
+// ─── BUY AIRTIME (self — pinless) ──────────────────────────────────────────
 
 function airtimeMenuText() {
   return 'Buy Airtime\n' + AIRTIME_AMOUNTS.map((a, i) => `${i + 1} R${a}`).join('\n') + '\n0 Back';
@@ -311,7 +411,7 @@ async function handleBuyAirtimeConfirm(session, input) {
   }
 }
 
-// ─── BUY DATA ───────────────────────────────────────────────────────────────
+// ─── BUY DATA (self — pinless) ──────────────────────────────────────────────
 
 function dataMenuText() {
   return 'Buy Data\n' + DATA_AMOUNTS.map((a, i) => `${i + 1} R${a}`).join('\n') + '\n0 Back';
@@ -403,17 +503,188 @@ async function handleCashOutConfirm(session, input) {
 // ─── MORE MENU ──────────────────────────────────────────────────────────────
 
 function moreMenuText() {
-  return 'More\n1 Mini statement\n2 Change PIN\n3 My referral code\n4 Help\n0 Back';
+  return 'More\n1 Airtime for Others\n2 Buy Electricity\n3 Buy Voucher\n4 Mini Statement\n5 Change PIN\n6 Referral Code\n7 Help\n0 Back';
 }
 
 async function handleMoreMenu(session, input) {
   switch (input) {
-    case '1': return handleMiniStatement(session, input);
-    case '2': return continueSession('Enter current PIN:', 'CHANGE_PIN');
-    case '3': return handleReferralCode(session, input);
-    case '4': return handleHelp(session, input);
+    case '1': return continueSession('Airtime for Others\nEnter recipient phone number:', 'AIRTIME_OTHERS_PHONE');
+    case '2': return continueSession(electricityMenuText(), 'ELECTRICITY_AMOUNT');
+    case '3': return continueSession(voucherBrandMenuText(), 'VOUCHER_BRAND');
+    case '4': return handleMiniStatement(session, input);
+    case '5': return continueSession('Enter current PIN:', 'CHANGE_PIN');
+    case '6': return handleReferralCode(session, input);
+    case '7': return handleHelp(session, input);
     case '0': return continueSession(mainMenuText(), 'MAIN_MENU');
     default: return continueSession('Invalid choice.\n' + moreMenuText(), 'MORE_MENU');
+  }
+}
+
+// ─── AIRTIME FOR OTHERS (eeziAirtime PIN) ──────────────────────────────────
+
+function eeziAirtimeMenuText() {
+  return 'Airtime for Others\n' + EEZI_AIRTIME_AMOUNTS.map((a, i) => `${i + 1} R${a}`).join('\n') + '\n0 Back';
+}
+
+async function handleAirtimeOthersPhone(session, input) {
+  if (input === '0') return continueSession(moreMenuText(), 'MORE_MENU');
+  const phone = normalizePhoneNumber(input);
+  if (!phone) {
+    return continueSession('Invalid number.\nEnter SA phone number\n(e.g. 0821234567):', 'AIRTIME_OTHERS_PHONE');
+  }
+  return continueSession(
+    eeziAirtimeMenuText(),
+    'AIRTIME_OTHERS_AMOUNT',
+    { recipientPhone: formatPhone(phone) }
+  );
+}
+
+async function handleAirtimeOthersAmount(session, input) {
+  if (input === '0') return continueSession(moreMenuText(), 'MORE_MENU');
+  const idx = parseInt(input, 10) - 1;
+  if (isNaN(idx) || idx < 0 || idx >= EEZI_AIRTIME_AMOUNTS.length) {
+    return continueSession('Invalid choice.\n' + eeziAirtimeMenuText(), 'AIRTIME_OTHERS_AMOUNT');
+  }
+  const amount = EEZI_AIRTIME_AMOUNTS[idx];
+  const total = parseFloat((amount + SMS_FEE_AMOUNT).toFixed(2));
+  return continueSession(
+    `R${amount} Airtime to ${session.data.recipientPhone}\n+R${SMS_FEE_AMOUNT.toFixed(2)} SMS fee\nTotal: R${total.toFixed(2)}\n1 Yes 2 No`,
+    'AIRTIME_OTHERS_CONFIRM',
+    { eeziAirtimeAmount: amount }
+  );
+}
+
+async function handleAirtimeOthersConfirm(session, input) {
+  if (input === '2' || input === '0') return continueSession(moreMenuText(), 'MORE_MENU');
+  if (input !== '1') return continueSession('1 Yes\n2 No', 'AIRTIME_OTHERS_CONFIRM');
+
+  const amount = session.data.eeziAirtimeAmount;
+  const total = parseFloat((amount + SMS_FEE_AMOUNT).toFixed(2));
+  const userId = session.data.userId;
+
+  const balCheck = await checkBalanceAndLimits(userId, total);
+  if (!balCheck.ok) return endSession(balCheck.message);
+
+  try {
+    const result = await purchaseEeziProduct(userId, amount, session.sessionId, false);
+    if (result.success) {
+      await debitSmsFee(userId, session.sessionId, 'USSD-EA');
+      sendPinSmsAsync(session.msisdn, result.pin, amount, session.data.recipientPhone, 'eeziAirtime');
+      const newBal = await getWalletBalance(userId);
+      return endSession(`Airtime purchased!\nPIN sent via SMS.\nBal: R${newBal}`);
+    }
+    return endSession(result.error || 'Purchase failed. Try again.');
+  } catch (err) {
+    console.error('[USSD] eeziAirtime error:', err.message);
+    return endSession('Service error. Try again later.');
+  }
+}
+
+// ─── BUY ELECTRICITY (eeziPower PIN) ───────────────────────────────────────
+
+function electricityMenuText() {
+  return 'Buy Electricity\n' + EEZI_POWER_AMOUNTS.map((a, i) => `${i + 1} R${a}`).join('\n') + '\n0 Back';
+}
+
+async function handleElectricityAmount(session, input) {
+  if (input === '0') return continueSession(moreMenuText(), 'MORE_MENU');
+  const idx = parseInt(input, 10) - 1;
+  if (isNaN(idx) || idx < 0 || idx >= EEZI_POWER_AMOUNTS.length) {
+    return continueSession('Invalid choice.\n' + electricityMenuText(), 'ELECTRICITY_AMOUNT');
+  }
+  const amount = EEZI_POWER_AMOUNTS[idx];
+  const total = parseFloat((amount + SMS_FEE_AMOUNT).toFixed(2));
+  return continueSession(
+    `R${amount} Electricity\n+R${SMS_FEE_AMOUNT.toFixed(2)} SMS fee\nTotal: R${total.toFixed(2)}\n1 Yes 2 No`,
+    'ELECTRICITY_CONFIRM',
+    { eeziPowerAmount: amount }
+  );
+}
+
+async function handleElectricityConfirm(session, input) {
+  if (input === '2' || input === '0') return continueSession(moreMenuText(), 'MORE_MENU');
+  if (input !== '1') return continueSession('1 Yes\n2 No', 'ELECTRICITY_CONFIRM');
+
+  const amount = session.data.eeziPowerAmount;
+  const total = parseFloat((amount + SMS_FEE_AMOUNT).toFixed(2));
+  const userId = session.data.userId;
+
+  const balCheck = await checkBalanceAndLimits(userId, total);
+  if (!balCheck.ok) return endSession(balCheck.message);
+
+  try {
+    const result = await purchaseEeziProduct(userId, amount, session.sessionId, true);
+    if (result.success) {
+      await debitSmsFee(userId, session.sessionId, 'USSD-EP');
+      sendPinSmsAsync(session.msisdn, result.pin, amount, null, 'eeziPower');
+      const newBal = await getWalletBalance(userId);
+      return endSession(`Electricity purchased!\nPIN sent via SMS.\nBal: R${newBal}`);
+    }
+    return endSession(result.error || 'Purchase failed. Try again.');
+  } catch (err) {
+    console.error('[USSD] eeziPower error:', err.message);
+    return endSession('Service error. Try again later.');
+  }
+}
+
+// ─── BUY VOUCHER (6 brands) ────────────────────────────────────────────────
+
+function voucherBrandMenuText() {
+  return 'Buy Voucher\n' + VOUCHER_BRANDS.map((b, i) => `${i + 1} ${b.name}`).join('\n') + '\n0 Back';
+}
+
+async function handleVoucherBrand(session, input) {
+  if (input === '0') return continueSession(moreMenuText(), 'MORE_MENU');
+  const idx = parseInt(input, 10) - 1;
+  if (isNaN(idx) || idx < 0 || idx >= VOUCHER_BRANDS.length) {
+    return continueSession('Invalid choice.\n' + voucherBrandMenuText(), 'VOUCHER_BRAND');
+  }
+  const brand = VOUCHER_BRANDS[idx];
+  const amountMenu = brand.name + '\n' + brand.amounts.map((a, i) => `${i + 1} R${a}`).join('\n') + '\n0 Back';
+  return continueSession(amountMenu, 'VOUCHER_AMOUNT', { voucherBrandIdx: idx });
+}
+
+async function handleVoucherAmount(session, input) {
+  if (input === '0') return continueSession(voucherBrandMenuText(), 'VOUCHER_BRAND');
+  const brand = VOUCHER_BRANDS[session.data.voucherBrandIdx];
+  const idx = parseInt(input, 10) - 1;
+  if (isNaN(idx) || idx < 0 || idx >= brand.amounts.length) {
+    const amountMenu = brand.name + '\n' + brand.amounts.map((a, i) => `${i + 1} R${a}`).join('\n') + '\n0 Back';
+    return continueSession('Invalid choice.\n' + amountMenu, 'VOUCHER_AMOUNT');
+  }
+  const amount = brand.amounts[idx];
+  const total = parseFloat((amount + SMS_FEE_AMOUNT).toFixed(2));
+  return continueSession(
+    `R${amount} ${brand.name}\n+R${SMS_FEE_AMOUNT.toFixed(2)} SMS fee\nTotal: R${total.toFixed(2)}\n1 Yes 2 No`,
+    'VOUCHER_CONFIRM',
+    { voucherAmount: amount }
+  );
+}
+
+async function handleVoucherConfirm(session, input) {
+  if (input === '2' || input === '0') return continueSession(voucherBrandMenuText(), 'VOUCHER_BRAND');
+  if (input !== '1') return continueSession('1 Yes\n2 No', 'VOUCHER_CONFIRM');
+
+  const brand = VOUCHER_BRANDS[session.data.voucherBrandIdx];
+  const amount = session.data.voucherAmount;
+  const total = parseFloat((amount + SMS_FEE_AMOUNT).toFixed(2));
+  const userId = session.data.userId;
+
+  const balCheck = await checkBalanceAndLimits(userId, total);
+  if (!balCheck.ok) return endSession(balCheck.message);
+
+  try {
+    const result = await purchaseVoucherByBrand(userId, brand, amount, session.sessionId);
+    if (result.success) {
+      await debitSmsFee(userId, session.sessionId, 'USSD-VCH');
+      sendPinSmsAsync(session.msisdn, result.pin, amount, null, 'voucher', brand.name);
+      const newBal = await getWalletBalance(userId);
+      return endSession(`${brand.name} purchased!\nPIN sent via SMS.\nBal: R${newBal}`);
+    }
+    return endSession(result.error || 'Purchase failed. Try again.');
+  } catch (err) {
+    console.error('[USSD] Voucher purchase error:', err.message);
+    return endSession('Service error. Try again later.');
   }
 }
 
@@ -635,7 +906,7 @@ async function purchaseEeziVoucher(userId, amountRand, sessionId) {
       terminalId,
     });
 
-    const eeziPin = response?.voucherPin || response?.pin || response?.data?.pin || response?.token || null;
+    const eeziPin = extractPinFromResponse(response);
     if (!eeziPin) {
       await t.rollback();
       return { success: false, error: 'Voucher error. Try again.' };
@@ -665,7 +936,346 @@ async function purchaseEeziVoucher(userId, amountRand, sessionId) {
   }
 }
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+async function purchaseEeziProduct(userId, amountRand, sessionId, isEeziPower) {
+  const t = await sequelize.transaction();
+  try {
+    const wallet = await Wallet.findOne({
+      where: { userId },
+      lock: t.LOCK.UPDATE,
+      transaction: t,
+    });
+    if (!wallet) { await t.rollback(); return { success: false, error: 'Wallet not found.' }; }
+
+    const canDebit = wallet.canDebit(amountRand);
+    if (!canDebit.allowed) { await t.rollback(); return { success: false, error: 'Insufficient balance.' }; }
+
+    const accountNumber = process.env.FLASH_ACCOUNT_NUMBER;
+    if (!accountNumber) { await t.rollback(); return { success: false, error: 'Service not configured.' }; }
+
+    const amountCents = amountRand * 100;
+    const prefix = isEeziPower ? 'USSD-EP' : 'USSD-EA';
+    const reference = `${prefix}-${sessionId}-${Date.now()}`.replace(/_/g, '-');
+    const storeId = process.env.FLASH_STORE_ID || accountNumber.replace(/-/g, '').slice(0, 12);
+    const terminalId = process.env.FLASH_TERMINAL_ID || accountNumber.replace(/-/g, '').slice(0, 12);
+
+    let productCode;
+    try {
+      const FlashController = require('../controllers/flashController');
+      const fc = new FlashController();
+      productCode = isEeziPower
+        ? await fc._resolveEeziPowerProductCode()
+        : await fc._resolveEeziVoucherProductCode();
+    } catch (pcErr) {
+      console.warn(`[USSD] Could not resolve eezi product code, proceeding without:`, pcErr.message);
+    }
+
+    const FlashAuthService = require('./flashAuthService');
+    const flashAuth = FlashAuthService.getInstance ? FlashAuthService.getInstance() : new FlashAuthService();
+
+    const payload = { reference, accountNumber, amount: amountCents, storeId, terminalId };
+    if (productCode) payload.productCode = productCode;
+
+    const response = await flashAuth.makeAuthenticatedRequest('POST', '/eezi-voucher/purchase', payload);
+
+    const eeziPin = extractPinFromResponse(response);
+    if (!eeziPin) { await t.rollback(); return { success: false, error: 'PIN not received. Try again.' }; }
+
+    await wallet.debit(amountRand, 'withdraw', { transaction: t });
+
+    const productLabel = isEeziPower ? 'eeziPower' : 'eeziAirtime';
+    const vasType = isEeziPower ? 'electricity' : 'airtime';
+    const txnId = `TXN-USSD-${Date.now()}-${productLabel.toUpperCase()}`;
+    await Transaction.create({
+      transactionId: txnId,
+      userId,
+      walletId: wallet.walletId,
+      amount: amountRand,
+      type: 'withdraw',
+      status: 'completed',
+      description: `${productLabel} R${amountRand}`,
+      metadata: { channel: 'ussd', reference, vasType, productLabel, eeziPin: '***' },
+      currency: 'ZAR',
+    }, { transaction: t });
+
+    await t.commit();
+
+    postVasLedgerEntry(amountRand, LEDGER_ACCOUNT_FLASH_FLOAT, txnId);
+
+    return { success: true, pin: eeziPin };
+  } catch (err) {
+    try { await t.rollback(); } catch {}
+    console.error(`[USSD] eezi${isEeziPower ? 'Power' : 'Airtime'} purchase error:`, err.message);
+    return { success: false, error: 'Purchase failed. Try again.' };
+  }
+}
+
+async function purchaseVoucherByBrand(userId, brand, amountRand, sessionId) {
+  const t = await sequelize.transaction();
+  try {
+    const wallet = await Wallet.findOne({ where: { userId }, lock: t.LOCK.UPDATE, transaction: t });
+    if (!wallet) { await t.rollback(); return { success: false, error: 'Wallet not found.' }; }
+
+    const canDebit = wallet.canDebit(amountRand);
+    if (!canDebit.allowed) { await t.rollback(); return { success: false, error: 'Insufficient balance.' }; }
+
+    const [variants] = await sequelize.query(`
+      SELECT pv.id, pv."supplierProductId", pv."supplierId", s.code AS "supplierCode"
+      FROM product_variants pv
+      JOIN products p ON p.id = pv."productId"
+      JOIN suppliers s ON s.id = pv."supplierId"
+      WHERE p.type = 'voucher' AND pv.status = 'active'
+        AND (LOWER(p.name) LIKE $1 OR LOWER(pv.provider) LIKE $1)
+        AND pv."minAmount" <= $2 AND (pv."maxAmount" >= $2 OR pv."maxAmount" IS NULL)
+      ORDER BY s.code = 'FLASH' DESC, pv."commissionPercentage" DESC NULLS LAST
+      LIMIT 1
+    `, { bind: [`%${brand.key}%`, amountRand * 100] });
+
+    if (!variants.length) { await t.rollback(); return { success: false, error: `${brand.name} not available for R${amountRand}.` }; }
+
+    const variant = variants[0];
+    const amountCents = amountRand * 100;
+    const reference = `USSD-VCH-${sessionId}-${Date.now()}`.replace(/_/g, '-');
+
+    let pin = null;
+
+    if (variant.supplierCode === 'FLASH') {
+      const accountNumber = process.env.FLASH_ACCOUNT_NUMBER;
+      const storeId = process.env.FLASH_STORE_ID || accountNumber?.replace(/-/g, '').slice(0, 12);
+      const terminalId = process.env.FLASH_TERMINAL_ID || accountNumber?.replace(/-/g, '').slice(0, 12);
+      const productCode = parseInt(String(variant.supplierProductId).trim(), 10);
+
+      if (!accountNumber || isNaN(productCode)) {
+        await t.rollback();
+        return { success: false, error: 'Voucher service not configured.' };
+      }
+
+      const FlashAuthService = require('./flashAuthService');
+      const flashAuth = FlashAuthService.getInstance ? FlashAuthService.getInstance() : new FlashAuthService();
+      const response = await flashAuth.makeAuthenticatedRequest('POST', '/gift-voucher/purchase', {
+        reference, accountNumber, amount: amountCents, productCode, storeId, terminalId,
+      });
+      pin = extractPinFromResponse(response);
+    } else {
+      const MobileMartAuthService = require('./mobilemartAuthService');
+      const mmAuth = new MobileMartAuthService();
+      const response = await mmAuth.makeAuthenticatedRequest('POST', '/voucher/purchase', {
+        requestId: reference,
+        merchantProductId: variant.supplierProductId,
+        tenderType: 'CreditCard',
+        amount: amountRand,
+      });
+      pin = response?.additionalDetails?.pin || response?.additionalDetails?.serialNumber ||
+            response?.pin || response?.voucherPin || null;
+    }
+
+    if (!pin) { await t.rollback(); return { success: false, error: 'Voucher PIN not received.' }; }
+
+    await wallet.debit(amountRand, 'payment', { transaction: t });
+
+    const txnId = `TXN-USSD-${Date.now()}-VOUCHER`;
+    await Transaction.create({
+      transactionId: txnId,
+      userId,
+      walletId: wallet.walletId,
+      amount: amountRand,
+      type: 'payment',
+      status: 'completed',
+      description: `${brand.name} R${amountRand}`,
+      metadata: { channel: 'ussd', reference, voucherBrand: brand.name, supplier: variant.supplierCode, voucherPin: '***' },
+      currency: 'ZAR',
+    }, { transaction: t });
+
+    await t.commit();
+
+    const floatAccount = variant.supplierCode === 'FLASH' ? LEDGER_ACCOUNT_FLASH_FLOAT : (process.env.LEDGER_ACCOUNT_MOBILEMART_FLOAT || '1200-10-05');
+    postVasLedgerEntry(amountRand, floatAccount, txnId);
+
+    return { success: true, pin };
+  } catch (err) {
+    try { await t.rollback(); } catch {}
+    console.error('[USSD] Voucher purchase error:', err.message);
+    return { success: false, error: 'Purchase failed. Try again.' };
+  }
+}
+
+async function sendMoneyToUser(senderId, receiverId, amountRand, sessionId, senderMsisdn, receiverPhone, receiverName) {
+  const t = await sequelize.transaction();
+  try {
+    const senderWallet = await Wallet.findOne({ where: { userId: senderId }, lock: t.LOCK.UPDATE, transaction: t });
+    if (!senderWallet) { await t.rollback(); return { success: false, error: 'Wallet not found.' }; }
+
+    const canDebit = senderWallet.canDebit(amountRand);
+    if (!canDebit.allowed) { await t.rollback(); return { success: false, error: 'Insufficient balance.' }; }
+
+    const receiverWallet = await Wallet.findOne({ where: { userId: receiverId }, lock: t.LOCK.UPDATE, transaction: t });
+    if (!receiverWallet) { await t.rollback(); return { success: false, error: 'Receiver wallet not found.' }; }
+
+    await senderWallet.debit(amountRand, 'send', { transaction: t });
+    const newReceiverBal = parseFloat(receiverWallet.balance) + amountRand;
+    await receiverWallet.update({ balance: newReceiverBal }, { transaction: t });
+
+    const senderTxnId = `TXN-USSD-${Date.now()}-SEND`;
+    const receiverTxnId = `TXN-USSD-${Date.now()}-RECV`;
+
+    await Transaction.create({
+      transactionId: senderTxnId, userId: senderId, walletId: senderWallet.walletId,
+      amount: amountRand, type: 'send', status: 'completed',
+      description: `Sent R${amountRand} to ${receiverName}`,
+      metadata: { channel: 'ussd', receiverUserId: receiverId }, currency: 'ZAR',
+    }, { transaction: t });
+
+    const [senderRows] = await sequelize.query(`SELECT "firstName" FROM users WHERE id = $1`, { bind: [senderId] });
+    const senderName = senderRows[0]?.firstName || 'MyMoolah User';
+
+    await Transaction.create({
+      transactionId: receiverTxnId, userId: receiverId, walletId: receiverWallet.walletId,
+      amount: amountRand, type: 'receive', status: 'completed',
+      description: `Received R${amountRand} from ${senderName}`,
+      metadata: { channel: 'ussd', senderUserId: senderId }, currency: 'ZAR',
+    }, { transaction: t });
+
+    await t.commit();
+
+    postP2pLedgerEntry(amountRand, senderTxnId);
+
+    setImmediate(async () => {
+      try {
+        const e164Sender = senderMsisdn.startsWith('+') ? senderMsisdn : `+${senderMsisdn}`;
+        const e164Receiver = receiverPhone.startsWith('+') ? receiverPhone : `+${receiverPhone}`;
+        if (smsService.isConfigured()) {
+          await smsService.sendUssdSendMoneySms(e164Sender, amountRand, receiverName);
+          await smsService.sendUssdReceiveMoneySms(e164Receiver, amountRand, senderName);
+        }
+      } catch (smsErr) {
+        console.error('[USSD] Send money SMS error (non-blocking):', smsErr.message);
+      }
+    });
+
+    return { success: true };
+  } catch (err) {
+    try { await t.rollback(); } catch {}
+    console.error('[USSD] Send money error:', err.message);
+    return { success: false, error: 'Transfer failed. Try again.' };
+  }
+}
+
+// ─── SMS Fee & Ledger Helpers ───────────────────────────────────────────────
+
+async function debitSmsFee(userId, sessionId, prefix) {
+  const t = await sequelize.transaction();
+  try {
+    const wallet = await Wallet.findOne({ where: { userId }, lock: t.LOCK.UPDATE, transaction: t });
+    if (!wallet || !wallet.canDebit(SMS_FEE_AMOUNT).allowed) {
+      await t.rollback();
+      return;
+    }
+
+    await wallet.debit(SMS_FEE_AMOUNT, 'fee', { transaction: t });
+
+    const txnId = `TXN-USSD-${Date.now()}-SMSFEE`;
+    await Transaction.create({
+      transactionId: txnId, userId, walletId: wallet.walletId,
+      amount: SMS_FEE_AMOUNT, type: 'fee', status: 'completed',
+      description: `SMS fee R${SMS_FEE_AMOUNT.toFixed(2)}`,
+      metadata: { channel: 'ussd', feeType: 'sms_pin_delivery', prefix },
+      currency: 'ZAR',
+    }, { transaction: t });
+
+    await t.commit();
+
+    setImmediate(async () => {
+      try {
+        const ledgerService = require('./ledgerService');
+        await ledgerService.postJournalEntry({
+          reference: `SMS-FEE-${txnId}`,
+          description: `USSD SMS fee - ${prefix}`,
+          lines: [
+            { accountCode: LEDGER_ACCOUNT_CLIENT_FLOAT, dc: 'debit', amount: SMS_FEE_AMOUNT, memo: 'SMS fee wallet debit' },
+            { accountCode: LEDGER_ACCOUNT_SMS_FEE, dc: 'credit', amount: SMS_FEE_EX_VAT, memo: 'SMS fee revenue ex-VAT' },
+            { accountCode: LEDGER_ACCOUNT_VAT_CONTROL, dc: 'credit', amount: SMS_FEE_VAT, memo: 'VAT on SMS fee' },
+          ],
+        });
+      } catch (jeErr) {
+        console.error('[USSD] SMS fee JE error (non-blocking):', jeErr.message);
+      }
+    });
+  } catch (err) {
+    try { await t.rollback(); } catch {}
+    console.error('[USSD] SMS fee debit error (non-blocking):', err.message);
+  }
+}
+
+function sendPinSmsAsync(msisdn, pin, amount, recipient, productType, brandName) {
+  if (!smsService.isConfigured()) return;
+  const e164 = msisdn.startsWith('+') ? msisdn : `+${msisdn}`;
+  setImmediate(async () => {
+    try {
+      if (productType === 'eeziAirtime') {
+        await smsService.sendUssdEeziAirtimeSms(e164, pin, amount, recipient || 'recipient');
+      } else if (productType === 'eeziPower') {
+        await smsService.sendUssdEeziPowerSms(e164, pin, amount);
+      } else if (productType === 'voucher') {
+        await smsService.sendUssdVoucherSms(e164, pin, amount, brandName || 'Voucher');
+      }
+    } catch (smsErr) {
+      console.error(`[USSD] PIN SMS error (non-blocking):`, smsErr.message);
+    }
+  });
+}
+
+function postVasLedgerEntry(amountRand, supplierFloatAccount, txnId) {
+  setImmediate(async () => {
+    try {
+      const ledgerService = require('./ledgerService');
+      await ledgerService.postJournalEntry({
+        reference: `VAS-${txnId}`,
+        description: `USSD VAS purchase`,
+        lines: [
+          { accountCode: LEDGER_ACCOUNT_CLIENT_FLOAT, dc: 'debit', amount: amountRand, memo: 'Wallet debit for VAS' },
+          { accountCode: supplierFloatAccount, dc: 'credit', amount: amountRand, memo: 'Supplier float' },
+        ],
+      });
+    } catch (jeErr) {
+      console.error('[USSD] VAS ledger JE error (non-blocking):', jeErr.message);
+    }
+  });
+}
+
+function postP2pLedgerEntry(amountRand, senderTxnId) {
+  setImmediate(async () => {
+    try {
+      const ledgerService = require('./ledgerService');
+      await ledgerService.postJournalEntry({
+        reference: `P2P-${senderTxnId}`,
+        description: `USSD P2P transfer`,
+        lines: [
+          { accountCode: LEDGER_ACCOUNT_CLIENT_FLOAT, dc: 'debit', amount: amountRand, memo: 'Sender wallet debit' },
+          { accountCode: LEDGER_ACCOUNT_CLIENT_FLOAT, dc: 'credit', amount: amountRand, memo: 'Receiver wallet credit' },
+        ],
+      });
+    } catch (jeErr) {
+      console.error('[USSD] P2P ledger JE error (non-blocking):', jeErr.message);
+    }
+  });
+}
+
+function extractPinFromResponse(response) {
+  if (!response) return null;
+  const voucher = response.voucher;
+  const tx = response.transaction || response.data || response.result || response;
+  const vd = (typeof tx === 'object' && tx?.voucherDetails) || response.voucherDetails;
+
+  const tryExtract = (obj) => {
+    if (!obj || typeof obj !== 'object') return null;
+    return obj.pin || obj.pinNumber || obj.voucherPin || obj.code || obj.token ||
+           obj.voucherCode || obj.voucher_pin || obj.eeziPin || null;
+  };
+
+  return tryExtract(voucher) || tryExtract(tx) || tryExtract(response) || tryExtract(vd) ||
+         response?.voucherPin || response?.pin || response?.data?.pin || response?.token || null;
+}
+
+// ─── Phone number helpers ───────────────────────────────────────────────────
 
 function formatPhone(msisdn) {
   const e164 = msisdn.startsWith('+') ? msisdn : `+${msisdn}`;
@@ -673,6 +1283,20 @@ function formatPhone(msisdn) {
     return '0' + e164.slice(3);
   }
   return e164;
+}
+
+function normalizePhoneNumber(input) {
+  const cleaned = input.replace(/[\s\-()]/g, '');
+  if (/^0[6-8]\d{8}$/.test(cleaned)) {
+    return '+27' + cleaned.slice(1);
+  }
+  if (/^27[6-8]\d{8}$/.test(cleaned)) {
+    return '+' + cleaned;
+  }
+  if (/^\+27[6-8]\d{8}$/.test(cleaned)) {
+    return cleaned;
+  }
+  return null;
 }
 
 module.exports = { processInput };

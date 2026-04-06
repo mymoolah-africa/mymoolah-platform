@@ -16,9 +16,13 @@ The **MyMoolah USSD channel** exposes wallet and value-added services (VAS) over
 |------------|-------------|
 | **Wallet registration** | Tier 0 onboarding from USSD using SA ID or passport (no proof of address). |
 | **Balance** | View wallet balance after successful PIN authentication. |
-| **Airtime** | Purchase airtime for the MSISDN linked to the session. |
-| **Data** | Purchase mobile data bundles (denominations configured in menu). |
-| **Cash out** | eeziCash voucher flow (Flash), subject to configuration and limits. |
+| **Send Money** | P2P transfer to existing MMTP users. Free SMS notification to both parties. |
+| **Airtime** | Purchase pinless airtime for the MSISDN linked to the session. |
+| **Data** | Purchase pinless mobile data bundles. |
+| **Cash out** | eeziCash voucher flow (Flash) — PIN displayed on USSD screen. |
+| **Airtime for Others** | eeziAirtime PIN voucher for a different phone number. PIN delivered via SMS (R0.40 fee). |
+| **Electricity** | eeziPower PIN voucher. PIN delivered via SMS (R0.40 fee). |
+| **Vouchers** | 6 brands: 1Voucher, OTT, Blu, Betway, Hollywood Bets, SupaBets. PIN via SMS (R0.40 fee). |
 | **Mini statement** | Last five completed transactions (abbreviated). |
 | **PIN management** | Set USSD PIN (new users / migration), change PIN (authenticated), progressive lockout on failures. |
 
@@ -197,10 +201,11 @@ Text below matches the **implemented** prompts (option keys and labels may be tu
 ```
 MyMoolah
 1 Balance
-2 Buy airtime
-3 Buy data
-4 Cash out
-5 More
+2 Send Money
+3 Buy Airtime
+4 Buy Data
+5 Cash Out
+6 More
 0 Exit
 ```
 
@@ -208,17 +213,24 @@ MyMoolah
 
 ```
 More
-1 Mini statement
-2 Change PIN
-3 My referral code
-4 Help
+1 Airtime for Others
+2 Buy Electricity
+3 Buy Voucher
+4 Mini Statement
+5 Change PIN
+6 Referral Code
+7 Help
 0 Back
 ```
 
 ### Sub-flows (summary)
 
-- **Airtime / Data:** Denomination menus → confirm **Yes/No** → VAS purchase via `ProductPurchaseService` with idempotency key.  
-- **Cash out:** Amount menu → confirm → eeziCash / Flash path (requires `FLASH_ACCOUNT_NUMBER` and related config).  
+- **Send Money:** Enter recipient phone → amount → confirm. Only existing MMTP users. Free SMS to sender + receiver.
+- **Airtime / Data (self):** Denomination menus → confirm → pinless VAS via `ProductPurchaseService`.  
+- **Cash out:** Amount menu → confirm → eeziCash PIN shown on screen.
+- **Airtime for Others (eeziAirtime):** Enter recipient phone → amount → confirm → PIN via SMS (R0.40 SMS fee).
+- **Buy Electricity (eeziPower):** Amount menu → confirm → PIN via SMS (R0.40 SMS fee).
+- **Buy Voucher:** Brand menu (1Voucher, OTT, Blu, Betway, Hollywood Bets, SupaBets) → amount → confirm → PIN via SMS (R0.40 SMS fee). Betting brands min R50, max R1000. Shopping brands min R10, max R200.
 - **Mini statement:** Last **5** completed transactions + balance.  
 - **Change PIN:** Current PIN → new PIN → confirm.  
 - **Help:** Support numbers and web reference.
@@ -314,21 +326,22 @@ Security and GRC stakeholders should review **POPIA** implications of displaying
 
 ## 11. Phased rollout
 
-### Phase 1 — MVP (current target)
+### Phase 1 — MVP (complete)
 
-- Registration (Tier 0), USSD PIN set / verify, **balance**, **airtime**, **data**, **mini statement**, **cash out** (where Flash is configured), **change PIN**, **referral code**, **help**.
+- Registration (Tier 0), USSD PIN set / verify, **balance**, **airtime**, **data**, **mini statement**, **cash out** (eeziCash), **change PIN**, **referral code**, **help**.
 
-### Phase 2
+### Phase 2 — Extended Services (complete — April 2026)
 
-- **Buy for others** (alternate MSISDN).  
-- **Electricity** and additional VAS catalog entries.  
-- **Send money** (P2P) with Tier-aware limits.  
-- **Multi-language** menus using `preferred_language` and translated prompts.
+- **Send Money** (P2P) to existing MMTP users with Tier-aware limits. Free SMS notifications.
+- **Airtime for Others** (eeziAirtime) — Flash PIN voucher, SMS delivery with R0.40 SMS fee.
+- **Buy Electricity** (eeziPower) — Flash PIN voucher, SMS delivery with R0.40 SMS fee.
+- **Buy Voucher** — 6 brands (1Voucher, OTT Voucher, Blu Voucher, Betway, Hollywood Bets, SupaBets). Flash/MobileMart with commission-based supplier selection. SMS delivery with R0.40 SMS fee.
+- **SMS fee ledger**: `4000-20-03` SMS Fee Revenue, R0.35 ex-VAT + R0.05 VAT.
 
 ### Phase 3
 
+- **Multi-language** menus using `preferred_language` and translated prompts.
 - **Request money** (pull / voucher requests).  
-- **Bill payments** (EasyPay and aligned billers).  
 - **Push notifications** or **outbound USSD** where MNO and product rules allow.
 
 Each phase should include **security review**, **load testing**, **SOP updates**, and **changelog** entries before production promotion.
@@ -342,5 +355,16 @@ Each phase should include **security review**, **load testing**, **SOP updates**
 - Code: files listed in [File structure](#3-file-structure).
 
 ---
+
+## Phase 2 Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SMS_FEE_AMOUNT` | `0.40` | SMS fee in ZAR (incl VAT) charged for USSD PIN delivery |
+| `LEDGER_ACCOUNT_SMS_FEE_REVENUE` | `4000-20-03` | Ledger account code for SMS fee revenue |
+| `LEDGER_ACCOUNT_CLIENT_FLOAT` | `2100-01-01` | Client float liability account |
+| `LEDGER_ACCOUNT_VAT_CONTROL` | `2300-10-01` | VAT control account |
+| `LEDGER_ACCOUNT_FLASH_FLOAT` | `1200-10-04` | Flash supplier float account |
+| `LEDGER_ACCOUNT_MOBILEMART_FLOAT` | `1200-10-05` | MobileMart supplier float account |
 
 *This document describes the MyMoolah USSD integration as implemented in the repository. For the exact behaviour of limits, menus, and third-party APIs, always verify the current source and deployed configuration.*
