@@ -1,6 +1,6 @@
 ---
 name: banking-grade-auditing
-version: 2.0.0
+version: 2.1.0
 description: >
   Banking-grade ledger auditing, reconciliation, double-entry accounting,
   and South African regulatory compliance skill for the MyMoolah Treasury
@@ -64,6 +64,17 @@ process, compliance check, and audit trail in the MyMoolah Treasury Platform.
 > are reference standards -- the actual codes in `ledger_accounts` may differ.
 > Always query the `LedgerAccount` model for real codes before hardcoding.
 
+**Mojaloop Reference → MMTP Actual Code Mapping:**
+| Mojaloop Ref | MMTP Code | Name |
+|-------------|-----------|------|
+| 10100 | `1100-01-01` | Standard Bank Current Account |
+| 10200 | `1200-10-04` / `1200-10-05` | Supplier Float (Flash / MobileMart) |
+| 20100 | `2100-01-01` | User Wallet ZAR |
+| 20500 | `2600-01-01` | Unallocated Suspense |
+| 40100 | `4100-10-01` | Commission Revenue — Airtime/Data |
+| 40200 | `4100-10-02` | Commission Revenue — Electricity |
+| 50100 | `5100-01-01` | Supplier COGS |
+
 ---
 
 ## 1. Double-Entry Ledger Architecture
@@ -96,6 +107,11 @@ MyMoolah uses `LedgerAccount` with `code`, `name`, `type`, and `normalSide` fiel
 4xxxx = Revenue       (e.g., 40100 = Commission Income)
 5xxxx = Expenses      (e.g., 50100 = Transaction Processing Fees)
 ```
+
+> **Canonical Reference**: See `docs/CHART_OF_ACCOUNTS.md` for the complete,
+> authoritative Chart of Accounts with all 28+ accounts, journal templates,
+> solvency rules, reserved ranges, and product registration checklist.
+> That document supersedes any account listings in this skill.
 
 ### 1.3 MyMoolah Core Accounts (Minimum Required)
 ```
@@ -441,6 +457,21 @@ statement (MT940/MT942):
 Σ(VAT journal lines for period) = Σ(commission * 0.15) for VAT-applicable transactions
 ```
 
+**Commission Configuration Reference:**
+- Commission rates are externalized in `config/supplier-commissions.json`
+  (no longer hardcoded in if/else chains)
+- Commission tiers are stored in `supplier_commission_tiers` table
+- Product selection rules are in `product_selection_rules` table
+- The `v_best_offers` materialized view resolves the winning supplier/product
+  for each VAS category, auto-refreshed after every catalog sync
+
+**Known Issue — `tax_transactions` FK Constraint:**
+The `tax_transactions.originalTransactionId` FK can fail when the parent
+`transactions` row is not yet committed at the time the tax record is inserted.
+Commission journal entries are still posted correctly; only the
+`tax_transactions` audit record fails to persist. This is tracked in the
+tech debt register.
+
 ---
 
 ## 5. Settlement & Position Management
@@ -688,6 +719,21 @@ All user phone numbers must be RICA-verified before wallet activation.
 - Financial record retention: 7 years minimum
 - Annual financial statements prepared in accordance with IFRS
 - External audit requirement for public interest companies
+
+#### IFRS / IAS Presentation Requirements
+MMTP financial records should be prepared in accordance with IFRS for SMEs
+(or full IFRS if required by turnover/asset thresholds):
+
+- **IAS 1 (Presentation)**: Trial balance reports must classify accounts into
+  current/non-current where applicable
+- **IAS 7 (Cash Flows)**: Bank reconciliation (MT940/MT942) must support
+  cash flow statement preparation
+- **IFRS 9 (Financial Instruments)**: User wallet balances are financial
+  liabilities; supplier floats are financial assets measured at amortised cost
+- **IAS 18/IFRS 15 (Revenue)**: Commission revenue recognised at point of
+  VAS transaction completion (not at order placement)
+- **IAS 12 (Income Taxes)**: VAT at 15% on commission income; VAT control
+  account `2300-10-01` must reconcile to SARS VAT201 returns
 
 ### 6.6 Regulatory Standards Cross-Reference
 | Standard | Scope | MyMoolah Applicability |
@@ -949,6 +995,43 @@ ACTIONS NEEDED:
 [ ] Complete audit trail archive to cold storage (GCS WORM)
 ```
 
+### 9.6 Cloud Scheduler Integration
+
+MMTP uses Google Cloud Scheduler (not node-cron) for automated tasks on Cloud
+Run, because Cloud Run kills idle instances mid-sweep. Scheduled endpoints
+use OIDC authentication.
+
+**Scheduled Audit-Related Jobs:**
+| Job | Schedule | Endpoint | Timeout |
+|-----|----------|----------|---------|
+| VAS catalog sync + view refresh | Daily 02:00 SAST | `POST /api/v1/catalog/scheduled-sync` | 1800s |
+| Referral payout processing | Daily 02:15 SAST | `POST /api/v1/referrals/scheduled-payout` | 300s |
+| Reconciliation runs | Per-supplier schedule | Supplier-specific endpoints | 600s |
+
+**Pattern for New Scheduled Audits:**
+```javascript
+// 1. Create authenticated endpoint
+router.post('/api/v1/audit/scheduled-health-check',
+  requireCloudSchedulerAuth,  // OIDC token validation
+  async (req, res) => {
+    const results = await runHealthChecks();
+    // Log results to audit trail
+    await logAuditEvent('SCHEDULED_HEALTH_CHECK', results);
+    res.json({ success: true, results });
+  }
+);
+
+// 2. Create Cloud Scheduler job via gcloud
+// gcloud scheduler jobs create http mmtp-daily-health-check \
+//   --schedule="0 3 * * *" \
+//   --uri="https://api-mm.mymoolah.africa/api/v1/audit/scheduled-health-check" \
+//   --http-method=POST \
+//   --oidc-service-account-email=cloud-scheduler@mmtp-*.iam.gserviceaccount.com \
+//   --oidc-audience="https://api-mm.mymoolah.africa" \
+//   --time-zone="Africa/Johannesburg" \
+//   --attempt-deadline=1800s
+```
+
 ---
 
 ## 10. Error Handling & Recovery
@@ -1059,6 +1142,9 @@ When reviewing any PR that touches financial code, verify:
 | `FlashTransaction` | `models/FlashTransaction.js` | VAS provider transactions |
 | `Settlement` | `models/Settlement*.js` | Settlement processing |
 | `Wallet` | `models/Wallet.js` | User wallet balances (SELECT FOR UPDATE) |
+| `v_best_offers` | Materialized view (SQL) | Commission-based supplier selection for VAS products; auto-refreshed after catalog sync |
+| `ProductVariant` | `models/ProductVariant.js` | Normalized VAS product variants with supplier pricing |
+| `ProductSelectionRule` | `product_selection_rules` table | Rules for selecting winning supplier per VAS category |
 
 ### 12.2 Financial Flow Architecture
 ```
@@ -1236,3 +1322,52 @@ The script performs:
 - Treasury narrative with operator facts
 
 All agents should be familiar with this script and its output format.
+
+---
+
+## 15. Agent Optimization (Claude Opus 4.6 / Cursor)
+
+This skill is optimized for Claude Opus 4.6 with extended thinking in Cursor IDE.
+
+### 15.1 Structured Audit Prompting
+When running audits, use this pattern for maximum accuracy:
+
+1. **Anchor assertions first**: State the invariant being checked before querying
+2. **Use explicit checklists**: Reference Section 8.2 step numbers (e.g., "Step 3, Check 4")
+3. **Show your work**: For balance checks, show the SQL, the result, and the PASS/WARN/FAIL determination
+4. **One domain at a time**: Don't mix ledger checks with compliance checks in a single reasoning chain
+
+### 15.2 Subagent Delegation for Large Audits
+For full platform audits, delegate to parallel subagents:
+
+| Subagent | Scope | Files to Read |
+|----------|-------|--------------|
+| Structural | Trial balance, orphaned entries | `scripts/production-full-audit.js` |
+| Compliance | FICA/POPIA checks | `services/kycService.js`, `controllers/kycController.js` |
+| Reconciliation | Supplier match rates | `services/reconService.js`, `models/ReconRun.js` |
+| Commission | VAT/commission accuracy | `services/commissionVatService.js`, `config/supplier-commissions.json` |
+
+### 15.3 Common Audit Commands
+```bash
+# Full audit (all checks)
+node scripts/production-full-audit.js --production
+
+# Quick ledger balance check
+node scripts/production-full-audit.js --uat 2>&1 | head -30
+
+# Verify specific account balance
+node -e "const {getUATClient}=require('./scripts/db-connection-helper'); (async()=>{const c=await getUATClient(); const r=await c.query(\"SELECT code, name FROM ledger_accounts WHERE code LIKE '2100%'\"); console.table(r.rows); c.release();})()"
+```
+
+### 15.4 Skill Activation Triggers
+This skill should be read by the agent when the task involves ANY of:
+- Ledger accounts, journal entries, or journal lines
+- Reconciliation runs or transaction matching
+- Float management or settlement processing
+- Financial transactions (deposits, withdrawals, transfers, purchases)
+- Audit trails, compliance checks, or forensic logging
+- FICA CDD/EDD, SAR, or KYC status changes
+- POPIA data requests or breach handling
+- Commission/VAT calculations or reporting
+- Chart of Accounts changes or new product registration
+- Running `production-full-audit.js`

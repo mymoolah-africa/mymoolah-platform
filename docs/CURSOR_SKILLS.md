@@ -24,7 +24,8 @@ Skills extend Cursor Agent with specialized knowledge for banking-grade, Mojaloo
 | **interaction-design** | wshobson/agents | Microinteractions, motion design, UX polish |
 | **security-best-practices** | supercent-io/skills-template | Security patterns for applications |
 | **frontend-design** | .agents/skills/ (project) | Distinctive UI, typography, aesthetics |
-| **auditing** | .agents/skills/ (project) | Banking-grade ledger auditing, FICA/POPIA/SARB compliance, SHA-256 hash-chained audit trails, double-entry reconciliation, SOX-grade internal controls |
+| **auditing** | .agents/skills/ (project) | Banking-grade ledger auditing v2.1.0, FICA/POPIA/SARB compliance, SHA-256 hash-chained audit trails, double-entry reconciliation, SOX-grade internal controls, IFRS presentation, Cloud Scheduler integration, Opus 4.6 optimization |
+| **admin-portal-builder** | .agents/skills/ (project) | MMTP Admin Portal (MMAP) — RBAC, dashboard architecture, data tables, maker-checker workflows, admin audit logging, overlay patterns, API design for admin endpoints |
 | **fintech-test-driven-development** | .agents/skills/ (project) | Jest/Supertest TDD for financial endpoints, idempotency, race conditions |
 | **safe-database-migrations** | .agents/skills/ (project) | Zero-downtime PostgreSQL/Sequelize migrations |
 | **redis-caching-and-locks** | .agents/skills/ (project) | Distributed locks, rate limiting, idempotency caching |
@@ -63,3 +64,20 @@ npx skills add <owner/repo> --skill <name> --agent cursor -y
 | REST API design | api-design-principles |
 | Tailwind/React UI | tailwind-design-system, frontend-design |
 | 11-language, inclusive UX | accessibility-compliance, interaction-design |
+| Admin portal, dashboard, RBAC | admin-portal-builder |
+| Maker-checker workflows | admin-portal-builder, auditing |
+
+## Skill Sources & Provenance
+
+| Skill | Primary Sources | License |
+|-------|----------------|---------|
+| **auditing** v2.1.0 | openclaw/skills Agent Audit Trail (MIT-0), odinlayer SOX Compliance (LobeHub), CFO Stack /cfo-audit, MMTP project-specific | MIT-0 / Custom |
+| **admin-portal-builder** v1.0.0 | MMTP project-specific (portal codebase patterns) | Custom |
+
+## Skills Sweep Protocol
+
+Before creating a new skill, sweep `.agents/skills/` to avoid duplicates:
+```bash
+ls .agents/skills/
+```
+Total installed: 20 skills (7 CLI-managed + 13 project-specific).

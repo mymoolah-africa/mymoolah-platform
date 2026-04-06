@@ -1,5 +1,29 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-06 - Auditing Skill v2.1.0 + Admin Portal Builder Skill + Knowledge Base Update (v2.82.0)
+
+### Summary
+Comprehensive skills and knowledge base update session:
+
+1. **Auditing Skill v2.1.0** (`.agents/skills/auditing/SKILL.md`): 8 targeted enhancements — added `docs/CHART_OF_ACCOUNTS.md` canonical reference, Mojaloop-to-MMTP account code mapping table, commission config reference (`config/supplier-commissions.json`, `v_best_offers`, `tax_transactions` FK known issue), Cloud Scheduler integration pattern (Section 9.6), `v_best_offers`/`ProductVariant`/`ProductSelectionRule` in architecture reference, IFRS/IAS presentation requirements (IAS 1, IAS 7, IFRS 9, IFRS 15, IAS 12), and Agent Optimization section for Claude Opus 4.6 (Section 15: structured prompting, subagent delegation, common commands, activation triggers).
+
+2. **Admin Portal Builder Skill v1.0.0** (NEW: `.agents/skills/admin-portal-builder/SKILL.md`): 12-section guide for building the MMTP Admin Portal (MMAP) — covers RBAC, dashboard architecture, data tables with server-side pagination, maker-checker workflows, admin audit logging, overlay patterns, API design conventions, portal-specific screen priority list (15 screens), frontend component standards, and code review checklist.
+
+3. **Knowledge Base Updates**: `docs/CURSOR_SKILLS.md` (added admin-portal-builder, updated auditing description, added provenance table and sweep protocol), `docs/CHANGELOG.md`, `docs/AGENT_HANDOVER.md`, `.cursor/rules/tech-debt.mdc` (added architectural decision for skills update).
+
+### Internet Research Conducted
+Searched GitHub (openclaw/skills, alirezarezvani/claude-skills, jeremylongshore/claude-code-plugins-plus-skills, MikeChongCan/cfo-stack, bluriesophos/cursorskills), LobeHub Skills Marketplace (SOX compliance, audit support, data retention, compliance-governance), Mojaloop official docs (Business Operations Framework, FSPIOP, cybersecurity), and general SKILL.md registries. Confirmed existing auditing skill already incorporates the best available sources; no superior open-source alternative found.
+
+### Files Modified
+- `.agents/skills/auditing/SKILL.md` — v2.0.0 → v2.1.0 (+134 lines, 8 enhancements)
+- `.agents/skills/admin-portal-builder/SKILL.md` — NEW (680+ lines, 12 sections)
+- `docs/CURSOR_SKILLS.md` — Added admin-portal-builder, updated auditing, added provenance table
+- `docs/CHANGELOG.md` — This entry
+- `docs/AGENT_HANDOVER.md` — Updated with session reference
+- `.cursor/rules/tech-debt.mdc` — Added architectural decision
+
+---
+
 ## 2026-04-05 - Visual Chart of Accounts + Documentation Update (v2.81.1)
 
 ### Summary
