@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-06 21:00  
-**Latest Feature**: **MMTP Admin Portal Security Hardening & Rebuild (v2.85.0)** — 14+ backend security fixes (JWT HS512, hardcoded secrets removed, audit trail to DB, PII redaction), frontend auth rewired to real backend JWT, Clearflow-inspired dark sidebar navigation, dashboard rebuilt with real data, User Management and Transaction Monitoring screens built (backend APIs + frontend UIs).  
-**Document Version**: 2.85.0  
-**Session logs**: `docs/session_logs/2026-04-06_2100_portal-security-hardening-and-rebuild.md`  
+**Last Updated**: 2026-04-06 22:00  
+**Latest Feature**: **MMTP Admin Portal DB Helper Migration & First Live Test (v2.85.1)** — All portal backend DB access migrated to `db-connection-helper.js` (project standard). Fixed frontend build failures (tsconfig, lucide-react icon, dist/ gitignore). Created portal admin seed script. Portal tested end-to-end in Codespaces: login, dashboard with real UAT data, sidebar navigation all working. **UI styling identified as top priority for next session.**  
+**Document Version**: 2.85.1  
+**Session logs**: `docs/session_logs/2026-04-06_2200_portal-db-helper-and-testing.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -101,7 +101,10 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (April 6, 2026 - 15:00)**
+### **Latest Achievement (April 6, 2026 - 22:00)**
+**MMTP Admin Portal DB Helper Migration & First Live Test (v2.85.1)** — Continuation of portal rebuild. All portal backend controllers migrated from custom Sequelize to `db-connection-helper.js` via new `portal/backend/helpers/getDbClient.js` wrapper. Fixed frontend build failures: missing `tsconfig.json`, unavailable `Handshake` icon (replaced with `Briefcase`), `dist/` added to `.gitignore`. Created `scripts/seed-portal-admin.js` for seeding admin users. Portal tested end-to-end in Codespaces: JWT HS512 login, dashboard with real UAT data, Clearflow sidebar navigation. **Andre confirmed portal is functional but "looks horrendous" — UI styling is the #1 priority for next session.** Read the `frontend-design` skill and Behance Clearflow reference for design direction. Session logs: `docs/session_logs/2026-04-06_2200_portal-db-helper-and-testing.md`, `docs/session_logs/2026-04-06_2100_portal-security-hardening-and-rebuild.md`.
+
+### **Previous Achievement (April 6, 2026 - 15:00)**
 **USSD Phase 2 Services (v2.84.0)** — Complete USSD Phase 2 for `*120*5616#` (production) and `*120*34248#` (staging). New services: (1) Send Money (P2P) — wallet-to-wallet to existing MMTP users, free SMS to both parties. (2) Airtime for Others (eeziAirtime) — Flash PIN voucher, SMS delivery, R0.40 fee. (3) Buy Electricity (eeziPower) — Flash PIN voucher, SMS delivery, R0.40 fee. (4) Buy Voucher — 6 brands (1Voucher, OTT, Blu, Betway, Hollywood Bets, SupaBets), commission-based supplier selection, PIN via SMS, R0.40 fee. (5) Cash Out updated to PIN via SMS (R0.40 fee). (6) New ledger account `4000-20-03` SMS Fee Revenue, 3-line JE (R0.35 ex-VAT + R0.05 VAT). (7) Menu restructured: Main — Balance, Send Money, Buy Airtime, Buy Data, Cash Out, More. More — Airtime for Others, Electricity, Vouchers, Mini Statement, Change PIN, Referral, Help. Migration `20260406_01` applied to staging + production. Session log: `docs/session_logs/2026-04-06_1400_ussd-phase2-services.md`.
 
 ### **Previous Achievement (April 6, 2026 - 14:00)**
@@ -696,20 +699,22 @@ You're part of a **banking-grade software system** where:
 
 ## 🎯 **CURRENT SESSION SUMMARY**
 
-**Session Status**: ✅ **COMPLETE** — USSD Phase 2 Services (v2.84.0)  
-**Last Session**: 2026-04-06 15:00 — USSD Phase 2 implementation, migration applied to staging + production
+**Session Status**: ✅ **COMPLETE** — MMTP Admin Portal DB Helper Migration & First Live Test (v2.85.1)  
+**Last Session**: 2026-04-06 22:00 — Portal DB migration to db-connection-helper.js, build fixes, end-to-end testing in Codespaces
 
-### **Most Recent Work (2026-04-06 15:00)**
-- **USSD Phase 2 Services**: Complete implementation of 4 new USSD services + Cash Out SMS update for `*120*5616#` (production) and `*120*34248#` (staging).
-- **Send Money (P2P)**: Wallet-to-wallet transfer to existing MMTP users only. Non-registered recipients declined. Free SMS notifications to both sender and receiver.
-- **Airtime for Others (eeziAirtime)**: Flash PIN voucher for a different phone number. PIN delivered via SMS. R0.40 incl VAT SMS fee.
-- **Buy Electricity (eeziPower)**: Flash PIN voucher. PIN delivered via SMS. R0.40 SMS fee.
-- **Buy Voucher**: 6 brands — 1Voucher, OTT Voucher, Blu Voucher, Betway, Hollywood Bets, SupaBets. Commission-based supplier selection (Flash preferred, MobileMart fallback). PIN via SMS. R0.40 SMS fee.
-- **Cash Out (eeziCash)**: Updated from on-screen PIN to PIN via SMS with R0.40 fee.
-- **SMS Fee Ledger**: Account `4000-20-03` SMS Fee Revenue. JE: DR Client Float R0.40, CR Revenue R0.35, CR VAT R0.05.
-- **Menu restructured**: Main — Balance, Send Money, Buy Airtime, Buy Data, Cash Out, More. More — Airtime for Others, Buy Electricity, Buy Voucher, Mini Statement, Change PIN, Referral Code, Help.
-- **Migration `20260406_01`**: Applied to staging and production.
-- **Environment**: `SMS_FEE_AMOUNT=0.40` (configurable). Backend-only change — no frontend deployment needed.
+### **Most Recent Work (2026-04-06 22:00)**
+- **Portal DB access migrated**: All controllers (`adminController.js`, `userManagementController.js`, `transactionMonitoringController.js`) rewritten from Sequelize ORM to raw parameterized SQL via `portal/backend/helpers/getDbClient.js` (wraps `db-connection-helper.js`).
+- **Portal models/index.js rewritten**: Uses `db-connection-helper.js` config functions (`getUATConfig`/`getStagingConfig`/`getProductionConfig`) for Sequelize initialization.
+- **Frontend build fixed**: Missing `tsconfig.json` created. `Handshake` icon replaced with `Briefcase` (not in lucide-react v0.294.0). `dist/` added to `.gitignore`.
+- **Admin seeder created**: `scripts/seed-portal-admin.js` uses `db-connection-helper.js`. Requires `PORTAL_ADMIN_PASSWORD` env var (no hardcoded defaults).
+- **End-to-end tested in Codespaces**: Login (JWT HS512), dashboard with real UAT data, sidebar navigation — all working.
+- **UI styling feedback**: Andre confirmed portal is functional but visually rough. **UI styling is #1 priority for next session.**
+
+### **Previous Work (2026-04-06 21:00)**
+- **Portal Security Hardening & Rebuild (v2.85.0)**: 14+ backend security fixes (JWT HS512, hardcoded secrets removed, audit trail to DB, PII redaction), frontend auth rewired to real backend JWT, Clearflow-inspired dark sidebar navigation, dashboard rebuilt with real data, User Management and Transaction Monitoring screens built.
+
+### **Previous Work (2026-04-06 15:00)**
+- **USSD Phase 2 Services (v2.84.0)**: Send Money (P2P), Airtime for Others (eeziAirtime), Buy Electricity (eeziPower), Buy Voucher (6 brands), Cash Out via SMS. R0.40 SMS fee. `4000-20-03` ledger account. Migration applied to staging + production.
 
 ### **Previous Work (2026-04-06 14:00)**
 - **Voucher v_best_offers Integration (v2.83.0)**: Voucher catalog via materialized view. Electricity cleanup. adService typo fix.
@@ -767,15 +772,15 @@ You're part of a **banking-grade software system** where:
 
 ### **Next Agent Actions**
 1. Read `docs/CURSOR_2.0_RULES_FINAL.md` (MANDATORY)
-2. Read this file and recent session logs (especially `2026-04-06_1400_ussd-phase2-services.md`)
-3. **USSD Phase 2 is code-complete** — all services wired to live APIs (Flash, MobileMart, MyMobileAPI SMS). Backend redeploy will activate on both shortcodes.
-4. **Test USSD Phase 2 flows** after deployment: Send Money, Airtime for Others, Electricity, Vouchers, Cash Out SMS
-5. **VAS Catalog live on staging + production** — `v_best_offers` view, commission config in `config/supplier-commissions.json`
-6. **Frontend display tech debt**: (a) Airtime success modal "- R2" suffix; (b) VAS purchases show "Money Sent" type
-7. **Confirm 1Voucher product code with Flash** — Code `311` rejected (error 2283)
-8. **Continue API testing**: bill payments, referral system, AI support chat
-9. **Add more brand logos**: Steam, Netflix, Google Play, Roblox, MTN, CellC, Telkom
-10. Do NOT reactivate Peach Payments without explicit approval from André
+2. Read this file and recent session logs (especially `2026-04-06_2200_portal-db-helper-and-testing.md` and `2026-04-06_2100_portal-security-hardening-and-rebuild.md`)
+3. **ADMIN PORTAL UI STYLING (TOP PRIORITY)**: Portal is functional but "looks horrendous" per Andre. Read `.agents/skills/frontend-design/SKILL.md` for guidance. Apply Clearflow "quiet control" aesthetic with MyMoolah brand colors (#00B894 accent). Fix Tailwind CSS loading. Polish: login page, sidebar, dashboard KPI cards, tables, alerts, spacing, typography. Behance reference: Treasury Platform Product Redesign (Clearflow).
+4. **Test User Management and Transaction Monitoring screens** with real data in portal
+5. **Build remaining portal screens**: Float Management, Settlement, Commission, Circuit Breaker, Service Management, Reporting, Security Audit, System Config
+6. **Portal deployment**: Deploy to Cloud Run (staging first) when screens are ready
+7. **Portal backend**: All DB access uses `db-connection-helper.js` via `portal/backend/helpers/getDbClient.js` — NEVER use `new Sequelize()` or `require('../../../models')` for main app tables
+8. **Portal auth**: JWT HS512. Seed users with `PORTAL_ADMIN_PASSWORD=xxx node scripts/seed-portal-admin.js`
+9. **USSD Phase 2 is code-complete** — backend redeploy will activate on both shortcodes
+10. Do NOT reactivate Peach Payments without explicit approval from Andre
 11. Do NOT add `RmtInf.Ustrd` to Pain.013 — SBSA rejects it
 12. npm audit: 9 remaining (5 low, 4 moderate) — all in transitive deps
 
@@ -785,6 +790,8 @@ You're part of a **banking-grade software system** where:
 
 | Date | Update |
 |------|--------|
+| Apr 6 (22:00) | **Admin Portal DB Helper Migration & First Live Test (v2.85.1)**: All portal backend DB access migrated to `db-connection-helper.js`. Frontend build fixed (tsconfig, lucide-react icon, dist/ gitignore). Admin seed script created. Portal tested end-to-end in Codespaces: login, dashboard, sidebar all working. **UI styling is #1 priority for next session.** Session log: `docs/session_logs/2026-04-06_2200_portal-db-helper-and-testing.md` |
+| Apr 6 (21:00) | **Admin Portal Security Hardening & Rebuild (v2.85.0)**: 14+ backend security fixes, frontend auth rewired to real backend JWT, Clearflow sidebar, dashboard with real data, User Management + Transaction Monitoring screens. Session log: `docs/session_logs/2026-04-06_2100_portal-security-hardening-and-rebuild.md` |
 | Apr 6 (15:00) | **USSD Phase 2 Services (v2.84.0)**: Send Money (P2P), Airtime for Others (eeziAirtime), Buy Electricity (eeziPower), Buy Voucher (6 brands), Cash Out via SMS. All PIN products use SMS delivery with R0.40 fee. New ledger account `4000-20-03`. Migration applied to staging + production. Session log: `docs/session_logs/2026-04-06_1400_ussd-phase2-services.md` |
 | Apr 6 (14:00) | **Voucher v_best_offers + Electricity Cleanup (v2.83.0)**: Voucher catalog via `v_best_offers` materialized view. Flash electricity hardcoded values fixed. adService `2100-05-001` → `2100-05-01` typo fixed. Session log: `docs/session_logs/2026-04-06_1400_voucher-v-best-offers-electricity-cleanup.md` |
 | Apr 6 (10:00) | **Auditing Skill v2.1.0 + Admin Portal Builder v1.0.0 (v2.82.0)**: 8 auditing enhancements + new 680-line portal builder skill. Session log: `docs/session_logs/2026-04-06_1000_auditing-skill-portal-skill-knowledge-base.md` |
