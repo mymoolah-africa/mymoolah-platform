@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-06 22:00  
-**Latest Feature**: **MMTP Admin Portal DB Helper Migration & First Live Test (v2.85.1)** — All portal backend DB access migrated to `db-connection-helper.js` (project standard). Fixed frontend build failures (tsconfig, lucide-react icon, dist/ gitignore). Created portal admin seed script. Portal tested end-to-end in Codespaces: login, dashboard with real UAT data, sidebar navigation all working. **UI styling identified as top priority for next session.**  
-**Document Version**: 2.85.1  
-**Session logs**: `docs/session_logs/2026-04-06_2200_portal-db-helper-and-testing.md`  
+**Last Updated**: 2026-04-06 22:30  
+**Latest Feature**: **Codespaces Startup Script & Portal Auth Security Fix (v2.85.2)** — Created `scripts/start-all-services.sh` (one-command Codespaces startup: proxies + 4 services + public ports). Migrated portal auth from `localStorage` to `sessionStorage` (banking-grade: closing browser requires re-login). **UI styling is the #1 priority for next session** — read `frontend-design`, `tailwind-design-system`, `admin-portal-builder`, `interaction-design` skills.  
+**Document Version**: 2.85.2  
+**Session logs**: `docs/session_logs/2026-04-06_2230_startup-script-and-auth-fix.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -101,7 +101,10 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (April 6, 2026 - 22:00)**
+### **Latest Achievement (April 6, 2026 - 22:30)**
+**Codespaces Startup Script & Portal Auth Security Fix (v2.85.2)** — Created `scripts/start-all-services.sh` for one-command Codespaces startup (proxies, main backend, wallet frontend, portal backend, portal frontend, all ports set to Public). Migrated all portal auth from `localStorage` to `sessionStorage` across 8 files — closing the browser now requires re-login (banking-grade). Debugged and resolved Codespaces port forwarding 404 issue (browser cache). Session log: `docs/session_logs/2026-04-06_2230_startup-script-and-auth-fix.md`.
+
+### **Previous Achievement (April 6, 2026 - 22:00)**
 **MMTP Admin Portal DB Helper Migration & First Live Test (v2.85.1)** — Continuation of portal rebuild. All portal backend controllers migrated from custom Sequelize to `db-connection-helper.js` via new `portal/backend/helpers/getDbClient.js` wrapper. Fixed frontend build failures: missing `tsconfig.json`, unavailable `Handshake` icon (replaced with `Briefcase`), `dist/` added to `.gitignore`. Created `scripts/seed-portal-admin.js` for seeding admin users. Portal tested end-to-end in Codespaces: JWT HS512 login, dashboard with real UAT data, Clearflow sidebar navigation. **Andre confirmed portal is functional but "looks horrendous" — UI styling is the #1 priority for next session.** Read the `frontend-design` skill and Behance Clearflow reference for design direction. Session logs: `docs/session_logs/2026-04-06_2200_portal-db-helper-and-testing.md`, `docs/session_logs/2026-04-06_2100_portal-security-hardening-and-rebuild.md`.
 
 ### **Previous Achievement (April 6, 2026 - 15:00)**
@@ -790,6 +793,7 @@ You're part of a **banking-grade software system** where:
 
 | Date | Update |
 |------|--------|
+| Apr 6 (22:30) | **Codespaces Startup Script & Portal Auth Security Fix (v2.85.2)**: Created `start-all-services.sh` one-command startup. Migrated portal auth from localStorage to sessionStorage (banking-grade). Fixed Codespaces port forwarding 404 (browser cache). Session log: `docs/session_logs/2026-04-06_2230_startup-script-and-auth-fix.md` |
 | Apr 6 (22:00) | **Admin Portal DB Helper Migration & First Live Test (v2.85.1)**: All portal backend DB access migrated to `db-connection-helper.js`. Frontend build fixed (tsconfig, lucide-react icon, dist/ gitignore). Admin seed script created. Portal tested end-to-end in Codespaces: login, dashboard, sidebar all working. **UI styling is #1 priority for next session.** Session log: `docs/session_logs/2026-04-06_2200_portal-db-helper-and-testing.md` |
 | Apr 6 (21:00) | **Admin Portal Security Hardening & Rebuild (v2.85.0)**: 14+ backend security fixes, frontend auth rewired to real backend JWT, Clearflow sidebar, dashboard with real data, User Management + Transaction Monitoring screens. Session log: `docs/session_logs/2026-04-06_2100_portal-security-hardening-and-rebuild.md` |
 | Apr 6 (15:00) | **USSD Phase 2 Services (v2.84.0)**: Send Money (P2P), Airtime for Others (eeziAirtime), Buy Electricity (eeziPower), Buy Voucher (6 brands), Cash Out via SMS. All PIN products use SMS delivery with R0.40 fee. New ledger account `4000-20-03`. Migration applied to staging + production. Session log: `docs/session_logs/2026-04-06_1400_ussd-phase2-services.md` |
