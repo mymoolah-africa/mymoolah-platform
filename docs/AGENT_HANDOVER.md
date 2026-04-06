@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-06 15:00  
-**Latest Feature**: **USSD Phase 2 Services (v2.84.0)** — Send Money (P2P), Airtime for Others (eeziAirtime), Buy Electricity (eeziPower), Buy Voucher (6 brands). SMS PIN delivery with R0.40 fee. New ledger account `4000-20-03` SMS Fee Revenue. Main menu: Balance, Send Money, Buy Airtime, Buy Data, Cash Out, More. More menu: Airtime for Others, Electricity, Vouchers, Mini Statement, Change PIN, Referral, Help.  
-**Document Version**: 2.84.0  
-**Session logs**: `docs/session_logs/2026-04-06_1400_ussd-phase2-services.md`, `docs/session_logs/2026-04-06_1400_voucher-v-best-offers-electricity-cleanup.md`  
+**Last Updated**: 2026-04-06 21:00  
+**Latest Feature**: **MMTP Admin Portal Security Hardening & Rebuild (v2.85.0)** — 14+ backend security fixes (JWT HS512, hardcoded secrets removed, audit trail to DB, PII redaction), frontend auth rewired to real backend JWT, Clearflow-inspired dark sidebar navigation, dashboard rebuilt with real data, User Management and Transaction Monitoring screens built (backend APIs + frontend UIs).  
+**Document Version**: 2.85.0  
+**Session logs**: `docs/session_logs/2026-04-06_2100_portal-security-hardening-and-rebuild.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
