@@ -1,6 +1,7 @@
 import React, { ReactNode, useMemo, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import logoIcon from '../../assets/logo-icon.png';
 import {
   LayoutDashboard,
   Landmark,
@@ -133,9 +134,7 @@ export const AppLayoutWrapper: React.FC<AppLayoutWrapperProps> = ({ children }) 
             collapsed ? 'justify-center px-2' : 'px-4'
           }`}
         >
-          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-[var(--sidebar-primary)] text-sm font-bold text-[var(--sidebar-primary-foreground)]">
-            M
-          </div>
+          <img src={logoIcon} alt="MyMoolah" className="h-9 w-9 flex-shrink-0 rounded-lg" />
           <div
             className={`min-w-0 flex-1 overflow-hidden transition-opacity duration-200 ${
               collapsed ? 'pointer-events-none opacity-0' : 'opacity-100'

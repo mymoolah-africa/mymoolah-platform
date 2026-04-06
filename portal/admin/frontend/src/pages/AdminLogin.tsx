@@ -2,17 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Lock, Shield } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-
-function BrandMark({ className = '' }: { className?: string }) {
-  return (
-    <div
-      className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-sm font-bold text-[var(--primary-foreground)] bg-[var(--primary)] ${className}`}
-      aria-hidden
-    >
-      M
-    </div>
-  );
-}
+import logoStacked from '../assets/logo-stacked.png';
+import logoIcon from '../assets/logo-icon.png';
 
 const AdminLogin: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -53,24 +44,21 @@ const AdminLogin: React.FC = () => {
     <div className="flex min-h-screen flex-col font-sans lg:flex-row">
       {/* Left brand panel — desktop only */}
       <aside
-        className="relative hidden w-full flex-col justify-between bg-[var(--sidebar)] px-10 py-12 text-[var(--sidebar-foreground)] lg:flex lg:w-[40%]"
+        className="relative hidden w-full flex-col items-center justify-center bg-[var(--sidebar)] px-10 py-12 text-[var(--sidebar-foreground)] lg:flex lg:w-[40%]"
         aria-label="MyMoolah brand"
       >
-        <div>
-          <div className="flex items-center gap-3">
-            <BrandMark />
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-white">MyMoolah</p>
-            </div>
-          </div>
-          <div className="mt-12 space-y-2">
-            <h1 className="text-2xl font-semibold tracking-tight text-white md:text-3xl">
-              MyMoolah Treasury Platform
-            </h1>
-            <p className="text-sm text-[var(--muted-foreground)]">Admin Portal</p>
-          </div>
+        <div className="flex flex-col items-center text-center">
+          <img
+            src={logoStacked}
+            alt="MyMoolah"
+            className="mb-8 w-48 drop-shadow-lg"
+          />
+          <h1 className="text-xl font-semibold tracking-tight text-white">
+            Treasury Platform
+          </h1>
+          <p className="mt-1 text-sm text-[var(--muted-foreground)]">Admin Portal</p>
         </div>
-        <p className="text-xs font-medium tracking-wide text-[var(--muted-foreground)]">
+        <p className="absolute bottom-8 left-0 right-0 text-center text-xs font-medium tracking-wide text-[var(--muted-foreground)]">
           Banking-Grade Security | TLS 1.3 Encrypted
         </p>
       </aside>
@@ -80,7 +68,7 @@ const AdminLogin: React.FC = () => {
         {/* Mobile / tablet brand strip */}
         <header className="border-b border-[var(--border)] bg-[var(--card)] px-4 py-4 lg:hidden">
           <div className="mx-auto flex max-w-md items-center gap-3">
-            <BrandMark />
+            <img src={logoIcon} alt="MyMoolah" className="h-9 w-9 flex-shrink-0" />
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-[var(--foreground)]">MyMoolah</p>
               <p className="truncate text-xs text-[var(--muted-foreground)]">Admin Portal</p>
