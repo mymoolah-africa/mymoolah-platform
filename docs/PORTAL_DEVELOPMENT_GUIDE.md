@@ -1,7 +1,7 @@
 # MMTP Admin Portal — Development Guide
 
-**Version**: 1.0.0 (2026-04-07)  
-**Status**: Active development — UI overhaul complete, building out remaining screens  
+**Version**: 1.1.0 (2026-04-07)  
+**Status**: Active development — UI overhaul complete, brand logos integrated, building out remaining screens  
 **Skill reference**: `.agents/skills/admin-portal-builder/SKILL.md`
 
 ---
@@ -21,8 +21,13 @@ portal/
 │       │   │   ├── common/       ← ErrorBoundary
 │       │   │   ├── providers/    ← AppProviders
 │       │   │   └── ui/           ← shadcn primitives (button, card, table, etc.)
+│       │   ├── assets/           ← Brand logos (PNG)
+│       │   │   ├── logo-stacked.png     ← Diamond + wordmark (login brand panel)
+│       │   │   ├── logo-icon.png        ← Diamond icon only (sidebar, mobile header)
+│       │   │   └── logo-horizontal.png  ← Inline wordmark (future: reports, emails)
 │       │   ├── contexts/         ← AuthContext, MoolahContext
 │       │   ├── index.css         ← Design system tokens (170 lines)
+│       │   ├── vite-env.d.ts     ← PNG/JPG/SVG module declarations
 │       │   ├── main.tsx          ← App entry
 │       │   └── App.tsx           ← Provider wiring
 │       ├── postcss.config.js
@@ -98,6 +103,29 @@ All tokens live in `portal/admin/frontend/src/index.css` under `:root`.
 - **Font**: Montserrat (imported via Google Fonts in `index.css`)
 - **Financial amounts**: Always use `font-mono tabular-nums` for column alignment
 - **Weights**: 400 (body), 500 (labels), 600 (headings), 700 (hero/KPI)
+
+### Logo Assets
+
+Three official MyMoolah logo PNGs live in `portal/admin/frontend/src/assets/`. Import them as Vite modules:
+
+```tsx
+import logoIcon from '../assets/logo-icon.png';
+import logoStacked from '../assets/logo-stacked.png';
+import logoHorizontal from '../assets/logo-horizontal.png';
+```
+
+| File | Dimensions | Where used | Description |
+|------|-----------|-----------|-------------|
+| `logo-icon.png` | 1024×1024 | Sidebar header, mobile login header | Diamond icon only (green M + blue M) |
+| `logo-stacked.png` | 1024×1024 | Login brand panel (centered, `drop-shadow-lg`) | Diamond + "MYMOOLAH" wordmark below |
+| `logo-horizontal.png` | 1024×282 | Available for reports, emails, print | Inline diamond + "MYMOOLAH" wordmark |
+
+**Usage rules**:
+- Always use `<img>` with `alt="MyMoolah"` for accessibility
+- Sidebar icon: `className="h-9 w-9 flex-shrink-0 rounded-lg"`
+- Login panel: `className="mb-8 w-48 drop-shadow-lg"`
+- Never recreate the logo with CSS/SVG — use the official PNGs
+- `vite-env.d.ts` declares `*.png` modules so TypeScript resolves them
 
 ---
 
@@ -346,6 +374,8 @@ Based on `.agents/skills/admin-portal-builder/SKILL.md` priority list and existi
 | What | File |
 |------|------|
 | Design tokens | `portal/admin/frontend/src/index.css` |
+| Brand logos | `portal/admin/frontend/src/assets/logo-*.png` |
+| TS module declarations | `portal/admin/frontend/src/vite-env.d.ts` |
 | Sidebar + header shell | `portal/admin/frontend/src/components/layout/AppLayoutWrapper.tsx` |
 | Route definitions | `portal/admin/frontend/src/components/routing/RouteConfig.tsx` |
 | Auth context | `portal/admin/frontend/src/contexts/AuthContext.tsx` |

@@ -1,9 +1,24 @@
 # MyMoolah Treasury Platform - Changelog
 
-## 2026-04-07 - Portal UI Overhaul Complete + Documentation + Proxy Fix (v2.86.1)
+## 2026-04-07 - Portal UI Complete + Brand Logos + Dev Guide (v2.86.2)
 
 ### Summary
-Portal UI overhaul approved by Andre. Comprehensive portal documentation created. Codespaces startup stabilized.
+Portal UI overhaul approved by Andre. Official MyMoolah brand logos integrated. Primary color corrected to brand green. Comprehensive portal documentation created. Codespaces startup stabilized.
+
+### Brand Identity
+- **Primary color**: Updated from `#00B894` (teal, not a brand color) to `#86BE41` (official MyMoolah brand green, R134 G190 B65)
+- **Secondary color**: `#2D8CCA` (official MyMoolah brand blue, R45 G140 B202) confirmed
+- **All CSS tokens** updated: `--primary`, `--ring`, `--sidebar-primary`, `--sidebar-ring`, `--portal-admin`, `--chart-1`, focus ring shadow
+- **SKILL.md** brand color table corrected with official hex + RGB values
+
+### Brand Logos
+- 3 official MyMoolah logo PNGs added to `portal/admin/frontend/src/assets/`:
+  - `logo-stacked.png` (56 KB) — diamond + wordmark, used in login brand panel (centered, drop-shadow)
+  - `logo-icon.png` (43 KB) — diamond icon, used in sidebar header + mobile login header
+  - `logo-horizontal.png` (24 KB) — inline wordmark, available for reports/emails/print
+- `vite-env.d.ts` added for TypeScript PNG/JPG/SVG module declarations
+- Login brand panel: stacked logo replaces "M" square + text heading
+- Sidebar header: icon logo replaces green "M" square
 
 ### Portal UI (v2.86.0 — styling approved)
 - **5 screens fully styled** (CSS variables, zero inline styles): Login, Dashboard, Sidebar/Header, Users & KYC, Transactions
@@ -13,10 +28,10 @@ Portal UI overhaul approved by Andre. Comprehensive portal documentation created
 - Build: zero warnings, zero linter errors
 
 ### Portal Development Guide (new)
-- Created `docs/PORTAL_DEVELOPMENT_GUIDE.md` — comprehensive development guide for portal
-- Architecture diagram, design token reference, screen status matrix
+- Created `docs/PORTAL_DEVELOPMENT_GUIDE.md` v1.1.0 — comprehensive development guide for portal
+- Architecture diagram, logo usage rules, design token reference, screen status matrix
 - Step-by-step "build a screen" tutorial (frontend component + route + sidebar + backend endpoint)
-- Conventions (CSS vars, auth, DB access), recommended build order for remaining 7 screens
+- Conventions (CSS vars, logos, auth, DB access), recommended build order for remaining 7 screens
 
 ### Proxy Stabilization
 - `scripts/start-all-services.sh`: 3-second pause after Cloud SQL Auth Proxies start before launching main backend
@@ -24,11 +39,19 @@ Portal UI overhaul approved by Andre. Comprehensive portal documentation created
 
 ### Files Created
 - `docs/PORTAL_DEVELOPMENT_GUIDE.md`
+- `portal/admin/frontend/src/assets/logo-stacked.png`
+- `portal/admin/frontend/src/assets/logo-icon.png`
+- `portal/admin/frontend/src/assets/logo-horizontal.png`
+- `portal/admin/frontend/src/vite-env.d.ts`
 
 ### Files Modified
+- `portal/admin/frontend/src/index.css` — primary color + all token refs
+- `portal/admin/frontend/src/pages/AdminLogin.tsx` — brand logos
+- `portal/admin/frontend/src/components/layout/AppLayoutWrapper.tsx` — sidebar logo
+- `.agents/skills/admin-portal-builder/SKILL.md` — brand color table
 - `scripts/start-all-services.sh` — post-proxy stabilization wait
 - `docs/DATABASE_CONNECTION_GUIDE.md` — ECONNRESET recovery
-- `docs/AGENT_HANDOVER.md` — portal-specific next-agent context
+- `docs/AGENT_HANDOVER.md` — portal-specific next-agent context with logo conventions
 - Portal frontend files (see v2.86.0 session log for full list)
 
 ---

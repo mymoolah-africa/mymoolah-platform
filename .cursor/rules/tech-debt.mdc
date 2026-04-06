@@ -71,6 +71,7 @@ alwaysApply: true
 | Electricity uses commission-based supplier selection via `v_best_offers` | Apr 2026 | Same pattern as airtime/data. Frontend sends winning `productId` (ProductVariant ID) from catalog; backend resolves supplier, applies circuit breaker + failover. Backward compatible: omitting `productId` falls back to env-var routing. MobileMart min R30, Flash min R10. |
 | Auditing skill v2.1.0 — 8 enhancements including IFRS, Cloud Scheduler, Opus 4.6 | Apr 2026 | Internet research confirmed existing auditing skill is best-in-class; no superior open-source alternative. Enhanced with CoA cross-reference, Mojaloop-to-MMTP code mapping, commission config reference, Cloud Scheduler patterns, IFRS presentation, and Opus 4.6 optimization hints. Sources: openclaw/skills (MIT-0), odinlayer SOX (LobeHub), CFO Stack. |
 | Admin Portal Builder skill v1.0.0 created | Apr 2026 | New SKILL.md for MMTP Portal (MMAP) development. Covers RBAC, dashboard architecture, data tables, maker-checker workflows, admin audit logging, overlay patterns. 15-screen priority list. No suitable open-source portal skill found — custom-built from existing portal codebase patterns. |
+| Portal primary color corrected to brand green `#86BE41` | Apr 2026 | `#00B894` (teal) was never an official MyMoolah brand color. Corrected to `#86BE41` (brand green, R134 G190 B65). Blue `#2D8CCA` (R45 G140 B202) confirmed as secondary. All CSS tokens, SKILL.md, Portal Dev Guide updated. Official PNG logos imported as Vite modules. |
 
 ## Rule: When to Add Here
 

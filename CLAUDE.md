@@ -111,6 +111,11 @@ Never `pm2 restart all`, never `node server.js`, never `npm start`.
 | USSD auth/PIN | `services/ussdAuthService.js` |
 | USSD sessions | `services/ussdSessionService.js` |
 | Chart of Accounts | `docs/CHART_OF_ACCOUNTS.md` |
+| Portal dev guide | `docs/PORTAL_DEVELOPMENT_GUIDE.md` |
+| Portal frontend | `portal/admin/frontend/src/` |
+| Portal backend | `portal/backend/` |
+| Portal brand logos | `portal/admin/frontend/src/assets/logo-*.png` |
+| Portal builder skill | `.agents/skills/admin-portal-builder/SKILL.md` |
 
 ---
 

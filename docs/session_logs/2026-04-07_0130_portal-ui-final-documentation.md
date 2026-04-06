@@ -10,7 +10,7 @@
 
 ## Session Summary
 
-This session wrapped up the MMTP Admin Portal UI overhaul (v2.86.0) and Codespaces startup stabilization (v2.86.1). Two code changes were shipped: (1) a 3-second proxy stabilization pause in `start-all-services.sh` to prevent `read ECONNRESET` on backend boot; (2) extended ECONNRESET recovery documentation in `DATABASE_CONNECTION_GUIDE.md`. Session concluded with comprehensive portal documentation: created `docs/PORTAL_DEVELOPMENT_GUIDE.md` (design system tokens, architecture, file map, screen status matrix, build-a-screen tutorial, conventions, recommended build order), updated `AGENT_HANDOVER.md` with portal-specific next-agent context, and updated `CHANGELOG.md`.
+This session wrapped up the MMTP Admin Portal UI overhaul (v2.86.0→v2.86.2). Work delivered: (1) 3-second proxy stabilization pause in `start-all-services.sh` to prevent `read ECONNRESET` on backend boot; (2) extended ECONNRESET recovery documentation; (3) primary color corrected from `#00B894` (teal) to official MyMoolah brand green `#86BE41`, blue `#2D8CCA` confirmed as secondary — all CSS tokens + SKILL.md updated; (4) official MyMoolah brand logos (3 PNG variants) integrated into login brand panel, sidebar header, and mobile header; (5) comprehensive portal documentation created: `docs/PORTAL_DEVELOPMENT_GUIDE.md` v1.1.0 (design tokens, logo usage rules, architecture, file map, screen status matrix, build-a-screen tutorial, conventions, recommended build order). Andre approved logos and styling.
 
 ---
 
@@ -20,15 +20,21 @@ This session wrapped up the MMTP Admin Portal UI overhaul (v2.86.0) and Codespac
 - [x] Added 3s stabilization pause after proxy startup in `scripts/start-all-services.sh`
 - [x] Extended ECONNRESET section in `docs/DATABASE_CONNECTION_GUIDE.md` with recovery snippet
 - [x] Verified successful Codespaces boot — all services healthy, Redis connected, ledger check passed
-- [x] Created `docs/PORTAL_DEVELOPMENT_GUIDE.md` — comprehensive development guide for portal
-- [x] Updated `docs/AGENT_HANDOVER.md` — portal-specific context for tomorrow's agent
-- [x] Updated `docs/CHANGELOG.md` — consolidated entry for v2.86.1
+- [x] Corrected primary color from `#00B894` to `#86BE41` (MyMoolah brand green) — all CSS tokens updated
+- [x] Updated SKILL.md brand color table with official RGB values + usage notes
+- [x] Integrated 3 official MyMoolah logo PNGs: stacked (login), icon (sidebar + mobile), horizontal (future)
+- [x] Added `vite-env.d.ts` for PNG/JPG/SVG TypeScript module declarations
+- [x] Created `docs/PORTAL_DEVELOPMENT_GUIDE.md` v1.1.0 — with logo usage rules, design tokens, architecture
+- [x] Updated `docs/AGENT_HANDOVER.md` — portal-specific context with logo + brand conventions for next agent
+- [x] Updated `docs/CHANGELOG.md` — consolidated entry for v2.86.2
 
 ---
 
 ## Key Decisions
 
 - **3s proxy delay**: Short enough not to annoy during dev, long enough to avoid cold-proxy resets. Not a permanent fix — the root cause is Cloud SQL Auth Proxy needing a moment after listener bind before it can reliably serve client connections.
+- **Brand green as primary**: `#86BE41` (official MyMoolah brand green from brand guide, confirmed by Andre with Digital Colour Meter screenshots) replaces `#00B894` (teal) which was never an actual brand color. `#2D8CCA` (brand blue) confirmed as secondary/info color.
+- **Real PNG logos, not CSS**: Logo is a complex diamond shape with interlocking M letters — CSS/SVG recreation would be approximate. Official PNGs imported as Vite modules.
 - **Portal Development Guide**: Created as a standalone doc rather than embedding everything in the handover. This keeps the handover focused on project status while giving portal-specific agents a self-contained reference.
 - **Screen status matrix**: Documented every portal screen's current state (functional + styled / functional + inline styles / placeholder) so the next agent knows exactly what to work on.
 
@@ -36,15 +42,23 @@ This session wrapped up the MMTP Admin Portal UI overhaul (v2.86.0) and Codespac
 
 ## Files Created
 
-- `docs/PORTAL_DEVELOPMENT_GUIDE.md` — Portal architecture, design system, screen status, build tutorial, conventions
+- `docs/PORTAL_DEVELOPMENT_GUIDE.md` — Portal architecture, design system, logo usage, screen status, build tutorial
 - `docs/session_logs/2026-04-07_0100_start-all-services-proxy-stabilize.md` — Proxy fix session log
+- `portal/admin/frontend/src/assets/logo-stacked.png` — 56 KB, diamond + wordmark
+- `portal/admin/frontend/src/assets/logo-icon.png` — 43 KB, diamond icon only
+- `portal/admin/frontend/src/assets/logo-horizontal.png` — 24 KB, inline wordmark
+- `portal/admin/frontend/src/vite-env.d.ts` — PNG/JPG/SVG module type declarations
 
 ## Files Modified
 
 - `scripts/start-all-services.sh` — Added post-proxy `sleep 3` with explanatory comment
 - `docs/DATABASE_CONNECTION_GUIDE.md` — Extended ECONNRESET section with `start-all-services.sh` context
-- `docs/AGENT_HANDOVER.md` — Updated latest achievement, session refs, next agent actions, portal context
-- `docs/CHANGELOG.md` — Added v2.86.1 entry
+- `docs/AGENT_HANDOVER.md` — Updated latest achievement, session refs, next agent actions, logo + brand conventions
+- `docs/CHANGELOG.md` — Consolidated v2.86.2 entry
+- `portal/admin/frontend/src/index.css` — Primary color `#00B894` → `#86BE41`, all token refs updated
+- `portal/admin/frontend/src/pages/AdminLogin.tsx` — Stacked logo in brand panel, icon logo in mobile header
+- `portal/admin/frontend/src/components/layout/AppLayoutWrapper.tsx` — Icon logo replaces "M" square in sidebar
+- `.agents/skills/admin-portal-builder/SKILL.md` — Brand color table corrected with official hex + RGB
 
 ---
 
@@ -98,7 +112,9 @@ This session wrapped up the MMTP Admin Portal UI overhaul (v2.86.0) and Codespac
 | `6edc616d` | fix(codespaces): stabilize Cloud SQL proxy before main backend start |
 | `38b66952` | docs: session log and handover - start-all-services proxy stabilize |
 | `a668d6d0` | docs: changelog - start-all-services proxy stabilization v2.86.1 |
-| (pending) | docs: portal development guide, final session log, handover update |
+| `546ce238` | feat(portal): brand colors #86BE41/#2D8CCA + portal dev guide + session docs |
+| `ab10fe26` | feat(portal): real MyMoolah logos in login + sidebar |
+| (pending) | docs: update all documentation with logo + brand color details |
 
 ---
 
@@ -128,7 +144,9 @@ This session wrapped up the MMTP Admin Portal UI overhaul (v2.86.0) and Codespac
 
 **Critical conventions** (will break visual consistency if ignored):
 - All colors via CSS variables in `index.css` `:root` — never hardcode hex
+- Primary = `#86BE41` (brand green), secondary = `#2D8CCA` (brand blue) — NEVER use `#00B894`
 - Use `bg-[var(--card)]`, `text-[var(--foreground)]`, `border-[var(--border)]` etc.
+- **Logos**: Use PNGs from `src/assets/logo-*.png` — never recreate with CSS/SVG
 - Financial amounts: `font-mono tabular-nums`
 - Auth: `sessionStorage` (not `localStorage`)
 - DB: `portal/backend/helpers/getDbClient.js` → raw parameterized SQL
