@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-05 23:00  
-**Latest Feature**: **Visual Chart of Accounts + Production Audit Analysis** — Created `docs/CHART_OF_ACCOUNTS_VISUAL.html` (print-ready HTML/PDF CoA). Analysed production audit: R50.00 discrepancy in Wallet vs Ledger caused by missing face-value JE for TXN#33 (electricity purchase). Commission JE posted but transaction JE silently failed. Backfill + root cause investigation pending.  
-**Document Version**: 2.81.1  
-**Session logs**: `docs/session_logs/2026-04-05_1800_electricity-supplier-comparison.md`, `docs/session_logs/2026-04-04_2300_chart-of-accounts.md`  
+**Last Updated**: 2026-04-06 10:00  
+**Latest Feature**: **Auditing Skill v2.1.0 + Admin Portal Builder Skill + Knowledge Base Update** — Enhanced auditing skill with 8 improvements (CoA reference, Mojaloop-to-MMTP code mapping, commission config, Cloud Scheduler, IFRS, Opus 4.6 optimization). Created new admin-portal-builder skill (12 sections, 680+ lines). Updated all knowledge base files. Internet research confirmed existing auditing skill is best-in-class; no superior open-source alternative found.  
+**Document Version**: 2.82.0  
+**Session logs**: `docs/session_logs/2026-04-06_1000_auditing-skill-portal-skill-knowledge-base.md`, `docs/session_logs/2026-04-05_1800_electricity-supplier-comparison.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -43,7 +43,7 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 | Deploy | `docs/DEPLOYMENT_GUIDE.md`, `docs/archive/deployment/GCP_PRODUCTION_DEPLOYMENT.md` |
 | API contracts | `docs/API_DOCUMENTATION.md` |
 | Recent chat context | `docs/session_logs/` (2-3 most recent) |
-| Cursor skills inventory | `docs/CURSOR_SKILLS.md` |
+| Cursor skills inventory (20 skills) | `docs/CURSOR_SKILLS.md` |
 | Historical updates & integrations | `docs/archive/agent_handover_history.md` |
 | Extended rules (model selection, examples) | `docs/archive/CURSOR_RULES_EXTENDED.md` |
 | Docs archive map | `docs/DOCS_CONSOLIDATION_2026.md` |
@@ -101,7 +101,10 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (April 4, 2026 - 23:00)**
+### **Latest Achievement (April 6, 2026 - 10:00)**
+**Auditing Skill v2.1.0 + Admin Portal Builder Skill + Knowledge Base Update (v2.82.0)** — (1) Enhanced `.agents/skills/auditing/SKILL.md` from v2.0.0 to v2.1.0 with 8 targeted improvements: canonical CoA reference to `docs/CHART_OF_ACCOUNTS.md`, Mojaloop-to-MMTP account code mapping table, commission config reference (`config/supplier-commissions.json`, `v_best_offers`, `tax_transactions` FK known issue), Cloud Scheduler integration patterns (Section 9.6), `v_best_offers`/`ProductVariant`/`ProductSelectionRule` in architecture reference, IFRS/IAS presentation requirements, and Agent Optimization section for Claude Opus 4.6 (Section 15). (2) Created new `.agents/skills/admin-portal-builder/SKILL.md` v1.0.0 — 12-section guide (680+ lines) for MMTP Admin Portal: RBAC, dashboard architecture, data tables, maker-checker workflows, admin audit logging, overlay patterns, API design, 15-screen priority list, frontend component standards, code review checklist. (3) Updated `docs/CURSOR_SKILLS.md`, `docs/CHANGELOG.md`, `.cursor/rules/tech-debt.mdc`, `docs/AGENT_HANDOVER.md`. Internet research across GitHub, OpenClaw, LobeHub, and 5+ repositories confirmed existing auditing skill is already best-in-class. Session log: `docs/session_logs/2026-04-06_1000_auditing-skill-portal-skill-knowledge-base.md`.
+
+### **Previous Achievement (April 4, 2026 - 23:00)**
 **Chart of Accounts & Missing Account Migrations (v2.80.0)** — (1) Created `docs/CHART_OF_ACCOUNTS.md` as the canonical CoA reference: 28 accounts, 15 journal templates, Mojaloop settlement mapping, solvency rules, product registration checklist, reserved ranges for 10 future verticals (MoolahMove, TCIB, lending, insurance, stokvels, etc.), env var map, cross-references. Documented 5 misalignments in `internationalPaymentService.js`. (2) Created migration `20260405_01_seed_missing_ledger_accounts.js` for 4 accounts (`1100-02-01` SBSA Statement Recon, `2200-03-01` Referral Payable, `2600-01-01` Unallocated Suspense, `5100-02-01` Referral Expense). Applied to staging and production — all 4 already existed (manually created). Migration recorded in `SequelizeMeta`. Tech-debt updated: missing migrations RESOLVED, internationalPaymentService and adService `2100-05-001` typo flagged. Session log: `docs/session_logs/2026-04-04_2300_chart-of-accounts.md`.
 
 ### **Previous Achievement (April 3, 2026 - evening)**
