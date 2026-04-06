@@ -212,7 +212,7 @@ if [ ! -d "node_modules" ]; then
   warn "node_modules missing in wallet frontend — running npm install..."
   npm install --silent 2>/dev/null
 fi
-nohup npx vite --host 0.0.0.0 --port ${WALLET_FE_PORT} > "${LOG_DIR}/wallet-frontend.log" 2>&1 &
+nohup npm run dev > "${LOG_DIR}/wallet-frontend.log" 2>&1 &
 WALLET_FE_PID=$!
 cd "${ROOT_DIR}"
 log "Wallet frontend starting (PID: ${WALLET_FE_PID}, log: ${LOG_DIR}/wallet-frontend.log)"
@@ -248,7 +248,7 @@ if [ ! -d "node_modules" ]; then
   warn "node_modules missing in portal frontend — running npm install..."
   npm install --silent 2>/dev/null
 fi
-nohup npx vite --host 0.0.0.0 --port ${PORTAL_FE_PORT} > "${LOG_DIR}/portal-frontend.log" 2>&1 &
+nohup npm run dev > "${LOG_DIR}/portal-frontend.log" 2>&1 &
 PORTAL_FE_PID=$!
 cd "${ROOT_DIR}"
 log "Portal frontend starting (PID: ${PORTAL_FE_PID}, log: ${LOG_DIR}/portal-frontend.log)"
