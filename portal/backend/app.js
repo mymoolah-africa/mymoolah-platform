@@ -3,25 +3,18 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
-// Load environment variables from parent directory
-require('dotenv').config({ path: '../../.env' });
+require('dotenv').config({ path: require('path').resolve(__dirname, '../../.env') });
 
-// Import routes
 const adminRoutes = require('./routes/admin');
 const authRoutes = require('./routes/auth');
 
-// Import middleware
-const { portalAuth } = require('./middleware/portalAuth');
-
 const app = express();
 
-// Trust proxy for Cloud Run behind load balancer
-// Cloud Run has exactly 1 proxy hop (Google Cloud Load Balancer)
-// Setting to 1 (not true) is secure and passes express-rate-limit validation
 app.set('trust proxy', 1);
 
-// Security middleware
+// Banking-grade security headers
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -31,52 +24,71 @@ app.use(helmet({
       scriptSrc: ["'self'"],
       imgSrc: ["'self'", "data:", "https:"],
       connectSrc: ["'self'"],
+      frameAncestors: ["'none'"],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
     },
   },
   crossOriginEmbedderPolicy: false,
+  hsts: { maxAge: 63072000, includeSubDomains: true, preload: true },
+  noSniff: true,
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  frameguard: { action: 'deny' },
+  permittedCrossDomainPolicies: { permittedPolicies: 'none' },
 }));
 
-// CORS configuration
+// CORS
+const allowedOrigins = (process.env.PORTAL_FRONTEND_URL || 'http://localhost:3003').split(',').map(s => s.trim());
 app.use(cors({
-  origin: process.env.PORTAL_FRONTEND_URL || 'http://localhost:3001',
+  origin: (origin, cb) => {
+    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+    cb(new Error('CORS policy violation'));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID']
 }));
 
-// Rate limiting
-// Disable express-rate-limit's trust proxy validation (Express returns true even when set to 1)
+// Rate limiting -- general (reads)
 const generalLimit = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000, // limit each IP to 1000 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.',
+  windowMs: 15 * 60 * 1000,
+  max: 300,
   standardHeaders: true,
   legacyHeaders: false,
-  validate: {
-    trustProxy: false // Disable validation - we handle proxy correctly with trust proxy: 1
-  },
+  validate: { trustProxy: false },
+  message: { success: false, error: 'Too many requests. Please try again later.', timestamp: new Date().toISOString() },
 });
 
 app.use(generalLimit);
 
-// Body parsing middleware
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Body parsing
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
-// Request logging middleware
+// Request ID middleware
 app.use((req, res, next) => {
-  const timestamp = new Date().toISOString();
-  console.log(`${timestamp} - ${req.method} ${req.path} - IP: ${req.ip}`);
+  req.requestId = req.get('X-Request-ID') || crypto.randomUUID();
+  res.setHeader('X-Request-ID', req.requestId);
   next();
 });
 
-// Health check endpoint
+// Request logging with PII redaction
+app.use((req, res, next) => {
+  const ts = new Date().toISOString();
+  const ip = req.ip ? req.ip.replace(/^::ffff:/, '') : 'unknown';
+  const redactedIp = ip.length > 6 ? ip.substring(0, ip.lastIndexOf('.')) + '.***' : '***';
+  console.log(`${ts} [${req.requestId}] ${req.method} ${req.path} - ${redactedIp}`);
+  next();
+});
+
+// Health check
 app.get('/health', (req, res) => {
   res.json({
     success: true,
     message: 'MyMoolah Portal Backend is running',
     timestamp: new Date().toISOString(),
-    version: '1.0.0'
+    version: '2.0.0'
   });
 });
 
@@ -84,7 +96,7 @@ app.get('/health', (req, res) => {
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/admin/auth', authRoutes);
 
-// 404 handler
+// 404
 app.use('*', (req, res) => {
   res.status(404).json({
     success: false,
@@ -93,16 +105,14 @@ app.use('*', (req, res) => {
   });
 });
 
-// Global error handler
-app.use((error, req, res, next) => {
-  console.error('Global error handler:', error);
-  
-  // Handle specific error types
-  if (error.name === 'ValidationError') {
+// Global error handler -- never expose internal details
+app.use((error, req, res, _next) => {
+  console.error(`[${req.requestId || 'no-id'}] Global error:`, error.message);
+
+  if (error.name === 'ValidationError' || error.message === 'CORS policy violation') {
     return res.status(400).json({
       success: false,
-      error: 'Validation error',
-      details: error.message,
+      error: 'Invalid request.',
       timestamp: new Date().toISOString()
     });
   }
@@ -110,28 +120,18 @@ app.use((error, req, res, next) => {
   if (error.name === 'UnauthorizedError') {
     return res.status(401).json({
       success: false,
-      error: 'Unauthorized',
+      error: 'Authentication required.',
       timestamp: new Date().toISOString()
     });
   }
 
-  if (error.name === 'ForbiddenError') {
-    return res.status(403).json({
-      success: false,
-      error: 'Forbidden',
-      timestamp: new Date().toISOString()
-    });
-  }
-
-  // Default error response
   res.status(500).json({
     success: false,
-    error: 'Internal server error',
+    error: 'An internal error occurred. Please try again.',
     timestamp: new Date().toISOString()
   });
 });
 
-// Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('SIGTERM received, shutting down gracefully');
   process.exit(0);

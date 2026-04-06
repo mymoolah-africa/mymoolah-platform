@@ -1,133 +1,151 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 
-// Auth Context Types
 interface AuthUser {
-  id: string;
-  name: string;
+  id: number;
+  entityId: string;
+  entityName: string;
+  entityType: string;
   email: string;
   role: string;
-  permissions?: string[];
-  lastLogin?: string;
+  hasDualRole?: boolean;
+  dualRoles?: string[];
+  isVerified?: boolean;
+  lastLoginAt?: string;
 }
 
 interface AuthContextType {
   user: AuthUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
-  logout: () => void;
-  updateUser: (userData: Partial<AuthUser>) => void;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  logout: () => Promise<void>;
+  verifyToken: () => Promise<boolean>;
 }
 
-// Create Auth Context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Auth Provider Props
+const API_BASE = '/api/v1/admin/auth';
+
 interface AuthProviderProps {
   children: ReactNode;
 }
 
-// Auth Provider Component
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check authentication status on mount
-  useEffect(() => {
-    const checkAuthStatus = () => {
-      try {
-        const token = localStorage.getItem('portal_token');
-        const userData = localStorage.getItem('portal_user');
-        
-        if (token && userData) {
-          const parsedUser = JSON.parse(userData);
-          setUser(parsedUser);
-        }
-      } catch (error) {
-        console.error('Error checking auth status:', error);
-        // Clear invalid data
-        localStorage.removeItem('portal_token');
-        localStorage.removeItem('portal_user');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkAuthStatus();
+  const clearSession = useCallback(() => {
+    localStorage.removeItem('portal_token');
+    localStorage.removeItem('portal_user');
+    setUser(null);
   }, []);
 
-  // Login function
-  const login = async (email: string, password: string): Promise<boolean> => {
-    try {
-      setIsLoading(true);
-      
-      const adminEmail = process.env.REACT_APP_ADMIN_EMAIL || import.meta.env.VITE_ADMIN_EMAIL;
-      const adminPassword = process.env.REACT_APP_ADMIN_PASSWORD || import.meta.env.VITE_ADMIN_PASSWORD;
-
-      if (!adminEmail || !adminPassword) {
-        console.error('Admin credentials not configured in environment variables');
-        return false;
-      }
-
-      if (email === adminEmail && password === adminPassword) {
-        const userData: AuthUser = {
-          id: 'admin-001',
-          name: 'Admin User',
-          email: adminEmail,
-          role: 'admin',
-          permissions: ['read', 'write', 'admin'],
-          lastLogin: new Date().toISOString()
-        };
-
-        localStorage.setItem('portal_token', 'demo-token-123');
-        localStorage.setItem('portal_user', JSON.stringify(userData));
-        
-        setUser(userData);
-        return true;
-      } else {
-        return false;
-      }
-    } catch (error) {
-      console.error('Login error:', error);
+  const verifyToken = useCallback(async (): Promise<boolean> => {
+    const token = localStorage.getItem('portal_token');
+    if (!token) {
+      clearSession();
       return false;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/verify`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) {
+        clearSession();
+        return false;
+      }
+
+      const data = await res.json();
+      if (data.success && data.data?.user) {
+        setUser(data.data.user);
+        localStorage.setItem('portal_user', JSON.stringify(data.data.user));
+        return true;
+      }
+
+      clearSession();
+      return false;
+    } catch {
+      clearSession();
+      return false;
+    }
+  }, [clearSession]);
+
+  useEffect(() => {
+    const init = async () => {
+      const token = localStorage.getItem('portal_token');
+      const userData = localStorage.getItem('portal_user');
+
+      if (token && userData) {
+        try {
+          setUser(JSON.parse(userData));
+        } catch {
+          clearSession();
+        }
+        await verifyToken();
+      }
+      setIsLoading(false);
+    };
+    init();
+  }, [verifyToken, clearSession]);
+
+  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    setIsLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        return { success: false, error: data.error || 'Login failed' };
+      }
+
+      localStorage.setItem('portal_token', data.data.token);
+      localStorage.setItem('portal_user', JSON.stringify(data.data.user));
+      setUser(data.data.user);
+
+      return { success: true };
+    } catch {
+      return { success: false, error: 'Network error. Please try again.' };
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Logout function
-  const logout = () => {
-    localStorage.removeItem('portal_token');
-    localStorage.removeItem('portal_user');
-    setUser(null);
-  };
-
-  // Update user function
-  const updateUser = (userData: Partial<AuthUser>) => {
-    if (user) {
-      const updatedUser = { ...user, ...userData };
-      setUser(updatedUser);
-      localStorage.setItem('portal_user', JSON.stringify(updatedUser));
+  const logout = async () => {
+    const token = localStorage.getItem('portal_token');
+    try {
+      await fetch(`${API_BASE}/logout`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+    } catch {
+      // Logout is best-effort
     }
-  };
-
-  const value: AuthContextType = {
-    user,
-    isAuthenticated: !!user,
-    isLoading,
-    login,
-    logout,
-    updateUser
+    clearSession();
   };
 
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated: !!user,
+        isLoading,
+        login,
+        logout,
+        verifyToken,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
 };
 
-// Custom hook to use auth context
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (context === undefined) {

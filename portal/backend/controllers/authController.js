@@ -7,8 +7,11 @@ const jwt = require('jsonwebtoken');
 
 class AuthController {
   constructor() {
-    this.jwtSecret = process.env.PORTAL_JWT_SECRET || process.env.JWT_SECRET || 'your-portal-secret-key';
-    this.jwtExpiry = process.env.PORTAL_JWT_EXPIRY || '24h';
+    this.jwtSecret = process.env.PORTAL_JWT_SECRET || process.env.JWT_SECRET;
+    if (!this.jwtSecret) {
+      console.error('FATAL: No JWT secret configured (PORTAL_JWT_SECRET or JWT_SECRET). Portal auth will fail.');
+    }
+    this.jwtExpiry = process.env.PORTAL_JWT_EXPIRY || '8h';
   }
 
   /**
@@ -73,7 +76,6 @@ class AuthController {
       // Reset login attempts on successful login
       await portalUser.resetLoginAttempts();
 
-      // Generate JWT token
       const token = jwt.sign(
         {
           portalUserId: portalUser.id,
@@ -83,7 +85,7 @@ class AuthController {
           email: portalUser.email
         },
         this.jwtSecret,
-        { expiresIn: this.jwtExpiry }
+        { algorithm: 'HS512', expiresIn: this.jwtExpiry }
       );
 
       // Update last login time
@@ -170,10 +172,8 @@ class AuthController {
         });
       }
 
-      // Verify token
-      const decoded = jwt.verify(token, this.jwtSecret);
+      const decoded = jwt.verify(token, this.jwtSecret, { algorithms: ['HS512'] });
 
-      // Get current user data
       const portalUser = await PortalUser.findByPk(decoded.portalUserId, {
         attributes: [
           'id',
@@ -249,10 +249,8 @@ class AuthController {
         });
       }
 
-      // Verify current token (even if expired)
-      const decoded = jwt.verify(token, this.jwtSecret, { ignoreExpiration: true });
+      const decoded = jwt.verify(token, this.jwtSecret, { algorithms: ['HS512'] });
 
-      // Get current user data
       const portalUser = await PortalUser.findByPk(decoded.portalUserId, {
         attributes: [
           'id',
@@ -274,7 +272,6 @@ class AuthController {
         });
       }
 
-      // Generate new token
       const newToken = jwt.sign(
         {
           portalUserId: portalUser.id,
@@ -284,7 +281,7 @@ class AuthController {
           email: portalUser.email
         },
         this.jwtSecret,
-        { expiresIn: this.jwtExpiry }
+        { algorithm: 'HS512', expiresIn: this.jwtExpiry }
       );
 
       res.json({

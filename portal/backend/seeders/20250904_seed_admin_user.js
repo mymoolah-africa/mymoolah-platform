@@ -6,7 +6,10 @@ module.exports = {
   up: async (queryInterface, Sequelize) => {
     // Hash password for admin user
     const saltRounds = 12;
-    const adminPassword = process.env.ADMIN_PASSWORD || 'Admin123!';
+    const adminPassword = process.env.PORTAL_ADMIN_PASSWORD;
+    if (!adminPassword) {
+      throw new Error('PORTAL_ADMIN_PASSWORD env var is required for seeding. Never use default passwords.');
+    }
     const passwordHash = await bcrypt.hash(adminPassword, saltRounds);
 
     // Create admin portal user
@@ -137,8 +140,12 @@ module.exports = {
     ], {});
 
     // Create corresponding portal users for the dual-role entities
-    const flashPasswordHash = await bcrypt.hash('Flash@123!', saltRounds);
-    const zapperPasswordHash = await bcrypt.hash('Zapper@123!', saltRounds);
+    const supplierPassword = process.env.PORTAL_SUPPLIER_PASSWORD;
+    if (!supplierPassword) {
+      throw new Error('PORTAL_SUPPLIER_PASSWORD env var is required for seeding supplier portal users.');
+    }
+    const flashPasswordHash = await bcrypt.hash(supplierPassword, saltRounds);
+    const zapperPasswordHash = await bcrypt.hash(supplierPassword, saltRounds);
 
     await queryInterface.bulkInsert('portal_users', [
       {

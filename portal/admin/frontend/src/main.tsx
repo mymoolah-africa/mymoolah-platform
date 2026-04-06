@@ -69,7 +69,7 @@ class ErrorBoundary extends React.Component<
             <button
               onClick={() => window.location.reload()}
               style={{
-                background: 'linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)',
+                background: '#00B894',
                 color: 'white',
                 border: 'none',
                 padding: '0.75rem 1.5rem',
@@ -80,7 +80,7 @@ class ErrorBoundary extends React.Component<
               }}
               onMouseOver={(e) => {
                 e.currentTarget.style.transform = 'translateY(-1px)';
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(124, 58, 237, 0.3)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 184, 148, 0.3)';
               }}
               onMouseOut={(e) => {
                 e.currentTarget.style.transform = 'translateY(0)';

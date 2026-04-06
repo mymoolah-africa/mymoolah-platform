@@ -1,12 +1,13 @@
 {
   "development": {
-    "username": "mymoolah_app",
-    "password": "AppPass_1755005621204_ChangeMe",
-    "database": "mymoolah",
+    "username": null,
+    "password": null,
+    "database": null,
     "host": "127.0.0.1",
-    "port": 5433,
+    "port": 5432,
     "dialect": "postgres",
     "logging": true,
+    "use_env_variable": "PORTAL_DATABASE_URL",
     "pool": {
       "max": 20,
       "min": 0,
@@ -15,13 +16,14 @@
     }
   },
   "test": {
-    "username": "mymoolah_app",
-    "password": "AppPass_1755005621204_ChangeMe",
-    "database": "mymoolah",
+    "username": null,
+    "password": null,
+    "database": null,
     "host": "127.0.0.1",
-    "port": 5433,
+    "port": 5432,
     "dialect": "postgres",
     "logging": false,
+    "use_env_variable": "PORTAL_DATABASE_URL",
     "pool": {
       "max": 5,
       "min": 0,
@@ -30,13 +32,14 @@
     }
   },
   "production": {
-    "username": "mymoolah_app",
-    "password": "AppPass_1755005621204_ChangeMe",
-    "database": "mymoolah",
+    "username": null,
+    "password": null,
+    "database": null,
     "host": "127.0.0.1",
-    "port": 5433,
+    "port": 5432,
     "dialect": "postgres",
     "logging": false,
+    "use_env_variable": "PORTAL_DATABASE_URL",
     "pool": {
       "max": 20,
       "min": 0,

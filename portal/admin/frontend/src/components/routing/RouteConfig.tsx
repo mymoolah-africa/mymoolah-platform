@@ -2,8 +2,7 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AppLayoutWrapper } from '../layout/AppLayoutWrapper';
 
-// Core Portal Pages
-import AdminLogin from '../../pages/AdminLoginSimple';
+import AdminLogin from '../../pages/AdminLogin';
 import AdminDashboard from '../../pages/AdminDashboard';
 
 // Admin Management Overlays
@@ -27,16 +26,21 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const isAuthenticated = () => {
-    const token = localStorage.getItem('portal_token');
-    const user = localStorage.getItem('portal_user');
-    return !!(token && user);
-  };
+  const token = localStorage.getItem('portal_token');
+  const user = localStorage.getItem('portal_user');
 
-  if (!isAuthenticated()) {
+  if (!token || !user) {
     return <Navigate to="/admin/login" replace />;
   }
-  
+
+  try {
+    JSON.parse(user);
+  } catch {
+    localStorage.removeItem('portal_token');
+    localStorage.removeItem('portal_user');
+    return <Navigate to="/admin/login" replace />;
+  }
+
   return <>{children}</>;
 };
 

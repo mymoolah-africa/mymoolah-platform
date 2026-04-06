@@ -7,8 +7,8 @@ const jwt = require('jsonwebtoken');
 
 class AdminController {
   constructor() {
-    this.jwtSecret = process.env.JWT_SECRET || 'your-secret-key';
-    this.jwtExpiry = process.env.JWT_EXPIRY || '24h';
+    this.jwtSecret = process.env.PORTAL_JWT_SECRET || process.env.JWT_SECRET;
+    this.jwtExpiry = process.env.PORTAL_JWT_EXPIRY || '8h';
   }
 
   /**
@@ -349,6 +349,15 @@ class AdminController {
    */
   async getPortalUsers(req, res) {
     try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          error: errors.array().map(e => e.msg).join('; '),
+          timestamp: new Date().toISOString()
+        });
+      }
+
       const { page = 1, limit = 20, entityType, search } = req.query;
       
       const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -645,7 +654,7 @@ class AdminController {
         referenceNumber: mobileNumber.trim(),
         amount:          record.amount,
         currency:        record.currency || 'ZAR',
-        description:    `Manual allocation from admin by ${req.user?.email || 'unknown'} — original ref: ${record.referenceNumber}`,
+        description:    `Manual allocation from admin by ${req.portalUser?.email || 'unknown'} — original ref: ${record.referenceNumber}`,
       };
 
       const result = await processDepositNotification(syntheticPayload);
@@ -660,7 +669,7 @@ class AdminController {
       await record.update({
         status: 'completed',
         processedAt: new Date(),
-        notes: notes ? `${notes} | Manually allocated by ${req.user?.email}` : `Manually allocated by ${req.user?.email}`,
+        notes: notes ? `${notes} | Manually allocated by ${req.portalUser?.email}` : `Manually allocated by ${req.portalUser?.email}`,
       });
 
       res.json({

@@ -1,7 +1,6 @@
 'use strict';
 
-// Load environment variables from parent directory
-require('dotenv').config({ path: '../../.env' });
+require('dotenv').config({ path: require('path').resolve(__dirname, '../../.env') });
 
 const app = require('./app');
 const { sequelize } = require('./models');
@@ -45,13 +44,10 @@ async function startServer() {
     // Start HTTP server
     const server = app.listen(PORT, HOST, () => {
       console.log('🚀 MyMoolah Portal Backend Server Started');
-      console.log(`📍 Server running on http://${HOST}:${PORT}`);
-      console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`📊 Database: ${process.env.DB_NAME || 'mymoolah_portal'}`);
-      console.log('🔒 Security: Banking-grade TLS 1.3 enabled');
-      console.log('📈 Performance: Optimized for millions of transactions');
-      console.log('🏦 Compliance: Mojaloop & ISO 27001 ready');
-      console.log('─'.repeat(60));
+      console.log(`Server: http://${HOST}:${PORT}`);
+      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`JWT: ${process.env.PORTAL_JWT_SECRET ? 'configured' : process.env.JWT_SECRET ? 'using main JWT_SECRET' : 'NOT CONFIGURED'}`);
+      console.log('---');
     });
 
     // Handle server errors

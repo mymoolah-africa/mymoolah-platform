@@ -1,121 +1,61 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-
-// Moolah Context Types
-interface SystemMetrics {
-  totalUsers: number;
-  totalTransactions: number;
-  totalRevenue: number;
-  systemUptime: number;
-  activeSessions: number;
-}
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 
 interface SystemHealth {
-  status: 'healthy' | 'warning' | 'critical';
+  status: 'healthy' | 'warning' | 'critical' | 'unknown';
   lastCheck: string;
-  services: {
-    database: 'up' | 'down';
-    api: 'up' | 'down';
-    payments: 'up' | 'down';
-    notifications: 'up' | 'down';
-  };
 }
 
 interface MoolahContextType {
-  systemMetrics: SystemMetrics | null;
-  systemHealth: SystemHealth | null;
+  systemHealth: SystemHealth;
   isLoading: boolean;
-  refreshMetrics: () => Promise<void>;
   refreshHealth: () => Promise<void>;
 }
 
-// Create Moolah Context
 const MoolahContext = createContext<MoolahContextType | undefined>(undefined);
 
-// Moolah Provider Props
 interface MoolahProviderProps {
   children: ReactNode;
 }
 
-// Moolah Provider Component
 export const MoolahProvider: React.FC<MoolahProviderProps> = ({ children }) => {
-  const [systemMetrics, setSystemMetrics] = useState<SystemMetrics | null>(null);
-  const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
+  const [systemHealth, setSystemHealth] = useState<SystemHealth>({
+    status: 'unknown',
+    lastCheck: new Date().toISOString(),
+  });
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load initial data
-  useEffect(() => {
-    loadInitialData();
-  }, []);
-
-  const loadInitialData = async () => {
+  const refreshHealth = useCallback(async (): Promise<void> => {
     try {
-      setIsLoading(true);
-      await Promise.all([
-        refreshMetrics(),
-        refreshHealth()
-      ]);
-    } catch (error) {
-      console.error('Error loading initial data:', error);
+      const res = await fetch('/api/v1/admin/health');
+      if (res.ok) {
+        const data = await res.json();
+        setSystemHealth({
+          status: data.success ? 'healthy' : 'warning',
+          lastCheck: new Date().toISOString(),
+        });
+      } else {
+        setSystemHealth({ status: 'warning', lastCheck: new Date().toISOString() });
+      }
+    } catch {
+      setSystemHealth({ status: 'critical', lastCheck: new Date().toISOString() });
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  // Refresh system metrics
-  const refreshMetrics = async (): Promise<void> => {
-    try {
-      // Demo data for now - replace with actual API call
-      const mockMetrics: SystemMetrics = {
-        totalUsers: 15420,
-        totalTransactions: 89456,
-        totalRevenue: 2456789.50,
-        systemUptime: 99.95,
-        activeSessions: 1247
-      };
-
-      setSystemMetrics(mockMetrics);
-    } catch (error) {
-      console.error('Error refreshing metrics:', error);
-    }
-  };
-
-  // Refresh system health
-  const refreshHealth = async (): Promise<void> => {
-    try {
-      // Demo data for now - replace with actual API call
-      const mockHealth: SystemHealth = {
-        status: 'healthy',
-        lastCheck: new Date().toISOString(),
-        services: {
-          database: 'up',
-          api: 'up',
-          payments: 'up',
-          notifications: 'up'
-        }
-      };
-
-      setSystemHealth(mockHealth);
-    } catch (error) {
-      console.error('Error refreshing health:', error);
-    }
-  };
-
-  const value: MoolahContextType = {
-    systemMetrics,
-    systemHealth,
-    isLoading,
-    refreshMetrics,
-    refreshHealth
-  };
+  useEffect(() => {
+    refreshHealth();
+    const interval = setInterval(refreshHealth, 60_000);
+    return () => clearInterval(interval);
+  }, [refreshHealth]);
 
   return (
-    <MoolahContext.Provider value={value}>
+    <MoolahContext.Provider value={{ systemHealth, isLoading, refreshHealth }}>
       {children}
     </MoolahContext.Provider>
   );
 };
 
-// Custom hook to use moolah context
 export const useMoolah = (): MoolahContextType => {
   const context = useContext(MoolahContext);
   if (context === undefined) {

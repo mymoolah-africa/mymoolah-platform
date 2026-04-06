@@ -1,737 +1,330 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Users, 
-  Building2, 
-  Activity, 
-  Clock, 
-  RefreshCw, 
-  LogOut, 
-  Bell, 
-  User, 
-  Store,
-  UserCheck,
+import {
+  Users,
+  Layers,
+  Activity,
+  Clock,
+  RefreshCw,
   AlertTriangle,
   CheckCircle,
   Info,
   XCircle,
-  Calendar,
-  TrendingUp,
-  DollarSign,
-  Settings,
-  Eye,
-  MoreVertical
+  ArrowUpRight,
+  ArrowDownRight,
+  Landmark,
 } from 'lucide-react';
-import { Button } from '../components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { Badge } from '../components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
-import { Alert, AlertDescription } from '../components/ui/alert';
-import { Separator } from '../components/ui/separator';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../components/ui/dropdown-menu';
 
-// Type definitions
-interface DashboardMetrics {
-  totalPortalUsers: number;
-  dualRoleEntities: number;
-  recentActivity24h: number;
-  systemUptime: string;
+interface DashboardData {
+  systemMetrics: {
+    totalPortalUsers: number;
+    dualRoleEntitiesCount: number;
+    entitiesByType: Record<string, number>;
+    recentActivity: number;
+    systemHealth: string;
+    uptime: number;
+  };
+  dualRoleEntities: {
+    entityId: string;
+    entityName: string;
+    primaryRole: string;
+    supplierBalance: number;
+    merchantBalance: number;
+    netBalance: number;
+    status: string;
+    requiresSettlement: boolean;
+  }[];
+  settlementSummary: {
+    pendingSettlements: number;
+    totalSettlementAmount: number;
+    nextSettlementAt: string | null;
+    autoSettlementEnabled: number;
+    settlementBreakdown: {
+      entityName: string;
+      settlementAmount: number;
+      direction: string;
+    }[];
+  };
+  recentAlerts: {
+    type: string;
+    category: string;
+    title: string;
+    message: string;
+    timestamp: string;
+  }[];
+  performanceAnalytics: {
+    totalActiveUsers: number;
+    dualRoleEntities: number;
+    entityDistribution: { type: string; count: number }[];
+  };
 }
 
-interface EntityDistribution {
-  suppliers: number;
-  clients: number;
-  merchants: number;
-  resellers: number;
-}
+const formatZAR = (n: number) =>
+  new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR', minimumFractionDigits: 2 }).format(n);
 
-interface SettlementSummary {
-  pendingSettlements: number;
-  totalAmount: number;
-  autoSettlementEnabled: boolean;
-  nextSettlement: string;
-}
+const relativeTime = (iso: string) => {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+};
 
-interface DualRoleEntity {
-  id: string;
-  name: string;
-  entityId: string;
-  roles: string[];
-  supplierBalance: number;
-  merchantBalance: number;
-  netBalance: number;
-  status: 'active' | 'suspended';
-  settlementDue: boolean;
-}
+const AlertIcon: React.FC<{ type: string }> = ({ type }) => {
+  const cls = 'w-4 h-4';
+  switch (type) {
+    case 'warning': return <AlertTriangle className={`${cls} text-amber-500`} />;
+    case 'error': return <XCircle className={`${cls} text-red-500`} />;
+    case 'success': return <CheckCircle className={`${cls} text-emerald-500`} />;
+    default: return <Info className={`${cls} text-blue-500`} />;
+  }
+};
 
-interface RecentAlert {
-  id: string;
-  type: 'warning' | 'error' | 'success' | 'info';
-  title: string;
-  message: string;
-  timestamp: string;
-}
-
-interface AdminUser {
-  id: string;
-  email: string;
-  name: string;
-  role: string;
-}
-
-export function AdminDashboardPage() {
+export default function AdminDashboard() {
   const navigate = useNavigate();
-  const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
-  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
-  const [entityDistribution, setEntityDistribution] = useState<EntityDistribution | null>(null);
-  const [settlementSummary, setSettlementSummary] = useState<SettlementSummary | null>(null);
-  const [dualRoleEntities, setDualRoleEntities] = useState<DualRoleEntity[]>([]);
-  const [recentAlerts, setRecentAlerts] = useState<RecentAlert[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [systemHealthy, setSystemHealthy] = useState(true);
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState('');
 
-  // Load admin user from localStorage
-  useEffect(() => {
-    const userData = localStorage.getItem('portal_user');
-    if (userData) {
-      try {
-        const user = JSON.parse(userData);
-        setAdminUser(user);
-      } catch (error) {
-        console.error('Failed to parse admin user data:', error);
-        navigate('/admin/login');
+  const fetchDashboard = useCallback(async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true); else setLoading(true);
+    setError('');
+
+    const token = localStorage.getItem('portal_token');
+    if (!token) { navigate('/admin/login', { replace: true }); return; }
+
+    try {
+      const res = await fetch('/api/v1/admin/dashboard', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.status === 401) {
+        localStorage.removeItem('portal_token');
+        localStorage.removeItem('portal_user');
+        navigate('/admin/login', { replace: true });
+        return;
       }
-    } else {
-      navigate('/admin/login');
+
+      const json = await res.json();
+      if (json.success) {
+        setData(json.data);
+      } else {
+        setError(json.error || 'Failed to load dashboard');
+      }
+    } catch {
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
   }, [navigate]);
 
-  // Load dashboard data
-  const loadDashboardData = async (isRefresh = false) => {
-    if (isRefresh) {
-      setIsRefreshing(true);
-    } else {
-      setIsLoading(true);
-    }
+  useEffect(() => { fetchDashboard(); }, [fetchDashboard]);
 
-    try {
-      // Check if we're in demo mode
-      const isDemoMode = import.meta.env.VITE_DEMO_MODE === 'true' || !import.meta.env.VITE_API_BASE_URL;
-      
-      if (isDemoMode) {
-        // Demo mode - simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        // Mock data for demo
-        setMetrics({
-          totalPortalUsers: 1247,
-          dualRoleEntities: 89,
-          recentActivity24h: 342,
-          systemUptime: '99.97%'
-        });
-
-        setEntityDistribution({
-          suppliers: 156,
-          clients: 1091,
-          merchants: 234,
-          resellers: 67
-        });
-
-        setSettlementSummary({
-          pendingSettlements: 23,
-          totalAmount: 487650.00,
-          autoSettlementEnabled: true,
-          nextSettlement: '2025-01-10T09:00:00Z'
-        });
-
-        setDualRoleEntities([
-          {
-            id: '1',
-            name: 'ABC Trading Ltd',
-            entityId: 'ENT-001',
-            roles: ['supplier', 'merchant'],
-            supplierBalance: 45230.50,
-            merchantBalance: -12450.00,
-            netBalance: 32780.50,
-            status: 'active',
-            settlementDue: false
-          },
-          {
-            id: '2',
-            name: 'XYZ Commerce',
-            entityId: 'ENT-002',
-            roles: ['merchant', 'reseller'],
-            supplierBalance: 0,
-            merchantBalance: 23100.75,
-            netBalance: 23100.75,
-            status: 'active',
-            settlementDue: true
-          },
-          {
-            id: '3',
-            name: 'SuperStore Chain',
-            entityId: 'ENT-003',
-            roles: ['supplier', 'merchant'],
-            supplierBalance: 78900.00,
-            merchantBalance: -89100.25,
-            netBalance: -10200.25,
-            status: 'active',
-            settlementDue: false
-          }
-        ]);
-
-        setRecentAlerts([
-          {
-            id: '1',
-            type: 'warning',
-            title: 'Settlement Overdue',
-            message: 'XYZ Commerce has an overdue settlement requiring attention',
-            timestamp: '2025-01-09T14:30:00Z'
-          },
-          {
-            id: '2',
-            type: 'success',
-            title: 'System Update Complete',
-            message: 'Platform maintenance completed successfully with zero downtime',
-            timestamp: '2025-01-09T12:15:00Z'
-          },
-          {
-            id: '3',
-            type: 'info',
-            title: 'New Entity Registration',
-            message: 'Tech Solutions Ltd completed KYC verification and is now active',
-            timestamp: '2025-01-09T10:45:00Z'
-          },
-          {
-            id: '4',
-            type: 'error',
-            title: 'API Rate Limit Exceeded',
-            message: 'Entity ENT-045 exceeded API rate limits, temporary throttling applied',
-            timestamp: '2025-01-09T09:20:00Z'
-          }
-        ]);
-
-        setSystemHealthy(true);
-      } else {
-        // Production mode - real API calls
-        const token = localStorage.getItem('portal_token');
-        if (!token) {
-          navigate('/admin/login');
-          return;
-        }
-
-        const headers = {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        };
-
-        // Parallel API calls for better performance
-        const [metricsRes, entityRes, settlementRes, entitiesRes, alertsRes] = await Promise.all([
-          fetch('/api/v1/admin/dashboard/metrics', { headers }),
-          fetch('/api/v1/admin/dashboard/entity-distribution', { headers }),
-          fetch('/api/v1/admin/dashboard/settlement-summary', { headers }),
-          fetch('/api/v1/admin/dashboard/dual-role-entities', { headers }),
-          fetch('/api/v1/admin/dashboard/recent-alerts', { headers })
-        ]);
-
-        // Check for authentication errors
-        if (metricsRes.status === 401) {
-          localStorage.removeItem('portal_token');
-          localStorage.removeItem('portal_user');
-          navigate('/admin/login');
-          return;
-        }
-
-        // Parse responses
-        const [metricsData, entityData, settlementData, entitiesData, alertsData] = await Promise.all([
-          metricsRes.json(),
-          entityRes.json(),
-          settlementRes.json(),
-          entitiesRes.json(),
-          alertsRes.json()
-        ]);
-
-        setMetrics(metricsData);
-        setEntityDistribution(entityData);
-        setSettlementSummary(settlementData);
-        setDualRoleEntities(entitiesData);
-        setRecentAlerts(alertsData);
-      }
-    } catch (error) {
-      console.error('Failed to load dashboard data:', error);
-      setSystemHealthy(false);
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
-    }
-  };
-
-  // Initial data load
-  useEffect(() => {
-    if (adminUser) {
-      loadDashboardData();
-    }
-  }, [adminUser]);
-
-  // Format currency
-  const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-ZA', {
-      style: 'currency',
-      currency: 'ZAR',
-      minimumFractionDigits: 2
-    }).format(amount);
-  };
-
-  // Format timestamp
-  const formatTimestamp = (timestamp: string): string => {
-    return new Date(timestamp).toLocaleString('en-ZA', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  // Handle logout
-  const handleLogout = () => {
-    localStorage.removeItem('portal_token');
-    localStorage.removeItem('portal_user');
-    navigate('/admin/login');
-  };
-
-  // Handle refresh
-  const handleRefresh = () => {
-    loadDashboardData(true);
-  };
-
-  // Get alert icon
-  const getAlertIcon = (type: string) => {
-    switch (type) {
-      case 'warning':
-        return <AlertTriangle className="w-4 h-4 text-orange-500" />;
-      case 'error':
-        return <XCircle className="w-4 h-4 text-red-500" />;
-      case 'success':
-        return <CheckCircle className="w-4 h-4 text-green-500" />;
-      case 'info':
-        return <Info className="w-4 h-4 text-blue-500" />;
-      default:
-        return <Info className="w-4 h-4 text-gray-500" />;
-    }
-  };
-
-  if (isLoading) {
+  if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 mx-auto bg-gradient-to-r from-mymoolah-green/20 to-mymoolah-blue/20 rounded-full flex items-center justify-center mb-4">
-            <RefreshCw className="w-6 h-6 animate-spin text-mymoolah-green" />
-          </div>
-          <p className="text-lg text-gray-600 wallet-form-label">
-            Loading admin dashboard...
-          </p>
-        </div>
+      <div className="flex items-center justify-center h-64">
+        <RefreshCw className="w-6 h-6 animate-spin text-gray-400" />
       </div>
     );
   }
 
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-3">
+        <p className="text-sm text-red-600">{error}</p>
+        <button onClick={() => fetchDashboard()} className="text-sm text-emerald-600 hover:underline">Retry</button>
+      </div>
+    );
+  }
+
+  if (!data) return null;
+
+  const { systemMetrics, dualRoleEntities, settlementSummary, recentAlerts } = data;
+  const uptimeHours = Math.floor(systemMetrics.uptime / 3600);
+  const uptimeStr = uptimeHours >= 24 ? `${Math.floor(uptimeHours / 24)}d ${uptimeHours % 24}h` : `${uptimeHours}h`;
+
+  const kpis = [
+    {
+      label: 'Active Users',
+      value: systemMetrics.totalPortalUsers.toLocaleString(),
+      icon: Users,
+      accent: 'bg-emerald-50 text-emerald-600',
+    },
+    {
+      label: 'Dual-Role Entities',
+      value: systemMetrics.dualRoleEntitiesCount.toLocaleString(),
+      icon: Layers,
+      accent: 'bg-blue-50 text-blue-600',
+    },
+    {
+      label: 'Activity (24h)',
+      value: systemMetrics.recentActivity.toLocaleString(),
+      icon: Activity,
+      accent: 'bg-violet-50 text-violet-600',
+    },
+    {
+      label: 'Uptime',
+      value: uptimeStr,
+      icon: Clock,
+      accent: 'bg-amber-50 text-amber-600',
+    },
+  ];
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-gradient-to-r from-mymoolah-green to-mymoolah-blue rounded-xl flex items-center justify-center">
-              <Building2 className="w-6 h-6 text-white" />
+    <div className="space-y-6">
+      {/* Title row */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Treasury Platform overview</p>
+        </div>
+        <button
+          onClick={() => fetchDashboard(true)}
+          disabled={refreshing}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition disabled:opacity-50"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+          Refresh
+        </button>
+      </div>
+
+      {/* KPI cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {kpis.map((kpi) => (
+          <div key={kpi.label} className="bg-white rounded-xl border border-gray-200 p-5">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm text-gray-500">{kpi.label}</span>
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${kpi.accent}`}>
+                <kpi.icon className="w-4 h-4" />
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 wallet-form-label">
-                Admin Dashboard
-              </h1>
-              <p className="text-sm text-gray-600 wallet-form-label">
-                System overview and management
-              </p>
-            </div>
+            <p className="text-2xl font-semibold text-gray-900">{kpi.value}</p>
           </div>
+        ))}
+      </div>
 
-          <div className="flex items-center gap-4">
-            {/* System Health Indicator */}
-            <div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-full">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              <span className="text-sm text-green-600 font-medium wallet-form-label">
-                System Healthy
-              </span>
-            </div>
-
-            {/* Refresh Button */}
-            <Button
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              variant="outline"
-              size="sm"
-              className="wallet-btn-primary"
-            >
-              <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
-
-            {/* User Menu */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-gradient-to-r from-mymoolah-green to-mymoolah-blue rounded-full flex items-center justify-center">
-                    <User className="w-4 h-4 text-white" />
-                  </div>
-                  <span className="wallet-form-label">
-                    {adminUser?.name || 'Admin User'}
-                  </span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem>
-                  <Settings className="w-4 h-4 mr-2" />
-                  <span className="wallet-form-label">Settings</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleLogout}>
-                  <LogOut className="w-4 h-4 mr-2" />
-                  <span className="wallet-form-label">Sign Out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+      {/* Two-column: Settlements + Alerts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Settlement summary */}
+        <div className="bg-white rounded-xl border border-gray-200">
+          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+            <h2 className="font-semibold text-gray-900">Settlements</h2>
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700">
+              {settlementSummary.pendingSettlements} pending
+            </span>
           </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-6 py-8">
-        {/* Metrics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {/* Total Portal Users */}
-          <Card className="wallet-card">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1 wallet-form-label">
-                    Total Portal Users
-                  </p>
-                  <p className="text-2xl font-bold text-gray-900 wallet-form-label">
-                    {metrics?.totalPortalUsers.toLocaleString() || '0'}
-                  </p>
-                </div>
-                <div className="w-12 h-12 bg-gradient-to-r from-mymoolah-green/20 to-mymoolah-blue/20 rounded-xl flex items-center justify-center">
-                  <Users className="w-6 h-6 text-mymoolah-blue" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Dual-Role Entities */}
-          <Card className="wallet-card">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1 wallet-form-label">
-                    Dual-Role Entities
-                  </p>
-                  <p className="text-2xl font-bold text-gray-900 wallet-form-label">
-                    {metrics?.dualRoleEntities.toLocaleString() || '0'}
-                  </p>
-                </div>
-                <div className="w-12 h-12 bg-gradient-to-r from-mymoolah-green/20 to-mymoolah-blue/20 rounded-xl flex items-center justify-center">
-                  <Building2 className="w-6 h-6 text-mymoolah-green" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Recent Activity */}
-          <Card className="wallet-card">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1 wallet-form-label">
-                    Recent Activity (24h)
-                  </p>
-                  <p className="text-2xl font-bold text-gray-900 wallet-form-label">
-                    {metrics?.recentActivity24h.toLocaleString() || '0'}
-                  </p>
-                </div>
-                <div className="w-12 h-12 bg-gradient-to-r from-mymoolah-green/20 to-mymoolah-blue/20 rounded-xl flex items-center justify-center">
-                  <Activity className="w-6 h-6 text-mymoolah-green" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* System Uptime */}
-          <Card className="wallet-card">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1 wallet-form-label">
-                    System Uptime
-                  </p>
-                  <p className="text-2xl font-bold text-gray-900 wallet-form-label">
-                    {metrics?.systemUptime || '0%'}
-                  </p>
-                </div>
-                <div className="w-12 h-12 bg-gradient-to-r from-mymoolah-green/20 to-mymoolah-blue/20 rounded-xl flex items-center justify-center">
-                  <Clock className="w-6 h-6 text-mymoolah-blue" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          {/* Entity Distribution */}
-          <Card className="wallet-card">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold wallet-form-label">
-                Entity Distribution
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Building2 className="w-5 h-5 text-mymoolah-green" />
-                  <span className="text-sm text-gray-700 wallet-form-label">
-                    Suppliers
-                  </span>
-                </div>
-                <span className="text-base font-semibold text-gray-900 wallet-form-label">
-                  {entityDistribution?.suppliers.toLocaleString() || '0'}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Users className="w-5 h-5 text-mymoolah-blue" />
-                  <span className="text-sm text-gray-700 wallet-form-label">
-                    Clients
-                  </span>
-                </div>
-                <span className="text-base font-semibold text-gray-900 wallet-form-label">
-                  {entityDistribution?.clients.toLocaleString() || '0'}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Store className="w-5 h-5 text-mymoolah-green" />
-                  <span className="text-sm text-gray-700 wallet-form-label">
-                    Merchants
-                  </span>
-                </div>
-                <span className="text-base font-semibold text-gray-900 wallet-form-label">
-                  {entityDistribution?.merchants.toLocaleString() || '0'}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <UserCheck className="w-5 h-5 text-mymoolah-blue" />
-                  <span className="text-sm text-gray-700 wallet-form-label">
-                    Resellers
-                  </span>
-                </div>
-                <span className="text-base font-semibold text-gray-900 wallet-form-label">
-                  {entityDistribution?.resellers.toLocaleString() || '0'}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Settlement Summary */}
-          <Card className="wallet-card">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold wallet-form-label">
-                Settlement Summary
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600 wallet-form-label">
-                  Pending Settlements
-                </span>
-                <span className="text-base font-semibold text-gray-900 wallet-form-label">
-                  {settlementSummary?.pendingSettlements || 0}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600 wallet-form-label">
-                  Total Amount
-                </span>
-                <span className="text-base font-semibold text-gray-900 wallet-form-label">
-                  {formatCurrency(settlementSummary?.totalAmount || 0)}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600 wallet-form-label">
-                  Auto Settlement
-                </span>
-                <Badge variant={settlementSummary?.autoSettlementEnabled ? 'default' : 'secondary'} className="wallet-badge">
-                  {settlementSummary?.autoSettlementEnabled ? 'Enabled' : 'Disabled'}
-                </Badge>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600 wallet-form-label">
-                  Next Settlement
-                </span>
-                <span className="text-sm text-gray-700 wallet-form-label">
-                  {settlementSummary?.nextSettlement ? formatTimestamp(settlementSummary.nextSettlement) : 'Not scheduled'}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Dual-Role Entities Table */}
-        <Card className="mb-8 wallet-card">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold wallet-form-label">
-              Dual-Role Entities
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="wallet-form-label">Entity</TableHead>
-                    <TableHead className="wallet-form-label">Roles</TableHead>
-                    <TableHead className="wallet-form-label">Supplier Balance</TableHead>
-                    <TableHead className="wallet-form-label">Merchant Balance</TableHead>
-                    <TableHead className="wallet-form-label">Net Balance</TableHead>
-                    <TableHead className="wallet-form-label">Status</TableHead>
-                    <TableHead></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {dualRoleEntities.map((entity) => (
-                    <TableRow key={entity.id} className="hover:bg-gray-50">
-                      <TableCell>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900 wallet-form-label">
-                            {entity.name}
-                          </p>
-                          <p className="text-xs text-gray-600 wallet-form-label">
-                            {entity.entityId}
-                          </p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          {entity.roles.map((role) => (
-                            <Badge key={role} variant="outline" className="text-xs wallet-badge">
-                              {role}
-                            </Badge>
-                          ))}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm text-mymoolah-green wallet-form-label">
-                          {formatCurrency(entity.supplierBalance)}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm text-mymoolah-blue wallet-form-label">
-                          {formatCurrency(entity.merchantBalance)}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className={`text-sm font-medium wallet-form-label ${
-                          entity.netBalance >= 0 ? 'text-mymoolah-green' : 'text-red-600'
-                        }`}>
-                          {formatCurrency(entity.netBalance)}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Badge variant={entity.status === 'active' ? 'default' : 'secondary'} className="wallet-badge">
-                            {entity.status}
-                          </Badge>
-                          {entity.settlementDue && (
-                            <Badge variant="outline" className="wallet-badge bg-orange-50 text-orange-700 border-orange-200">
-                              Settlement Due
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreVertical className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem>
-                              <Eye className="w-4 h-4 mr-2" />
-                              <span className="wallet-form-label">View Details</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <DollarSign className="w-4 h-4 mr-2" />
-                              <span className="wallet-form-label">Process Settlement</span>
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+          <div className="p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-500">Total pending</span>
+              <span className="text-sm font-medium text-gray-900">{formatZAR(settlementSummary.totalSettlementAmount)}</span>
             </div>
-          </CardContent>
-        </Card>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-500">Auto-settlement</span>
+              <span className="text-sm font-medium text-gray-900">{settlementSummary.autoSettlementEnabled} entities</span>
+            </div>
+            {settlementSummary.nextSettlementAt && (
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-500">Next settlement</span>
+                <span className="text-sm text-gray-700">{new Date(settlementSummary.nextSettlementAt).toLocaleDateString('en-ZA')}</span>
+              </div>
+            )}
 
-        {/* Recent Alerts */}
-        <Card className="wallet-card">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold wallet-form-label">
-              Recent Alerts
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {recentAlerts.map((alert, index) => (
-                <div key={alert.id}>
-                  <div className={`p-4 rounded-lg border-l-4 ${
-                    alert.type === 'warning' ? 'border-orange-500 bg-orange-50' :
-                    alert.type === 'error' ? 'border-red-500 bg-red-50' :
-                    alert.type === 'success' ? 'border-green-500 bg-green-50' :
-                    'border-blue-500 bg-blue-50'
-                  }`}>
-                    <div className="flex items-start gap-3">
-                      {getAlertIcon(alert.type)}
-                      <div className="flex-1">
-                        <h4 className="text-sm font-medium text-gray-900 mb-1 wallet-form-label">
-                          {alert.title}
-                        </h4>
-                        <p className="text-sm text-gray-600 mb-2 wallet-form-label">
-                          {alert.message}
-                        </p>
-                        <p className="text-xs text-gray-500 wallet-form-label">
-                          {formatTimestamp(alert.timestamp)}
-                        </p>
-                      </div>
+            {settlementSummary.settlementBreakdown.length > 0 && (
+              <div className="pt-3 border-t border-gray-100 space-y-2">
+                {settlementSummary.settlementBreakdown.slice(0, 5).map((s, i) => (
+                  <div key={i} className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600 truncate max-w-[60%]">{s.entityName}</span>
+                    <div className="flex items-center gap-1">
+                      {s.direction === 'payout'
+                        ? <ArrowUpRight className="w-3 h-3 text-emerald-500" />
+                        : <ArrowDownRight className="w-3 h-3 text-red-500" />}
+                      <span className="font-medium text-gray-900">{formatZAR(s.settlementAmount)}</span>
                     </div>
                   </div>
-                  {index < recentAlerts.length - 1 && <Separator className="my-4" />}
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Alerts */}
+        <div className="bg-white rounded-xl border border-gray-200">
+          <div className="px-5 py-4 border-b border-gray-100">
+            <h2 className="font-semibold text-gray-900">Alerts</h2>
+          </div>
+          <div className="divide-y divide-gray-100">
+            {recentAlerts.length === 0 ? (
+              <p className="p-5 text-sm text-gray-400">No active alerts</p>
+            ) : (
+              recentAlerts.slice(0, 6).map((alert, i) => (
+                <div key={i} className="px-5 py-3 flex items-start gap-3">
+                  <div className="mt-0.5"><AlertIcon type={alert.type} /></div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900">{alert.title}</p>
+                    <p className="text-xs text-gray-500 mt-0.5 truncate">{alert.message}</p>
+                  </div>
+                  <span className="text-[11px] text-gray-400 whitespace-nowrap">{relativeTime(alert.timestamp)}</span>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </main>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Dual-role entities table */}
+      {dualRoleEntities.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200">
+          <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
+            <Landmark className="w-4 h-4 text-gray-400" />
+            <h2 className="font-semibold text-gray-900">Dual-Role Entities</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-100 text-left">
+                  <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Entity</th>
+                  <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Primary Role</th>
+                  <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-right">Supplier</th>
+                  <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-right">Merchant</th>
+                  <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-right">Net</th>
+                  <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {dualRoleEntities.map((entity) => (
+                  <tr key={entity.entityId} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-5 py-3">
+                      <p className="font-medium text-gray-900">{entity.entityName}</p>
+                      <p className="text-xs text-gray-400">{entity.entityId}</p>
+                    </td>
+                    <td className="px-5 py-3 capitalize text-gray-600">{entity.primaryRole}</td>
+                    <td className="px-5 py-3 text-right text-gray-700">{formatZAR(entity.supplierBalance)}</td>
+                    <td className="px-5 py-3 text-right text-gray-700">{formatZAR(entity.merchantBalance)}</td>
+                    <td className={`px-5 py-3 text-right font-medium ${entity.netBalance >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                      {formatZAR(entity.netBalance)}
+                    </td>
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-2">
+                        <span className={`inline-block w-1.5 h-1.5 rounded-full ${entity.status === 'active' ? 'bg-emerald-500' : 'bg-gray-400'}`} />
+                        <span className="capitalize text-gray-600">{entity.status}</span>
+                        {entity.requiresSettlement && (
+                          <span className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-700">
+                            Due
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
-export default AdminDashboardPage;

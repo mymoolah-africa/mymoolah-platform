@@ -1,10 +1,8 @@
 import React from 'react';
-import { AppLayoutWrapper } from '../layout/AppLayoutWrapper';
 
 export const SecurityAuditOverlay: React.FC = () => {
   return (
-    <AppLayoutWrapper>
-      <div className="space-y-6">
+    <div className="space-y-6">
         <div className="mymoolah-card p-6">
           <h2 className="admin-text-heading text-xl mb-4">Security & Audit</h2>
           <p className="admin-text-body text-gray-600">
@@ -19,6 +17,5 @@ export const SecurityAuditOverlay: React.FC = () => {
           </div>
         </div>
       </div>
-    </AppLayoutWrapper>
   );
 };

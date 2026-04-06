@@ -3,11 +3,15 @@
 const express = require('express');
 const router = express.Router();
 const AdminController = require('../controllers/adminController');
+const UserManagementController = require('../controllers/userManagementController');
+const TransactionMonitoringController = require('../controllers/transactionMonitoringController');
 const { portalAuth } = require('../middleware/portalAuth');
 const rateLimit = require('express-rate-limit');
 const { body, query, param } = require('express-validator');
 
 const adminController = new AdminController();
+const userManagementController = new UserManagementController();
+const transactionMonitoringController = new TransactionMonitoringController();
 
 // Rate limiting configuration
 // Disable express-rate-limit's trust proxy validation (Express returns true even when set to 1)
@@ -188,6 +192,124 @@ router.post('/unallocated-deposits/:id/allocate',
     body('notes').optional().isString().isLength({ max: 500 }).withMessage('notes must be a string up to 500 characters'),
   ],
   adminController.allocateDeposit.bind(adminController)
+);
+
+// ============================================================================
+// WALLET USERS (main app users / MMTP User Management)
+// ============================================================================
+
+const getWalletUsersValidation = [
+  query('page')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('page must be a positive integer'),
+  query('limit')
+    .optional()
+    .isInt({ min: 1, max: 100 })
+    .withMessage('limit must be between 1 and 100'),
+  query('search')
+    .optional()
+    .isLength({ max: 255 })
+    .withMessage('search must be at most 255 characters'),
+  query('kycStatus')
+    .optional()
+    .isIn(['pending', 'approved', 'rejected', 'reset'])
+    .withMessage('kycStatus must be pending, approved, rejected, or reset'),
+  query('isActive')
+    .optional()
+    .isIn(['true', 'false'])
+    .withMessage('isActive must be true or false'),
+];
+
+/**
+ * @route GET /api/v1/admin/wallet-users
+ * @desc Search main-app wallet users (users + wallet + kyc summary)
+ * @access Private (Admin only)
+ */
+router.get(
+  '/wallet-users',
+  portalAuth('admin'),
+  standardLimit,
+  getWalletUsersValidation,
+  userManagementController.getWalletUsers.bind(userManagementController)
+);
+
+/**
+ * @route GET /api/v1/admin/wallet-users/:id
+ * @desc Wallet user detail with recent transactions
+ * @access Private (Admin only)
+ */
+router.get(
+  '/wallet-users/:id',
+  portalAuth('admin'),
+  standardLimit,
+  [param('id').isInt({ min: 1 }).withMessage('id must be a positive integer')],
+  userManagementController.getWalletUserDetail.bind(userManagementController)
+);
+
+// ============================================================================
+// TRANSACTION MONITORING (main app transactions + ledger)
+// ============================================================================
+
+const getTransactionsValidation = [
+  query('page')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('page must be a positive integer'),
+  query('limit')
+    .optional()
+    .isInt({ min: 1, max: 100 })
+    .withMessage('limit must be between 1 and 100'),
+  query('search')
+    .optional()
+    .isLength({ max: 255 })
+    .withMessage('search must be at most 255 characters'),
+  query('type')
+    .optional()
+    .isIn(['deposit', 'withdrawal', 'purchase', 'transfer'])
+    .withMessage('type must be deposit, withdrawal, purchase, or transfer'),
+  query('status')
+    .optional()
+    .isIn(['completed', 'pending', 'failed'])
+    .withMessage('status must be completed, pending, or failed'),
+  query('dateFrom')
+    .optional()
+    .isISO8601()
+    .withMessage('dateFrom must be ISO8601'),
+  query('dateTo')
+    .optional()
+    .isISO8601()
+    .withMessage('dateTo must be ISO8601'),
+  query('userId')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('userId must be a positive integer'),
+];
+
+/**
+ * @route GET /api/v1/admin/transactions
+ * @desc Search main-app transactions with filters, pagination, and DB sum summary
+ * @access Private (Admin only)
+ */
+router.get(
+  '/transactions',
+  portalAuth('admin'),
+  standardLimit,
+  getTransactionsValidation,
+  transactionMonitoringController.getTransactions.bind(transactionMonitoringController)
+);
+
+/**
+ * @route GET /api/v1/admin/transactions/:id
+ * @desc Transaction detail with safe user fields and related journal entries
+ * @access Private (Admin only)
+ */
+router.get(
+  '/transactions/:id',
+  portalAuth('admin'),
+  standardLimit,
+  [param('id').isInt({ min: 1 }).withMessage('id must be a positive integer')],
+  transactionMonitoringController.getTransactionDetail.bind(transactionMonitoringController)
 );
 
 // Error handling middleware

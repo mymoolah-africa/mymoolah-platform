@@ -25,9 +25,16 @@ const portalAuth = (portalType) => {
         });
       }
 
-      // Verify token
-      const jwtSecret = process.env.PORTAL_JWT_SECRET || process.env.JWT_SECRET || 'your-portal-secret-key';
-      const decoded = jwt.verify(token, jwtSecret);
+      const jwtSecret = process.env.PORTAL_JWT_SECRET || process.env.JWT_SECRET;
+      if (!jwtSecret) {
+        console.error('FATAL: No JWT secret configured (PORTAL_JWT_SECRET or JWT_SECRET)');
+        return res.status(500).json({
+          success: false,
+          error: 'Authentication service misconfigured.',
+          timestamp: new Date().toISOString()
+        });
+      }
+      const decoded = jwt.verify(token, jwtSecret, { algorithms: ['HS512'] });
 
       // Get portal user from database
       const portalUser = await PortalUser.findByPk(decoded.portalUserId, {
@@ -181,7 +188,8 @@ const requirePermission = (permission) => {
       return next();
     }
 
-    if (!req.portalUser.hasPermission(permission)) {
+    const permissions = req.portalUser.permissions || {};
+    if (!permissions[permission]) {
       return res.status(403).json({
         success: false,
         error: `Permission '${permission}' required.`,
@@ -265,8 +273,7 @@ const requireEntityOwnership = (entityIdParam = 'entityId') => {
  * @returns {Function} Express middleware function
  */
 const auditLog = (action) => {
-  return (req, res, next) => {
-    // Log the action
+  return async (req, res, next) => {
     const auditData = {
       action,
       portalUser: req.portalUser ? {
@@ -277,15 +284,34 @@ const auditLog = (action) => {
       } : null,
       method: req.method,
       url: req.originalUrl,
-      ip: req.ip,
+      ip: req.ip ? req.ip.replace(/^::ffff:/, '') : 'unknown',
       userAgent: req.get('User-Agent'),
       timestamp: new Date().toISOString()
     };
 
-    console.log('AUDIT:', JSON.stringify(auditData));
-
-    // Add audit data to request for potential database logging
     req.auditData = auditData;
+
+    try {
+      const { sequelize } = require('../models');
+      await sequelize.query(
+        `INSERT INTO portal_audit_logs (portal_user_id, action, method, url, ip_address, user_agent, metadata, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
+        {
+          bind: [
+            req.portalUser?.id || null,
+            action,
+            req.method,
+            req.originalUrl,
+            auditData.ip,
+            (req.get('User-Agent') || '').substring(0, 500),
+            JSON.stringify({ entityId: req.portalUser?.entityId, entityType: req.portalUser?.entityType, role: req.portalUser?.role })
+          ],
+          type: sequelize.QueryTypes.INSERT
+        }
+      );
+    } catch (err) {
+      console.error('Audit log DB write failed (non-blocking):', err.message);
+    }
 
     next();
   };

@@ -1,20 +1,28 @@
 'use strict';
 
-// Load environment variables from parent directory
-require('dotenv').config({ path: '../../../.env' });
+require('dotenv').config({ path: require('path').resolve(__dirname, '../../../.env') });
 
 const { Sequelize } = require('sequelize');
 const PortalUser = require('./PortalUser');
 const DualRoleFloat = require('./DualRoleFloat');
 
-// Database configuration
+const dbName = process.env.PORTAL_DB_NAME || process.env.DB_NAME;
+const dbUser = process.env.PORTAL_DB_USER || process.env.DB_USER;
+const dbPassword = process.env.PORTAL_DB_PASSWORD || process.env.DB_PASSWORD;
+const dbHost = process.env.PORTAL_DB_HOST || process.env.DB_HOST || '127.0.0.1';
+const dbPort = process.env.PORTAL_DB_PORT || process.env.DB_PORT || 5432;
+
+if (!dbName || !dbUser || !dbPassword) {
+  console.error('FATAL: Database credentials not configured. Set PORTAL_DB_NAME, PORTAL_DB_USER, PORTAL_DB_PASSWORD (or DB_NAME, DB_USER, DB_PASSWORD).');
+}
+
 const sequelize = new Sequelize(
-  process.env.PORTAL_DB_NAME || 'mymoolah',
-  process.env.PORTAL_DB_USER || 'mymoolah_app',
-  process.env.PORTAL_DB_PASSWORD || 'AppPass_1755005621204_ChangeMe',
+  dbName,
+  dbUser,
+  dbPassword,
   {
-    host: process.env.PORTAL_DB_HOST || '127.0.0.1',
-    port: process.env.PORTAL_DB_PORT || 5433,
+    host: dbHost,
+    port: dbPort,
     dialect: 'postgres',
     logging: process.env.NODE_ENV === 'development' ? console.log : false,
     pool: {
