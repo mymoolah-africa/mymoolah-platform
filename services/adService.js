@@ -123,7 +123,7 @@ class AdService {
           'DUMMY_AD_MERCHANT_001', 'Test Advertiser (Dummy)', 'other', 'MF-AD-DUMMY-001', 'Dummy Advertiser Float Account',
           1000.00, 1000.00, 0.00, NULL, 600.00, 600.00, 0.00,
           'monthly', 'prefunded', 'active', true, false, false, 0.000, 0.000,
-          '2100-05-001', '{"isTestMerchant": true, "createdFor": "watch_to_earn_testing"}', NOW(), NOW()
+          '2100-05-01', '{"isTestMerchant": true, "createdFor": "watch_to_earn_testing"}', NOW(), NOW()
         )
         ON CONFLICT ("merchantId") DO UPDATE SET
           "adFloatBalance" = 600.00, "adFloatInitialBalance" = 600.00, "updatedAt" = NOW()
@@ -380,7 +380,7 @@ class AdService {
         description: `Watch to Earn: ${campaign.title}`,
         lines: [
           {
-            accountCode: merchantFloat.ledgerAccountCode || '2100-05-001', // Merchant ad float (liability)
+            accountCode: merchantFloat.ledgerAccountCode || '2100-05-01', // Merchant ad float (liability)
             dc: 'debit',
             amount: campaign.costPerView,
             memo: 'Debit from prefunded ad float account'

@@ -178,7 +178,8 @@ class CatalogSyncController {
   }
 
   /**
-   * Refresh vas_best_offers table (pre-computed best product per denomination)
+   * Refresh v_best_offers materialized view (commission-based supplier selection).
+   * Also refreshes legacy vas_best_offers table for backward compatibility.
    * Run after manual catalog sync. Also runs automatically after daily sweep.
    */
   async refreshBestOffers(req, res) {
@@ -190,23 +191,34 @@ class CatalogSyncController {
         });
       }
 
-      const { refreshBestOffers } = require('../scripts/refresh-vas-best-offers');
-      const result = await refreshBestOffers();
+      const ProductCatalogService = require('../services/productCatalogService');
+      const catalogService = new ProductCatalogService();
+
+      await catalogService.refreshView();
+
+      let legacyResult = null;
+      try {
+        const { refreshBestOffers } = require('../scripts/refresh-vas-best-offers');
+        legacyResult = await refreshBestOffers();
+      } catch (legacyErr) {
+        console.warn('Legacy vas_best_offers refresh skipped:', legacyErr.message);
+      }
 
       res.json({
         success: true,
-        message: 'vas_best_offers refreshed successfully',
+        message: 'v_best_offers materialized view refreshed successfully',
         data: {
-          rowsAffected: result.rowsAffected,
-          catalogVersion: result.catalogVersion,
+          viewRefreshed: true,
+          legacyRefreshed: !!legacyResult,
+          legacyRowsAffected: legacyResult?.rowsAffected || 0,
           refreshedAt: new Date().toISOString()
         }
       });
     } catch (error) {
-      console.error('Error refreshing vas_best_offers:', error);
+      console.error('Error refreshing best offers:', error);
       res.status(500).json({
         success: false,
-        error: 'Failed to refresh vas_best_offers',
+        error: 'Failed to refresh best offers',
         message: error.message
       });
     }

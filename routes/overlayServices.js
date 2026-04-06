@@ -2653,8 +2653,8 @@ router.post('/electricity/purchase', auth, async (req, res) => {
             accountNumber: process.env.FLASH_ACCOUNT_NUMBER || 'FLASH001234',
             meterNumber: meterNumber,
             amount: Math.round(amount * 100),
-            productCode: 1,
-            serviceProvider: 'ESKOM',
+            productCode: supplierProductCode || 1,
+            serviceProvider: flashServiceProvider || 'ESKOM',
             metadata: {
               source: 'ElectricityOverlay',
               userId: req.user.id,
@@ -3808,7 +3808,28 @@ router.get('/vouchers/catalog', auth, async (req, res) => {
   try {
     const { q, category } = req.query;
     const { ProductVariant, Product, Supplier } = require('../models');
+    const ProductCatalogService = require('../services/productCatalogService');
+    const catalogService = new ProductCatalogService();
+    const supplierCircuitBreaker = require('../services/supplierCircuitBreaker');
 
+    // Phase 1: Get winning variant per provider from v_best_offers (source of truth)
+    const viewResult = await catalogService.getCatalog('voucher');
+    const winningSupplierMap = new Map();
+    for (const product of viewResult.products) {
+      const providerKey = (product.provider || '').toLowerCase().trim();
+      if (!providerKey) continue;
+      const existing = winningSupplierMap.get(providerKey);
+      if (!existing || product.commission > existing.commission) {
+        winningSupplierMap.set(providerKey, {
+          supplierCode: (product.supplierCode || '').toUpperCase(),
+          variantId: product.id,
+          productId: product.productId,
+          commission: product.commission
+        });
+      }
+    }
+
+    // Phase 2: Load all active voucher variants (needed for denomination data)
     const voucherVariants = await ProductVariant.findAll({
       where: { status: 'active' },
       include: [
@@ -3828,14 +3849,13 @@ router.get('/vouchers/catalog', auth, async (req, res) => {
       order: [['commission', 'DESC'], ['priority', 'ASC']]
     });
 
-    // Phase 1: Group ALL variants by recognised brand (cross-supplier)
-    // Each brand accumulates variants from Flash AND MobileMart
+    // Phase 3: Group by brand-regex, filter to winning supplier per provider
     const brandGroups = new Map();
 
     for (const variant of voucherVariants) {
       const rawName = variant.product?.name || variant.provider || '';
       const recognised = recogniseVoucherBrand(rawName);
-      if (!recognised) continue; // skip unrecognised products
+      if (!recognised) continue;
 
       const brandKey = recognised.brand.toLowerCase();
       if (!brandGroups.has(brandKey)) {
@@ -3850,20 +3870,54 @@ router.get('/vouchers/catalog', auth, async (req, res) => {
       brandGroups.get(brandKey).variants.push(variant);
     }
 
-    // Phase 2: For each brand, pick the best supplier (highest commission),
+    // Phase 4: For each brand, use view-determined winner (with circuit breaker),
     // then collapse that supplier's variants into one catalog card
     const vouchers = [];
 
     for (const [, group] of brandGroups) {
-      // Find best commission across all variants of this brand
-      let bestComm = -1;
+      // Determine winning supplier from v_best_offers view results
       let bestSupplier = '';
+      let bestComm = -1;
+      let bestVariantId = null;
+      let bestProductId = null;
+
       for (const v of group.variants) {
-        const c = parseFloat(v.commission) || 0;
-        const sup = (v.supplier?.code || '').toUpperCase();
-        if (c > bestComm || (c === bestComm && sup === 'FLASH' && bestSupplier !== 'FLASH')) {
-          bestComm = c;
-          bestSupplier = sup;
+        const providerKey = (v.provider || '').toLowerCase();
+        const viewWinner = winningSupplierMap.get(providerKey);
+        if (viewWinner && (viewWinner.commission > bestComm ||
+            (viewWinner.commission === bestComm && viewWinner.supplierCode === 'FLASH'))) {
+          bestComm = viewWinner.commission;
+          bestSupplier = viewWinner.supplierCode;
+          bestVariantId = viewWinner.variantId;
+          bestProductId = viewWinner.productId;
+        }
+      }
+
+      // Fallback: if view had no match, use JS-based highest commission
+      if (!bestSupplier) {
+        for (const v of group.variants) {
+          const c = parseFloat(v.commission) || 0;
+          const sup = (v.supplier?.code || '').toUpperCase();
+          if (c > bestComm || (c === bestComm && sup === 'FLASH' && bestSupplier !== 'FLASH')) {
+            bestComm = c;
+            bestSupplier = sup;
+          }
+        }
+      }
+
+      // Circuit breaker: if winning supplier is down, try the alternative
+      if (bestSupplier && supplierCircuitBreaker.isOpen(bestSupplier)) {
+        const altSupplier = bestSupplier === 'FLASH' ? 'MOBILEMART' : 'FLASH';
+        const altVariants = group.variants.filter(
+          v => (v.supplier?.code || '').toUpperCase() === altSupplier
+        );
+        if (altVariants.length > 0 && !supplierCircuitBreaker.isOpen(altSupplier)) {
+          console.log(`[Voucher CB] ${bestSupplier} circuit OPEN — switching to ${altSupplier} for ${group.brand}`);
+          bestSupplier = altSupplier;
+          const topAlt = altVariants[0];
+          bestComm = parseFloat(topAlt.commission) || 0;
+          bestVariantId = topAlt.id;
+          bestProductId = topAlt.product?.id;
         }
       }
 
@@ -3873,7 +3927,7 @@ router.get('/vouchers/catalog', auth, async (req, res) => {
       );
       if (winnerVariants.length === 0) continue;
 
-      // Detect variable vs fixed
+      // Detect variable vs fixed pricing
       let hasVariable = false;
       let variableVariant = null;
       const allDenoms = [];
@@ -3890,7 +3944,6 @@ router.get('/vouchers/catalog', auth, async (req, res) => {
             variableVariant = v;
           }
         } else {
-          // Collect fixed denominations
           if (Array.isArray(v.denominations) && v.denominations.length > 0) {
             v.denominations.forEach(d => {
               const n = typeof d === 'number' ? d : parseFloat(d);
@@ -3902,7 +3955,6 @@ router.get('/vouchers/catalog', auth, async (req, res) => {
         }
       }
 
-      // Build the card
       const representative = variableVariant || winnerVariants[0];
       const uniqueDenoms = Array.from(new Set(allDenoms)).sort((a, b) => a - b);
       const minAmt = variableVariant
@@ -3913,9 +3965,9 @@ router.get('/vouchers/catalog', auth, async (req, res) => {
         : (uniqueDenoms.length > 0 ? Math.max(...uniqueDenoms) : 0);
 
       vouchers.push({
-        id: `voucher-${representative.id}`,
-        productId: representative.product?.id,
-        variantId: representative.id,
+        id: `voucher-${bestVariantId || representative.id}`,
+        productId: bestProductId || representative.product?.id,
+        variantId: bestVariantId || representative.id,
         name: group.brand,
         brand: group.brand,
         category: group.category,
@@ -3931,7 +3983,7 @@ router.get('/vouchers/catalog', auth, async (req, res) => {
       });
     }
 
-    // Phase 3: Filter and sort
+    // Phase 5: Filter and sort
     let result = vouchers;
 
     if (q) {

@@ -136,7 +136,7 @@ async function seedWatchToEarn() {
         600.00, 600.00, 0.00,
         'monthly', 'prefunded', 'active', true,
         false, false, 0.000, 0.000,
-        '2100-05-001',
+        '2100-05-01',
         '{"isTestMerchant": true, "createdFor": "watch_to_earn_testing"}',
         NOW(), NOW()
       )

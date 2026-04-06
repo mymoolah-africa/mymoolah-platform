@@ -82,7 +82,7 @@ clearing accounts, and funds held on behalf of others. Normal side: **credit**
 |------|------|--------|-----------|---------|-------|
 | `2100-01-01` | Client Float Liability | credit | `20260224_03` | walletController, requestController, voucherController, overlayServices, flashController, rtpService, rppService, referralPayoutService, productPurchaseService, backfill scripts | **Core account** — aggregate of all user wallet balances; must equal `Σ wallets.balance` |
 | `2100-02-01` | Client Clearing Account | credit | `20260224_03` | — | Settlement clearing between client and MMTP (reserved) |
-| `2100-05-01` | Merchant Ad Float | credit | `20260224_03` | `adService.js` | Watch-to-Earn merchant prefunded float; **note**: `adService.js` also references `2100-05-001` (extra digit) — known cosmetic bug, should be `2100-05-01` |
+| `2100-05-01` | Merchant Ad Float | credit | `20260224_03` | `adService.js` | Watch-to-Earn merchant prefunded float |
 | `2200-01-01` | MM Commission Clearing | credit | `20260224_03` | `commissionVatService.js`, `qrPaymentController.js` | Commission holding before recognition |
 | `2200-02-01` | Supplier Clearing Account | credit | `20260224_03` | — | Supplier settlement netting (reserved) |
 | `2200-03-01` | Referral Commission Payable | credit | `20260405_01` | `referralPayoutService.js`, `backfill-missing-journal-entries.js` | Accrued referral commissions awaiting payout; env var `LEDGER_ACCOUNT_REFERRAL_PAYABLE` defaults to this code |

@@ -36,7 +36,7 @@ module.exports = {
       canRedeemVouchers: false,
       voucherSaleCommission: 0.000,
       voucherRedemptionFee: 0.000,
-      ledgerAccountCode: '2100-05-001', // Merchant ad float ledger account
+      ledgerAccountCode: '2100-05-01', // Merchant ad float ledger account
       metadata: JSON.stringify({
         isTestMerchant: true,
         createdFor: 'watch_to_earn_testing'

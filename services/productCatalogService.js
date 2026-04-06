@@ -406,13 +406,13 @@ class ProductCatalogService {
 
   /**
    * Get curated product catalog for a VAS type.
-   * Uses v_best_offers materialized view for data/airtime,
-   * product_variants directly for electricity/voucher/bill_payment.
+   * Uses v_best_offers materialized view for data/airtime/electricity/voucher,
+   * product_variants directly for bill_payment and other types.
    */
   async getCatalog(vasType, options = {}) {
     const { provider, amount, bracket, limit } = options;
 
-    if (vasType === 'data' || vasType === 'airtime' || vasType === 'electricity') {
+    if (vasType === 'data' || vasType === 'airtime' || vasType === 'electricity' || vasType === 'voucher') {
       return this._getFromView(vasType, provider, bracket, limit);
     }
 

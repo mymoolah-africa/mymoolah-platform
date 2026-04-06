@@ -44,7 +44,7 @@
 ### **📚 Docs sync**
 - Canonical docs updated: `AGENT_HANDOVER.md`, `CHANGELOG.md`, `PROJECT_STATUS.md`, `DEVELOPMENT_GUIDE.md`, `CURSOR_2.0_RULES_FINAL.md`, `CURSOR_SKILLS.md`, `AGENT_ROLE_TEMPLATE.md`
 - **Rules vs skills**: `.cursor/rules/*.mdc` = always-on; `.agents/skills/**/SKILL.md` = deep procedures read when the task fits
-- **VAS**: Production uses precomputed `vas_best_offers` + fallback comparison; non-production lists all supplier variants — see `services/supplierComparisonService.js` / `services/bestOfferService.js`
+- **VAS**: All environments use `v_best_offers` materialized view for commission-based supplier selection (airtime, data, electricity, vouchers) — see `services/productCatalogService.js`
 
 **Session log**: `docs/session_logs/2026-03-19_1830_cursor-rules-skills-flash-catalog-docs.md`
 

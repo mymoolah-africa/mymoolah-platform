@@ -104,14 +104,14 @@ Merchants prepay money into their **ad float account** (similar to how supplier 
 ### Revenue Per View (Reach Ads)
 | Party | Amount | Ledger Account |
 |-------|--------|----------------|
-| Merchant (debit) | R6.00 | 2100-05-001 (Ad Float Liability) |
+| Merchant (debit) | R6.00 | 2100-05-01 (Ad Float Liability) |
 | User (credit) | R2.00 | 1100-01-01 (Wallet Clearing) |
 | MyMoolah (revenue) | R4.00 | 4100-05-01 (Ad Revenue) |
 
 ### Revenue Per Engagement (Engagement Ads)
 | Party | Amount | Ledger Account |
 |-------|--------|----------------|
-| Merchant (debit) | R15.00 | 2100-05-001 (Ad Float Liability) |
+| Merchant (debit) | R15.00 | 2100-05-01 (Ad Float Liability) |
 | User (credit) | R3.00 | 1100-01-01 (Wallet Clearing) |
 | MyMoolah (revenue) | R12.00 | 4100-05-01 (Ad Revenue) |
 
@@ -668,7 +668,7 @@ const isProduction = process.env.NODE_ENV === 'production' &&
 - **Status**: ✅ Fixed
 
 **Issue 4: Ledger Account Error (Non-blocking)**
-- **Problem**: `Account not found (2100-05-001)` in ledger posting
+- **Problem**: `Account not found (2100-05-01)` in ledger posting
 - **Impact**: Doesn't affect core Watch to Earn flow (wallet credit works)
 - **Status**: ⏳ Can be addressed later, not critical for UAT demos
 
