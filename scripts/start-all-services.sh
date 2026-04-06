@@ -263,13 +263,29 @@ wait_for_port "${PORTAL_FE_PORT}" "Portal frontend" 30 1 || warn "Portal fronten
 echo ""
 log "Setting port visibility to Public..."
 
+set_port_public() {
+  local port="$1"
+  local name="$2"
+  local max_attempts=3
+  for attempt in $(seq 1 ${max_attempts}); do
+    if gh codespace ports visibility "${port}:public" -c "${CODESPACE_NAME}" 2>/dev/null; then
+      ok "${name} (port ${port}) set to Public"
+      return 0
+    fi
+    if [ "${attempt}" -lt "${max_attempts}" ]; then
+      sleep 3
+    fi
+  done
+  warn "Could not set ${name} (port ${port}) to Public — set manually in Ports tab"
+  return 1
+}
+
 if [ -n "${CODESPACE_NAME:-}" ] && command -v gh >/dev/null 2>&1; then
-  gh codespace ports visibility \
-    "${WALLET_FE_PORT}:public" \
-    "${BACKEND_PORT}:public" \
-    "${PORTAL_BE_PORT}:public" \
-    "${PORTAL_FE_PORT}:public" \
-    -c "${CODESPACE_NAME}" 2>/dev/null && ok "All ports set to Public" || warn "Could not set port visibility (set manually in Ports tab)"
+  sleep 5
+  set_port_public "${WALLET_FE_PORT}" "Wallet frontend"
+  set_port_public "${BACKEND_PORT}" "Main backend"
+  set_port_public "${PORTAL_BE_PORT}" "Portal backend"
+  set_port_public "${PORTAL_FE_PORT}" "Portal frontend"
 elif [ -n "${CODESPACE_NAME:-}" ]; then
   warn "gh CLI not found — please set ports to Public manually in the Ports tab"
 else
