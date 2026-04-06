@@ -295,9 +295,9 @@ class SmsService {
     return this.sendSms(phoneNumber, msg, { type: 'ussd', reference: `USSD-DAT-${Date.now()}` });
   }
 
-  async sendUssdCashOutSms(phoneNumber, amount) {
-    const msg = `MyMoolah: eeziCash R${amount} voucher purchased. Present PIN at any eeziPay retailer. Keep this SMS safe.`;
-    return this.sendSms(phoneNumber, msg, { type: 'ussd', reference: `USSD-CASH-${Date.now()}` });
+  async sendUssdCashOutSms(phoneNumber, amount, pin) {
+    const msg = `MyMoolah: Your eeziCash PIN: ${pin}. Amount: R${amount}. Present at any Flash/eeziPay retailer. Keep this SMS safe.`;
+    return this.sendSms(phoneNumber, msg.substring(0, 160), { type: 'ussd', reference: `USSD-CASH-${Date.now()}` });
   }
 
   async sendUssdSendMoneySms(phoneNumber, amount, recipientName) {

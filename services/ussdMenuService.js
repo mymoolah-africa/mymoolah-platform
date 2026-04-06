@@ -468,8 +468,9 @@ async function handleCashOut(session, input) {
     return continueSession('Invalid choice.\n' + cashOutMenuText(), 'CASH_OUT');
   }
   const amount = CASHOUT_AMOUNTS[idx];
+  const total = parseFloat((amount + SMS_FEE_AMOUNT).toFixed(2));
   return continueSession(
-    `Cash out R${amount} via eeziCash?\n1 Yes\n2 No`,
+    `Cash out R${amount} (eeziCash)\n+R${SMS_FEE_AMOUNT.toFixed(2)} SMS fee\nTotal: R${total.toFixed(2)}\n1 Yes 2 No`,
     'CASH_OUT_CONFIRM',
     { cashOutAmount: amount }
   );
@@ -480,18 +481,19 @@ async function handleCashOutConfirm(session, input) {
   if (input !== '1') return continueSession('1 Yes\n2 No', 'CASH_OUT_CONFIRM');
 
   const amount = session.data.cashOutAmount;
+  const total = parseFloat((amount + SMS_FEE_AMOUNT).toFixed(2));
   const userId = session.data.userId;
 
-  const balCheck = await checkBalanceAndLimits(userId, amount);
+  const balCheck = await checkBalanceAndLimits(userId, total);
   if (!balCheck.ok) return endSession(balCheck.message);
 
   try {
     const result = await purchaseEeziVoucher(userId, amount, session.sessionId);
     if (result.success) {
+      await debitSmsFee(userId, session.sessionId, 'USSD-CASH');
+      sendPinSmsAsync(session.msisdn, result.pin, amount, null, 'eeziCash');
       const newBal = await getWalletBalance(userId);
-      return endSession(
-        `eeziCash PIN: ${result.pin}\nPresent at any eeziPay retailer.\nBal: R${newBal}`
-      );
+      return endSession(`eeziCash R${amount} purchased!\nPIN sent via SMS.\nBal: R${newBal}`);
     }
     return endSession(result.error || 'Cash out failed. Try again.');
   } catch (err) {
@@ -1210,7 +1212,9 @@ function sendPinSmsAsync(msisdn, pin, amount, recipient, productType, brandName)
   const e164 = msisdn.startsWith('+') ? msisdn : `+${msisdn}`;
   setImmediate(async () => {
     try {
-      if (productType === 'eeziAirtime') {
+      if (productType === 'eeziCash') {
+        await smsService.sendUssdCashOutSms(e164, amount, pin);
+      } else if (productType === 'eeziAirtime') {
         await smsService.sendUssdEeziAirtimeSms(e164, pin, amount, recipient || 'recipient');
       } else if (productType === 'eeziPower') {
         await smsService.sendUssdEeziPowerSms(e164, pin, amount);
