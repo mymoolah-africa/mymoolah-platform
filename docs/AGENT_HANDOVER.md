@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-06 23:30  
-**Latest Feature**: **Portal UI Overhaul — Clearflow Finance Control Room (v2.86.0)** — Complete visual overhaul of MMTP Admin Portal. CSS foundations rewritten (892→170 lines, 50+ design tokens). Login page redesigned (split-screen brand layout). Sidebar refined (CSS variable refs, page title header, search/notification icons). Dashboard rebuilt as finance control room (KPI cards, skeleton loading, welcome greeting). Data tables polished (UserManagement, TransactionMonitoring). 7 placeholder screens upgraded. Accessibility sweep completed. Zero inline styles in rewritten files.  
-**Document Version**: 2.86.0  
-**Session logs**: `docs/session_logs/2026-04-06_2330_portal-ui-overhaul.md`  
+**Last Updated**: 2026-04-07 01:00  
+**Latest Feature**: **Codespaces `start-all-services.sh`** — After Cloud SQL proxies start, script waits **3s** before launching main backend to reduce `read ECONNRESET` on first DB connection. Recovery steps added under ECONNRESET in `docs/DATABASE_CONNECTION_GUIDE.md`. (Prior: Portal UI Overhaul v2.86.0 — Clearflow-style admin portal.)  
+**Document Version**: 2.86.1  
+**Session logs**: `docs/session_logs/2026-04-07_0100_start-all-services-proxy-stabilize.md`, `docs/session_logs/2026-04-06_2330_portal-ui-overhaul.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
