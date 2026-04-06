@@ -19,7 +19,7 @@ The **MyMoolah USSD channel** exposes wallet and value-added services (VAS) over
 | **Send Money** | P2P transfer to existing MMTP users. Free SMS notification to both parties. |
 | **Airtime** | Purchase pinless airtime for the MSISDN linked to the session. |
 | **Data** | Purchase pinless mobile data bundles. |
-| **Cash out** | eeziCash voucher flow (Flash) — PIN displayed on USSD screen. |
+| **Cash out** | eeziCash voucher flow (Flash) — PIN delivered via SMS (R0.40 fee). |
 | **Airtime for Others** | eeziAirtime PIN voucher for a different phone number. PIN delivered via SMS (R0.40 fee). |
 | **Electricity** | eeziPower PIN voucher. PIN delivered via SMS (R0.40 fee). |
 | **Vouchers** | 6 brands: 1Voucher, OTT, Blu, Betway, Hollywood Bets, SupaBets. PIN via SMS (R0.40 fee). |
@@ -227,7 +227,7 @@ More
 
 - **Send Money:** Enter recipient phone → amount → confirm. Only existing MMTP users. Free SMS to sender + receiver.
 - **Airtime / Data (self):** Denomination menus → confirm → pinless VAS via `ProductPurchaseService`.  
-- **Cash out:** Amount menu → confirm → eeziCash PIN shown on screen.
+- **Cash out:** Amount menu → confirm → eeziCash PIN sent via SMS (R0.40 SMS fee).
 - **Airtime for Others (eeziAirtime):** Enter recipient phone → amount → confirm → PIN via SMS (R0.40 SMS fee).
 - **Buy Electricity (eeziPower):** Amount menu → confirm → PIN via SMS (R0.40 SMS fee).
 - **Buy Voucher:** Brand menu (1Voucher, OTT, Blu, Betway, Hollywood Bets, SupaBets) → amount → confirm → PIN via SMS (R0.40 SMS fee). Betting brands min R50, max R1000. Shopping brands min R10, max R200.

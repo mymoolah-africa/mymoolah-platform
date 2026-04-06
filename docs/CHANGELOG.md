@@ -1,5 +1,52 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-06 - USSD Phase 2 Services (v2.84.0)
+
+### Summary
+Complete USSD Phase 2 implementation for `*120*5616#` (production) and `*120*34248#` (staging):
+
+1. **Send Money (P2P)**: Wallet-to-wallet transfer to existing MMTP users only. Non-registered recipients are declined. Free SMS notifications to both sender and receiver.
+2. **Airtime for Others (eeziAirtime)**: Flash PIN voucher for a different phone number. PIN delivered via SMS. User charged R0.40 incl VAT SMS fee.
+3. **Buy Electricity (eeziPower)**: Flash PIN voucher. PIN delivered via SMS. User charged R0.40 SMS fee.
+4. **Buy Voucher**: 6 brands — 1Voucher, OTT Voucher, Blu Voucher, Betway, Hollywood Bets, SupaBets. Commission-based supplier selection (Flash preferred, MobileMart fallback). PIN via SMS. R0.40 SMS fee.
+5. **Cash Out (eeziCash)**: Updated to deliver PIN via SMS (R0.40 fee) instead of on-screen display.
+6. **SMS Fee Ledger**: New account `4000-20-03` SMS Fee Revenue. 3-line JE: DR Client Float R0.40, CR SMS Fee Revenue R0.35 (ex-VAT), CR VAT Control R0.05.
+7. **Menu restructured**: Main menu — Balance, Send Money, Buy Airtime, Buy Data, Cash Out, More. More menu — Airtime for Others, Buy Electricity, Buy Voucher, Mini Statement, Change PIN, Referral Code, Help.
+
+### Preset Amounts
+- Airtime for Others: R5, R10, R29, R55, R110
+- Electricity: R20, R50, R100, R200, R500
+- Non-betting vouchers (1Voucher, OTT, Blu): R10, R25, R50, R100, R200, R500
+- Betting vouchers (Betway, Hollywood Bets, SupaBets): R50, R100, R200, R500, R1,000
+
+### Files Modified
+- `services/ussdMenuService.js` — 12 new state handlers, 5 new operations, SMS fee logic, phone normalization
+- `services/smsService.js` — 4 new SMS templates (eeziAirtime, eeziPower, voucher, updated eeziCash with PIN)
+- `migrations/20260406_01_create_sms_fee_revenue_ledger_account.js` — Account `4000-20-03`
+- `docs/CHART_OF_ACCOUNTS.md` — New account, journal template (Section 3.13), env var mapping
+- `docs/USSD_INTEGRATION_GUIDE.md` — Updated menu tree, capabilities, Phase 2 complete, env vars
+
+### Environment Variables
+- `SMS_FEE_AMOUNT` (default `0.40`) — configurable SMS fee in ZAR incl VAT
+- `LEDGER_ACCOUNT_SMS_FEE_REVENUE` (default `4000-20-03`)
+
+---
+
+## 2026-04-06 - Voucher v_best_offers Integration, Electricity Cleanup & adService Typo Fix (v2.83.0)
+
+### Summary
+Integrated voucher catalog with `v_best_offers` materialized view for commission-based supplier selection. Fixed Flash electricity hardcoded `productCode` values. Added circuit breaker awareness to voucher catalog. Fixed `2100-05-001` → `2100-05-01` ledger account typo in adService, seeders, and documentation. Cleaned up stale bestOfferService references.
+
+### Files Modified
+- `services/productCatalogService.js` — Voucher catalog via `v_best_offers`
+- `controllers/catalogSyncController.js` — Admin refresh endpoint
+- `routes/overlayServices.js` — Voucher overlay integration
+- `services/adService.js` — Fixed `2100-05-001` → `2100-05-01`
+- `scripts/seed-watch-to-earn.js`, `seeders/20260120_seed_watch_to_earn.js` — Same typo fix
+- `docs/WATCH_TO_EARN.md`, `docs/CHART_OF_ACCOUNTS.md` — Documentation sync
+
+---
+
 ## 2026-04-06 - Auditing Skill v2.1.0 + Admin Portal Builder Skill + Knowledge Base Update (v2.82.0)
 
 ### Summary

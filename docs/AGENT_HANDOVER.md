@@ -101,8 +101,11 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (April 6, 2026 - 14:00)**
-**Voucher v_best_offers Integration, Electricity Cleanup & adService Typo Fix (v2.83.0)** — (1) Integrated voucher catalog with `v_best_offers` materialized view: `productCatalogService.getCatalog('voucher')` routes through `_getFromView`, `GET /vouchers/catalog` refactored to use view results with brand-regex grouping (`recogniseVoucherBrand`) and circuit breaker failover. (2) Electricity cleanup: fixed Flash hardcoded `productCode: 1` / `serviceProvider: 'ESKOM'` to use resolved variant metadata; wired `catalogSyncController` admin refresh to `v_best_offers`; corrected `supplierPricingService` tech debt entry (not deprecated). (3) Fixed `2100-05-001` → `2100-05-01` ledger account typo in `adService.js` (2), `seed-watch-to-earn.js`, `seeders/20260120_seed_watch_to_earn.js`, `WATCH_TO_EARN.md` (3), `CHART_OF_ACCOUNTS.md`. Watch-to-Earn ledger postings will now succeed. (4) Removed stale `bestOfferService` references from `README.md` and `PERFORMANCE.md`. Session log: `docs/session_logs/2026-04-06_1400_voucher-v-best-offers-electricity-cleanup.md`.
+### **Latest Achievement (April 6, 2026 - 15:00)**
+**USSD Phase 2 Services (v2.84.0)** — Complete USSD Phase 2 for `*120*5616#` (production) and `*120*34248#` (staging). New services: (1) Send Money (P2P) — wallet-to-wallet to existing MMTP users, free SMS to both parties. (2) Airtime for Others (eeziAirtime) — Flash PIN voucher, SMS delivery, R0.40 fee. (3) Buy Electricity (eeziPower) — Flash PIN voucher, SMS delivery, R0.40 fee. (4) Buy Voucher — 6 brands (1Voucher, OTT, Blu, Betway, Hollywood Bets, SupaBets), commission-based supplier selection, PIN via SMS, R0.40 fee. (5) Cash Out updated to PIN via SMS (R0.40 fee). (6) New ledger account `4000-20-03` SMS Fee Revenue, 3-line JE (R0.35 ex-VAT + R0.05 VAT). (7) Menu restructured: Main — Balance, Send Money, Buy Airtime, Buy Data, Cash Out, More. More — Airtime for Others, Electricity, Vouchers, Mini Statement, Change PIN, Referral, Help. Migration `20260406_01` applied to staging + production. Session log: `docs/session_logs/2026-04-06_1400_ussd-phase2-services.md`.
+
+### **Previous Achievement (April 6, 2026 - 14:00)**
+**Voucher v_best_offers Integration, Electricity Cleanup & adService Typo Fix (v2.83.0)** — Integrated voucher catalog with `v_best_offers` materialized view. Fixed Flash electricity hardcoded values. Fixed `2100-05-001` → `2100-05-01` ledger account typo. Cleaned up stale bestOfferService references. Session log: `docs/session_logs/2026-04-06_1400_voucher-v-best-offers-electricity-cleanup.md`.
 
 ### **Previous Achievement (April 6, 2026 - 10:00)**
 **Auditing Skill v2.1.0 + Admin Portal Builder Skill + Knowledge Base Update (v2.82.0)** — (1) Enhanced `.agents/skills/auditing/SKILL.md` from v2.0.0 to v2.1.0 with 8 targeted improvements: canonical CoA reference to `docs/CHART_OF_ACCOUNTS.md`, Mojaloop-to-MMTP account code mapping table, commission config reference (`config/supplier-commissions.json`, `v_best_offers`, `tax_transactions` FK known issue), Cloud Scheduler integration patterns (Section 9.6), `v_best_offers`/`ProductVariant`/`ProductSelectionRule` in architecture reference, IFRS/IAS presentation requirements, and Agent Optimization section for Claude Opus 4.6 (Section 15). (2) Created new `.agents/skills/admin-portal-builder/SKILL.md` v1.0.0 — 12-section guide (680+ lines) for MMTP Admin Portal: RBAC, dashboard architecture, data tables, maker-checker workflows, admin audit logging, overlay patterns, API design, 15-screen priority list, frontend component standards, code review checklist. (3) Updated `docs/CURSOR_SKILLS.md`, `docs/CHANGELOG.md`, `.cursor/rules/tech-debt.mdc`, `docs/AGENT_HANDOVER.md`. Internet research across GitHub, OpenClaw, LobeHub, and 5+ repositories confirmed existing auditing skill is already best-in-class. Session log: `docs/session_logs/2026-04-06_1000_auditing-skill-portal-skill-knowledge-base.md`.
@@ -693,25 +696,32 @@ You're part of a **banking-grade software system** where:
 
 ## 🎯 **CURRENT SESSION SUMMARY**
 
-**Session Status**: ✅ **COMPLETE** — VAS Catalog Production Deployment, Biller Telecoms Fix, eeziPower Label Fix  
-**Last Session**: 2026-04-03 15:00 — Production migrations, biller fix, eeziPower label fix
+**Session Status**: ✅ **COMPLETE** — USSD Phase 2 Services (v2.84.0)  
+**Last Session**: 2026-04-06 15:00 — USSD Phase 2 implementation, migration applied to staging + production
 
-### **Most Recent Work (2026-04-03 15:00)**
-- **VAS Catalog Simplification → Production**: Ran migrations `20260403_02` (product_selection_rules, 60 rules) and `20260403_03` (v_best_offers materialized view, 197 rows). Both staging and production now use the simplified catalog architecture.
-- **Telecoms biller fix**: MobileMart's bill payment API uses `mobilemart_content_creator: "telcos"` — this keyword was missing from `BILLER_CATEGORY_MAP.telecoms`. Added it, unlocking 35 telecoms billers (Telkom, Cell C, Virgin Mobile, VUMA fibre, Herotel, etc.).
-- **eeziPower label fix**: Backend `flashController.js` was hardcoding "eeziAirtime" for both eeziAirtime and eeziPower purchases. Now uses `isEeziPower` flag to set correct labels, vasType (`electricity` vs `airtime`), supplierProductId, and metadata. Frontend `TransactionDetailModal.tsx` detects eeziPower tokens and shows "Your eeziPower PIN" with amber styling and electricity redemption instructions.
-- **Regression tests**: 8/9 passed on production. The 1 expected limitation (postgres admin can't refresh mymoolah_app-owned view) is irrelevant — Cloud Run connects as mymoolah_app.
+### **Most Recent Work (2026-04-06 15:00)**
+- **USSD Phase 2 Services**: Complete implementation of 4 new USSD services + Cash Out SMS update for `*120*5616#` (production) and `*120*34248#` (staging).
+- **Send Money (P2P)**: Wallet-to-wallet transfer to existing MMTP users only. Non-registered recipients declined. Free SMS notifications to both sender and receiver.
+- **Airtime for Others (eeziAirtime)**: Flash PIN voucher for a different phone number. PIN delivered via SMS. R0.40 incl VAT SMS fee.
+- **Buy Electricity (eeziPower)**: Flash PIN voucher. PIN delivered via SMS. R0.40 SMS fee.
+- **Buy Voucher**: 6 brands — 1Voucher, OTT Voucher, Blu Voucher, Betway, Hollywood Bets, SupaBets. Commission-based supplier selection (Flash preferred, MobileMart fallback). PIN via SMS. R0.40 SMS fee.
+- **Cash Out (eeziCash)**: Updated from on-screen PIN to PIN via SMS with R0.40 fee.
+- **SMS Fee Ledger**: Account `4000-20-03` SMS Fee Revenue. JE: DR Client Float R0.40, CR Revenue R0.35, CR VAT R0.05.
+- **Menu restructured**: Main — Balance, Send Money, Buy Airtime, Buy Data, Cash Out, More. More — Airtime for Others, Buy Electricity, Buy Voucher, Mini Statement, Change PIN, Referral Code, Help.
+- **Migration `20260406_01`**: Applied to staging and production.
+- **Environment**: `SMS_FEE_AMOUNT=0.40` (configurable). Backend-only change — no frontend deployment needed.
 
-### **Previous Work (2026-04-02 13:30)**
-- **Electricity purchase fix**: Created `vas_products` table migration (`20260402_01`) and `processingTime` column migration (`20260402_02`). Reconciled R200 and R100 failed purchases. R150 electricity purchase completed end-to-end with automated commission and VAT.
-- **Treasury operations**: MobileMart float R2200 (real), Flash float R875 (real). Deposit notification service now creates transaction records.
+### **Previous Work (2026-04-06 14:00)**
+- **Voucher v_best_offers Integration (v2.83.0)**: Voucher catalog via materialized view. Electricity cleanup. adService typo fix.
 
-### **Previous Work (2026-04-01 17:00)**
-- **Production API testing**: Comprehensive staging API testing — registration, KYC, wallet transfers, payment requests, airtime/data, vouchers. 15+ issues fixed and deployed.
+### **Previous Work (2026-04-06 10:00)**
+- **Auditing Skill v2.1.0 + Admin Portal Builder v1.0.0 (v2.82.0)**: 8 auditing enhancements + new 680-line portal builder skill.
 
-### **Previous Work (2026-03-31 23:30)**
-- **Sync script fixed + extended**: Fixed JSON bug that caused all product INSERTs to fail. Added `--staging`/`--production`/`--uat` target flags, `--billers-only` filter, 5-second production safety pause. Renamed to `scripts/sync-mobilemart-products.js`.
-- **Bill category click fixed**: Backend `mapBillerCategory()` maps MobileMart's `contentCreator` to 6 frontend category IDs via keyword matching.
+### **Previous Work (2026-04-04–05)**
+- **Chart of Accounts (v2.80.0)**: Canonical CoA reference doc, 4 missing account migrations, visual HTML CoA.
+- **Ledger Audit**: Backfill journal entries, scheduled recon service, forward JE posting for P2P/RTP/voucher.
+- **KYC Fixes**: Raw SQL for user updates, auto-navigate removal, reset scripts preserve audit trail.
+- **Staging/Production Parity**: Rate limit bypass removed, referral payout Cloud Scheduler, ProductVariant findOrCreate fix.
 - **Staging sync successful**: 1,205 production billers synced to staging.
 
 ### **Previous Work (2026-03-31 23:00)**
@@ -745,29 +755,29 @@ You're part of a **banking-grade software system** where:
 - **PayShap RTP Pain.013 fixes**: Fixed EDRIL rejection (CdtrRefInf.Ref 35-char limit), Ustrd rejection (removed), DuePyblAmt (net amount), PADCL priority. Creditor name in CdtrRefInf.Ref. Per-bank account normalization.
 
 ### **Current State**
-- SFTP Gateway: `34.35.137.166`, **port 5022**, admin `https://34.35.137.166` — ✅ Running
-- SBSA H2H: PG15 + SSH key submitted ✅ | SOAP handler live ✅ | VPN resolved (Open Internet) ✅ | PGP not required ✅ | File names confirmed ✅ | Awaiting SBSA test traffic before freeze (Thu Mar 27 → Apr 8)
-- PayShap RTP: Standard Bank ✅ | Discovery Bank ✅ (Peach DECOMMISSIONED). Creditor MSISDN auto-resolved in CdtrRefInf.Ref ✅
-- Peach Payments: ARCHIVED (2026-03-21). See `routes/peach.js` for reactivation steps.
+- **USSD Phase 2**: Live on Codespaces. Backend redeploy needed for staging/production Cloud Run.
+- USSD shortcodes: `*120*5616#` (production), `*120*34248#` (staging)
+- SMS Fee: R0.40 incl VAT via `SMS_FEE_AMOUNT` env var (defaults to 0.40)
+- Ledger: `4000-20-03` SMS Fee Revenue — migration applied to staging + production
+- SFTP Gateway: `34.35.137.166`, **port 5022** — ✅ Running
+- SBSA H2H: PG15 + SSH key submitted ✅ | SOAP handler live ✅ | Awaiting SBSA test traffic
+- PayShap RTP: Standard Bank ✅ | Discovery Bank ✅ (Peach DECOMMISSIONED)
 - Production: `api-mm.mymoolah.africa`, `wallet.mymoolah.africa` — live
-- **Production redeploy required** — VAS catalog simplification, Telecoms biller fix, eeziPower label fix (commits `580bcddf`, `c30213d3`, `b5e974b1`, `9e90bd63`). Migrations already applied.
-- Production wallet (User 1): R554.25 | MobileMart float: R2,200 | Flash float: R875
-- Commission revenue: R6.50 | VAT control: R1.60
+- **Backend redeploy required** for USSD Phase 2 + previous VAS/voucher/electricity changes
 
 ### **Next Agent Actions**
 1. Read `docs/CURSOR_2.0_RULES_FINAL.md` (MANDATORY)
-2. Read this file and recent session logs (especially `2026-04-03_1500_vas-catalog-production-biller-eezipower-fix.md` and `2026-04-03_1400_vas-catalog-simplification.md`)
-3. **VAS Catalog is now live on both staging and production** — `v_best_offers` materialized view auto-refreshes after each catalog sweep. Commission config in `config/supplier-commissions.json`. Product selection rules in `product_selection_rules` table.
-4. **Deprecated files** (header comments added, not deleted): `bestOfferService.js`, `catalogDisplayPolicy.js`, `productComparisonService.js`, `supplierPricingService.js`, `scripts/refresh-vas-best-offers.js`, `scripts/mark-featured-data-products.js`. Can be deleted once production is stable.
-5. **Frontend display tech debt**: (a) Airtime success modal shows "Vodacom Airtime - R2" with redundant "- R2" suffix; (b) VAS purchases show "Money Sent" as transaction type instead of "Purchase" or similar.
-6. **Balance auto-refresh UX**: Investigate why the balance didn't auto-refresh for ~1 minute after RTP paid notification. The 10s polling in `MoolahContext.tsx` with `window.__processedTxnNotifIds` deduplication may skip a refresh cycle under certain timing.
-7. **Confirm 1Voucher product code with Flash** — Code `311` rejected (error 2283). Need Flash to confirm correct product code.
-8. **Continue API testing**: bill payments, eeziCash, referral system, AI support chat
-9. **Add more brand logos**: As André sources them — Steam, Netflix, Google Play, Roblox, MTN, CellC, Telkom (same Vite import pattern)
+2. Read this file and recent session logs (especially `2026-04-06_1400_ussd-phase2-services.md`)
+3. **USSD Phase 2 is code-complete** — all services wired to live APIs (Flash, MobileMart, MyMobileAPI SMS). Backend redeploy will activate on both shortcodes.
+4. **Test USSD Phase 2 flows** after deployment: Send Money, Airtime for Others, Electricity, Vouchers, Cash Out SMS
+5. **VAS Catalog live on staging + production** — `v_best_offers` view, commission config in `config/supplier-commissions.json`
+6. **Frontend display tech debt**: (a) Airtime success modal "- R2" suffix; (b) VAS purchases show "Money Sent" type
+7. **Confirm 1Voucher product code with Flash** — Code `311` rejected (error 2283)
+8. **Continue API testing**: bill payments, referral system, AI support chat
+9. **Add more brand logos**: Steam, Netflix, Google Play, Roblox, MTN, CellC, Telkom
 10. Do NOT reactivate Peach Payments without explicit approval from André
 11. Do NOT add `RmtInf.Ustrd` to Pain.013 — SBSA rejects it
-12. npm audit: 9 remaining (5 low, 4 moderate) — all in transitive deps, cannot safely fix
-13. **Commission allocation**: `flash_transactions.service_type` ENUM still missing `airtime`, `data`, `electricity` — but the `::text` cast in `supplierPricingService.js` handles this gracefully.
+12. npm audit: 9 remaining (5 low, 4 moderate) — all in transitive deps
 
 ---
 
@@ -775,6 +785,11 @@ You're part of a **banking-grade software system** where:
 
 | Date | Update |
 |------|--------|
+| Apr 6 (15:00) | **USSD Phase 2 Services (v2.84.0)**: Send Money (P2P), Airtime for Others (eeziAirtime), Buy Electricity (eeziPower), Buy Voucher (6 brands), Cash Out via SMS. All PIN products use SMS delivery with R0.40 fee. New ledger account `4000-20-03`. Migration applied to staging + production. Session log: `docs/session_logs/2026-04-06_1400_ussd-phase2-services.md` |
+| Apr 6 (14:00) | **Voucher v_best_offers + Electricity Cleanup (v2.83.0)**: Voucher catalog via `v_best_offers` materialized view. Flash electricity hardcoded values fixed. adService `2100-05-001` → `2100-05-01` typo fixed. Session log: `docs/session_logs/2026-04-06_1400_voucher-v-best-offers-electricity-cleanup.md` |
+| Apr 6 (10:00) | **Auditing Skill v2.1.0 + Admin Portal Builder v1.0.0 (v2.82.0)**: 8 auditing enhancements + new 680-line portal builder skill. Session log: `docs/session_logs/2026-04-06_1000_auditing-skill-portal-skill-knowledge-base.md` |
+| Apr 5 (18:00) | **Electricity Commission-Based Supplier Selection**: Route electricity via `v_best_offers`, `productId` in payload, circuit breaker + failover. Session log: `docs/session_logs/2026-04-05_1800_electricity-supplier-comparison.md` |
+| Apr 4-5 | **Chart of Accounts (v2.80.0), Ledger Audit, KYC Fixes, Staging/Production Parity**: CoA doc, 4 missing account migrations, ledger backfill, KYC raw SQL fix, rate limit parity, referral Cloud Scheduler. Multiple session logs. |
 | Apr 3 (15:00) | **VAS Catalog Production + Biller Telecoms + eeziPower Fix**: Applied VAS catalog simplification migrations to production (product_selection_rules + v_best_offers view, 197 rows). Fixed empty Telecoms biller category (added `'telcos'` to keyword map, 35 billers unlocked). Fixed eeziPower mislabelled as eeziAirtime in backend records and frontend transaction modal. Session log: `docs/session_logs/2026-04-03_1500_vas-catalog-production-biller-eezipower-fix.md` |
 | Apr 3 (14:00) | **VAS Catalog Simplification (Staging)**: Replaced 6 services, 2 scripts, 3 cron schedules with single `v_best_offers` materialized view + `product_selection_rules` table + `config/supplier-commissions.json`. Unified `productCatalogService.getCatalog()` entry point. 34/34 regression tests passed. Session log: `docs/session_logs/2026-04-03_1400_vas-catalog-simplification.md` |
 | Apr 3 (09:00) | **Referral System Banking-Grade Fix**: Stable persistent referral codes, dual-path signup matching, USSD fix, dead frontend code removed. Session log: `docs/session_logs/2026-04-03_0900_referral-system-banking-grade-fix.md` |

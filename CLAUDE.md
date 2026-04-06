@@ -9,7 +9,7 @@
 ## What is MyMoolah?
 
 Banking-grade Treasury Platform for South Africa.  
-**Services**: Digital wallet, double-entry ledger, VAS (airtime/data/electricity/bills), USDC/stablecoin, NFC deposits, KYC, automated reconciliation.  
+**Services**: Digital wallet, double-entry ledger, VAS (airtime/data/electricity/bills), USSD banking (`*120*5616#`), USDC/stablecoin, NFC deposits, KYC, automated reconciliation.  
 **Production**: api-mm.mymoolah.africa | wallet.mymoolah.africa  
 **Stack**: Node.js + Express, PostgreSQL (Cloud SQL), React + Vite, GCP
 
@@ -106,6 +106,11 @@ Never `pm2 restart all`, never `node server.js`, never `npm start`.
 | DB helper | `scripts/db-connection-helper.js` |
 | Migration script | `scripts/run-migrations-master.sh` |
 | Restart script | `scripts/one-click-restart-and-start.sh` |
+| USSD integration guide | `docs/USSD_INTEGRATION_GUIDE.md` |
+| USSD state machine | `services/ussdMenuService.js` |
+| USSD auth/PIN | `services/ussdAuthService.js` |
+| USSD sessions | `services/ussdSessionService.js` |
+| Chart of Accounts | `docs/CHART_OF_ACCOUNTS.md` |
 
 ---
 
@@ -120,6 +125,8 @@ Never `pm2 restart all`, never `node server.js`, never `npm start`.
 | npm audit: 9 vulnerabilities (5 low, 4 moderate) | Low — transitive deps |
 | RTP balance auto-refresh can miss a polling cycle | Low — cosmetic delay, `MoolahContext.tsx` dedup logic |
 | `tax_transactions` FK constraint on electricity commission | Low — commission JEs posted; audit record fails |
+| USSD sessions use in-memory fallback on Cloud Run (no Redis) | Medium — sessions lost on cold-start |
+| Airtime/Electricity/Biller inline in overlayServices.js (~1,200 lines) | Medium — violates separation of concerns |
 
 ---
 
