@@ -1,21 +1,45 @@
 import React from 'react';
+import { Shield } from 'lucide-react';
+
+const FEATURES = [
+  'Admin action log',
+  'Login attempts',
+  'Permission changes',
+  'Export for compliance',
+] as const;
 
 export const SecurityAuditOverlay: React.FC = () => {
   return (
     <div className="space-y-6">
-        <div className="mymoolah-card p-6">
-          <h2 className="admin-text-heading text-xl mb-4">Security & Audit</h2>
-          <p className="admin-text-body text-gray-600">
-            Comprehensive security monitoring and audit system for the MyMoolah Treasury Platform.
-            Monitor security events, audit logs, and compliance reporting.
-          </p>
-          <div className="mt-4 p-4 bg-red-50 rounded-lg">
-            <p className="admin-text-small text-red-800">
-              <strong>Features:</strong> Security monitoring, audit logs, compliance reporting, 
-              threat detection, and security analytics.
-            </p>
-          </div>
+      <div>
+        <h1 className="text-2xl font-semibold text-[var(--foreground)]">Audit Log</h1>
+        <p className="text-sm text-[var(--muted-foreground)] mt-1">
+          View all administrative actions, security events, and compliance audit trails.
+        </p>
+      </div>
+
+      <div className="bg-white rounded-xl border border-[var(--border)] p-12 flex flex-col items-center text-center">
+        <div className="w-16 h-16 rounded-2xl bg-[var(--muted)] flex items-center justify-center mb-6">
+          <Shield className="w-8 h-8 text-[var(--muted-foreground)]" />
+        </div>
+        <h2 className="text-lg font-semibold text-[var(--foreground)] mb-2">Coming Soon</h2>
+        <p className="text-sm text-[var(--muted-foreground)] max-w-md mb-8">
+          Searchable, exportable audit trails for admin activity, auth events, and RBAC changes
+          will be available in this module as it is rolled out.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg">
+          {FEATURES.map((f) => (
+            <div
+              key={f}
+              className="flex items-center gap-3 rounded-lg border border-[var(--border)] px-4 py-3 text-left"
+            >
+              <div className="w-2 h-2 rounded-full bg-[var(--primary)] shrink-0" />
+              <span className="text-sm text-[var(--foreground)]">{f}</span>
+            </div>
+          ))}
         </div>
       </div>
+    </div>
   );
 };

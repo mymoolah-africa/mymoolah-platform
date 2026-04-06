@@ -1,12 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Eye, EyeOff, Lock, Shield } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+
+function BrandMark({ className = '' }: { className?: string }) {
+  return (
+    <div
+      className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-sm font-bold text-[var(--primary-foreground)] bg-[var(--primary)] ${className}`}
+      aria-hidden
+    >
+      M
+    </div>
+  );
+}
 
 const AdminLogin: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const { login, isAuthenticated } = useAuth();
 
@@ -37,82 +50,135 @@ const AdminLogin: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1
-            className="text-3xl font-bold tracking-tight"
-            style={{ color: '#1a1a2e' }}
-          >
-            MyMoolah
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">Admin Portal</p>
+    <div className="flex min-h-screen flex-col font-sans lg:flex-row">
+      {/* Left brand panel — desktop only */}
+      <aside
+        className="relative hidden w-full flex-col justify-between bg-[var(--sidebar)] px-10 py-12 text-[var(--sidebar-foreground)] lg:flex lg:w-[40%]"
+        aria-label="MyMoolah brand"
+      >
+        <div>
+          <div className="flex items-center gap-3">
+            <BrandMark />
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-white">MyMoolah</p>
+            </div>
+          </div>
+          <div className="mt-12 space-y-2">
+            <h1 className="text-2xl font-semibold tracking-tight text-white md:text-3xl">
+              MyMoolah Treasury Platform
+            </h1>
+            <p className="text-sm text-[var(--muted-foreground)]">Admin Portal</p>
+          </div>
         </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Sign in</h2>
-
-          {error && (
-            <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Email address
-              </label>
-              <input
-                id="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition"
-                placeholder="you@mymoolah.africa"
-                disabled={isSubmitting}
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition"
-                placeholder="Enter your password"
-                disabled={isSubmitting}
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full rounded-lg py-2.5 text-sm font-medium text-white transition disabled:opacity-60"
-              style={{ backgroundColor: '#00B894' }}
-            >
-              {isSubmitting ? 'Signing in...' : 'Sign in'}
-            </button>
-          </form>
-        </div>
-
-        <p className="text-center text-xs text-gray-400 mt-6">
-          MyMoolah Treasury Platform &middot; Banking-grade security
+        <p className="text-xs font-medium tracking-wide text-[var(--muted-foreground)]">
+          Banking-Grade Security | TLS 1.3 Encrypted
         </p>
+      </aside>
+
+      {/* Right: form area */}
+      <div className="flex min-h-screen flex-1 flex-col bg-[var(--background)] lg:w-[60%]">
+        {/* Mobile / tablet brand strip */}
+        <header className="border-b border-[var(--border)] bg-[var(--card)] px-4 py-4 lg:hidden">
+          <div className="mx-auto flex max-w-md items-center gap-3">
+            <BrandMark />
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-[var(--foreground)]">MyMoolah</p>
+              <p className="truncate text-xs text-[var(--muted-foreground)]">Admin Portal</p>
+            </div>
+          </div>
+        </header>
+
+        <main className="flex flex-1 items-center justify-center px-4 py-10 sm:px-6">
+          <div className="w-full max-w-md rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] p-8 shadow-[var(--portal-shadow)]">
+            <h2 className="text-xl font-semibold tracking-tight text-[var(--foreground)]">
+              Sign in
+            </h2>
+
+            {error ? (
+              <div
+                className="mt-4 rounded-[var(--radius)] border border-[var(--destructive)]/20 bg-[var(--destructive)]/10 px-4 py-3 text-sm text-[var(--destructive)]"
+                role="alert"
+              >
+                {error}
+              </div>
+            ) : null}
+
+            <form
+              onSubmit={handleSubmit}
+              className={`space-y-5 ${error ? 'mt-6' : 'mt-8'}`}
+            >
+              <div>
+                <label
+                  htmlFor="email"
+                  className="mb-1.5 block text-sm font-medium text-[var(--foreground)]"
+                >
+                  Email address
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="min-h-[44px] w-full rounded-[var(--radius)] border border-[var(--input)] bg-[var(--card)] px-4 py-2.5 text-sm text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] transition-colors focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+                  placeholder="you@mymoolah.africa"
+                  disabled={isSubmitting}
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="password"
+                  className="mb-1.5 block text-sm font-medium text-[var(--foreground)]"
+                >
+                  Password
+                </label>
+                <div className="relative">
+                  <input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="min-h-[44px] w-full rounded-[var(--radius)] border border-[var(--input)] bg-[var(--card)] py-2.5 pl-4 pr-12 text-sm text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] transition-colors focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+                    placeholder="Enter your password"
+                    disabled={isSubmitting}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    disabled={isSubmitting}
+                    className="absolute right-0 top-0 flex h-[44px] w-11 items-center justify-center rounded-r-[var(--radius)] text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="min-h-[44px] w-full rounded-[var(--radius)] bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-foreground)] transition-opacity focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isSubmitting ? 'Signing in...' : 'Sign in'}
+              </button>
+            </form>
+
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--muted)]/50 px-2.5 py-1 text-[11px] font-medium text-[var(--muted-foreground)]">
+                <Shield className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                Banking-Grade
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--muted)]/50 px-2.5 py-1 text-[11px] font-medium text-[var(--muted-foreground)]">
+                <Lock className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                TLS 1.3
+              </span>
+            </div>
+          </div>
+        </main>
       </div>
     </div>
   );

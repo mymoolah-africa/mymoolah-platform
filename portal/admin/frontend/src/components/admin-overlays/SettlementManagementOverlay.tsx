@@ -1,21 +1,45 @@
 import React from 'react';
+import { Layers } from 'lucide-react';
+
+const FEATURES = [
+  'Settlement queue',
+  'Maker-checker approval',
+  'Auto-settlement config',
+  'Settlement history',
+] as const;
 
 export const SettlementManagementOverlay: React.FC = () => {
   return (
     <div className="space-y-6">
-        <div className="mymoolah-card p-6">
-          <h2 className="admin-text-heading text-xl mb-4">Settlement Management</h2>
-          <p className="admin-text-body text-gray-600">
-            Advanced settlement management system for automated and manual settlements
-            across all suppliers, merchants, and service providers.
-          </p>
-          <div className="mt-4 p-4 bg-indigo-50 rounded-lg">
-            <p className="admin-text-small text-indigo-800">
-              <strong>Features:</strong> Automated settlements, manual processing, 
-              reconciliation reports, and settlement analytics.
-            </p>
-          </div>
+      <div>
+        <h1 className="text-2xl font-semibold text-[var(--foreground)]">Settlement Management</h1>
+        <p className="text-sm text-[var(--muted-foreground)] mt-1">
+          Manage settlement cycles, approve payouts, and track reconciliation status.
+        </p>
+      </div>
+
+      <div className="bg-white rounded-xl border border-[var(--border)] p-12 flex flex-col items-center text-center">
+        <div className="w-16 h-16 rounded-2xl bg-[var(--muted)] flex items-center justify-center mb-6">
+          <Layers className="w-8 h-8 text-[var(--muted-foreground)]" />
+        </div>
+        <h2 className="text-lg font-semibold text-[var(--foreground)] mb-2">Coming Soon</h2>
+        <p className="text-sm text-[var(--muted-foreground)] max-w-md mb-8">
+          End-to-end settlement operations—queues, approvals, automation, and audit-ready
+          history—will live here. Implementation is planned for a future release.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg">
+          {FEATURES.map((f) => (
+            <div
+              key={f}
+              className="flex items-center gap-3 rounded-lg border border-[var(--border)] px-4 py-3 text-left"
+            >
+              <div className="w-2 h-2 rounded-full bg-[var(--primary)] shrink-0" />
+              <span className="text-sm text-[var(--foreground)]">{f}</span>
+            </div>
+          ))}
         </div>
       </div>
+    </div>
   );
 };

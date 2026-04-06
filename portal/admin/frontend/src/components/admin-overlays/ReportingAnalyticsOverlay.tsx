@@ -1,21 +1,45 @@
 import React from 'react';
+import { BarChart3 } from 'lucide-react';
+
+const FEATURES = [
+  'Transaction reports',
+  'Revenue analytics',
+  'KYC compliance stats',
+  'Scheduled exports',
+] as const;
 
 export const ReportingAnalyticsOverlay: React.FC = () => {
   return (
     <div className="space-y-6">
-        <div className="mymoolah-card p-6">
-          <h2 className="admin-text-heading text-xl mb-4">Reporting & Analytics</h2>
-          <p className="admin-text-body text-gray-600">
-            Comprehensive reporting and analytics dashboard for business intelligence,
-            performance metrics, and financial reporting across the platform.
-          </p>
-          <div className="mt-4 p-4 bg-teal-50 rounded-lg">
-            <p className="admin-text-small text-teal-800">
-              <strong>Features:</strong> Business intelligence, performance dashboards, 
-              financial reports, custom analytics, and data export capabilities.
-            </p>
-          </div>
+      <div>
+        <h1 className="text-2xl font-semibold text-[var(--foreground)]">Reports & Analytics</h1>
+        <p className="text-sm text-[var(--muted-foreground)] mt-1">
+          Generate financial reports, transaction analytics, and compliance documentation.
+        </p>
+      </div>
+
+      <div className="bg-white rounded-xl border border-[var(--border)] p-12 flex flex-col items-center text-center">
+        <div className="w-16 h-16 rounded-2xl bg-[var(--muted)] flex items-center justify-center mb-6">
+          <BarChart3 className="w-8 h-8 text-[var(--muted-foreground)]" />
+        </div>
+        <h2 className="text-lg font-semibold text-[var(--foreground)] mb-2">Coming Soon</h2>
+        <p className="text-sm text-[var(--muted-foreground)] max-w-md mb-8">
+          Reporting packs, dashboards, and scheduled deliveries for finance and compliance teams
+          are on the roadmap for this section.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg">
+          {FEATURES.map((f) => (
+            <div
+              key={f}
+              className="flex items-center gap-3 rounded-lg border border-[var(--border)] px-4 py-3 text-left"
+            >
+              <div className="w-2 h-2 rounded-full bg-[var(--primary)] shrink-0" />
+              <span className="text-sm text-[var(--foreground)]">{f}</span>
+            </div>
+          ))}
         </div>
       </div>
+    </div>
   );
 };
