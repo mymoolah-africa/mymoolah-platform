@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-06 10:00  
-**Latest Feature**: **Auditing Skill v2.1.0 + Admin Portal Builder Skill + Knowledge Base Update** — Enhanced auditing skill with 8 improvements (CoA reference, Mojaloop-to-MMTP code mapping, commission config, Cloud Scheduler, IFRS, Opus 4.6 optimization). Created new admin-portal-builder skill (12 sections, 680+ lines). Updated all knowledge base files. Internet research confirmed existing auditing skill is best-in-class; no superior open-source alternative found.  
-**Document Version**: 2.82.0  
-**Session logs**: `docs/session_logs/2026-04-06_1000_auditing-skill-portal-skill-knowledge-base.md`, `docs/session_logs/2026-04-05_1800_electricity-supplier-comparison.md`  
+**Last Updated**: 2026-04-06 14:00  
+**Latest Feature**: **Voucher v_best_offers Integration, Electricity Cleanup & adService Typo Fix (v2.83.0)** — Integrated voucher catalog with `v_best_offers` materialized view for commission-based supplier selection. Fixed Flash electricity hardcoded values. Added circuit breaker awareness to voucher catalog. Fixed `2100-05-001` → `2100-05-01` ledger account typo in adService/seeders/docs. Cleaned up stale bestOfferService references. Updated tech debt register.  
+**Document Version**: 2.83.0  
+**Session logs**: `docs/session_logs/2026-04-06_1400_voucher-v-best-offers-electricity-cleanup.md`, `docs/session_logs/2026-04-06_1000_auditing-skill-portal-skill-knowledge-base.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -101,7 +101,10 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (April 6, 2026 - 10:00)**
+### **Latest Achievement (April 6, 2026 - 14:00)**
+**Voucher v_best_offers Integration, Electricity Cleanup & adService Typo Fix (v2.83.0)** — (1) Integrated voucher catalog with `v_best_offers` materialized view: `productCatalogService.getCatalog('voucher')` routes through `_getFromView`, `GET /vouchers/catalog` refactored to use view results with brand-regex grouping (`recogniseVoucherBrand`) and circuit breaker failover. (2) Electricity cleanup: fixed Flash hardcoded `productCode: 1` / `serviceProvider: 'ESKOM'` to use resolved variant metadata; wired `catalogSyncController` admin refresh to `v_best_offers`; corrected `supplierPricingService` tech debt entry (not deprecated). (3) Fixed `2100-05-001` → `2100-05-01` ledger account typo in `adService.js` (2), `seed-watch-to-earn.js`, `seeders/20260120_seed_watch_to_earn.js`, `WATCH_TO_EARN.md` (3), `CHART_OF_ACCOUNTS.md`. Watch-to-Earn ledger postings will now succeed. (4) Removed stale `bestOfferService` references from `README.md` and `PERFORMANCE.md`. Session log: `docs/session_logs/2026-04-06_1400_voucher-v-best-offers-electricity-cleanup.md`.
+
+### **Previous Achievement (April 6, 2026 - 10:00)**
 **Auditing Skill v2.1.0 + Admin Portal Builder Skill + Knowledge Base Update (v2.82.0)** — (1) Enhanced `.agents/skills/auditing/SKILL.md` from v2.0.0 to v2.1.0 with 8 targeted improvements: canonical CoA reference to `docs/CHART_OF_ACCOUNTS.md`, Mojaloop-to-MMTP account code mapping table, commission config reference (`config/supplier-commissions.json`, `v_best_offers`, `tax_transactions` FK known issue), Cloud Scheduler integration patterns (Section 9.6), `v_best_offers`/`ProductVariant`/`ProductSelectionRule` in architecture reference, IFRS/IAS presentation requirements, and Agent Optimization section for Claude Opus 4.6 (Section 15). (2) Created new `.agents/skills/admin-portal-builder/SKILL.md` v1.0.0 — 12-section guide (680+ lines) for MMTP Admin Portal: RBAC, dashboard architecture, data tables, maker-checker workflows, admin audit logging, overlay patterns, API design, 15-screen priority list, frontend component standards, code review checklist. (3) Updated `docs/CURSOR_SKILLS.md`, `docs/CHANGELOG.md`, `.cursor/rules/tech-debt.mdc`, `docs/AGENT_HANDOVER.md`. Internet research across GitHub, OpenClaw, LobeHub, and 5+ repositories confirmed existing auditing skill is already best-in-class. Session log: `docs/session_logs/2026-04-06_1000_auditing-skill-portal-skill-knowledge-base.md`.
 
 ### **Previous Achievement (April 4, 2026 - 23:00)**
