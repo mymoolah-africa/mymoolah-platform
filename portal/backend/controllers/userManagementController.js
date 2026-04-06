@@ -1,13 +1,13 @@
 'use strict';
 
 const { validationResult } = require('express-validator');
-const { Op, fn, col, where } = require('sequelize');
+const { getClient } = require('../helpers/getDbClient');
 
 class UserManagementController {
   /**
    * GET /api/v1/admin/wallet-users
    * Search wallet users with pagination, filtering by phone/email/name/KYC status
-   * Uses the main app's database via require('../../../models')
+   * Uses pg via scripts/db-connection-helper (no main-app Sequelize models).
    */
   async getWalletUsers(req, res) {
     const errors = validationResult(req);
@@ -20,8 +20,8 @@ class UserManagementController {
       });
     }
 
+    const client = await getClient();
     try {
-      const db = require('../../../models');
       const adminEmail = req.portalUser?.email || 'unknown';
       console.info(`[UserManagement] wallet-users list by ${adminEmail}`);
 
@@ -32,123 +32,155 @@ class UserManagementController {
       const kycStatus = req.query.kycStatus ? String(req.query.kycStatus).toLowerCase() : '';
       const isActiveParam = req.query.isActive;
 
-      const userWhere = {};
+      const conditions = [];
+      const params = [];
+      let p = 1;
 
       if (isActiveParam === 'true') {
-        userWhere.status = 'active';
+        conditions.push(`u.status = $${p}`);
+        params.push('active');
+        p += 1;
       } else if (isActiveParam === 'false') {
-        userWhere.status = { [Op.ne]: 'active' };
+        conditions.push(`u.status <> $${p}`);
+        params.push('active');
+        p += 1;
       }
-
-      const kycInclude = {
-        model: db.Kyc,
-        as: 'kyc',
-        attributes: ['id', 'status', 'documentType', 'submittedAt', 'reviewedAt'],
-        required: false,
-      };
 
       if (kycStatus === 'pending') {
-        userWhere.kycStatus = 'pending';
+        conditions.push(`u."kycStatus" = $${p}`);
+        params.push('pending');
+        p += 1;
       } else if (kycStatus === 'approved') {
-        userWhere.kycStatus = 'verified';
+        conditions.push(`u."kycStatus" = $${p}`);
+        params.push('verified');
+        p += 1;
       } else if (kycStatus === 'rejected') {
-        userWhere.kycStatus = 'rejected';
-      } else if (kycStatus === 'reset') {
-        kycInclude.where = { status: 'reset' };
-        kycInclude.required = true;
+        conditions.push(`u."kycStatus" = $${p}`);
+        params.push('rejected');
+        p += 1;
       }
+
+      const kycJoin =
+        kycStatus === 'reset'
+          ? `INNER JOIN LATERAL (
+          SELECT id, status, "documentType", "submittedAt", "reviewedAt"
+          FROM kyc
+          WHERE "userId" = u.id AND status = 'reset'
+          ORDER BY "createdAt" DESC
+          LIMIT 1
+        ) k ON true`
+          : `LEFT JOIN LATERAL (
+          SELECT id, status, "documentType", "submittedAt", "reviewedAt"
+          FROM kyc
+          WHERE "userId" = u.id
+          ORDER BY "createdAt" DESC
+          LIMIT 1
+        ) k ON true`;
 
       if (search) {
         const pattern = `%${search}%`;
-        userWhere[Op.or] = [
-          { phoneNumber: { [Op.iLike]: pattern } },
-          { email: { [Op.iLike]: pattern } },
-          { firstName: { [Op.iLike]: pattern } },
-          { lastName: { [Op.iLike]: pattern } },
-          where(fn('concat', col('User.firstName'), ' ', col('User.lastName')), {
-            [Op.iLike]: pattern,
-          }),
-        ];
+        conditions.push(`(
+          u."phoneNumber" ILIKE $${p}
+          OR u."email" ILIKE $${p}
+          OR u."firstName" ILIKE $${p}
+          OR u."lastName" ILIKE $${p}
+          OR (u."firstName" || ' ' || u."lastName") ILIKE $${p}
+        )`);
+        params.push(pattern);
+        p += 1;
       }
 
-      const userAttributes = [
-        'id',
-        'email',
-        'firstName',
-        'lastName',
-        'phoneNumber',
-        'status',
-        'kycStatus',
-        'kyc_tier',
-        'kycVerifiedAt',
-        'createdAt',
-        'updatedAt',
-      ];
+      const whereSql = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
-      const { count, rows } = await db.User.findAndCountAll({
-        where: userWhere,
-        attributes: userAttributes,
-        include: [
-          {
-            model: db.Wallet,
-            as: 'wallet',
-            attributes: ['id', 'balance', 'currency', 'status'],
-            required: false,
-          },
-          kycInclude,
-        ],
-        limit,
-        offset,
-        order: [['createdAt', 'DESC']],
-        distinct: true,
-        col: 'User.id',
-        subQuery: false,
-      });
+      const countSql = `
+        SELECT COUNT(DISTINCT u.id)::bigint AS total
+        FROM users u
+        LEFT JOIN wallets w ON w."userId" = u.id
+        ${kycJoin}
+        ${whereSql}
+      `;
 
-      const users = rows.map((row) => {
-        const plain = row.get({ plain: true });
-        return {
-          id: plain.id,
-          email: plain.email,
-          firstName: plain.firstName,
-          lastName: plain.lastName,
-          phoneNumber: plain.phoneNumber,
-          status: plain.status,
-          kycStatus: plain.kycStatus,
-          kycTier: plain.kyc_tier,
-          kycVerifiedAt: plain.kycVerifiedAt,
-          createdAt: plain.createdAt,
-          updatedAt: plain.updatedAt,
-          isActiveWallet: plain.status === 'active',
-          wallet: plain.wallet
-            ? {
-                id: plain.wallet.id,
-                balance: plain.wallet.balance,
-                currency: plain.wallet.currency,
-                status: plain.wallet.status,
-              }
-            : null,
-          kyc: plain.kyc
-            ? {
-                id: plain.kyc.id,
-                status: plain.kyc.status,
-                documentType: plain.kyc.documentType,
-                submittedAt: plain.kyc.submittedAt,
-                reviewedAt: plain.kyc.reviewedAt,
-              }
-            : null,
-        };
-      });
+      const countResult = await client.query(countSql, params);
+      const total = parseInt(String(countResult.rows[0]?.total || '0'), 10);
+
+      const listParams = [...params, limit, offset];
+      const limitIdx = p;
+      const offsetIdx = p + 1;
+
+      const listSql = `
+        SELECT DISTINCT ON (u.id)
+          u.id AS user_id,
+          u."email" AS email,
+          u."firstName" AS "firstName",
+          u."lastName" AS "lastName",
+          u."phoneNumber" AS "phoneNumber",
+          u.status AS user_status,
+          u."kycStatus" AS "kycStatus",
+          u.kyc_tier AS kyc_tier,
+          u."kycVerifiedAt" AS "kycVerifiedAt",
+          u."createdAt" AS "createdAt",
+          u."updatedAt" AS "updatedAt",
+          w.id AS w_id,
+          w.balance AS w_balance,
+          w.currency AS w_currency,
+          w.status AS w_status,
+          k.id AS k_id,
+          k.status AS k_status,
+          k."documentType" AS k_document_type,
+          k."submittedAt" AS k_submitted_at,
+          k."reviewedAt" AS k_reviewed_at
+        FROM users u
+        LEFT JOIN wallets w ON w."userId" = u.id
+        ${kycJoin}
+        ${whereSql}
+        ORDER BY u.id, w.id DESC NULLS LAST
+      `;
+
+      const innerSql = `SELECT * FROM (${listSql}) ordered_rows ORDER BY "createdAt" DESC LIMIT $${limitIdx} OFFSET $${offsetIdx}`;
+
+      const { rows } = await client.query(innerSql, listParams);
+
+      const users = rows.map((row) => ({
+        id: row.user_id,
+        email: row.email,
+        firstName: row.firstName,
+        lastName: row.lastName,
+        phoneNumber: row.phoneNumber,
+        status: row.user_status,
+        kycStatus: row.kycStatus,
+        kycTier: row.kyc_tier,
+        kycVerifiedAt: row.kycVerifiedAt,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+        isActiveWallet: row.user_status === 'active',
+        wallet: row.w_id
+          ? {
+              id: row.w_id,
+              balance: row.w_balance,
+              currency: row.w_currency,
+              status: row.w_status,
+            }
+          : null,
+        kyc: row.k_id
+          ? {
+              id: row.k_id,
+              status: row.k_status,
+              documentType: row.k_document_type,
+              submittedAt: row.k_submitted_at,
+              reviewedAt: row.k_reviewed_at,
+            }
+          : null,
+      }));
 
       return res.json({
         success: true,
         data: {
           users,
           pagination: {
-            total: count,
+            total,
             page,
             limit,
-            totalPages: Math.ceil(count / limit) || 0,
+            totalPages: Math.ceil(total / limit) || 0,
           },
         },
         timestamp: new Date().toISOString(),
@@ -161,6 +193,8 @@ class UserManagementController {
         data: null,
         timestamp: new Date().toISOString(),
       });
+    } finally {
+      client.release();
     }
   }
 
@@ -179,58 +213,81 @@ class UserManagementController {
       });
     }
 
+    const userId = parseInt(String(req.params.id), 10);
+    if (!Number.isFinite(userId) || userId < 1) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found',
+        data: null,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    const client = await getClient();
     try {
-      const db = require('../../../models');
-      const userId = parseInt(String(req.params.id), 10);
       const adminEmail = req.portalUser?.email || 'unknown';
       console.info(`[UserManagement] wallet-user detail ${userId} by ${adminEmail}`);
 
-      const userAttributes = [
-        'id',
-        'email',
-        'firstName',
-        'lastName',
-        'phoneNumber',
-        'status',
-        'kycStatus',
-        'kyc_tier',
-        'kycVerifiedAt',
-        'idType',
-        'createdAt',
-        'updatedAt',
-      ];
+      const userSql = `
+        SELECT
+          u.id,
+          u."email",
+          u."firstName",
+          u."lastName",
+          u."phoneNumber",
+          u.status,
+          u."kycStatus",
+          u.kyc_tier,
+          u."kycVerifiedAt",
+          u."idType",
+          u."createdAt",
+          u."updatedAt",
+          w.id AS w_id,
+          w."walletId" AS w_wallet_id,
+          w.balance AS w_balance,
+          w.currency AS w_currency,
+          w.status AS w_status,
+          w."kycVerified" AS w_kyc_verified,
+          w."createdAt" AS w_created_at,
+          w."updatedAt" AS w_updated_at,
+          k.id AS k_id,
+          k.status AS k_status,
+          k."documentType" AS k_document_type,
+          k."submittedAt" AS k_submitted_at,
+          k."reviewedAt" AS k_reviewed_at,
+          k."reviewedBy" AS k_reviewed_by,
+          k."rejectionReason" AS k_rejection_reason,
+          k."verificationScore" AS k_verification_score,
+          k."isAutomated" AS k_is_automated,
+          k."createdAt" AS k_created_at,
+          k."updatedAt" AS k_updated_at
+        FROM users u
+        LEFT JOIN wallets w ON w."userId" = u.id
+        LEFT JOIN LATERAL (
+          SELECT
+            id,
+            status,
+            "documentType",
+            "submittedAt",
+            "reviewedAt",
+            "reviewedBy",
+            "rejectionReason",
+            "verificationScore",
+            "isAutomated",
+            "createdAt",
+            "updatedAt"
+          FROM kyc
+          WHERE "userId" = u.id
+          ORDER BY "createdAt" DESC
+          LIMIT 1
+        ) k ON true
+        WHERE u.id = $1
+      `;
 
-      const user = await db.User.findByPk(userId, {
-        attributes: userAttributes,
-        include: [
-          {
-            model: db.Wallet,
-            as: 'wallet',
-            attributes: ['id', 'walletId', 'balance', 'currency', 'status', 'kycVerified', 'createdAt', 'updatedAt'],
-            required: false,
-          },
-          {
-            model: db.Kyc,
-            as: 'kyc',
-            attributes: [
-              'id',
-              'status',
-              'documentType',
-              'submittedAt',
-              'reviewedAt',
-              'reviewedBy',
-              'rejectionReason',
-              'verificationScore',
-              'isAutomated',
-              'createdAt',
-              'updatedAt',
-            ],
-            required: false,
-          },
-        ],
-      });
+      const userResult = await client.query(userSql, [userId]);
+      const row = userResult.rows[0];
 
-      if (!user) {
+      if (!row) {
         return res.status(404).json({
           success: false,
           error: 'User not found',
@@ -239,68 +296,68 @@ class UserManagementController {
         });
       }
 
-      const recentTransactions = await db.Transaction.findAll({
-        where: { userId },
-        order: [['createdAt', 'DESC']],
-        limit: 10,
-        attributes: [
-          'id',
-          'transactionId',
-          'amount',
-          'type',
-          'status',
-          'description',
-          'fee',
-          'currency',
-          'createdAt',
-          'updatedAt',
-        ],
-      });
+      const txnSql = `
+        SELECT
+          id,
+          "transactionId",
+          amount,
+          type,
+          status,
+          description,
+          fee,
+          currency,
+          "createdAt",
+          "updatedAt"
+        FROM transactions
+        WHERE "userId" = $1
+        ORDER BY "createdAt" DESC
+        LIMIT 10
+      `;
 
-      const u = user.get({ plain: true });
+      const txnResult = await client.query(txnSql, [userId]);
 
       const userPayload = {
-        id: u.id,
-        email: u.email,
-        firstName: u.firstName,
-        lastName: u.lastName,
-        phoneNumber: u.phoneNumber,
-        status: u.status,
-        kycStatus: u.kycStatus,
-        kycTier: u.kyc_tier,
-        kycVerifiedAt: u.kycVerifiedAt,
-        idType: u.idType,
-        createdAt: u.createdAt,
-        updatedAt: u.updatedAt,
-        isActiveWallet: u.status === 'active',
+        id: row.id,
+        email: row.email,
+        firstName: row.firstName,
+        lastName: row.lastName,
+        phoneNumber: row.phoneNumber,
+        status: row.status,
+        kycStatus: row.kycStatus,
+        kycTier: row.kyc_tier,
+        kycVerifiedAt: row.kycVerifiedAt,
+        idType: row.idType,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+        isActiveWallet: row.status === 'active',
       };
 
-      const walletPayload = u.wallet
+      const walletPayload = row.w_id
         ? {
-            id: u.wallet.id,
-            walletId: u.wallet.walletId,
-            balance: u.wallet.balance,
-            currency: u.wallet.currency,
-            status: u.wallet.status,
-            kycVerified: u.wallet.kycVerified,
-            createdAt: u.wallet.createdAt,
-            updatedAt: u.wallet.updatedAt,
+            id: row.w_id,
+            walletId: row.w_wallet_id,
+            balance: row.w_balance,
+            currency: row.w_currency,
+            status: row.w_status,
+            kycVerified: row.w_kyc_verified,
+            createdAt: row.w_created_at,
+            updatedAt: row.w_updated_at,
           }
         : null;
 
-      const kycPayload = u.kyc
+      const kycPayload = row.k_id
         ? {
-            id: u.kyc.id,
-            status: u.kyc.status,
-            documentType: u.kyc.documentType,
-            submittedAt: u.kyc.submittedAt,
-            reviewedAt: u.kyc.reviewedAt,
-            reviewedBy: u.kyc.reviewedBy,
-            rejectionReason: u.kyc.rejectionReason,
-            verificationScore: u.kyc.verificationScore,
-            isAutomated: u.kyc.isAutomated,
-            createdAt: u.kyc.createdAt,
-            updatedAt: u.kyc.updatedAt,
+            id: row.k_id,
+            status: row.k_status,
+            documentType: row.k_document_type,
+            submittedAt: row.k_submitted_at,
+            reviewedAt: row.k_reviewed_at,
+            reviewedBy: row.k_reviewed_by,
+            rejectionReason: row.k_rejection_reason,
+            verificationScore: row.k_verification_score,
+            isAutomated: row.k_is_automated,
+            createdAt: row.k_created_at,
+            updatedAt: row.k_updated_at,
           }
         : null;
 
@@ -310,7 +367,18 @@ class UserManagementController {
           user: userPayload,
           wallet: walletPayload,
           kyc: kycPayload,
-          recentTransactions: recentTransactions.map((t) => t.get({ plain: true })),
+          recentTransactions: txnResult.rows.map((t) => ({
+            id: t.id,
+            transactionId: t.transactionId,
+            amount: t.amount,
+            type: t.type,
+            status: t.status,
+            description: t.description,
+            fee: t.fee,
+            currency: t.currency,
+            createdAt: t.createdAt,
+            updatedAt: t.updatedAt,
+          })),
         },
         timestamp: new Date().toISOString(),
       });
@@ -322,6 +390,8 @@ class UserManagementController {
         data: null,
         timestamp: new Date().toISOString(),
       });
+    } finally {
+      client.release();
     }
   }
 }

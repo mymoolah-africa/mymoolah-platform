@@ -27,6 +27,10 @@ mymoolah-wallet-frontend/node_modules/
 vite.config.*.timestamp-*
 *.timestamp-*.mjs
 
+# Frontend build output
+portal/admin/frontend/dist/
+mymoolah-wallet-frontend/dist/
+
 # Binary files
 cloud-sql-proxy
 bin/cloud-sql-proxy

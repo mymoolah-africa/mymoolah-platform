@@ -3,13 +3,8 @@
 const { PortalUser, DualRoleFloat } = require('../models');
 const { validationResult } = require('express-validator');
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
 
 class AdminController {
-  constructor() {
-    this.jwtSecret = process.env.PORTAL_JWT_SECRET || process.env.JWT_SECRET;
-    this.jwtExpiry = process.env.PORTAL_JWT_EXPIRY || '8h';
-  }
 
   /**
    * Admin Dashboard - Get comprehensive system overview
@@ -565,54 +560,68 @@ class AdminController {
    * Supports pagination, date range, and status filters.
    */
   async getUnallocatedDeposits(req, res) {
+    const { getClient } = require('../helpers/getDbClient');
+    let client;
     try {
-      const { Sequelize } = require('sequelize');
-      // Require models from root project (portal shares the same DB)
-      const db = require('../../../models');
+      client = await getClient();
 
       const page     = Math.max(1, parseInt(req.query.page  || '1',  10));
       const limit    = Math.min(100, parseInt(req.query.limit || '20', 10));
       const offset   = (page - 1) * limit;
-      const status   = req.query.status || 'pending';   // pending | resolved | all
+      const status   = req.query.status || 'pending';
       const dateFrom = req.query.dateFrom ? new Date(req.query.dateFrom) : null;
       const dateTo   = req.query.dateTo   ? new Date(req.query.dateTo)   : null;
 
-      const where = { accountType: 'unallocated' };
-      if (status !== 'all') where.status = status;
-      if (dateFrom || dateTo) {
-        where.webhookReceivedAt = {};
-        if (dateFrom) where.webhookReceivedAt[Sequelize.Op.gte] = dateFrom;
-        if (dateTo)   where.webhookReceivedAt[Sequelize.Op.lte] = dateTo;
+      const conditions = ['"accountType" = $1'];
+      const params = ['unallocated'];
+      let idx = 2;
+
+      if (status !== 'all') {
+        conditions.push(`status = $${idx}`);
+        params.push(status);
+        idx++;
+      }
+      if (dateFrom) {
+        conditions.push(`"webhookReceivedAt" >= $${idx}`);
+        params.push(dateFrom.toISOString());
+        idx++;
+      }
+      if (dateTo) {
+        conditions.push(`"webhookReceivedAt" <= $${idx}`);
+        params.push(dateTo.toISOString());
+        idx++;
       }
 
-      const { count, rows } = await db.StandardBankTransaction.findAndCountAll({
-        where,
-        order: [['webhookReceivedAt', 'DESC']],
-        limit,
-        offset,
-        attributes: [
-          'id', 'transactionId', 'referenceNumber', 'amount', 'currency',
-          'status', 'webhookReceivedAt', 'processedAt', 'notes',
-        ],
-      });
+      const whereClause = conditions.join(' AND ');
 
-      // Aggregate total unallocated amount still pending
-      const totalPendingAmount = await db.StandardBankTransaction.sum('amount', {
-        where: { accountType: 'unallocated', status: 'pending' },
-      }) || 0;
+      const countResult = await client.query(
+        `SELECT COUNT(*) AS total FROM standard_bank_transactions WHERE ${whereClause}`,
+        params
+      );
+      const total = parseInt(countResult.rows[0].total, 10);
+
+      const dataResult = await client.query(
+        `SELECT id, "transactionId", "referenceNumber", amount, currency, status,
+                "webhookReceivedAt", "processedAt", notes
+         FROM standard_bank_transactions
+         WHERE ${whereClause}
+         ORDER BY "webhookReceivedAt" DESC
+         LIMIT $${idx} OFFSET $${idx + 1}`,
+        [...params, limit, offset]
+      );
+
+      const sumResult = await client.query(
+        `SELECT COALESCE(SUM(amount), 0) AS total FROM standard_bank_transactions
+         WHERE "accountType" = 'unallocated' AND status = 'pending'`
+      );
 
       res.json({
         success: true,
         data: {
-          deposits: rows,
-          pagination: {
-            total: count,
-            page,
-            limit,
-            totalPages: Math.ceil(count / limit),
-          },
+          deposits: dataResult.rows,
+          pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
           summary: {
-            totalPendingAmount: parseFloat(totalPendingAmount).toFixed(2),
+            totalPendingAmount: parseFloat(sumResult.rows[0].total).toFixed(2),
             currency: 'ZAR',
           },
         },
@@ -620,6 +629,8 @@ class AdminController {
     } catch (error) {
       console.error('[AdminController] getUnallocatedDeposits error:', error);
       res.status(500).json({ success: false, error: 'Failed to fetch unallocated deposits' });
+    } finally {
+      if (client) client.release();
     }
   }
 
@@ -636,21 +647,30 @@ class AdminController {
       return res.status(400).json({ success: false, error: 'mobileNumber is required' });
     }
 
+    const { getClient } = require('../helpers/getDbClient');
+    let client;
     try {
-      const db = require('../../../models');
-      const { processDepositNotification } = require('../../../services/standardbankDepositNotificationService');
+      client = await getClient();
 
-      const record = await db.StandardBankTransaction.findOne({
-        where: { id, accountType: 'unallocated', status: 'pending' },
-      });
-      if (!record) {
+      const recordResult = await client.query(
+        `SELECT id, "transactionId", "referenceNumber", amount, currency
+         FROM standard_bank_transactions
+         WHERE id = $1 AND "accountType" = 'unallocated' AND status = 'pending'`,
+        [id]
+      );
+
+      if (recordResult.rows.length === 0) {
         return res.status(404).json({ success: false, error: 'Unallocated deposit not found or already resolved' });
       }
 
-      // Re-use the processDepositNotification path but with the corrected mobile number
-      // Build a synthetic payload so it runs through the full ledger + wallet credit logic
+      const record = recordResult.rows[0];
+      client.release();
+      client = null;
+
+      const { processDepositNotification } = require('../../../services/standardbankDepositNotificationService');
+
       const syntheticPayload = {
-        transactionId:  `MANUAL-${record.transactionId}`,   // new ID to bypass idempotency
+        transactionId:  `MANUAL-${record.transactionId}`,
         referenceNumber: mobileNumber.trim(),
         amount:          record.amount,
         currency:        record.currency || 'ZAR',
@@ -665,12 +685,21 @@ class AdminController {
         });
       }
 
-      // Mark original record as resolved
-      await record.update({
-        status: 'completed',
-        processedAt: new Date(),
-        notes: notes ? `${notes} | Manually allocated by ${req.portalUser?.email}` : `Manually allocated by ${req.portalUser?.email}`,
-      });
+      const updateClient = await getClient();
+      try {
+        const auditNote = notes
+          ? `${notes} | Manually allocated by ${req.portalUser?.email}`
+          : `Manually allocated by ${req.portalUser?.email}`;
+
+        await updateClient.query(
+          `UPDATE standard_bank_transactions
+           SET status = 'completed', "processedAt" = NOW(), notes = $1
+           WHERE id = $2`,
+          [auditNote, id]
+        );
+      } finally {
+        updateClient.release();
+      }
 
       res.json({
         success: true,
@@ -680,6 +709,8 @@ class AdminController {
     } catch (error) {
       console.error('[AdminController] allocateDeposit error:', error);
       res.status(500).json({ success: false, error: 'Allocation failed — please try again or escalate to engineering' });
+    } finally {
+      if (client) client.release();
     }
   }
 }

@@ -6,27 +6,36 @@ const { Sequelize } = require('sequelize');
 const PortalUser = require('./PortalUser');
 const DualRoleFloat = require('./DualRoleFloat');
 
-const dbName = process.env.PORTAL_DB_NAME || process.env.DB_NAME;
-const dbUser = process.env.PORTAL_DB_USER || process.env.DB_USER;
-const dbPassword = process.env.PORTAL_DB_PASSWORD || process.env.DB_PASSWORD;
-const dbHost = process.env.PORTAL_DB_HOST || process.env.DB_HOST || '127.0.0.1';
-const dbPort = process.env.PORTAL_DB_PORT || process.env.DB_PORT || 5432;
+const PORTAL_ENV = process.env.PORTAL_ENV || process.env.MM_DEPLOYMENT_ENV || 'uat';
 
-if (!dbName || !dbUser || !dbPassword) {
-  console.error('FATAL: Database credentials not configured. Set PORTAL_DB_NAME, PORTAL_DB_USER, PORTAL_DB_PASSWORD (or DB_NAME, DB_USER, DB_PASSWORD).');
+let dbConfig;
+try {
+  const helper = require('../../../scripts/db-connection-helper');
+
+  if (PORTAL_ENV === 'production') {
+    dbConfig = helper.getProductionConfig();
+  } else if (PORTAL_ENV === 'staging') {
+    dbConfig = helper.getStagingConfig();
+  } else {
+    dbConfig = helper.getUATConfig();
+  }
+  console.log(`Portal DB: ${PORTAL_ENV} via db-connection-helper (port ${dbConfig.port})`);
+} catch (err) {
+  console.error('db-connection-helper failed, check proxies:', err.message);
+  process.exit(1);
 }
 
 const sequelize = new Sequelize(
-  dbName,
-  dbUser,
-  dbPassword,
+  dbConfig.database,
+  dbConfig.user,
+  dbConfig.password,
   {
-    host: dbHost,
-    port: dbPort,
+    host: dbConfig.host,
+    port: dbConfig.port,
     dialect: 'postgres',
     logging: process.env.NODE_ENV === 'development' ? console.log : false,
     pool: {
-      max: 20,
+      max: 10,
       min: 0,
       acquire: 30000,
       idle: 10000
@@ -39,7 +48,6 @@ const sequelize = new Sequelize(
   }
 );
 
-// Initialize models
 const models = {
   PortalUser: PortalUser(sequelize, Sequelize.DataTypes),
   DualRoleFloat: DualRoleFloat(sequelize, Sequelize.DataTypes),
@@ -47,7 +55,6 @@ const models = {
   Sequelize
 };
 
-// Define associations
 Object.keys(models).forEach(modelName => {
   if (models[modelName].associate) {
     models[modelName].associate(models);

@@ -1,7 +1,7 @@
 'use strict';
 
 const { validationResult } = require('express-validator');
-const { Op } = require('sequelize');
+const { getClient } = require('../helpers/getDbClient');
 
 /** Admin query type -> DB Transaction.type enum values */
 const TYPE_FILTER_MAP = {
@@ -11,30 +11,110 @@ const TYPE_FILTER_MAP = {
   transfer: ['transfer'],
 };
 
-const TRANSACTION_LIST_ATTRIBUTES = [
-  'id',
-  'transactionId',
-  'userId',
-  'walletId',
-  'senderWalletId',
-  'receiverWalletId',
-  'amount',
-  'type',
-  'status',
-  'description',
-  'fee',
-  'currency',
-  'exchangeRate',
-  'failureReason',
-  'processingTime',
-  'metadata',
-  'createdAt',
-  'updatedAt',
-];
+/**
+ * Escape %, _, \ for ILIKE so user search cannot broaden the pattern.
+ */
+function ilikePattern(term) {
+  const escaped = String(term).replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
+  return `%${escaped}%`;
+}
 
-const TRANSACTION_DETAIL_ATTRIBUTES = [...TRANSACTION_LIST_ATTRIBUTES, 'paymentId'];
+function num(v) {
+  if (v === null || v === undefined) return v;
+  const n = typeof v === 'number' ? v : Number(v);
+  return Number.isFinite(n) ? n : v;
+}
 
-const SAFE_USER_ATTRIBUTES = ['firstName', 'lastName', 'phoneNumber'];
+function buildTransactionWhere(query) {
+  const parts = [];
+  const params = [];
+  let i = 1;
+
+  const typeFilter = query.type ? String(query.type).toLowerCase() : '';
+  const statusFilter = query.status ? String(query.status).toLowerCase() : '';
+  const dateFrom = query.dateFrom ? String(query.dateFrom) : '';
+  const dateTo = query.dateTo ? String(query.dateTo) : '';
+  const search = query.search ? String(query.search).trim() : '';
+  const userIdParam =
+    query.userId !== undefined && query.userId !== ''
+      ? parseInt(String(query.userId), 10)
+      : null;
+
+  if (userIdParam !== null && !Number.isNaN(userIdParam)) {
+    parts.push(`t."userId" = $${i++}`);
+    params.push(userIdParam);
+  }
+
+  if (typeFilter && TYPE_FILTER_MAP[typeFilter]) {
+    const types = TYPE_FILTER_MAP[typeFilter];
+    const ph = types.map(() => `$${i++}`).join(', ');
+    parts.push(`t.type IN (${ph})`);
+    params.push(...types);
+  }
+
+  if (statusFilter === 'pending') {
+    parts.push(`t.status IN ($${i++}, $${i++})`);
+    params.push('pending', 'processing');
+  } else if (statusFilter === 'completed') {
+    parts.push(`t.status = $${i++}`);
+    params.push('completed');
+  } else if (statusFilter === 'failed') {
+    parts.push(`t.status = $${i++}`);
+    params.push('failed');
+  }
+
+  if (dateFrom) {
+    parts.push(`t."createdAt" >= $${i++}`);
+    params.push(new Date(dateFrom));
+  }
+  if (dateTo) {
+    parts.push(`t."createdAt" <= $${i++}`);
+    params.push(new Date(dateTo));
+  }
+
+  if (search) {
+    const pat = ilikePattern(search);
+    parts.push(`(t."transactionId" ILIKE $${i} ESCAPE '\\' OR t.description ILIKE $${i} ESCAPE '\\')`);
+    params.push(pat);
+    i += 1;
+  }
+
+  const whereSql = parts.length ? `WHERE ${parts.join(' AND ')}` : '';
+  return { whereSql, params };
+}
+
+function mapTransactionRow(row) {
+  const u =
+    row.user_firstName != null || row.user_lastName != null || row.user_phoneNumber != null
+      ? {
+          firstName: row.user_firstName,
+          lastName: row.user_lastName,
+          phoneNumber: row.user_phoneNumber,
+        }
+      : null;
+
+  return {
+    id: row.id,
+    transactionId: row.transactionId,
+    userId: row.userId,
+    walletId: row.walletId,
+    senderWalletId: row.senderWalletId,
+    receiverWalletId: row.receiverWalletId,
+    amount: num(row.amount),
+    type: row.type,
+    status: row.status,
+    description: row.description,
+    fee: num(row.fee),
+    currency: row.currency,
+    exchangeRate: row.exchangeRate != null ? num(row.exchangeRate) : row.exchangeRate,
+    failureReason: row.failureReason,
+    processingTime: row.processingTime,
+    metadata: row.metadata,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    user: u,
+  };
+}
 
 class TransactionMonitoringController {
   /**
@@ -52,113 +132,63 @@ class TransactionMonitoringController {
       });
     }
 
+    const adminEmail = req.portalUser?.email || 'unknown';
+    console.info(`[TransactionMonitoring] transactions list by ${adminEmail}`);
+
+    const page = Math.max(1, parseInt(String(req.query.page || '1'), 10));
+    const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit || '20'), 10)));
+    const offset = (page - 1) * limit;
+
+    const { whereSql, params: baseParams } = buildTransactionWhere(req.query);
+
+    const client = await getClient();
     try {
-      const db = require('../../../models');
-      const adminEmail = req.portalUser?.email || 'unknown';
-      console.info(`[TransactionMonitoring] transactions list by ${adminEmail}`);
+      const countSql = `SELECT COUNT(*)::int AS cnt FROM transactions t ${whereSql}`;
+      const sumSql = `SELECT COALESCE(SUM(t.amount), 0) AS total FROM transactions t ${whereSql}`;
 
-      const page = Math.max(1, parseInt(String(req.query.page || '1'), 10));
-      const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit || '20'), 10)));
-      const offset = (page - 1) * limit;
-      const search = req.query.search ? String(req.query.search).trim() : '';
-      const typeFilter = req.query.type ? String(req.query.type).toLowerCase() : '';
-      const statusFilter = req.query.status ? String(req.query.status).toLowerCase() : '';
-      const dateFrom = req.query.dateFrom ? String(req.query.dateFrom) : '';
-      const dateTo = req.query.dateTo ? String(req.query.dateTo) : '';
-      const userIdParam = req.query.userId !== undefined && req.query.userId !== '' ? parseInt(String(req.query.userId), 10) : null;
+      const listParamStart = baseParams.length + 1;
+      const listSql = `
+        SELECT
+          t.id,
+          t."transactionId",
+          t."userId",
+          t."walletId",
+          t."senderWalletId",
+          t."receiverWalletId",
+          t.amount,
+          t.type,
+          t.status,
+          t.description,
+          t.fee,
+          t.currency,
+          t."exchangeRate",
+          t."failureReason",
+          t."processingTime",
+          t.metadata,
+          t."createdAt",
+          t."updatedAt",
+          u."firstName" AS "user_firstName",
+          u."lastName" AS "user_lastName",
+          u."phoneNumber" AS "user_phoneNumber"
+        FROM transactions t
+        LEFT JOIN users u ON u.id = t."userId"
+        ${whereSql}
+        ORDER BY t."createdAt" DESC
+        LIMIT $${listParamStart} OFFSET $${listParamStart + 1}
+      `;
 
-      const transactionWhere = {};
-
-      if (userIdParam !== null && !Number.isNaN(userIdParam)) {
-        transactionWhere.userId = userIdParam;
-      }
-
-      if (typeFilter && TYPE_FILTER_MAP[typeFilter]) {
-        transactionWhere.type = { [Op.in]: TYPE_FILTER_MAP[typeFilter] };
-      }
-
-      if (statusFilter === 'pending') {
-        transactionWhere.status = { [Op.in]: ['pending', 'processing'] };
-      } else if (statusFilter === 'completed') {
-        transactionWhere.status = 'completed';
-      } else if (statusFilter === 'failed') {
-        transactionWhere.status = 'failed';
-      }
-
-      const createdAtCond = {};
-      if (dateFrom) {
-        createdAtCond[Op.gte] = new Date(dateFrom);
-      }
-      if (dateTo) {
-        createdAtCond[Op.lte] = new Date(dateTo);
-      }
-      if (Object.keys(createdAtCond).length > 0) {
-        transactionWhere.createdAt = createdAtCond;
-      }
-
-      if (search) {
-        const pattern = `%${search}%`;
-        transactionWhere[Op.or] = [
-          { transactionId: { [Op.iLike]: pattern } },
-          { description: { [Op.iLike]: pattern } },
-        ];
-      }
-
-      const userInclude = {
-        model: db.User,
-        as: 'user',
-        attributes: SAFE_USER_ATTRIBUTES,
-        required: false,
-      };
-
-      const [listResult, totalAmountRaw] = await Promise.all([
-        db.Transaction.findAndCountAll({
-          where: transactionWhere,
-          attributes: TRANSACTION_LIST_ATTRIBUTES,
-          include: [userInclude],
-          limit,
-          offset,
-          order: [['createdAt', 'DESC']],
-          subQuery: false,
-        }),
-        db.Transaction.sum('amount', { where: transactionWhere }),
+      const [countRes, sumRes, listRes] = await Promise.all([
+        client.query(countSql, baseParams),
+        client.query(sumSql, baseParams),
+        client.query(listSql, [...baseParams, limit, offset]),
       ]);
 
-      const { count, rows } = listResult;
+      const count = countRes.rows[0]?.cnt ?? 0;
+      const totalAmountRaw = sumRes.rows[0]?.total;
       const totalAmount =
-        totalAmountRaw === null || totalAmountRaw === undefined ? 0 : Number(totalAmountRaw);
+        totalAmountRaw === null || totalAmountRaw === undefined ? 0 : num(totalAmountRaw);
 
-      const transactions = rows.map((row) => {
-        const plain = row.get({ plain: true });
-        const u = plain.user;
-        return {
-          id: plain.id,
-          transactionId: plain.transactionId,
-          userId: plain.userId,
-          walletId: plain.walletId,
-          senderWalletId: plain.senderWalletId,
-          receiverWalletId: plain.receiverWalletId,
-          amount: plain.amount,
-          type: plain.type,
-          status: plain.status,
-          description: plain.description,
-          fee: plain.fee,
-          currency: plain.currency,
-          exchangeRate: plain.exchangeRate,
-          failureReason: plain.failureReason,
-          processingTime: plain.processingTime,
-          metadata: plain.metadata,
-          createdAt: plain.createdAt,
-          updatedAt: plain.updatedAt,
-          user: u
-            ? {
-                firstName: u.firstName,
-                lastName: u.lastName,
-                phoneNumber: u.phoneNumber,
-              }
-            : null,
-        };
-      });
+      const transactions = listRes.rows.map((row) => mapTransactionRow(row));
 
       return res.json({
         success: true,
@@ -185,6 +215,8 @@ class TransactionMonitoringController {
         data: null,
         timestamp: new Date().toISOString(),
       });
+    } finally {
+      client.release();
     }
   }
 
@@ -203,25 +235,43 @@ class TransactionMonitoringController {
       });
     }
 
+    const id = parseInt(String(req.params.id), 10);
+    const adminEmail = req.portalUser?.email || 'unknown';
+    console.info(`[TransactionMonitoring] transaction detail id=${id} by ${adminEmail}`);
+
+    const client = await getClient();
     try {
-      const db = require('../../../models');
-      const id = parseInt(String(req.params.id), 10);
-      const adminEmail = req.portalUser?.email || 'unknown';
-      console.info(`[TransactionMonitoring] transaction detail id=${id} by ${adminEmail}`);
+      const txnSql = `
+        SELECT
+          t.id,
+          t."transactionId",
+          t."userId",
+          t."walletId",
+          t."senderWalletId",
+          t."receiverWalletId",
+          t."paymentId",
+          t.amount,
+          t.type,
+          t.status,
+          t.description,
+          t.fee,
+          t.currency,
+          t."exchangeRate",
+          t."failureReason",
+          t."processingTime",
+          t.metadata,
+          t."createdAt",
+          t."updatedAt",
+          u."firstName" AS "user_firstName",
+          u."lastName" AS "user_lastName",
+          u."phoneNumber" AS "user_phoneNumber"
+        FROM transactions t
+        LEFT JOIN users u ON u.id = t."userId"
+        WHERE t.id = $1
+      `;
+      const txnRes = await client.query(txnSql, [id]);
 
-      const txn = await db.Transaction.findByPk(id, {
-        attributes: TRANSACTION_DETAIL_ATTRIBUTES,
-        include: [
-          {
-            model: db.User,
-            as: 'user',
-            attributes: SAFE_USER_ATTRIBUTES,
-            required: false,
-          },
-        ],
-      });
-
-      if (!txn) {
+      if (!txnRes.rows.length) {
         return res.status(404).json({
           success: false,
           error: 'Transaction not found',
@@ -230,91 +280,101 @@ class TransactionMonitoringController {
         });
       }
 
-      const plain = txn.get({ plain: true });
-      const tid = plain.transactionId;
+      const row = txnRes.rows[0];
+      const tid = row.transactionId;
 
-      const journalEntries = await db.JournalEntry.findAll({
-        where: {
-          [Op.or]: [
-            { reference: tid },
-            { reference: { [Op.like]: `${tid}%` } },
-            { reference: { [Op.like]: `%${tid}` } },
-          ],
-        },
-        include: [
-          {
-            model: db.JournalLine,
-            as: 'lines',
-            attributes: ['id', 'entryId', 'accountId', 'dc', 'amount', 'memo'],
-            include: [
-              {
-                model: db.LedgerAccount,
-                as: 'account',
-                attributes: ['id', 'code', 'name', 'type', 'normalSide'],
-                required: false,
-              },
-            ],
-          },
-        ],
-        order: [['postedAt', 'DESC']],
-      });
+      const jeSql = `
+        SELECT
+          je.id AS "je_id",
+          je.reference AS "je_reference",
+          je.description AS "je_description",
+          je."postedAt" AS "je_postedAt",
+          jl.id AS "jl_id",
+          jl."entryId" AS "jl_entryId",
+          jl."accountId" AS "jl_accountId",
+          jl.dc AS "jl_dc",
+          jl.amount AS "jl_amount",
+          jl.memo AS "jl_memo",
+          la.id AS "la_id",
+          la.code AS "la_code",
+          la.name AS "la_name",
+          la.type AS "la_type",
+          la."normalSide" AS "la_normalSide"
+        FROM journal_entries je
+        LEFT JOIN journal_lines jl ON jl."entryId" = je.id
+        LEFT JOIN ledger_accounts la ON la.id = jl."accountId"
+        WHERE je.reference = $1
+           OR je.reference LIKE $2
+           OR je.reference LIKE $3
+        ORDER BY je."postedAt" DESC, jl.id ASC
+      `;
+      const jeRes = await client.query(jeSql, [tid, `${tid}%`, `%${tid}`]);
+
+      const entryMap = new Map();
+      for (const r of jeRes.rows) {
+        const jeId = r.je_id;
+        if (!entryMap.has(jeId)) {
+          entryMap.set(jeId, {
+            id: jeId,
+            reference: r.je_reference,
+            description: r.je_description,
+            postedAt: r.je_postedAt,
+            lines: [],
+          });
+        }
+        if (r.jl_id != null) {
+          entryMap.get(jeId).lines.push({
+            id: r.jl_id,
+            entryId: r.jl_entryId,
+            accountId: r.jl_accountId,
+            dc: r.jl_dc,
+            amount: num(r.jl_amount),
+            memo: r.jl_memo,
+            account:
+              r.la_id != null
+                ? {
+                    id: r.la_id,
+                    code: r.la_code,
+                    name: r.la_name,
+                    type: r.la_type,
+                    normalSide: r.la_normalSide,
+                  }
+                : null,
+          });
+        }
+      }
+      const journalEntriesPayload = [...entryMap.values()];
 
       const transactionPayload = {
-        id: plain.id,
-        transactionId: plain.transactionId,
-        userId: plain.userId,
-        walletId: plain.walletId,
-        senderWalletId: plain.senderWalletId,
-        receiverWalletId: plain.receiverWalletId,
-        paymentId: plain.paymentId,
-        amount: plain.amount,
-        type: plain.type,
-        status: plain.status,
-        description: plain.description,
-        fee: plain.fee,
-        currency: plain.currency,
-        exchangeRate: plain.exchangeRate,
-        failureReason: plain.failureReason,
-        processingTime: plain.processingTime,
-        metadata: plain.metadata,
-        createdAt: plain.createdAt,
-        updatedAt: plain.updatedAt,
+        id: row.id,
+        transactionId: row.transactionId,
+        userId: row.userId,
+        walletId: row.walletId,
+        senderWalletId: row.senderWalletId,
+        receiverWalletId: row.receiverWalletId,
+        paymentId: row.paymentId,
+        amount: num(row.amount),
+        type: row.type,
+        status: row.status,
+        description: row.description,
+        fee: num(row.fee),
+        currency: row.currency,
+        exchangeRate: row.exchangeRate != null ? num(row.exchangeRate) : row.exchangeRate,
+        failureReason: row.failureReason,
+        processingTime: row.processingTime,
+        metadata: row.metadata,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
       };
 
-      const userPayload = plain.user
-        ? {
-            firstName: plain.user.firstName,
-            lastName: plain.user.lastName,
-            phoneNumber: plain.user.phoneNumber,
-          }
-        : null;
-
-      const journalEntriesPayload = journalEntries.map((je) => {
-        const j = je.get({ plain: true });
-        return {
-          id: j.id,
-          reference: j.reference,
-          description: j.description,
-          postedAt: j.postedAt,
-          lines: (j.lines || []).map((line) => ({
-            id: line.id,
-            entryId: line.entryId,
-            accountId: line.accountId,
-            dc: line.dc,
-            amount: line.amount,
-            memo: line.memo,
-            account: line.account
-              ? {
-                  id: line.account.id,
-                  code: line.account.code,
-                  name: line.account.name,
-                  type: line.account.type,
-                  normalSide: line.account.normalSide,
-                }
-              : null,
-          })),
-        };
-      });
+      const userPayload =
+        row.user_firstName != null || row.user_lastName != null || row.user_phoneNumber != null
+          ? {
+              firstName: row.user_firstName,
+              lastName: row.user_lastName,
+              phoneNumber: row.user_phoneNumber,
+            }
+          : null;
 
       return res.json({
         success: true,
@@ -333,6 +393,8 @@ class TransactionMonitoringController {
         data: null,
         timestamp: new Date().toISOString(),
       });
+    } finally {
+      client.release();
     }
   }
 }
