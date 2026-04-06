@@ -35,13 +35,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   const clearSession = useCallback(() => {
-    localStorage.removeItem('portal_token');
-    localStorage.removeItem('portal_user');
+    sessionStorage.removeItem('portal_token');
+    sessionStorage.removeItem('portal_user');
     setUser(null);
   }, []);
 
   const verifyToken = useCallback(async (): Promise<boolean> => {
-    const token = localStorage.getItem('portal_token');
+    const token = sessionStorage.getItem('portal_token');
     if (!token) {
       clearSession();
       return false;
@@ -60,7 +60,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const data = await res.json();
       if (data.success && data.data?.user) {
         setUser(data.data.user);
-        localStorage.setItem('portal_user', JSON.stringify(data.data.user));
+        sessionStorage.setItem('portal_user', JSON.stringify(data.data.user));
         return true;
       }
 
@@ -74,8 +74,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   useEffect(() => {
     const init = async () => {
-      const token = localStorage.getItem('portal_token');
-      const userData = localStorage.getItem('portal_user');
+      const token = sessionStorage.getItem('portal_token');
+      const userData = sessionStorage.getItem('portal_user');
 
       if (token && userData) {
         try {
@@ -105,8 +105,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return { success: false, error: data.error || 'Login failed' };
       }
 
-      localStorage.setItem('portal_token', data.data.token);
-      localStorage.setItem('portal_user', JSON.stringify(data.data.user));
+      sessionStorage.setItem('portal_token', data.data.token);
+      sessionStorage.setItem('portal_user', JSON.stringify(data.data.user));
       setUser(data.data.user);
 
       return { success: true };
@@ -118,7 +118,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = async () => {
-    const token = localStorage.getItem('portal_token');
+    const token = sessionStorage.getItem('portal_token');
     try {
       await fetch(`${API_BASE}/logout`, {
         method: 'POST',

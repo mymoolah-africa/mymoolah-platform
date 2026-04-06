@@ -44,7 +44,7 @@ type StatusFilter = 'pending' | 'completed' | 'all';
 const API = axios.create({ baseURL: '/api/v1/admin' });
 
 API.interceptors.request.use((config) => {
-  const token = localStorage.getItem('portal_token');
+  const token = sessionStorage.getItem('portal_token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });

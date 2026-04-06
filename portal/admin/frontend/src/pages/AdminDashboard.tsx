@@ -93,7 +93,7 @@ export default function AdminDashboard() {
     if (isRefresh) setRefreshing(true); else setLoading(true);
     setError('');
 
-    const token = localStorage.getItem('portal_token');
+    const token = sessionStorage.getItem('portal_token');
     if (!token) { navigate('/admin/login', { replace: true }); return; }
 
     try {
@@ -102,8 +102,8 @@ export default function AdminDashboard() {
       });
 
       if (res.status === 401) {
-        localStorage.removeItem('portal_token');
-        localStorage.removeItem('portal_user');
+        sessionStorage.removeItem('portal_token');
+        sessionStorage.removeItem('portal_user');
         navigate('/admin/login', { replace: true });
         return;
       }

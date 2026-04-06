@@ -53,7 +53,7 @@ interface ListPagination {
 }
 
 function authHeaders(): HeadersInit {
-  const token = localStorage.getItem('portal_token');
+  const token = sessionStorage.getItem('portal_token');
   const h: Record<string, string> = { Accept: 'application/json' };
   if (token) h.Authorization = `Bearer ${token}`;
   return h;
@@ -148,7 +148,7 @@ export const UserManagementOverlay: React.FC = () => {
   }, [debouncedSearch, kycStatus, activeOnly, limit]);
 
   const handleUnauthorized = useCallback(() => {
-    localStorage.removeItem('portal_token');
+    sessionStorage.removeItem('portal_token');
     navigate('/admin/login', { replace: true });
   }, [navigate]);
 

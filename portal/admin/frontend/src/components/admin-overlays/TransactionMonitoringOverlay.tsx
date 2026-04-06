@@ -37,7 +37,7 @@ const fmtDateTime = (d: string | null | undefined) => {
 };
 
 function authHeaders(): HeadersInit {
-  const token = localStorage.getItem('portal_token');
+  const token = sessionStorage.getItem('portal_token');
   const h: Record<string, string> = { Accept: 'application/json' };
   if (token) h.Authorization = `Bearer ${token}`;
   return h;
@@ -218,7 +218,7 @@ export const TransactionMonitoringOverlay: React.FC = () => {
   }, [debouncedSearch, typeFilter, statusFilter, dateFrom, dateTo, userIdFilter, limit]);
 
   const handleUnauthorized = useCallback(() => {
-    localStorage.removeItem('portal_token');
+    sessionStorage.removeItem('portal_token');
     navigate('/admin/login', { replace: true });
   }, [navigate]);
 

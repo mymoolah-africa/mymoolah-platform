@@ -26,8 +26,8 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const token = localStorage.getItem('portal_token');
-  const user = localStorage.getItem('portal_user');
+  const token = sessionStorage.getItem('portal_token');
+  const user = sessionStorage.getItem('portal_user');
 
   if (!token || !user) {
     return <Navigate to="/admin/login" replace />;
@@ -36,8 +36,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   try {
     JSON.parse(user);
   } catch {
-    localStorage.removeItem('portal_token');
-    localStorage.removeItem('portal_user');
+    sessionStorage.removeItem('portal_token');
+    sessionStorage.removeItem('portal_user');
     return <Navigate to="/admin/login" replace />;
   }
 

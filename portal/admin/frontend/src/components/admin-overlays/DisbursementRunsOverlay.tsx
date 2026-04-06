@@ -28,7 +28,7 @@ interface DisbursementRun {
 
 const API = axios.create({ baseURL: '/api/v1' });
 API.interceptors.request.use((cfg) => {
-  const token = localStorage.getItem('portal_token');
+  const token = sessionStorage.getItem('portal_token');
   if (token) cfg.headers.Authorization = `Bearer ${token}`;
   return cfg;
 });
