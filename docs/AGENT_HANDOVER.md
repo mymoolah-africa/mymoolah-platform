@@ -779,7 +779,7 @@ You're part of a **banking-grade software system** where:
 ### **Next Agent Actions**
 1. Read `docs/CURSOR_2.0_RULES_FINAL.md` (MANDATORY)
 2. Read this file and recent session logs (especially `2026-04-06_2330_portal-ui-overhaul.md`)
-3. **VISUAL TEST IN CODESPACES**: Pull latest, rebuild frontend, verify all portal screens visually. Run: `git pull origin main && cd portal/admin/frontend && npm run build && cd ../../.. && ./scripts/start-all-services.sh`
+3. **VISUAL TEST IN CODESPACES**: Pull latest, install deps, rebuild frontend, verify all portal screens visually. Run: `git pull origin main && cd portal/admin/frontend && npm install && npm run build && cd ../../.. && ./scripts/start-all-services.sh`
 4. **REMAINING INLINE STYLES**: UnallocatedDepositsOverlay, DisbursementRuns/Create/Detail overlays still have inline `style={{}}` and missing aria-labels. Polish in a dedicated session.
 5. **Build remaining portal screens**: Replace "Coming Soon" with real functionality (Float Management, Settlement, Commission Config, etc.)
 6. **Portal deployment**: Deploy to Cloud Run (staging first) when screens are ready
