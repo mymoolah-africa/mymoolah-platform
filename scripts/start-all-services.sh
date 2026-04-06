@@ -117,12 +117,37 @@ else
 fi
 
 # ──────────────────────────────────────────────────────────────
-# STEP 2: Start Cloud SQL Auth Proxies
+# STEP 2: Kill stale proxies, refresh gcloud token, start fresh
 # ──────────────────────────────────────────────────────────────
-log "Step 2/6: Starting Cloud SQL Auth Proxies..."
+log "Step 2/6: Refreshing auth + starting Cloud SQL Auth Proxies..."
+
+# Always kill existing proxies — a running proxy with an expired OAuth token
+# still holds the port open but returns 401 on every new DB connection,
+# producing "read ECONNRESET" in the backend.
+log "Killing any existing Cloud SQL proxies (stale tokens cause ECONNRESET)..."
+kill $(lsof -ti:6543 2>/dev/null) 2>/dev/null || true
+kill $(lsof -ti:6544 2>/dev/null) 2>/dev/null || true
+kill $(lsof -ti:6545 2>/dev/null) 2>/dev/null || true
+sleep 2
+
+# Refresh the gcloud access token so the new proxy gets a valid credential.
+# `gcloud auth print-access-token` forces a token refresh without an
+# interactive browser flow (unlike `gcloud auth login`).
+log "Refreshing gcloud access token..."
+if command -v gcloud >/dev/null 2>&1; then
+  if gcloud auth print-access-token >/dev/null 2>&1; then
+    ok "gcloud token refreshed"
+  else
+    warn "gcloud token refresh failed — you may need to run: gcloud auth login"
+  fi
+else
+  err "gcloud not found in PATH"
+  exit 1
+fi
+
 if [ -f "${ROOT_DIR}/scripts/ensure-proxies-running.sh" ]; then
   bash "${ROOT_DIR}/scripts/ensure-proxies-running.sh" || {
-    err "Failed to start proxies. Check gcloud auth."
+    err "Failed to start proxies. Run: gcloud auth login"
     exit 1
   }
 else
@@ -130,9 +155,8 @@ else
   exit 1
 fi
 
-# Cold Cloud SQL Auth Proxy often resets the first client connection if the
-# backend connects immediately. Brief pause reduces "read ECONNRESET" on boot.
-log "Waiting 3s for proxy TCP to stabilize (avoids ECONNRESET on first DB query)..."
+# Fresh proxy needs a moment before the first client connection.
+log "Waiting 3s for proxy TCP to stabilize..."
 sleep 3
 
 # ──────────────────────────────────────────────────────────────
