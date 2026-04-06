@@ -1,5 +1,13 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-07 - Codespaces start-all-services proxy stabilization (v2.86.1)
+
+### Summary
+- `scripts/start-all-services.sh`: 3-second pause after Cloud SQL Auth Proxies start before launching main backend, reducing intermittent `read ECONNRESET` on first Sequelize connection.
+- `docs/DATABASE_CONNECTION_GUIDE.md`: ECONNRESET section extended with `start-all-services.sh` context and kill/restart recovery snippet.
+
+---
+
 ## 2026-04-06 - USSD Phase 2 Services (v2.84.0)
 
 ### Summary
