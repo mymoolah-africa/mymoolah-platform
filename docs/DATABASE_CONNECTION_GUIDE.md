@@ -228,6 +228,13 @@ This script:
 - Check proxy logs: `cat /tmp/uat-proxy-6543.log` — look for auth or connection errors
 - In Codespaces: Ensure `gcloud auth login` completed successfully before running migrations
 - If intermittent: Retry; Codespaces network can occasionally drop connections
+- **After `./scripts/start-all-services.sh`**: The script waits **3 seconds** after proxies start before launching the main backend, so the first Sequelize query is less likely to hit a cold-proxy reset. If you still see `Startup failed: read ECONNRESET`, run the kill/restart sequence below, then `./scripts/start-all-services.sh` again:
+  ```bash
+  kill $(lsof -ti:6543) $(lsof -ti:6544) $(lsof -ti:6545) 2>/dev/null; sleep 2
+  ./scripts/ensure-proxies-running.sh
+  sleep 2
+  cd /workspaces/mymoolah-platform && ./scripts/start-all-services.sh
+  ```
 
 ### **Error: "Error parsing url: undefined"**
 ✅ **Solution**: 

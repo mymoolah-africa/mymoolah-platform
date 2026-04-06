@@ -130,6 +130,11 @@ else
   exit 1
 fi
 
+# Cold Cloud SQL Auth Proxy often resets the first client connection if the
+# backend connects immediately. Brief pause reduces "read ECONNRESET" on boot.
+log "Waiting 3s for proxy TCP to stabilize (avoids ECONNRESET on first DB query)..."
+sleep 3
+
 # ──────────────────────────────────────────────────────────────
 # STEP 3: Build DATABASE_URL and start main backend
 # ──────────────────────────────────────────────────────────────
