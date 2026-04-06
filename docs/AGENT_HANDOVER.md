@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-06 14:00  
-**Latest Feature**: **Voucher v_best_offers Integration, Electricity Cleanup & adService Typo Fix (v2.83.0)** — Integrated voucher catalog with `v_best_offers` materialized view for commission-based supplier selection. Fixed Flash electricity hardcoded values. Added circuit breaker awareness to voucher catalog. Fixed `2100-05-001` → `2100-05-01` ledger account typo in adService/seeders/docs. Cleaned up stale bestOfferService references. Updated tech debt register.  
-**Document Version**: 2.83.0  
-**Session logs**: `docs/session_logs/2026-04-06_1400_voucher-v-best-offers-electricity-cleanup.md`, `docs/session_logs/2026-04-06_1000_auditing-skill-portal-skill-knowledge-base.md`  
+**Last Updated**: 2026-04-06 15:00  
+**Latest Feature**: **USSD Phase 2 Services (v2.84.0)** — Send Money (P2P), Airtime for Others (eeziAirtime), Buy Electricity (eeziPower), Buy Voucher (6 brands). SMS PIN delivery with R0.40 fee. New ledger account `4000-20-03` SMS Fee Revenue. Main menu: Balance, Send Money, Buy Airtime, Buy Data, Cash Out, More. More menu: Airtime for Others, Electricity, Vouchers, Mini Statement, Change PIN, Referral, Help.  
+**Document Version**: 2.84.0  
+**Session logs**: `docs/session_logs/2026-04-06_1400_ussd-phase2-services.md`, `docs/session_logs/2026-04-06_1400_voucher-v-best-offers-electricity-cleanup.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
