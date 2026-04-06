@@ -1135,15 +1135,19 @@ import { cn } from '../lib/utils';
 
 ### 11.3 Brand Colors
 
-| Token | Hex | Usage |
-|-------|-----|-------|
-| Brand green | `#00B894` | Primary actions, success states, CTAs |
-| Brand dark | `#1a1a2e` | Dark backgrounds, sidebar, headers |
-| Navy action | `#1a3c5e` | Secondary buttons, active filter tabs |
-| Light gray | `#f8f9fa` | Page background |
-| Moolah green | `#86BE41` | Accent green (used on allocate buttons) |
-| Error red | `#c0392b` | Error states, negative amounts |
-| Warning amber | `#f39c12` | Pending states, alerts |
+| Token | Hex | RGB | Usage |
+|-------|-----|-----|-------|
+| MyMoolah Green | `#86BE41` | 134, 190, 65 | **Primary** — buttons, CTAs, active states, accents, sidebar highlights |
+| MyMoolah Blue | `#2D8CCA` | 45, 140, 202 | **Secondary** — info states, links, secondary actions, chart accent |
+| Brand dark | `#1a1a2e` | 26, 26, 46 | Dark backgrounds, sidebar, headers |
+| Light gray | `#f8f9fa` | 248, 249, 250 | Page background |
+| Error red | `#dc2626` | 220, 38, 38 | Error states, destructive actions, negative amounts |
+| Warning amber | `#f59e0b` | 245, 158, 11 | Pending states, alerts |
+| Success green | `#16a34a` | 22, 163, 74 | Success confirmations (distinct from brand green) |
+
+> **Note**: `#86BE41` and `#2D8CCA` are the official MyMoolah brand colors (confirmed from brand guide).
+> The CSS variable `--primary` in `portal/admin/frontend/src/index.css` maps to `#86BE41`.
+> Use `var(--primary)` for brand green and `var(--mymoolah-blue)` for brand blue.
 
 ### 11.4 Card Component
 

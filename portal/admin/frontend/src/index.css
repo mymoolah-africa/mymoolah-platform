@@ -24,8 +24,8 @@
     --popover: #ffffff;
     --popover-foreground: #1a1a2e;
 
-    /* Primary — brand green */
-    --primary: #00B894;
+    /* Primary — MyMoolah brand green */
+    --primary: #86BE41;
     --primary-foreground: #ffffff;
 
     /* Secondary */
@@ -47,34 +47,34 @@
     /* Borders & inputs */
     --border: #e2e8f0;
     --input: #e2e8f0;
-    --ring: #00B894;
+    --ring: #86BE41;
 
     /* Radius */
     --radius: 0.75rem;
 
     /* Chart palette */
-    --chart-1: #00B894;
+    --chart-1: #86BE41;
     --chart-2: #2D8CCA;
-    --chart-3: #86BE41;
+    --chart-3: #6a9b30;
     --chart-4: #f59e0b;
     --chart-5: #8b5cf6;
 
     /* Sidebar */
     --sidebar: #1a1a2e;
     --sidebar-foreground: #cbd5e1;
-    --sidebar-primary: #00B894;
+    --sidebar-primary: #86BE41;
     --sidebar-primary-foreground: #ffffff;
     --sidebar-accent: rgba(255, 255, 255, 0.08);
     --sidebar-accent-foreground: #ffffff;
     --sidebar-border: rgba(255, 255, 255, 0.08);
-    --sidebar-ring: #00B894;
+    --sidebar-ring: #86BE41;
 
     /* MyMoolah brand */
     --mymoolah-green: #86BE41;
     --mymoolah-blue: #2D8CCA;
 
     /* Portal role colors */
-    --portal-admin: #00B894;
+    --portal-admin: #86BE41;
     --portal-supplier: #059669;
     --portal-client: #2563eb;
     --portal-merchant: #dc2626;
@@ -85,6 +85,8 @@
     --error-color: #dc2626;
     --warning-color: #f59e0b;
     --info-color: #2D8CCA;
+    --secondary-action: #2D8CCA;
+    --secondary-action-foreground: #ffffff;
     --gray-text: #64748b;
 
     /* Spacing scale */
@@ -163,7 +165,7 @@
   .wallet-form-input:focus {
     @apply outline-none bg-white;
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(0, 184, 148, 0.1);
+    box-shadow: 0 0 0 3px rgba(134, 190, 65, 0.15);
   }
   .wallet-form-input::placeholder {
     @apply text-sm;

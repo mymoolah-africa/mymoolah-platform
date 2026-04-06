@@ -1,10 +1,35 @@
 # MyMoolah Treasury Platform - Changelog
 
-## 2026-04-07 - Codespaces start-all-services proxy stabilization (v2.86.1)
+## 2026-04-07 - Portal UI Overhaul Complete + Documentation + Proxy Fix (v2.86.1)
 
 ### Summary
-- `scripts/start-all-services.sh`: 3-second pause after Cloud SQL Auth Proxies start before launching main backend, reducing intermittent `read ECONNRESET` on first Sequelize connection.
-- `docs/DATABASE_CONNECTION_GUIDE.md`: ECONNRESET section extended with `start-all-services.sh` context and kill/restart recovery snippet.
+Portal UI overhaul approved by Andre. Comprehensive portal documentation created. Codespaces startup stabilized.
+
+### Portal UI (v2.86.0 — styling approved)
+- **5 screens fully styled** (CSS variables, zero inline styles): Login, Dashboard, Sidebar/Header, Users & KYC, Transactions
+- **4 screens functional** but use inline styles (migration pending): UnallocatedDeposits, Disbursement Runs/Create/Detail
+- **7 placeholder screens** with styled "Coming Soon" layouts: Float, Settlements, Services, System Config, Security, Reports, Partners
+- Design system: 50+ CSS tokens in `index.css`, Montserrat font, `font-mono tabular-nums` for financial amounts
+- Build: zero warnings, zero linter errors
+
+### Portal Development Guide (new)
+- Created `docs/PORTAL_DEVELOPMENT_GUIDE.md` — comprehensive development guide for portal
+- Architecture diagram, design token reference, screen status matrix
+- Step-by-step "build a screen" tutorial (frontend component + route + sidebar + backend endpoint)
+- Conventions (CSS vars, auth, DB access), recommended build order for remaining 7 screens
+
+### Proxy Stabilization
+- `scripts/start-all-services.sh`: 3-second pause after Cloud SQL Auth Proxies start before launching main backend
+- `docs/DATABASE_CONNECTION_GUIDE.md`: ECONNRESET section extended with recovery snippet
+
+### Files Created
+- `docs/PORTAL_DEVELOPMENT_GUIDE.md`
+
+### Files Modified
+- `scripts/start-all-services.sh` — post-proxy stabilization wait
+- `docs/DATABASE_CONNECTION_GUIDE.md` — ECONNRESET recovery
+- `docs/AGENT_HANDOVER.md` — portal-specific next-agent context
+- Portal frontend files (see v2.86.0 session log for full list)
 
 ---
 

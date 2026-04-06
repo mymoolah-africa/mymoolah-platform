@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-07 01:00  
-**Latest Feature**: **Codespaces `start-all-services.sh`** — After Cloud SQL proxies start, script waits **3s** before launching main backend to reduce `read ECONNRESET` on first DB connection. Recovery steps added under ECONNRESET in `docs/DATABASE_CONNECTION_GUIDE.md`. (Prior: Portal UI Overhaul v2.86.0 — Clearflow-style admin portal.)  
+**Last Updated**: 2026-04-07 01:30  
+**Latest Feature**: **Portal UI Overhaul Complete + Portal Development Guide (v2.86.1)** — MMTP Admin Portal Clearflow "finance control room" visual overhaul approved by Andre. 5 screens fully styled (Login, Dashboard, Sidebar, Users, Transactions), 4 functional screens with inline styles pending migration, 7 placeholder screens ready to build. Created `docs/PORTAL_DEVELOPMENT_GUIDE.md` — comprehensive development guide (design tokens, architecture, screen status, build tutorial, conventions, recommended build order). Proxy stabilization fix in `start-all-services.sh`.  
 **Document Version**: 2.86.1  
-**Session logs**: `docs/session_logs/2026-04-07_0100_start-all-services-proxy-stabilize.md`, `docs/session_logs/2026-04-06_2330_portal-ui-overhaul.md`  
+**Session logs**: `docs/session_logs/2026-04-07_0130_portal-ui-final-documentation.md`, `docs/session_logs/2026-04-06_2330_portal-ui-overhaul.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -39,6 +39,7 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 | Run DB migrations | `docs/DATABASE_CONNECTION_GUIDE.md` |
 | Set up dev environment | `docs/DEVELOPMENT_GUIDE.md` |
 | Test in Codespaces | `docs/CODESPACES_TESTING_REQUIREMENT.md` |
+| Portal development | `docs/PORTAL_DEVELOPMENT_GUIDE.md` |
 | Ledger Chart of Accounts | `docs/CHART_OF_ACCOUNTS.md` |
 | Deploy | `docs/DEPLOYMENT_GUIDE.md`, `docs/archive/deployment/GCP_PRODUCTION_DEPLOYMENT.md` |
 | API contracts | `docs/API_DOCUMENTATION.md` |
@@ -101,8 +102,8 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (April 6, 2026 - 23:30)**
-**Portal UI Overhaul — Clearflow Finance Control Room (v2.86.0)** — Complete visual overhaul of MMTP Admin Portal using 7 specialized skills (frontend-design, tailwind-design-system, admin-portal-builder, interaction-design, accessibility-compliance, robust-financial-forms, auditing). (1) CSS foundations: `index.css` rewritten from 892→170 lines; 50+ shadcn-compatible design tokens defined; ~700 lines duplicate Tailwind utilities removed; `postcss.config.js` added. (2) Login: split-screen layout (dark brand panel + form), Eye/EyeOff password toggle, security badges, responsive stacking. (3) Sidebar: CSS variable refs (zero inline styles), active left-border accent, header with route-derived page title + search/notification icons. (4) Dashboard: welcome greeting (time-of-day), KPI cards with left-border accents + icon wells, `DashboardSkeleton` loading, refined settlements/alerts panels, striped entity table. (5) Tables: UserManagement and TransactionMonitoring polished with consistent headers, filter bars, `font-mono tabular-nums` amounts, pagination, skeleton loading, empty/error states. (6) 7 placeholder screens upgraded from bare text to proper layouts with icons, descriptions, planned features grid. (7) Accessibility: `main.tsx` inline styles→Tailwind, aria-labels, focus-visible, reduced-motion support. Build: zero warnings, zero linter errors. Session log: `docs/session_logs/2026-04-06_2330_portal-ui-overhaul.md`.
+### **Latest Achievement (April 7, 2026 - 01:30)**
+**Portal UI Overhaul Complete + Documentation + Proxy Fix (v2.86.1)** — (1) Portal UI overhaul approved by Andre (screenshot confirmed). 5 screens fully styled with CSS variables: Login (split-screen brand layout), Dashboard (KPI cards, settlements, alerts, entity table), AppLayoutWrapper (dark sidebar, header with page title), UserManagement (user list, KYC dots, detail drawer), TransactionMonitoring (transaction list, filters, journal drawer). 4 screens functional but use inline styles (UnallocatedDeposits, Disbursement×3). 7 placeholder "Coming Soon" screens with styled layouts. (2) Created `docs/PORTAL_DEVELOPMENT_GUIDE.md` — design tokens, architecture, file map, screen status matrix, step-by-step "build a screen" tutorial, conventions, recommended build order. (3) Fixed `start-all-services.sh` — 3s proxy stabilization pause reduces `read ECONNRESET` on first DB connection. (4) Extended ECONNRESET recovery in `DATABASE_CONNECTION_GUIDE.md`. Session logs: `docs/session_logs/2026-04-07_0130_portal-ui-final-documentation.md`, `docs/session_logs/2026-04-06_2330_portal-ui-overhaul.md`.
 
 ### **Previous Achievement (April 6, 2026 - 22:30)**
 **Codespaces Startup Script & Portal Auth Security Fix (v2.85.2)** — Created `scripts/start-all-services.sh` for one-command Codespaces startup (proxies, main backend, wallet frontend, portal backend, portal frontend, all ports set to Public). Migrated all portal auth from `localStorage` to `sessionStorage` across 8 files — closing the browser now requires re-login (banking-grade). Debugged and resolved Codespaces port forwarding 404 issue (browser cache). Session log: `docs/session_logs/2026-04-06_2230_startup-script-and-auth-fix.md`.
@@ -705,16 +706,15 @@ You're part of a **banking-grade software system** where:
 
 ## 🎯 **CURRENT SESSION SUMMARY**
 
-**Session Status**: ✅ **COMPLETE** — MMTP Admin Portal DB Helper Migration & First Live Test (v2.85.1)  
-**Last Session**: 2026-04-06 22:00 — Portal DB migration to db-connection-helper.js, build fixes, end-to-end testing in Codespaces
+**Session Status**: ✅ **COMPLETE** — Portal UI Overhaul + Documentation + Proxy Fix (v2.86.1)  
+**Last Session**: 2026-04-07 01:30 — Portal UI approved, comprehensive documentation created, proxy startup stabilized
 
-### **Most Recent Work (2026-04-06 22:00)**
-- **Portal DB access migrated**: All controllers (`adminController.js`, `userManagementController.js`, `transactionMonitoringController.js`) rewritten from Sequelize ORM to raw parameterized SQL via `portal/backend/helpers/getDbClient.js` (wraps `db-connection-helper.js`).
-- **Portal models/index.js rewritten**: Uses `db-connection-helper.js` config functions (`getUATConfig`/`getStagingConfig`/`getProductionConfig`) for Sequelize initialization.
-- **Frontend build fixed**: Missing `tsconfig.json` created. `Handshake` icon replaced with `Briefcase` (not in lucide-react v0.294.0). `dist/` added to `.gitignore`.
-- **Admin seeder created**: `scripts/seed-portal-admin.js` uses `db-connection-helper.js`. Requires `PORTAL_ADMIN_PASSWORD` env var (no hardcoded defaults).
-- **End-to-end tested in Codespaces**: Login (JWT HS512), dashboard with real UAT data, sidebar navigation — all working.
-- **UI styling feedback**: Andre confirmed portal is functional but visually rough. **UI styling is #1 priority for next session.**
+### **Most Recent Work (2026-04-07 01:30)**
+- **Portal UI overhaul approved**: Andre confirmed he is happy with the portal styling (Clearflow "finance control room" aesthetic, MyMoolah brand colors).
+- **Portal Development Guide created**: `docs/PORTAL_DEVELOPMENT_GUIDE.md` — architecture diagram, design token reference, screen status matrix (5 fully styled, 4 functional w/ inline styles, 7 placeholders), step-by-step "build a screen" tutorial, conventions, recommended build order.
+- **Proxy stabilization fix**: `scripts/start-all-services.sh` now waits 3s after proxy startup, reducing `read ECONNRESET` on backend boot in Codespaces.
+- **Extended DB docs**: `DATABASE_CONNECTION_GUIDE.md` ECONNRESET section updated with `start-all-services.sh` recovery sequence.
+- **All services confirmed running**: Codespaces backend healthy on port 3001, portal functional.
 
 ### **Previous Work (2026-04-06 21:00)**
 - **Portal Security Hardening & Rebuild (v2.85.0)**: 14+ backend security fixes (JWT HS512, hardcoded secrets removed, audit trail to DB, PII redaction), frontend auth rewired to real backend JWT, Clearflow-inspired dark sidebar navigation, dashboard rebuilt with real data, User Management and Transaction Monitoring screens built.
@@ -776,20 +776,42 @@ You're part of a **banking-grade software system** where:
 - Production: `api-mm.mymoolah.africa`, `wallet.mymoolah.africa` — live
 - **Backend redeploy required** for USSD Phase 2 + previous VAS/voucher/electricity changes
 
-### **Next Agent Actions**
-1. Read `docs/CURSOR_2.0_RULES_FINAL.md` (MANDATORY)
-2. Read this file and recent session logs (especially `2026-04-06_2330_portal-ui-overhaul.md`)
-3. **VISUAL TEST IN CODESPACES**: Pull latest, install deps, rebuild frontend, verify all portal screens visually. Run: `git pull origin main && cd portal/admin/frontend && npm install && npm run build && cd ../../.. && ./scripts/start-all-services.sh`
-4. **REMAINING INLINE STYLES**: UnallocatedDepositsOverlay, DisbursementRuns/Create/Detail overlays still have inline `style={{}}` and missing aria-labels. Polish in a dedicated session.
-5. **Build remaining portal screens**: Replace "Coming Soon" with real functionality (Float Management, Settlement, Commission Config, etc.)
-6. **Portal deployment**: Deploy to Cloud Run (staging first) when screens are ready
-7. **Portal CSS system**: All tokens in `src/index.css` `:root`. Use CSS variable references (`bg-[var(--primary)]`, etc.). Do NOT introduce inline styles or hardcoded hex.
-8. **Portal backend**: All DB access uses `db-connection-helper.js` via `portal/backend/helpers/getDbClient.js`
-9. **Portal auth**: JWT HS512. Seed users with `PORTAL_ADMIN_PASSWORD=xxx node scripts/seed-portal-admin.js`
-10. **USSD Phase 2 is code-complete** — backend redeploy will activate on both shortcodes
-11. Do NOT reactivate Peach Payments without explicit approval from Andre
-12. Do NOT add `RmtInf.Ustrd` to Pain.013 — SBSA rejects it
-13. npm audit: 9 remaining (5 low, 4 moderate) — all in transitive deps
+### **Next Agent Actions — PORTAL CONTINUATION**
+
+**MANDATORY READING FOR PORTAL WORK**:
+1. Read `docs/CURSOR_2.0_RULES_FINAL.md` (mandatory rules confirmation)
+2. Read `docs/PORTAL_DEVELOPMENT_GUIDE.md` (design system, file map, screen status, build tutorial)
+3. Read `.agents/skills/admin-portal-builder/SKILL.md` (15-screen priority list, maker-checker patterns)
+4. Read this file and session logs: `2026-04-07_0130_portal-ui-final-documentation.md`, `2026-04-06_2330_portal-ui-overhaul.md`
+
+**PORTAL BUILD PRIORITIES** (in order):
+1. **Style migration** (HIGH) — Convert inline `style={{}}` to CSS variables in:
+   - `UnallocatedDepositsOverlay.tsx` (385 lines, inline styles for summary gradient, filter toggles, status chips, modal)
+   - `DisbursementRunsOverlay.tsx` (178 lines, inline styles for status colors, buttons)
+   - `CreateDisbursementRunOverlay.tsx` (319 lines, inline styles for mode toggle, buttons, inputs)
+   - `DisbursementRunDetailOverlay.tsx` (340 lines, inline styles for status badges, KPI text, buttons)
+2. **Float Management** — Replace placeholder with real screen. Data source: `supplier_floats` table. Main backend already has `FloatBalanceMonitoring` service. Need portal backend endpoint + frontend table.
+3. **Security / Audit Log** — Replace placeholder. Data source: `admin_audit_log` table (portal DB). Need read-only log viewer with date/user/action filters.
+4. **Settlement Management** — Replace placeholder. Data source: `settlement_runs`, `settlement_line_items` tables.
+5. **Reporting & Analytics** — Replace placeholder. Aggregate queries on transactions, wallets, VAS.
+6. **Service Management** — Replace placeholder. Data source: `product_variants`, `suppliers`, circuit breaker status.
+7. **System Configuration** — Replace placeholder. Feature flags (new table needed).
+8. **Partner Onboarding** — Replace placeholder. New tables needed for partner lifecycle.
+
+**PORTAL DESIGN CONVENTIONS** (MUST follow — Andre approved this styling):
+- All colors via CSS variables in `portal/admin/frontend/src/index.css` `:root`
+- Use `bg-[var(--card)]`, `text-[var(--foreground)]`, `border-[var(--border)]`, `rounded-[var(--radius)]` etc.
+- Financial amounts: `font-mono tabular-nums`
+- Auth: `sessionStorage` (not `localStorage`)
+- DB queries: `portal/backend/helpers/getDbClient.js` → raw parameterized SQL, never ORM
+- See `docs/PORTAL_DEVELOPMENT_GUIDE.md` Section 5 for step-by-step "build a screen" tutorial
+
+**OTHER REMINDERS**:
+- USSD Phase 2 is code-complete — backend redeploy will activate on both shortcodes
+- Do NOT reactivate Peach Payments without explicit approval from Andre
+- Do NOT add `RmtInf.Ustrd` to Pain.013 — SBSA rejects it
+- npm audit: 9 remaining (5 low, 4 moderate) — all in transitive deps
+- Portal deployment to Cloud Run (staging first) once more screens are functional
 
 ---
 
@@ -797,6 +819,7 @@ You're part of a **banking-grade software system** where:
 
 | Date | Update |
 |------|--------|
+| Apr 7 (01:30) | **Portal UI Overhaul Complete + Portal Development Guide (v2.86.1)**: Andre approved portal styling. Created `docs/PORTAL_DEVELOPMENT_GUIDE.md` (design tokens, architecture, screen status, build tutorial, conventions, recommended build order). Fixed `start-all-services.sh` proxy stabilization (3s pause). Extended ECONNRESET recovery in `DATABASE_CONNECTION_GUIDE.md`. Session logs: `docs/session_logs/2026-04-07_0130_portal-ui-final-documentation.md`, `docs/session_logs/2026-04-06_2330_portal-ui-overhaul.md` |
 | Apr 6 (22:30) | **Codespaces Startup Script & Portal Auth Security Fix (v2.85.2)**: Created `start-all-services.sh` one-command startup. Migrated portal auth from localStorage to sessionStorage (banking-grade). Fixed Codespaces port forwarding 404 (browser cache). Session log: `docs/session_logs/2026-04-06_2230_startup-script-and-auth-fix.md` |
 | Apr 6 (22:00) | **Admin Portal DB Helper Migration & First Live Test (v2.85.1)**: All portal backend DB access migrated to `db-connection-helper.js`. Frontend build fixed (tsconfig, lucide-react icon, dist/ gitignore). Admin seed script created. Portal tested end-to-end in Codespaces: login, dashboard, sidebar all working. **UI styling is #1 priority for next session.** Session log: `docs/session_logs/2026-04-06_2200_portal-db-helper-and-testing.md` |
 | Apr 6 (21:00) | **Admin Portal Security Hardening & Rebuild (v2.85.0)**: 14+ backend security fixes, frontend auth rewired to real backend JWT, Clearflow sidebar, dashboard with real data, User Management + Transaction Monitoring screens. Session log: `docs/session_logs/2026-04-06_2100_portal-security-hardening-and-rebuild.md` |
