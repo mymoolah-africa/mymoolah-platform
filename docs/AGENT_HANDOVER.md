@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-06 22:30  
-**Latest Feature**: **Codespaces Startup Script & Portal Auth Security Fix (v2.85.2)** — Created `scripts/start-all-services.sh` (one-command Codespaces startup: proxies + 4 services + public ports). Migrated portal auth from `localStorage` to `sessionStorage` (banking-grade: closing browser requires re-login). **UI styling is the #1 priority for next session** — read `frontend-design`, `tailwind-design-system`, `admin-portal-builder`, `interaction-design` skills.  
-**Document Version**: 2.85.2  
-**Session logs**: `docs/session_logs/2026-04-06_2230_startup-script-and-auth-fix.md`  
+**Last Updated**: 2026-04-06 23:30  
+**Latest Feature**: **Portal UI Overhaul — Clearflow Finance Control Room (v2.86.0)** — Complete visual overhaul of MMTP Admin Portal. CSS foundations rewritten (892→170 lines, 50+ design tokens). Login page redesigned (split-screen brand layout). Sidebar refined (CSS variable refs, page title header, search/notification icons). Dashboard rebuilt as finance control room (KPI cards, skeleton loading, welcome greeting). Data tables polished (UserManagement, TransactionMonitoring). 7 placeholder screens upgraded. Accessibility sweep completed. Zero inline styles in rewritten files.  
+**Document Version**: 2.86.0  
+**Session logs**: `docs/session_logs/2026-04-06_2330_portal-ui-overhaul.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -101,7 +101,10 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (April 6, 2026 - 22:30)**
+### **Latest Achievement (April 6, 2026 - 23:30)**
+**Portal UI Overhaul — Clearflow Finance Control Room (v2.86.0)** — Complete visual overhaul of MMTP Admin Portal using 7 specialized skills (frontend-design, tailwind-design-system, admin-portal-builder, interaction-design, accessibility-compliance, robust-financial-forms, auditing). (1) CSS foundations: `index.css` rewritten from 892→170 lines; 50+ shadcn-compatible design tokens defined; ~700 lines duplicate Tailwind utilities removed; `postcss.config.js` added. (2) Login: split-screen layout (dark brand panel + form), Eye/EyeOff password toggle, security badges, responsive stacking. (3) Sidebar: CSS variable refs (zero inline styles), active left-border accent, header with route-derived page title + search/notification icons. (4) Dashboard: welcome greeting (time-of-day), KPI cards with left-border accents + icon wells, `DashboardSkeleton` loading, refined settlements/alerts panels, striped entity table. (5) Tables: UserManagement and TransactionMonitoring polished with consistent headers, filter bars, `font-mono tabular-nums` amounts, pagination, skeleton loading, empty/error states. (6) 7 placeholder screens upgraded from bare text to proper layouts with icons, descriptions, planned features grid. (7) Accessibility: `main.tsx` inline styles→Tailwind, aria-labels, focus-visible, reduced-motion support. Build: zero warnings, zero linter errors. Session log: `docs/session_logs/2026-04-06_2330_portal-ui-overhaul.md`.
+
+### **Previous Achievement (April 6, 2026 - 22:30)**
 **Codespaces Startup Script & Portal Auth Security Fix (v2.85.2)** — Created `scripts/start-all-services.sh` for one-command Codespaces startup (proxies, main backend, wallet frontend, portal backend, portal frontend, all ports set to Public). Migrated all portal auth from `localStorage` to `sessionStorage` across 8 files — closing the browser now requires re-login (banking-grade). Debugged and resolved Codespaces port forwarding 404 issue (browser cache). Session log: `docs/session_logs/2026-04-06_2230_startup-script-and-auth-fix.md`.
 
 ### **Previous Achievement (April 6, 2026 - 22:00)**
@@ -775,17 +778,18 @@ You're part of a **banking-grade software system** where:
 
 ### **Next Agent Actions**
 1. Read `docs/CURSOR_2.0_RULES_FINAL.md` (MANDATORY)
-2. Read this file and recent session logs (especially `2026-04-06_2200_portal-db-helper-and-testing.md` and `2026-04-06_2100_portal-security-hardening-and-rebuild.md`)
-3. **ADMIN PORTAL UI STYLING (TOP PRIORITY)**: Portal is functional but "looks horrendous" per Andre. Read `.agents/skills/frontend-design/SKILL.md` for guidance. Apply Clearflow "quiet control" aesthetic with MyMoolah brand colors (#00B894 accent). Fix Tailwind CSS loading. Polish: login page, sidebar, dashboard KPI cards, tables, alerts, spacing, typography. Behance reference: Treasury Platform Product Redesign (Clearflow).
-4. **Test User Management and Transaction Monitoring screens** with real data in portal
-5. **Build remaining portal screens**: Float Management, Settlement, Commission, Circuit Breaker, Service Management, Reporting, Security Audit, System Config
+2. Read this file and recent session logs (especially `2026-04-06_2330_portal-ui-overhaul.md`)
+3. **VISUAL TEST IN CODESPACES**: Pull latest, rebuild frontend, verify all portal screens visually. Run: `git pull origin main && cd portal/admin/frontend && npm run build && cd ../../.. && ./scripts/start-all-services.sh`
+4. **REMAINING INLINE STYLES**: UnallocatedDepositsOverlay, DisbursementRuns/Create/Detail overlays still have inline `style={{}}` and missing aria-labels. Polish in a dedicated session.
+5. **Build remaining portal screens**: Replace "Coming Soon" with real functionality (Float Management, Settlement, Commission Config, etc.)
 6. **Portal deployment**: Deploy to Cloud Run (staging first) when screens are ready
-7. **Portal backend**: All DB access uses `db-connection-helper.js` via `portal/backend/helpers/getDbClient.js` — NEVER use `new Sequelize()` or `require('../../../models')` for main app tables
-8. **Portal auth**: JWT HS512. Seed users with `PORTAL_ADMIN_PASSWORD=xxx node scripts/seed-portal-admin.js`
-9. **USSD Phase 2 is code-complete** — backend redeploy will activate on both shortcodes
-10. Do NOT reactivate Peach Payments without explicit approval from Andre
-11. Do NOT add `RmtInf.Ustrd` to Pain.013 — SBSA rejects it
-12. npm audit: 9 remaining (5 low, 4 moderate) — all in transitive deps
+7. **Portal CSS system**: All tokens in `src/index.css` `:root`. Use CSS variable references (`bg-[var(--primary)]`, etc.). Do NOT introduce inline styles or hardcoded hex.
+8. **Portal backend**: All DB access uses `db-connection-helper.js` via `portal/backend/helpers/getDbClient.js`
+9. **Portal auth**: JWT HS512. Seed users with `PORTAL_ADMIN_PASSWORD=xxx node scripts/seed-portal-admin.js`
+10. **USSD Phase 2 is code-complete** — backend redeploy will activate on both shortcodes
+11. Do NOT reactivate Peach Payments without explicit approval from Andre
+12. Do NOT add `RmtInf.Ustrd` to Pain.013 — SBSA rejects it
+13. npm audit: 9 remaining (5 low, 4 moderate) — all in transitive deps
 
 ---
 
