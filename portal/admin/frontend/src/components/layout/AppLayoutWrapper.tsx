@@ -11,7 +11,7 @@ import {
   FileText,
   Shield,
   Settings,
-  Handshake,
+  Briefcase,
   Layers,
   Server,
   ChevronLeft,
@@ -70,7 +70,7 @@ const NAV_GROUPS: NavGroup[] = [
     title: 'SYSTEM',
     items: [
       { label: 'Configuration', path: '/admin/system', icon: Settings },
-      { label: 'Partners', path: '/admin/partners', icon: Handshake },
+      { label: 'Partners', path: '/admin/partners', icon: Briefcase },
     ],
   },
 ];
