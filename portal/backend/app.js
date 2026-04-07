@@ -42,7 +42,9 @@ app.use(helmet({
 const allowedOrigins = (process.env.PORTAL_FRONTEND_URL || 'http://localhost:3003').split(',').map(s => s.trim());
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+    if (!origin) return cb(null, true);
+    if (allowedOrigins.includes(origin)) return cb(null, true);
+    if (origin.endsWith('.app.github.dev') || origin.endsWith('.preview.app.github.dev')) return cb(null, true);
     cb(new Error('CORS policy violation'));
   },
   credentials: true,
