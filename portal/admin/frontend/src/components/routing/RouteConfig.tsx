@@ -1,5 +1,6 @@
 import React from 'react';
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import { AppLayoutWrapper } from '../layout/AppLayoutWrapper';
 
 import AdminLogin from '../../pages/AdminLogin';
@@ -20,18 +21,20 @@ import { CreateDisbursementRunOverlay } from '../admin-overlays/CreateDisburseme
 import { DisbursementRunDetailOverlay } from '../admin-overlays/DisbursementRunDetailOverlay';
 
 const ProtectedRoute: React.FC = () => {
-  const token = sessionStorage.getItem('portal_token');
-  const user = sessionStorage.getItem('portal_user');
+  const { isAuthenticated, isLoading } = useAuth();
 
-  if (!token || !user) {
-    return <Navigate to="/admin/login" replace />;
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-[var(--background)]">
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-[var(--muted)] border-t-[var(--primary)]" />
+          <p className="text-sm text-[var(--muted-foreground)]">Verifying session...</p>
+        </div>
+      </div>
+    );
   }
 
-  try {
-    JSON.parse(user);
-  } catch {
-    sessionStorage.removeItem('portal_token');
-    sessionStorage.removeItem('portal_user');
+  if (!isAuthenticated) {
     return <Navigate to="/admin/login" replace />;
   }
 
