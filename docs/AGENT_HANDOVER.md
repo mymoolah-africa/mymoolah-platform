@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-07 16:30  
-**Latest Feature**: **Disbursement Phase 1 Backend Services (v2.88.0)** — Complete Phase 1 backend for banking-grade disbursement service. 2 migrations (5 new tables + 5 ledger accounts), 7 new services (feeEngine, clientFloatService, fileParserService, kybComplianceService, notificationEngine, sbsaSftpClientService, pain002PollerService), modified disbursementService.js for multi-rail routing (EFT/PayShap/wallet). Wallet payments use same EFT banking path with MM treasury account + MSISDN reference. Previous: Portal Cloud Run Staging (v2.87.0).  
-**Document Version**: 2.88.0  
-**Session logs**: `docs/session_logs/2026-04-07_1630_disbursement-phase1-services.md`, `docs/session_logs/2026-04-07_1500_portal-cloud-run-staging-deployment.md`  
+**Last Updated**: 2026-04-07 18:30  
+**Latest Feature**: **Disbursement Phase 1 Complete + Portal Staging Live (v2.88.1)** — Phase 1 backend complete (7 services, 2 migrations, multi-rail disbursementService.js). Portal deployed to staging Cloud Run (K_SERVICE port fix). Migrations run on UAT + staging. **NEXT: Disbursement Phase 2 — API routes, controllers, Sequelize models, portal UI pages.** Previous: Disbursement Phase 1 Backend Services (v2.88.0).  
+**Document Version**: 2.88.1  
+**Session logs**: `docs/session_logs/2026-04-07_1830_portal-deploy-fix-and-session-wrap.md`, `docs/session_logs/2026-04-07_1630_disbursement-phase1-services.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -832,7 +832,7 @@ You're part of a **banking-grade software system** where:
 - Do NOT reactivate Peach Payments without explicit approval from Andre
 - Do NOT add `RmtInf.Ustrd` to Pain.013 — SBSA rejects it
 - npm audit: 9 remaining (5 low, 4 moderate) — all in transitive deps
-- ✅ Portal deployed to Cloud Run staging: https://mymoolah-portal-staging-4ekgjiko5a-bq.a.run.app
+- ✅ Portal deployed to Cloud Run staging: https://mymoolah-portal-staging-1039241541823.africa-south1.run.app
 - Portal production deployment pending (custom URL planned)
 
 ---
@@ -841,6 +841,8 @@ You're part of a **banking-grade software system** where:
 
 | Date | Update |
 |------|--------|
+| Apr 7 (18:30) | **Portal Deploy Fix + Disbursement Session Wrap (v2.88.1)**: Fixed Cloud Run deployment failure — previous fix removed PORT entirely, but Cloud Run requires PORT=8080. Added K_SERVICE environment detection: Cloud Run uses PORT, Codespaces defaults to 3002. Portal staging live and verified. Comprehensive disbursement Phase 2 handover written. Session log: `docs/session_logs/2026-04-07_1830_portal-deploy-fix-and-session-wrap.md` |
+| Apr 7 (16:30) | **Disbursement Phase 1 Backend Services (v2.88.0)**: 2 migrations (5 tables + 5 ledger accounts), 7 new services (feeEngine, clientFloatService, fileParserService, kybComplianceService, notificationEngine, sbsaSftpClientService, pain002PollerService), modified disbursementService.js for multi-rail routing (EFT/PayShap/wallet). Wallet payments use same EFT banking path with MM treasury account + MSISDN reference. Migrations run on UAT + staging. Session log: `docs/session_logs/2026-04-07_1630_disbursement-phase1-services.md` |
 | Apr 7 (15:00) | **Portal Cloud Run Staging Deployment (v2.87.0)**: Single-service architecture deployed to Cloud Run. Dockerfile (multi-stage), deploy-portal.sh (--no-cache), start.sh (DATABASE_URL), .dockerignore. CORS fix for Vite crossorigin. seed-portal-admin.js updated for multi-env. Portal live and verified. Session log: `docs/session_logs/2026-04-07_1500_portal-cloud-run-staging-deployment.md` |
 | Apr 7 (02:15) | **Proxy Auth Token Fix (v2.86.3)**: Fixed root cause of `read ECONNRESET` — expired OAuth2 tokens in stale Cloud SQL Auth Proxies. `start-all-services.sh` now kills stale proxies + refreshes gcloud token non-interactively before starting fresh proxies. Tested and verified in Codespaces. Session log: `docs/session_logs/2026-04-07_0200_start-all-services-auth-token-fix.md` |
 | Apr 7 (01:45) | **Portal UI Complete + Brand Logos + Dev Guide (v2.86.2)**: Andre approved portal styling. Official MyMoolah logos (stacked, icon, horizontal) integrated in login + sidebar. Primary color corrected from `#00B894` to brand green `#86BE41`. Created `docs/PORTAL_DEVELOPMENT_GUIDE.md` v1.1.0 (design tokens, logo usage, architecture, screen status, build tutorial). SKILL.md brand colors updated. Proxy stabilization (3s pause). Session logs: `docs/session_logs/2026-04-07_0130_portal-ui-final-documentation.md`, `docs/session_logs/2026-04-06_2330_portal-ui-overhaul.md` |
@@ -894,20 +896,53 @@ You're part of a **banking-grade software system** where:
 
 ## 🚀 **NEXT DEVELOPMENT PRIORITIES**
 
-1. ~~**Staging & Production VAS Products**~~ — ✅ DONE (2026-03-31 14:00). All overlay catalog routes now read from normalized `product_variants` (populated by daily sync). Frontend navigation fixed. Needs deployment and testing.
-2. **SBSA PayShap Production Callback** — Louis Van Zyl investigating why real PayShap deposits don't trigger production callbacks (inward queue issue). Sandbox callbacks confirmed working (6/6). Production callback URL registered: `https://api-mm.mymoolah.africa/api/v1/standardbank/payshap/inbound-credit`.
-3. **SBSA H2H SFTP Channel** — Melanie Block enabling SFTP channel. Pain.001 v3 file passed SSVS validator. Test file with valid beneficiaries uploaded to GCS outbox. Awaiting channel activation to test file pickup and Pain.002 return.
-4. **EasyPay legal follow-up** — Await Nkululeko / EasyPay legal response to TPPP/NPS positioning email (sent/drafted 2026-03-24). Offer Standard Bank sponsor letter or PASA application pack if requested. Session log: `docs/session_logs/2026-03-24_1530_easypay-tppp-legal-response-draft.md`.
-5. **H2H Statements/Payments** — Statement format (MT940 + MT942) and delivery schedule confirmed. Awaiting Melissa sign-on and SBSA connectivity test.
-6. ~~**Field encryption: Cloud Run env vars**~~ — ✅ DONE (2026-03-31). `FIELD_ENCRYPTION_KEY` and `FIELD_HMAC_KEY` linked from Secret Manager in production Cloud Run.
-7. **MobileMart + Flash SSH keys** — Awaiting their public keys to add to SFTP Gateway user profiles (`mobilemart` and `flash` users).
-8. ~~**Capitec RTP EBONF**~~ — ✅ DONE. Handled with professional daily-limit message. EBONF failures are SBSA-side routing issue (daily limit), not a code bug.
-9. **PayShap RTP — PBAC fallback path testing** — Need a payer with NO registered PayShap proxy to trigger `EPDNF` and verify `[RTP-RETRY-PBAC]` logs + account-based retry succeeds.
-10. **EasyPay Cash-In activation** — Await Razine response. Set `EASYPAY_RECEIVER_ID=5063` in Secret Manager. Parallel track: EasyPay legal/NPS (item 2 above).
-11. **Flash transaction testing in Staging** — Await Tia confirmation of transaction endpoint paths.
-12. **USDC send** — Test in Codespaces when VALR credentials available. Corporate account registration with VALR in progress (RMCP drafted 2026-03-22).
-13. **SFTP Gateway admin IP** — Dynamic ISP IP (last known: `169.0.73.54` on 2026-03-17). If admin UI becomes inaccessible, update `sftp-1-tcp-22` and `sftp-1-tcp-443` firewall rules with new IP.
-14. **SFTP Gateway port is 5022** — Updated 2026-03-17 per Colette (SBSA). Config: `/opt/sftpgw/application.properties`. To SSH into VM for config changes, you MUST use the disk detach/mount approach (SFTP Gateway intercepts port 22 — IAP SSH is blocked).
+### **🔴 PRIORITY 1: Disbursement Service — Phase 2 (API + Models + Portal UI)**
+
+Phase 1 backend services are COMPLETE (7 services, 2 migrations, multi-rail routing). Migrations run on UAT + staging. **Phase 2 is the next major build.**
+
+**Read first**: `docs/session_logs/2026-04-07_1830_portal-deploy-fix-and-session-wrap.md` (full inventory of what exists and what to build) and `docs/session_logs/2026-04-07_1630_disbursement-phase1-services.md` (all Phase 1 architecture decisions).
+
+**What EXISTS (Phase 1 — DONE):**
+
+| Service | Location | Purpose |
+|---------|----------|---------|
+| `feeEngine.js` | `services/disbursement/` | Per-payment fee calc (flat/pct/combined, wallet=free) |
+| `clientFloatService.js` | `services/disbursement/` | ACID float ops, SELECT FOR UPDATE, double-entry JEs |
+| `fileParserService.js` | `services/disbursement/` | CSV/Excel/XML parsing, SA bank CDV validation |
+| `kybComplianceService.js` | `services/disbursement/` | GPT-4o OCR for KYB (5 entity types) |
+| `notificationEngine.js` | `services/disbursement/` | Webhook (HMAC-SHA256) + email, 8 event types |
+| `sbsaSftpClientService.js` | `services/standardbank/` | GCS-based Pain.001 upload to SBSA outbox |
+| `pain002PollerService.js` | `services/standardbank/` | GCS inbox polling for Pain.002 status files |
+| `disbursementService.js` | `services/standardbank/` | Multi-rail (EFT/PayShap/wallet), fee/float, KYB gate |
+
+Migrations: `20260408_01_create_disbursement_client_tables.js` (5 tables + alter), `20260408_02_seed_disbursement_ledger_accounts.js` (5 accounts).
+
+**What to BUILD (Phase 2):**
+
+1. **Sequelize Models** — `DisbursementClient`, `DisbursementClientFee`, `KybDocument`, `DisbursementNotificationPreference`, `DisbursementClientUser` (CRITICAL: `submitForApproval()` references `db.DisbursementClient`)
+2. **API Routes + Controller** — Client onboarding (POST/GET/PATCH /clients), KYB upload, file upload, run management (create/submit/approve), fee config, reporting. All with JWT auth + RBAC.
+3. **Portal UI Pages** — Client management, KYB review, disbursement runs, fee config, reporting/downloads
+4. **White-Label Client Portal** — Client registration form, beneficiary upload, run history, report downloads
+5. **SFTP Upload Endpoint** — For client file ingestion
+6. **PayShap RPP Integration** — Wire actual PayShap API calls (currently filtered out with TODO)
+7. **Unit Tests** — feeEngine, clientFloatService, fileParserService (pure functions, easily testable)
+8. **Install xlsx** — `npm install xlsx` (only if Excel upload needed)
+
+**Critical architecture note**: Wallet disbursements use the SAME EFT banking path — beneficiary = MM's SBSA treasury account, reference = recipient MSISDN. Existing deposit notification auto-credits wallet. No separate wallet service.
+
+### Other Priorities
+
+1. **SBSA PayShap Production Callback** — Louis Van Zyl investigating why real PayShap deposits don't trigger production callbacks (inward queue issue). Sandbox callbacks confirmed working (6/6). Production callback URL registered: `https://api-mm.mymoolah.africa/api/v1/standardbank/payshap/inbound-credit`.
+2. **SBSA H2H SFTP Channel** — Melanie Block enabling SFTP channel. Pain.001 v3 file passed SSVS validator. Test file with valid beneficiaries uploaded to GCS outbox. Awaiting channel activation to test file pickup and Pain.002 return.
+3. **EasyPay legal follow-up** — Await Nkululeko / EasyPay legal response to TPPP/NPS positioning email (sent/drafted 2026-03-24). Session log: `docs/session_logs/2026-03-24_1530_easypay-tppp-legal-response-draft.md`.
+4. **H2H Statements/Payments** — Statement format (MT940 + MT942) and delivery schedule confirmed. Awaiting Melissa sign-on and SBSA connectivity test.
+5. **MobileMart + Flash SSH keys** — Awaiting their public keys to add to SFTP Gateway user profiles.
+6. **PayShap RTP — PBAC fallback path testing** — Need a payer with NO registered PayShap proxy to trigger `EPDNF`.
+7. **EasyPay Cash-In activation** — Await Razine response. Set `EASYPAY_RECEIVER_ID=5063` in Secret Manager.
+8. **Flash transaction testing in Staging** — Await Tia confirmation of transaction endpoint paths.
+9. **USDC send** — Test when VALR credentials available (RMCP drafted 2026-03-22).
+10. **SFTP Gateway admin IP** — Dynamic ISP IP (last known: `169.0.73.54` on 2026-03-17). Update firewall rules if admin UI inaccessible.
+11. **SFTP Gateway port is 5022** — Config: `/opt/sftpgw/application.properties`. Disk detach/mount approach for SSH.
 
 ---
 
