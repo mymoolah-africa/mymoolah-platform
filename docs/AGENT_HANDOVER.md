@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-07 21:00  
-**Latest Feature**: **Disbursement Phase 2 Complete (v2.89.0)** — Phase 2 built: 5 Sequelize models (DisbursementClient, ClientFee, KybDocument, NotificationPreference, ClientUser), client management API (9 endpoints), 2 portal UI pages (client list + detail/KYB/fees), notificationEngine wired into run events, kybComplianceService wired into doc upload, Vite proxy split fixed. **NEXT: Multer file upload, xlsx package, unit tests, PayShap RPP, white-label client portal.** Previous: Disbursement Phase 1 Complete + Portal Staging Live (v2.88.1).  
-**Document Version**: 2.89.0  
-**Session logs**: `docs/session_logs/2026-04-07_2100_disbursement-phase2-api-models-portal.md`, `docs/session_logs/2026-04-07_1830_portal-deploy-fix-and-session-wrap.md`  
+**Last Updated**: 2026-04-07 22:30  
+**Latest Feature**: **Disbursement Wallet Architecture Fix + PayShap RPP + Multer (v2.90.0)** — CRITICAL FIX: Wallet disbursements now use internal ledger transfer (DR Client Float → CR User Wallet), not EFT. approveRun() rewritten with three-way rail split: EFT (Pain.001+SFTP), PayShap (RPP per payment via existing sbClient), Wallet (direct wallet credit, immediate settlement). Per-rail float debits with correct journal entries. Multer wired for file uploads. xlsx installed. **NEXT: Unit tests, portal CSS migration, SFTP results delivery, white-label client portal.** Previous: Disbursement Phase 2 (v2.89.0).  
+**Document Version**: 2.90.0  
+**Session logs**: `docs/session_logs/2026-04-07_2230_disbursement-wallet-fix-rpp-multer.md`, `docs/session_logs/2026-04-07_2100_disbursement-phase2-api-models-portal.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -102,7 +102,10 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (April 7, 2026 - 21:00)**
+### **Latest Achievement (April 7, 2026 - 22:30)**
+**Disbursement Wallet Architecture Fix + PayShap RPP + Multer (v2.90.0)** — CRITICAL architecture fix: wallet disbursements now use **internal ledger transfer** (DR Client Float 2100-20-XX → CR User Wallet 2100-01-01) instead of routing through the bank. `approveRun()` fully rewritten with three-way rail split: **EFT** (Pain.001 bulk XML + SBSA SFTP, unchanged), **PayShap** (calls existing RPP service per payment via `sbClient.initiatePayment()`, instant), **Wallet** (finds User by MSISDN, credits wallet via `Wallet.credit()`, creates Transaction record, marks 'accepted' immediately). Float debited per-rail group with correct journal entries. `createRun()` fixed — wallet payments no longer set treasury account details. `clientFloatService.debitFloat()` updated — wallet rail credits `USER_WALLET_ACCOUNT` (2100-01-01) not `BANK_ACCOUNT`. PayShap RPP wired into disbursement flow using existing `pain001Builder` + `sbClient`. Multer wired into routes for real multipart file uploads. xlsx installed (v0.18.5). All 59 verification checks pass. Session log: `docs/session_logs/2026-04-07_2230_disbursement-wallet-fix-rpp-multer.md`.
+
+### **Previous Achievement (April 7, 2026 - 21:00)**
 **Disbursement Phase 2 — API, Models & Portal UI (v2.89.0)** — Complete Phase 2 of the disbursement service. **5 new Sequelize models**: DisbursementClient, DisbursementClientFee, KybDocument, DisbursementNotificationPreference, DisbursementClientUser (auto-loaded by models/index.js). **Updated** DisbursementPayment model (added fee_cents, payment_rail, metadata). Added belongsTo(DisbursementClient) on DisbursementRun. **Client management API**: `disbursementClientController.js` (9 methods: CRUD, KYB upload/review with auto-OCR, fee configuration, beneficiary file parsing) + `routes/disbursementClient.js` (9 validated endpoints) wired at `/api/v1/disbursement-clients` in server.js. **Portal UI**: DisbursementClientManagementOverlay (client list, filters, create modal) + DisbursementClientDetailOverlay (detail view, KYB documents, fee config). Routes + sidebar registered. **Fixed** Vite proxy split: `/api/v1/admin` → portal backend (3002), `/api` → main backend (3001). **Wired** notificationEngine into disbursementService (submit/approve/reject fire-and-forget). **Wired** kybComplianceService GPT-4o OCR into document upload flow. All syntax checks + Vite build pass. No new migrations needed. Session log: `docs/session_logs/2026-04-07_2100_disbursement-phase2-api-models-portal.md`.
 
 ### **Previous Achievement (April 7, 2026 - 16:30)**
@@ -920,18 +923,24 @@ Phase 1 backend services are COMPLETE (7 services, 2 migrations, multi-rail rout
 
 Migrations: `20260408_01_create_disbursement_client_tables.js` (5 tables + alter), `20260408_02_seed_disbursement_ledger_accounts.js` (5 accounts).
 
-**What to BUILD (Phase 2):**
+**What's DONE (Phase 2 — COMPLETE):**
 
-1. **Sequelize Models** — `DisbursementClient`, `DisbursementClientFee`, `KybDocument`, `DisbursementNotificationPreference`, `DisbursementClientUser` (CRITICAL: `submitForApproval()` references `db.DisbursementClient`)
-2. **API Routes + Controller** — Client onboarding (POST/GET/PATCH /clients), KYB upload, file upload, run management (create/submit/approve), fee config, reporting. All with JWT auth + RBAC.
-3. **Portal UI Pages** — Client management, KYB review, disbursement runs, fee config, reporting/downloads
+1. **Sequelize Models** — DONE: 7 models auto-loaded
+2. **API Routes + Controller** — DONE: 9 endpoints + run management
+3. **Portal UI Pages** — DONE: 5 overlays (runs, create, detail, client management, client detail)
+4. **PayShap RPP** — DONE: Wired into approveRun via existing sbClient (v2.90.0)
+5. **Wallet rail** — DONE: Internal ledger transfer, direct wallet credit (v2.90.0)
+6. **Multer** — DONE: Real file uploads for beneficiaries and KYB docs (v2.90.0)
+7. **xlsx** — DONE: Installed, parseExcel works (v2.90.0)
+
+**What to BUILD (Phase 3):**
+
+1. **Unit Tests** — feeEngine, clientFloatService, fileParserService (pure functions, easily testable)
+2. **Portal CSS Migration** — 4 disbursement overlays still use inline styles → CSS variables
+3. **SFTP Results Delivery** — Add SFTP push channel to notificationEngine
 4. **White-Label Client Portal** — Client registration form, beneficiary upload, run history, report downloads
-5. **SFTP Upload Endpoint** — For client file ingestion
-6. **PayShap RPP Integration** — Wire actual PayShap API calls (currently filtered out with TODO)
-7. **Unit Tests** — feeEngine, clientFloatService, fileParserService (pure functions, easily testable)
-8. **Install xlsx** — `npm install xlsx` (only if Excel upload needed)
 
-**Critical architecture note**: Wallet disbursements use the SAME EFT banking path — beneficiary = MM's SBSA treasury account, reference = recipient MSISDN. Existing deposit notification auto-credits wallet. No separate wallet service.
+**Critical architecture note**: Wallet disbursements are INTERNAL LEDGER TRANSFERS — DR Client Float (2100-20-XX) → CR User Wallet (2100-01-01). No bank movement. Recipient wallet credited directly via Wallet.credit(). No separate wallet service.
 
 ### Other Priorities
 
