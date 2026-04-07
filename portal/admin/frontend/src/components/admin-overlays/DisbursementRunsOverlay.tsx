@@ -33,16 +33,16 @@ API.interceptors.request.use((cfg) => {
   return cfg;
 });
 
-const STATUS_COLORS: Record<string, React.CSSProperties> = {
-  draft:            { background: '#f0f0f0', color: '#555' },
-  pending_approval: { background: '#fff3cd', color: '#856404' },
-  approved:         { background: '#cce5ff', color: '#004085' },
-  submitted:        { background: '#d1ecf1', color: '#0c5460' },
-  processing:       { background: '#d1ecf1', color: '#0c5460' },
-  completed:        { background: '#d4edda', color: '#155724' },
-  partial:          { background: '#fff3cd', color: '#856404' },
-  failed:           { background: '#f8d7da', color: '#721c24' },
-  cancelled:        { background: '#e2e3e5', color: '#383d41' },
+const STATUS_CLASSES: Record<string, string> = {
+  draft:            'bg-gray-100 text-gray-600',
+  pending_approval: 'bg-amber-50 text-amber-700',
+  approved:         'bg-blue-50 text-blue-700',
+  submitted:        'bg-cyan-50 text-cyan-700',
+  processing:       'bg-cyan-50 text-cyan-700',
+  completed:        'bg-emerald-50 text-emerald-700',
+  partial:          'bg-amber-50 text-amber-700',
+  failed:           'bg-red-50 text-red-700',
+  cancelled:        'bg-gray-100 text-gray-500',
 };
 
 export const DisbursementRunsOverlay: React.FC = () => {
@@ -89,8 +89,7 @@ export const DisbursementRunsOverlay: React.FC = () => {
         </div>
         <button
           onClick={() => navigate('/admin/disbursements/create')}
-          className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-colors"
-          style={{ background: '#86BE41' }}
+          className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-[var(--primary)] text-[var(--primary-foreground)] transition-colors"
         >
           + New Disbursement Run
         </button>
@@ -139,8 +138,7 @@ export const DisbursementRunsOverlay: React.FC = () => {
                       <span className="text-gray-400 ml-1">/ {r.total_count}</span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize"
-                        style={STATUS_COLORS[r.status] || STATUS_COLORS.draft}>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize ${STATUS_CLASSES[r.status] || STATUS_CLASSES.draft}`}>
                         {r.status.replace('_', ' ')}
                       </span>
                     </td>

@@ -196,8 +196,7 @@ export const CreateDisbursementRunOverlay: React.FC = () => {
         <div className="flex gap-3 mb-5">
           {['csv', 'manual'].map((m) => (
             <button key={m} onClick={() => setMode(m as 'csv' | 'manual')}
-              className="px-4 py-2 rounded-xl text-sm font-medium transition-colors capitalize"
-              style={mode === m ? { background: '#1a3c5e', color: '#fff' } : { background: '#f0f0f0', color: '#555' }}>
+              className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors capitalize ${mode === m ? 'bg-[var(--foreground)] text-white' : 'bg-[var(--muted)] text-[var(--muted-foreground)]'}`}>
               {m === 'csv' ? '📄 Upload CSV' : '✏️ Manual Entry'}
             </button>
           ))}
@@ -302,8 +301,7 @@ export const CreateDisbursementRunOverlay: React.FC = () => {
             <button
               onClick={handleSubmit}
               disabled={submitting || rows.length === 0}
-              className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-50 transition-colors"
-              style={{ background: '#1a3c5e' }}
+              className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-[var(--foreground)] text-white disabled:opacity-50 transition-colors"
             >
               {submitting ? 'Creating…' : 'Create & Submit for Approval'}
             </button>

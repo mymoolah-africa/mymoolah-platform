@@ -33,18 +33,18 @@ API.interceptors.request.use((cfg) => {
   return cfg;
 });
 
-const CLIENT_STATUS_COLORS: Record<string, React.CSSProperties> = {
-  pending:   { background: '#fff3cd', color: '#856404' },
-  active:    { background: '#d4edda', color: '#155724' },
-  suspended: { background: '#f8d7da', color: '#721c24' },
-  closed:    { background: '#e2e3e5', color: '#383d41' },
+const CLIENT_STATUS_COLORS: Record<string, string> = {
+  pending:   'bg-amber-50 text-amber-700',
+  active:    'bg-emerald-50 text-emerald-700',
+  suspended: 'bg-red-50 text-red-700',
+  closed:    'bg-gray-100 text-gray-500',
 };
 
-const KYB_STATUS_COLORS: Record<string, React.CSSProperties> = {
-  none:      { background: '#f0f0f0', color: '#555' },
-  submitted: { background: '#cce5ff', color: '#004085' },
-  verified:  { background: '#d4edda', color: '#155724' },
-  rejected:  { background: '#f8d7da', color: '#721c24' },
+const KYB_STATUS_COLORS: Record<string, string> = {
+  none:      'bg-gray-100 text-gray-600',
+  submitted: 'bg-blue-50 text-blue-700',
+  verified:  'bg-emerald-50 text-emerald-700',
+  rejected:  'bg-red-50 text-red-700',
 };
 
 const ENTITY_TYPE_OPTIONS = [
@@ -154,8 +154,7 @@ export const DisbursementClientManagementOverlay: React.FC = () => {
         </div>
         <button
           onClick={() => { setForm({ ...INITIAL_FORM }); setFormError(null); setIsCreateModalOpen(true); }}
-          className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-colors"
-          style={{ background: '#86BE41' }}
+          className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors bg-[var(--primary)] text-[var(--primary-foreground)]"
         >
           + New Client
         </button>
@@ -234,16 +233,14 @@ export const DisbursementClientManagementOverlay: React.FC = () => {
                     <td className="px-4 py-3 text-gray-600">{c.contact_email}</td>
                     <td className="px-4 py-3">
                       <span
-                        className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize"
-                        style={CLIENT_STATUS_COLORS[c.status] || CLIENT_STATUS_COLORS.pending}
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize ${CLIENT_STATUS_COLORS[c.status] || CLIENT_STATUS_COLORS.pending}`}
                       >
                         {c.status}
                       </span>
                     </td>
                     <td className="px-4 py-3">
                       <span
-                        className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize"
-                        style={KYB_STATUS_COLORS[c.kyb_status] || KYB_STATUS_COLORS.none}
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize ${KYB_STATUS_COLORS[c.kyb_status] || KYB_STATUS_COLORS.none}`}
                       >
                         {c.kyb_status}
                       </span>
@@ -423,8 +420,7 @@ export const DisbursementClientManagementOverlay: React.FC = () => {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-5 py-2 rounded-lg text-sm font-semibold text-white transition-colors disabled:opacity-60"
-                  style={{ background: '#86BE41' }}
+                  className="px-5 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-60 bg-[var(--primary)] text-[var(--primary-foreground)]"
                 >
                   {submitting ? 'Creating…' : 'Create Client'}
                 </button>

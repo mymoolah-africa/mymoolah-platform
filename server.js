@@ -541,6 +541,10 @@ app.use('/api/v1/disbursements', disbursementRoutes);
 const disbursementClientRoutes = require('./routes/disbursementClient');
 app.use('/api/v1/disbursement-clients', disbursementClientRoutes);
 
+// Disbursement Client Portal — white-label client-facing endpoints
+const clientPortalRoutes = require('./routes/clientPortal');
+app.use('/api/v1/client-portal', clientPortalRoutes);
+
 // Peach Payments — ARCHIVED (2026-03-21). Agreement cancelled.
 // PayShap RTP handled directly via /api/v1/standardbank/payshap/rtp
 // Routes mounted only for /status endpoint (returns archived notice).

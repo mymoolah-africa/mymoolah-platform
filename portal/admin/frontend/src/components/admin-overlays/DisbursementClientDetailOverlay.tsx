@@ -71,26 +71,26 @@ interface NotificationPreference {
 
 /* ---------- Status badge color maps ---------- */
 
-const CLIENT_STATUS_BADGE: Record<string, React.CSSProperties> = {
-  pending:   { background: '#fff3cd', color: '#856404' },
-  active:    { background: '#d4edda', color: '#155724' },
-  suspended: { background: '#f8d7da', color: '#721c24' },
-  closed:    { background: '#e2e3e5', color: '#383d41' },
+const CLIENT_STATUS_BADGE: Record<string, string> = {
+  pending:   'bg-amber-50 text-amber-700',
+  active:    'bg-emerald-50 text-emerald-700',
+  suspended: 'bg-red-50 text-red-700',
+  closed:    'bg-gray-100 text-gray-500',
 };
 
-const KYB_STATUS_BADGE: Record<string, React.CSSProperties> = {
-  none:      { background: '#f0f0f0', color: '#555' },
-  submitted: { background: '#cce5ff', color: '#004085' },
-  verified:  { background: '#d4edda', color: '#155724' },
-  rejected:  { background: '#f8d7da', color: '#721c24' },
+const KYB_STATUS_BADGE: Record<string, string> = {
+  none:      'bg-gray-100 text-gray-600',
+  submitted: 'bg-blue-50 text-blue-700',
+  verified:  'bg-emerald-50 text-emerald-700',
+  rejected:  'bg-red-50 text-red-700',
 };
 
-const DOC_STATUS_BADGE: Record<string, React.CSSProperties> = {
-  pending:    { background: '#fff3cd', color: '#856404' },
-  processing: { background: '#cce5ff', color: '#004085' },
-  verified:   { background: '#d4edda', color: '#155724' },
-  rejected:   { background: '#f8d7da', color: '#721c24' },
-  expired:    { background: '#e2e3e5', color: '#383d41' },
+const DOC_STATUS_BADGE: Record<string, string> = {
+  pending:    'bg-amber-50 text-amber-700',
+  processing: 'bg-blue-50 text-blue-700',
+  verified:   'bg-emerald-50 text-emerald-700',
+  rejected:   'bg-red-50 text-red-700',
+  expired:    'bg-gray-100 text-gray-500',
 };
 
 /* ---------- Display helpers ---------- */
@@ -129,6 +129,15 @@ const fmtPct = (pct: string) => `${(parseFloat(pct) * 100).toFixed(2)}%`;
 const RAILS = ['EFT', 'PayShap', 'Wallet'] as const;
 const FEE_TYPES = ['Flat', 'Percentage', 'Flat+Percentage'] as const;
 
+const NOTIFICATION_EVENT_TYPES = [
+  'run_submitted', 'run_approved', 'run_rejected', 'run_completed',
+  'payment_failed', 'float_low', 'float_credited', 'kyb_status_changed',
+] as const;
+
+const NOTIFICATION_CHANNELS = ['webhook', 'email'] as const;
+
+const formatEventType = (et: string) => et.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+
 export const DisbursementClientDetailOverlay: React.FC = () => {
   const { clientId } = useParams<{ clientId: string }>();
   const navigate = useNavigate();
@@ -163,6 +172,12 @@ export const DisbursementClientDetailOverlay: React.FC = () => {
   });
   const [addingFee, setAddingFee] = useState(false);
 
+  /* Notification preferences state */
+  const [notifications, setNotifications] = useState<NotificationPreference[]>([]);
+  const [showNotifForm, setShowNotifForm] = useState(false);
+  const [notifForm, setNotifForm] = useState({ event_type: NOTIFICATION_EVENT_TYPES[0] as string, channel: 'webhook' as string });
+  const [addingNotif, setAddingNotif] = useState(false);
+
   /* Action messages */
   const [actionMsg, setActionMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -175,6 +190,7 @@ export const DisbursementClientDetailOverlay: React.FC = () => {
       setClient(data.client);
       setFees(data.fees || []);
       setDocuments(data.kybDocumentSummary || []);
+      setNotifications(data.notifications || []);
     } catch (err: any) {
       if (err?.response?.status === 404) {
         setNotFound(true);
@@ -284,6 +300,41 @@ export const DisbursementClientDetailOverlay: React.FC = () => {
     }
   };
 
+  /* ---------- Notification actions ---------- */
+
+  const addNotification = async () => {
+    setAddingNotif(true);
+    setActionMsg(null);
+    try {
+      await API.post(`/disbursement-clients/${clientId}/notifications`, {
+        event_type: notifForm.event_type,
+        channel: notifForm.channel,
+      });
+      setActionMsg({ type: 'success', text: 'Notification preference added.' });
+      setShowNotifForm(false);
+      setNotifForm({ event_type: NOTIFICATION_EVENT_TYPES[0], channel: 'webhook' });
+      await fetchClient();
+    } catch (err: any) {
+      setActionMsg({ type: 'error', text: err?.response?.data?.error || 'Failed to add notification' });
+    } finally {
+      setAddingNotif(false);
+    }
+  };
+
+  const toggleNotification = async (notif: NotificationPreference) => {
+    setActionMsg(null);
+    try {
+      await API.patch(`/disbursement-clients/${clientId}/notifications/${notif.id}`, {
+        enabled: !notif.enabled,
+      });
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === notif.id ? { ...n, enabled: !n.enabled } : n))
+      );
+    } catch (err: any) {
+      setActionMsg({ type: 'error', text: err?.response?.data?.error || 'Failed to toggle notification' });
+    }
+  };
+
   /* ---------- Rendering ---------- */
 
   if (loading) return <div className="p-8 text-center text-gray-400">Loading...</div>;
@@ -292,8 +343,7 @@ export const DisbursementClientDetailOverlay: React.FC = () => {
       <div className="mymoolah-card p-8 text-center">
         <p className="admin-text-heading text-lg mb-4">Client not found</p>
         <button onClick={() => navigate('/admin/disbursement-clients')}
-          className="px-4 py-2 rounded-xl text-sm font-semibold text-white"
-          style={{ background: 'var(--primary-color, #86BE41)' }}>
+          className="px-4 py-2 rounded-xl text-sm font-semibold bg-[var(--primary)] text-[var(--primary-foreground)]">
           Back to Clients
         </button>
       </div>
@@ -324,16 +374,14 @@ export const DisbursementClientDetailOverlay: React.FC = () => {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 flex-wrap">
               <h2 className="admin-text-heading text-xl">{client.company_name}</h2>
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-mono font-medium"
-                style={{ background: '#f0f0f0', color: '#555' }}>
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-mono font-medium bg-gray-100 text-gray-600">
                 {client.client_code}
               </span>
             </div>
           </div>
           {!editMode && (
             <button onClick={startEdit}
-              className="px-4 py-2 rounded-xl text-sm font-semibold text-white"
-              style={{ background: 'var(--primary-color, #86BE41)' }}>
+              className="px-4 py-2 rounded-xl text-sm font-semibold bg-[var(--primary)] text-[var(--primary-foreground)]">
               Edit
             </button>
           )}
@@ -402,8 +450,7 @@ export const DisbursementClientDetailOverlay: React.FC = () => {
             </div>
             <div className="flex gap-3">
               <button onClick={saveEdit} disabled={saving}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-50"
-                style={{ background: 'var(--primary-color, #86BE41)' }}>
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-50 bg-[var(--primary)] text-[var(--primary-foreground)]">
                 {saving ? 'Saving...' : 'Save Changes'}
               </button>
               <button onClick={cancelEdit}
@@ -431,15 +478,13 @@ export const DisbursementClientDetailOverlay: React.FC = () => {
             ))}
             <div className="flex items-baseline gap-2 py-1.5 border-b border-gray-50">
               <span className="text-xs font-semibold text-gray-400 uppercase w-40 shrink-0">Status</span>
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize"
-                style={CLIENT_STATUS_BADGE[client.status] || {}}>
+              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize ${CLIENT_STATUS_BADGE[client.status] || ''}`}>
                 {client.status}
               </span>
             </div>
             <div className="flex items-baseline gap-2 py-1.5 border-b border-gray-50">
               <span className="text-xs font-semibold text-gray-400 uppercase w-40 shrink-0">KYB Status</span>
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize"
-                style={KYB_STATUS_BADGE[client.kyb_status] || {}}>
+              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize ${KYB_STATUS_BADGE[client.kyb_status] || ''}`}>
                 {client.kyb_status}
               </span>
             </div>
@@ -457,8 +502,7 @@ export const DisbursementClientDetailOverlay: React.FC = () => {
             </p>
           </div>
           <button onClick={() => setShowUpload(!showUpload)}
-            className="px-4 py-2 rounded-xl text-sm font-semibold text-white"
-            style={{ background: 'var(--primary-color, #86BE41)' }}>
+            className="px-4 py-2 rounded-xl text-sm font-semibold bg-[var(--primary)] text-[var(--primary-foreground)]">
             {showUpload ? 'Cancel' : '+ Upload Document'}
           </button>
         </div>
@@ -483,8 +527,7 @@ export const DisbursementClientDetailOverlay: React.FC = () => {
                   className="border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-green-300 w-64" />
               </div>
               <button onClick={uploadDocument} disabled={uploading || !uploadDocType || !uploadFileName}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-50"
-                style={{ background: 'var(--primary-color, #86BE41)' }}>
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-50 bg-[var(--primary)] text-[var(--primary-foreground)]">
                 {uploading ? 'Creating...' : 'Create Record'}
               </button>
             </div>
@@ -512,8 +555,7 @@ export const DisbursementClientDetailOverlay: React.FC = () => {
                   <td className="px-4 py-2.5 font-medium text-gray-800">{formatDocType(doc.document_type)}</td>
                   <td className="px-4 py-2.5 text-gray-600 text-xs">{formatEntityType(doc.entity_type)}</td>
                   <td className="px-4 py-2.5">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize"
-                      style={DOC_STATUS_BADGE[doc.status] || {}}>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize ${DOC_STATUS_BADGE[doc.status] || ''}`}>
                       {doc.status}
                     </span>
                   </td>
@@ -523,8 +565,7 @@ export const DisbursementClientDetailOverlay: React.FC = () => {
                     {['pending', 'processing'].includes(doc.status) && (
                       <div className="flex gap-2">
                         <button onClick={() => reviewDocument(doc.id, 'verified')}
-                          className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white"
-                          style={{ background: '#27ae60' }}>
+                          className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-[var(--success-color)]">
                           Approve
                         </button>
                         <button onClick={() => reviewDocument(doc.id, 'rejected')}
@@ -548,8 +589,7 @@ export const DisbursementClientDetailOverlay: React.FC = () => {
             <h3 className="admin-text-heading text-lg">Fee Configuration</h3>
           </div>
           <button onClick={() => setShowFeeForm(!showFeeForm)}
-            className="px-4 py-2 rounded-xl text-sm font-semibold text-white"
-            style={{ background: 'var(--primary-color, #86BE41)' }}>
+            className="px-4 py-2 rounded-xl text-sm font-semibold bg-[var(--primary)] text-[var(--primary-foreground)]">
             {showFeeForm ? 'Cancel' : '+ Add Fee'}
           </button>
         </div>
@@ -602,8 +642,7 @@ export const DisbursementClientDetailOverlay: React.FC = () => {
             </div>
             <div className="mt-4">
               <button onClick={addFee} disabled={addingFee}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-50"
-                style={{ background: 'var(--primary-color, #86BE41)' }}>
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-50 bg-[var(--primary)] text-[var(--primary-foreground)]">
                 {addingFee ? 'Adding...' : 'Add Fee'}
               </button>
             </div>
@@ -661,6 +700,89 @@ export const DisbursementClientDetailOverlay: React.FC = () => {
                   )}
                 </>
               )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* ============ Section 4: Notification Settings ============ */}
+      <div className="mymoolah-card overflow-hidden">
+        <div className="p-5 border-b border-gray-100 flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h3 className="admin-text-heading text-lg">Notification Settings</h3>
+            <p className="text-xs text-gray-400 mt-0.5">
+              Configure webhook and email notifications for disbursement events
+            </p>
+          </div>
+          <button onClick={() => setShowNotifForm(!showNotifForm)}
+            className="px-4 py-2 rounded-xl text-sm font-semibold bg-[var(--primary)] text-[var(--primary-foreground)]">
+            {showNotifForm ? 'Cancel' : '+ Add Notification'}
+          </button>
+        </div>
+
+        {showNotifForm && (
+          <div className="p-5 bg-gray-50 border-b border-gray-100">
+            <div className="flex flex-wrap gap-3 items-end">
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Event Type</label>
+                <select value={notifForm.event_type} onChange={(e) => setNotifForm((p) => ({ ...p, event_type: e.target.value }))}
+                  className="border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-green-300">
+                  {NOTIFICATION_EVENT_TYPES.map((et) => (
+                    <option key={et} value={et}>{formatEventType(et)}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Channel</label>
+                <select value={notifForm.channel} onChange={(e) => setNotifForm((p) => ({ ...p, channel: e.target.value }))}
+                  className="border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-green-300">
+                  {NOTIFICATION_CHANNELS.map((ch) => (
+                    <option key={ch} value={ch}>{ch.charAt(0).toUpperCase() + ch.slice(1)}</option>
+                  ))}
+                </select>
+              </div>
+              <button onClick={addNotification} disabled={addingNotif}
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-50 bg-[var(--primary)] text-[var(--primary-foreground)]">
+                {addingNotif ? 'Adding...' : 'Add Preference'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-100 text-left">
+                {['Event Type', 'Channel', 'Enabled'].map((h) => (
+                  <th key={h} className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {notifications.length === 0 ? (
+                <tr>
+                  <td colSpan={3} className="px-4 py-8 text-center text-gray-400">
+                    No notification preferences configured
+                  </td>
+                </tr>
+              ) : notifications.map((notif) => (
+                <tr key={notif.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-2.5 font-medium text-gray-800">{formatEventType(notif.event_type)}</td>
+                  <td className="px-4 py-2.5 text-gray-600 capitalize">{notif.channel}</td>
+                  <td className="px-4 py-2.5">
+                    <button
+                      onClick={() => toggleNotification(notif)}
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors ${
+                        notif.enabled
+                          ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                          : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                      }`}
+                    >
+                      {notif.enabled ? 'Enabled' : 'Disabled'}
+                    </button>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

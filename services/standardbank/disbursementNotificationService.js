@@ -15,6 +15,7 @@
 const db = require('../../models');
 const axios = require('axios');
 const crypto = require('crypto');
+const { sendSftpResults } = require('../disbursement/notificationEngine');
 
 const logger = {
   info:  (...a) => console.log('[DisbursementNotification]', ...a),
@@ -156,6 +157,48 @@ async function sendEmailReport(toEmail, payload) {
 }
 
 /**
+ * Channel 3: SFTP results CSV via GCS.
+ * Queries the client's SFTP notification preference and uploads a full-results
+ * CSV to the configured GCS path.
+ */
+async function deliverSftpResults(run) {
+  try {
+    const pref = await db.DisbursementNotificationPreference.findOne({
+      where: {
+        client_id: run.client_id,
+        channel: 'sftp',
+        enabled: true,
+      },
+    });
+
+    if (!pref || !pref.config || !pref.config.gcs_path_prefix) {
+      return { success: false, message: 'no_sftp_preference' };
+    }
+
+    const payments = await db.DisbursementPayment.findAll({
+      where: { run_id: run.id },
+      attributes: [
+        'employee_ref', 'beneficiary_name', 'account_number',
+        'branch_code', 'amount', 'status', 'rejection_code', 'rejection_reason',
+      ],
+      raw: true,
+    });
+
+    const result = await sendSftpResults(
+      pref.config.gcs_path_prefix,
+      run.run_reference,
+      payments,
+    );
+
+    logger.info(`SFTP results delivered for run ${run.run_reference} — rows=${result.rowCount}`);
+    return result;
+  } catch (err) {
+    logger.warn(`SFTP results delivery failed for run ${run.run_reference}: ${err.message}`);
+    return { success: false, error: err.message };
+  }
+}
+
+/**
  * Notify employer of run results via all configured channels.
  *
  * @param {Object} run - DisbursementRun model instance
@@ -177,6 +220,12 @@ async function notifyRunResult(run) {
   } else if (process.env.OPS_ALERT_EMAIL) {
     results.email = await sendEmailReport(process.env.OPS_ALERT_EMAIL, payload);
   }
+
+  setImmediate(() => {
+    deliverSftpResults(run).catch((err) => {
+      logger.error(`SFTP delivery background error for run ${run.run_reference}: ${err.message}`);
+    });
+  });
 
   logger.info(`Notification results for run ${run.run_reference}:`, results);
   return results;

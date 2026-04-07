@@ -28,6 +28,12 @@ const strictLimit = rateLimit({
   validate: { trustProxy: false },
 });
 
+const requireDisbursementAccess = (req, res, next) => {
+  const role = req.user?.role;
+  if (role === 'admin' || role === 'manager' || req.user?.isAdmin) return next();
+  return res.status(403).json({ success: false, error: 'Disbursement access denied' });
+};
+
 // Beneficiary validation for createRun
 const beneficiaryValidation = [
   body('beneficiaries')
@@ -46,7 +52,7 @@ const beneficiaryValidation = [
     .isFloat({ min: 0.01 }).withMessage('Amount must be greater than R 0.00'),
   body('rail')
     .optional()
-    .isIn(['eft', 'rtc']).withMessage('rail must be eft or rtc'),
+    .isIn(['eft', 'rtc', 'payshap', 'wallet']).withMessage('rail must be eft, rtc, payshap, or wallet'),
   body('payPeriod')
     .optional()
     .matches(/^\d{4}-\d{2}$/).withMessage('payPeriod must be YYYY-MM format'),
@@ -100,6 +106,7 @@ router.get('/:id/payments',
  */
 router.post('/',
   authenticateToken,
+  requireDisbursementAccess,
   strictLimit,
   beneficiaryValidation,
   controller.createRun
@@ -112,6 +119,7 @@ router.post('/',
  */
 router.post('/:id/submit',
   authenticateToken,
+  requireDisbursementAccess,
   strictLimit,
   param('id').isInt({ min: 1 }),
   controller.submitForApproval
@@ -124,6 +132,7 @@ router.post('/:id/submit',
  */
 router.post('/:id/approve',
   authenticateToken,
+  requireDisbursementAccess,
   strictLimit,
   param('id').isInt({ min: 1 }),
   controller.approveRun
@@ -136,6 +145,7 @@ router.post('/:id/approve',
  */
 router.post('/:id/reject',
   authenticateToken,
+  requireDisbursementAccess,
   strictLimit,
   [
     param('id').isInt({ min: 1 }),
@@ -151,6 +161,7 @@ router.post('/:id/reject',
  */
 router.post('/:id/resubmit-failed',
   authenticateToken,
+  requireDisbursementAccess,
   strictLimit,
   [
     param('id').isInt({ min: 1 }),

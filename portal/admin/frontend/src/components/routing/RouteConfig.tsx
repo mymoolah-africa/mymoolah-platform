@@ -1,10 +1,13 @@
 import React from 'react';
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useClientAuth } from '../../contexts/ClientAuthContext';
 import { AppLayoutWrapper } from '../layout/AppLayoutWrapper';
+import { ClientPortalLayout } from '../layout/ClientPortalLayout';
 
 import AdminLogin from '../../pages/AdminLogin';
 import AdminDashboard from '../../pages/AdminDashboard';
+import ClientLoginPage from '../../pages/ClientLoginPage';
 
 import { UserManagementOverlay } from '../admin-overlays/UserManagementOverlay';
 import { TransactionMonitoringOverlay } from '../admin-overlays/TransactionMonitoringOverlay';
@@ -21,6 +24,11 @@ import { CreateDisbursementRunOverlay } from '../admin-overlays/CreateDisburseme
 import { DisbursementRunDetailOverlay } from '../admin-overlays/DisbursementRunDetailOverlay';
 import { DisbursementClientManagementOverlay } from '../admin-overlays/DisbursementClientManagementOverlay';
 import { DisbursementClientDetailOverlay } from '../admin-overlays/DisbursementClientDetailOverlay';
+
+import { ClientDashboardOverlay } from '../client-portal/ClientDashboardOverlay';
+import { ClientRunsOverlay } from '../client-portal/ClientRunsOverlay';
+import { ClientRunDetailOverlay } from '../client-portal/ClientRunDetailOverlay';
+import { ClientUploadOverlay } from '../client-portal/ClientUploadOverlay';
 
 const ProtectedRoute: React.FC = () => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -43,11 +51,33 @@ const ProtectedRoute: React.FC = () => {
   return <Outlet />;
 };
 
+const ClientProtectedRoute: React.FC = () => {
+  const { isAuthenticated, isLoading } = useClientAuth();
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-[var(--background)]">
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-[var(--muted)] border-t-[var(--primary)]" />
+          <p className="text-sm text-[var(--muted-foreground)]">Verifying session...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/client/login" replace />;
+  }
+
+  return <Outlet />;
+};
+
 export const RouteConfig: React.FC = () => {
   return (
     <Routes>
       {/* Public */}
       <Route path="/admin/login" element={<AdminLogin />} />
+      <Route path="/client/login" element={<ClientLoginPage />} />
 
       {/* Protected admin routes — single AppLayoutWrapper shell */}
       <Route element={<ProtectedRoute />}>
@@ -71,8 +101,19 @@ export const RouteConfig: React.FC = () => {
         </Route>
       </Route>
 
+      {/* Protected client portal routes — ClientPortalLayout shell */}
+      <Route element={<ClientProtectedRoute />}>
+        <Route element={<ClientPortalLayout />}>
+          <Route path="/client/dashboard" element={<ClientDashboardOverlay />} />
+          <Route path="/client/runs" element={<ClientRunsOverlay />} />
+          <Route path="/client/runs/:id" element={<ClientRunDetailOverlay />} />
+          <Route path="/client/upload" element={<ClientUploadOverlay />} />
+        </Route>
+      </Route>
+
       {/* Fallback redirects */}
       <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
+      <Route path="/client" element={<Navigate to="/client/login" replace />} />
       <Route path="/" element={<Navigate to="/admin/login" replace />} />
       <Route path="*" element={<Navigate to="/admin/login" replace />} />
     </Routes>

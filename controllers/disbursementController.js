@@ -13,6 +13,10 @@ const { validationResult } = require('express-validator');
 const disbursementService   = require('../services/standardbank/disbursementService');
 const db                    = require('../models');
 
+function resolveUserId(req) {
+  return req.user?.portalUserId || req.user?.id;
+}
+
 class DisbursementController {
 
   /**
@@ -28,8 +32,8 @@ class DisbursementController {
 
       const where = {};
       // Admin sees all; non-admin sees only their own client
-      if (!req.user?.isAdmin) {
-        where.client_id = req.user?.id;
+      if (!req.user?.isAdmin && req.user?.role !== 'admin') {
+        where.client_id = resolveUserId(req);
       }
       if (status) where.status = status;
 
@@ -87,9 +91,10 @@ class DisbursementController {
 
     try {
       const { rail, payPeriod, beneficiaries, notificationChannels } = req.body;
+      const userId = resolveUserId(req);
       const result = await disbursementService.createRun({
-        clientId:    req.user?.clientId || req.user?.id,
-        makerUserId: req.user?.id,
+        clientId:    req.user?.clientId || req.user?.entityId || userId,
+        makerUserId: userId,
         rail,
         payPeriod,
         beneficiaries,
@@ -110,7 +115,7 @@ class DisbursementController {
     try {
       const run = await disbursementService.submitForApproval(
         parseInt(req.params.id, 10),
-        req.user?.id
+        resolveUserId(req)
       );
       res.json({ success: true, message: 'Run submitted for approval', data: run });
     } catch (err) {
@@ -127,7 +132,7 @@ class DisbursementController {
     try {
       const result = await disbursementService.approveRun(
         parseInt(req.params.id, 10),
-        req.user?.id
+        resolveUserId(req)
       );
       res.json({ success: true, message: 'Run approved and submitted to SBSA', data: result });
     } catch (err) {
@@ -144,7 +149,7 @@ class DisbursementController {
     try {
       const run = await disbursementService.rejectRun(
         parseInt(req.params.id, 10),
-        req.user?.id,
+        resolveUserId(req),
         req.body?.reason
       );
       res.json({ success: true, message: 'Run rejected', data: run });
@@ -162,7 +167,7 @@ class DisbursementController {
     try {
       const result = await disbursementService.resubmitFailed(
         parseInt(req.params.id, 10),
-        req.user?.id,
+        resolveUserId(req),
         req.body?.corrections || []
       );
       res.status(201).json({

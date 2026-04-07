@@ -14,12 +14,25 @@
  */
 
 const crypto = require('crypto');
+const { Storage } = require('@google-cloud/storage');
 const { getUATClient, getStagingClient, getProductionClient } = require('../../scripts/db-connection-helper');
 
 const LOG_PREFIX = '[NotificationEngine]';
 const WEBHOOK_TIMEOUT_MS = 10_000;
 const MAX_WEBHOOK_ATTEMPTS = 3;
 const BACKOFF_BASE_MS = 1_000;
+const SFTP_BUCKET = process.env.SFTP_BUCKET_NAME || 'mymoolah-sftp-inbound';
+
+const SFTP_CSV_COLUMNS = [
+  'employee_ref',
+  'beneficiary_name',
+  'account_number',
+  'branch_code',
+  'amount',
+  'status',
+  'rejection_code',
+  'rejection_reason',
+];
 
 // ---------------------------------------------------------------------------
 // Event types
@@ -332,6 +345,73 @@ async function sendEmail(recipients, subject, body) {
 }
 
 // ---------------------------------------------------------------------------
+// buildResultsCsv
+// ---------------------------------------------------------------------------
+
+/**
+ * Build a RFC 4180–compliant CSV string from an array of payment objects.
+ * @param {object[]} payments
+ * @returns {string}
+ */
+function buildResultsCsv(payments) {
+  const header = SFTP_CSV_COLUMNS.join(',');
+  const rows = (payments || []).map((p) =>
+    SFTP_CSV_COLUMNS.map((col) => {
+      const val = p[col] != null ? String(p[col]) : '';
+      if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+        return `"${val.replace(/"/g, '""')}"`;
+      }
+      return val;
+    }).join(','),
+  );
+  return [header, ...rows].join('\n');
+}
+
+// ---------------------------------------------------------------------------
+// sendSftpResults
+// ---------------------------------------------------------------------------
+
+/**
+ * Upload a CSV of disbursement run results to GCS for SFTP delivery.
+ *
+ * @param {string}   gcsPathPrefix  e.g. "disbursement-results/CLIENT-CODE"
+ * @param {string}   runReference   Unique run reference (used in filename).
+ * @param {object[]} payments       Array of payment objects with CSV column keys.
+ * @returns {Promise<{success: boolean, gcsPath: string, bucket: string, filename: string, rowCount: number}>}
+ */
+async function sendSftpResults(gcsPathPrefix, runReference, payments) {
+  if (!gcsPathPrefix || typeof gcsPathPrefix !== 'string') {
+    throw new Error(`${LOG_PREFIX} gcs_path_prefix must be a non-empty string`);
+  }
+  if (!runReference || typeof runReference !== 'string') {
+    throw new Error(`${LOG_PREFIX} runReference must be a non-empty string`);
+  }
+  if (!Array.isArray(payments)) {
+    throw new Error(`${LOG_PREFIX} payments must be an array`);
+  }
+
+  const csv = buildResultsCsv(payments);
+  const filename = `${runReference}_results.csv`;
+  const gcsPath = `${gcsPathPrefix.replace(/\/+$/, '')}/${filename}`;
+
+  const gcsStorage = new Storage();
+  const bucket = gcsStorage.bucket(SFTP_BUCKET);
+  const file = bucket.file(gcsPath);
+
+  await file.save(Buffer.from(csv, 'utf-8'), {
+    contentType: 'text/csv',
+    resumable: false,
+    metadata: { cacheControl: 'no-cache' },
+  });
+
+  console.log(
+    `${LOG_PREFIX} SFTP results uploaded — bucket=${SFTP_BUCKET}, path=${gcsPath}, rows=${payments.length}`,
+  );
+
+  return { success: true, gcsPath, bucket: SFTP_BUCKET, filename, rowCount: payments.length };
+}
+
+// ---------------------------------------------------------------------------
 // notify — main orchestrator
 // ---------------------------------------------------------------------------
 
@@ -342,7 +422,7 @@ async function sendEmail(recipients, subject, body) {
  * @param {string} clientId
  * @param {string} eventType  One of EVENT_TYPES values.
  * @param {object} data       Event-specific data (passed to buildEventPayload).
- * @returns {Promise<{eventType: string, channels: {webhook?: object, email?: object}}>}
+ * @returns {Promise<{eventType: string, channels: {webhook?: object, email?: object, sftp?: object}}>}
  */
 async function notify(clientId, eventType, data) {
   validateClientId(clientId);
@@ -385,6 +465,17 @@ async function notify(clientId, eventType, data) {
     );
   }
 
+  if (channels.sftp && channels.sftp.gcs_path_prefix && data.runReference && Array.isArray(data.payments)) {
+    dispatches.push(
+      sendSftpResults(channels.sftp.gcs_path_prefix, data.runReference, data.payments)
+        .then((res) => { results.sftp = res; })
+        .catch((err) => {
+          console.error(`${LOG_PREFIX} SFTP dispatch error — event=${eventType}, error=${err.message}`);
+          results.sftp = { success: false, gcsPath: '', rowCount: 0 };
+        }),
+    );
+  }
+
   await Promise.allSettled(dispatches);
 
   const channelSummary = Object.keys(results).map((ch) => `${ch}=${results[ch].success}`).join(', ');
@@ -402,6 +493,8 @@ module.exports = {
   getClientPreferences,
   sendWebhook,
   sendEmail,
+  sendSftpResults,
+  buildResultsCsv,
   EVENT_TYPES,
   buildEventPayload,
 };

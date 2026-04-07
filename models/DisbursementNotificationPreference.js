@@ -2,7 +2,7 @@
 
 /**
  * DisbursementNotificationPreference model
- * Per-event notification routing for a disbursement client (email or webhook).
+ * Per-event notification routing for a disbursement client (email, webhook, or sftp).
  *
  * @author MyMoolah Treasury Platform
  * @date 2026-04-07
@@ -26,7 +26,7 @@ module.exports = (sequelize, DataTypes) => {
     channel: {
       type: DataTypes.STRING(20),
       allowNull: false,
-      validate: { isIn: [['email', 'webhook']] },
+      validate: { isIn: [['email', 'webhook', 'sftp']] },
     },
     enabled: {
       type: DataTypes.BOOLEAN,

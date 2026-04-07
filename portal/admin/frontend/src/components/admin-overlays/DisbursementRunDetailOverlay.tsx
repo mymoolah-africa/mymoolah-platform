@@ -53,22 +53,22 @@ interface Run {
   metadata:         Record<string, any> | null;
 }
 
-const STATUS_BADGE: Record<string, React.CSSProperties> = {
-  pending:    { background: '#fff3cd', color: '#856404' },
-  accepted:   { background: '#d4edda', color: '#155724' },
-  rejected:   { background: '#f8d7da', color: '#721c24' },
-  resubmitted:{ background: '#cce5ff', color: '#004085' },
-  cancelled:  { background: '#e2e3e5', color: '#383d41' },
+const STATUS_CLASSES: Record<string, string> = {
+  pending:    'bg-amber-50 text-amber-700',
+  accepted:   'bg-emerald-50 text-emerald-700',
+  rejected:   'bg-red-50 text-red-700',
+  resubmitted:'bg-blue-50 text-blue-700',
+  cancelled:  'bg-gray-100 text-gray-500',
 };
 
-const RUN_STATUS_BADGE: Record<string, React.CSSProperties> = {
-  draft:            { background: '#f0f0f0', color: '#555' },
-  pending_approval: { background: '#fff3cd', color: '#856404' },
-  submitted:        { background: '#d1ecf1', color: '#0c5460' },
-  processing:       { background: '#d1ecf1', color: '#0c5460' },
-  completed:        { background: '#d4edda', color: '#155724' },
-  partial:          { background: '#fff3cd', color: '#856404' },
-  failed:           { background: '#f8d7da', color: '#721c24' },
+const RUN_STATUS_CLASSES: Record<string, string> = {
+  draft:            'bg-gray-100 text-gray-600',
+  pending_approval: 'bg-amber-50 text-amber-700',
+  submitted:        'bg-cyan-50 text-cyan-700',
+  processing:       'bg-cyan-50 text-cyan-700',
+  completed:        'bg-emerald-50 text-emerald-700',
+  partial:          'bg-amber-50 text-amber-700',
+  failed:           'bg-red-50 text-red-700',
 };
 
 export const DisbursementRunDetailOverlay: React.FC = () => {
@@ -158,8 +158,7 @@ export const DisbursementRunDetailOverlay: React.FC = () => {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 flex-wrap">
               <h2 className="admin-text-heading text-xl">{run.run_reference}</h2>
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize"
-                style={RUN_STATUS_BADGE[run.status] || RUN_STATUS_BADGE.draft}>
+              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize ${RUN_STATUS_CLASSES[run.status] || RUN_STATUS_CLASSES.draft}`}>
                 {run.status.replace('_', ' ')}
               </span>
             </div>
@@ -175,14 +174,14 @@ export const DisbursementRunDetailOverlay: React.FC = () => {
           {/* Summary KPIs */}
           <div className="flex gap-3 flex-wrap">
             {[
-              { label: 'Total',     val: fmtAmt(run.total_amount),     color: '#1a3c5e' },
-              { label: 'Payments',  val: String(run.total_count),       color: '#555' },
-              { label: '✓ Success', val: String(run.success_count),     color: '#27ae60' },
-              { label: '✗ Failed',  val: String(run.failed_count),      color: run.failed_count > 0 ? '#c0392b' : '#aaa' },
+              { label: 'Total',     val: fmtAmt(run.total_amount),     colorClass: 'text-[var(--foreground)]' },
+              { label: 'Payments',  val: String(run.total_count),       colorClass: 'text-[var(--muted-foreground)]' },
+              { label: '✓ Success', val: String(run.success_count),     colorClass: 'text-[var(--success-color)]' },
+              { label: '✗ Failed',  val: String(run.failed_count),      colorClass: run.failed_count > 0 ? 'text-[var(--destructive)]' : 'text-gray-400' },
             ].map((k) => (
               <div key={k.label} className="text-center bg-gray-50 rounded-xl px-4 py-2 min-w-[80px]">
                 <p className="text-xs text-gray-400 mb-0.5">{k.label}</p>
-                <p className="font-bold text-sm" style={{ color: k.color }}>{k.val}</p>
+                <p className={`font-bold text-sm ${k.colorClass}`}>{k.val}</p>
               </div>
             ))}
           </div>
@@ -208,8 +207,7 @@ export const DisbursementRunDetailOverlay: React.FC = () => {
             <button
               onClick={() => doAction('approve')}
               disabled={acting}
-              className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-50"
-              style={{ background: '#27ae60' }}
+              className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-[var(--success-color)] text-white disabled:opacity-50"
             >
               {acting ? 'Approving…' : '✓ Approve & Submit to SBSA'}
             </button>
@@ -250,8 +248,7 @@ export const DisbursementRunDetailOverlay: React.FC = () => {
           <button
             onClick={() => doAction('resubmit')}
             disabled={acting}
-            className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-50"
-            style={{ background: '#c0392b' }}
+            className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-[var(--destructive)] text-white disabled:opacity-50"
           >
             {acting ? 'Creating…' : '↺ Resubmit Failed Payments'}
           </button>
@@ -264,8 +261,7 @@ export const DisbursementRunDetailOverlay: React.FC = () => {
           <span className="text-sm font-medium text-gray-600 mr-2">Filter:</span>
           {['all', 'pending', 'accepted', 'rejected'].map((s) => (
             <button key={s} onClick={() => setStatusFilter(s)}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-colors"
-              style={statusFilter === s ? { background: '#1a3c5e', color: '#fff' } : { background: '#f0f0f0', color: '#555' }}>
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-colors ${statusFilter === s ? 'bg-[var(--foreground)] text-white' : 'bg-[var(--muted)] text-[var(--muted-foreground)]'}`}>
               {s}
             </button>
           ))}
@@ -295,8 +291,7 @@ export const DisbursementRunDetailOverlay: React.FC = () => {
                   <td className="px-4 py-2.5 font-semibold whitespace-nowrap">{fmtAmt(p.amount)}</td>
                   <td className="px-4 py-2.5 text-xs text-gray-500">{p.reference || '—'}</td>
                   <td className="px-4 py-2.5">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize"
-                      style={STATUS_BADGE[p.status] || {}}>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize ${STATUS_CLASSES[p.status] || ''}`}>
                       {p.status}
                     </span>
                   </td>
