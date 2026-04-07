@@ -12,21 +12,27 @@ const authenticateToken = (req, res, next) => {
     });
   }
 
-  try {
-    // Verify token
-    const secret = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-    const decoded = jwt.verify(token, secret);
-    
-    // Add user info to request
-    req.user = decoded;
-    next();
-  } catch (error) {
-    console.error('❌ Token verification error:', error);
-    return res.status(403).json({
-      success: false,
-      message: 'Invalid or expired token'
-    });
+  const secrets = [
+    process.env.JWT_SECRET,
+    process.env.PORTAL_JWT_SECRET,
+  ].filter(Boolean);
+
+  if (secrets.length === 0) secrets.push('your-secret-key-change-in-production');
+
+  for (const secret of secrets) {
+    try {
+      const decoded = jwt.verify(token, secret);
+      req.user = decoded;
+      return next();
+    } catch (_) {
+      // try next secret
+    }
   }
+
+  return res.status(403).json({
+    success: false,
+    message: 'Invalid or expired token'
+  });
 };
 
 module.exports = authenticateToken; 
