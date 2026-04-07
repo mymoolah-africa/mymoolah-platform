@@ -4,30 +4,38 @@
 /**
  * Seed a portal admin user using db-connection-helper.js
  *
- * Usage (from repo root):
- *   PORTAL_ADMIN_EMAIL=admin@mymoolah.africa PORTAL_ADMIN_PASSWORD=YourSecurePass123! node scripts/seed-portal-admin.js
- *
- * Or set defaults in .env and run:
- *   node scripts/seed-portal-admin.js
+ * Usage (from repo root, in Codespaces):
+ *   PORTAL_ADMIN_PASSWORD=YourPass123! node scripts/seed-portal-admin.js staging
+ *   PORTAL_ADMIN_PASSWORD=YourPass123! node scripts/seed-portal-admin.js uat
+ *   PORTAL_ADMIN_PASSWORD=YourPass123! node scripts/seed-portal-admin.js production
  */
 
 require('dotenv').config();
 const bcrypt = require('bcryptjs');
-const { getUATClient } = require('./db-connection-helper');
+const helper = require('./db-connection-helper');
 
+const ENV = (process.argv[2] || 'uat').toLowerCase();
 const EMAIL = process.env.PORTAL_ADMIN_EMAIL || 'admin@mymoolah.africa';
 const PASSWORD = process.env.PORTAL_ADMIN_PASSWORD;
 
+if (!['uat', 'staging', 'production'].includes(ENV)) {
+  console.error('Usage: PORTAL_ADMIN_PASSWORD=Pass123! node scripts/seed-portal-admin.js [uat|staging|production]');
+  process.exit(1);
+}
+
 if (!PASSWORD) {
   console.error('PORTAL_ADMIN_PASSWORD env var is required.');
-  console.error('Usage: PORTAL_ADMIN_PASSWORD=YourPass123! node scripts/seed-portal-admin.js');
+  console.error('Usage: PORTAL_ADMIN_PASSWORD=Pass123! node scripts/seed-portal-admin.js [uat|staging|production]');
   process.exit(1);
 }
 
 (async () => {
   let client;
   try {
-    client = await getUATClient();
+    if (ENV === 'production') client = await helper.getProductionClient();
+    else if (ENV === 'staging') client = await helper.getStagingClient();
+    else client = await helper.getUATClient();
+    console.log(`Connected to ${ENV.toUpperCase()} database`);
 
     const existing = await client.query(
       'SELECT id FROM portal_users WHERE email = $1',
