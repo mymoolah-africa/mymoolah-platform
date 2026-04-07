@@ -41,8 +41,10 @@ class DisbursementClientController {
       const offset = (page - 1) * limit;
 
       const where = {};
-      if (!req.user?.isAdmin) {
-        where.created_by = req.user?.id;
+      const isPortalUser = !!req.user?.portalUserId;
+      if (!req.user?.isAdmin && !isPortalUser) {
+        const userId = req.user?.id;
+        if (userId) where.created_by = userId;
       }
       if (req.query.status) where.status = req.query.status;
       if (req.query.kyb_status) where.kyb_status = req.query.kyb_status;
