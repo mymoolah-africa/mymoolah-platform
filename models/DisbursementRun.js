@@ -120,6 +120,10 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: 'run_id',
       as: 'payments',
     });
+    DisbursementRun.belongsTo(models.DisbursementClient, {
+      foreignKey: 'client_id',
+      as: 'client',
+    });
   };
 
   return DisbursementRun;

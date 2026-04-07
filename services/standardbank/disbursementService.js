@@ -215,6 +215,22 @@ async function submitForApproval(runId, makerUserId) {
 
   await run.update({ status: 'pending_approval' });
   logger.info(`Run ${run.run_reference} submitted for approval`);
+
+  setImmediate(async () => {
+    try {
+      const { notify, EVENT_TYPES } = require('../disbursement/notificationEngine');
+      await notify(run.client_id, EVENT_TYPES.RUN_SUBMITTED, {
+        runId: run.id,
+        runReference: run.run_reference,
+        totalAmount: run.total_amount,
+        totalCount: run.total_count,
+        rail: run.rail,
+      });
+    } catch (notifyErr) {
+      logger.warn('Notification failed (non-critical):', notifyErr.message);
+    }
+  });
+
   return run;
 }
 
@@ -365,6 +381,23 @@ async function approveRun(runId, checkerUserId) {
   });
 
   logger.info(`Run ${run.run_reference} approved and submitted`);
+
+  setImmediate(async () => {
+    try {
+      const { notify, EVENT_TYPES } = require('../disbursement/notificationEngine');
+      await notify(run.client_id, EVENT_TYPES.RUN_APPROVED, {
+        runId: run.id,
+        runReference: run.run_reference,
+        totalAmount: run.total_amount,
+        totalCount: run.total_count,
+        pain001Filename: filename,
+        checkerUserId,
+      });
+    } catch (notifyErr) {
+      logger.warn('Notification failed (non-critical):', notifyErr.message);
+    }
+  });
+
   return { success: true, run, pain001Filename: filename };
 }
 
@@ -386,6 +419,21 @@ async function rejectRun(runId, checkerUserId, reason) {
     metadata:  { ...(run.metadata || {}), rejection_reason: reason, rejected_by: checkerUserId, rejected_at: new Date().toISOString() },
   });
   logger.info(`Run ${run.run_reference} rejected by checker ${checkerUserId}`);
+
+  setImmediate(async () => {
+    try {
+      const { notify, EVENT_TYPES } = require('../disbursement/notificationEngine');
+      await notify(run.client_id, EVENT_TYPES.RUN_FAILED, {
+        runId: run.id,
+        runReference: run.run_reference,
+        reason: reason || 'Rejected by checker',
+        checkerUserId,
+      });
+    } catch (notifyErr) {
+      logger.warn('Notification failed (non-critical):', notifyErr.message);
+    }
+  });
+
   return run;
 }
 

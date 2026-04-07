@@ -537,6 +537,10 @@ if (standardbankPayShapEnabled) {
 const disbursementRoutes = require('./routes/disbursement');
 app.use('/api/v1/disbursements', disbursementRoutes);
 
+// Disbursement Client Management — onboarding, KYB, fees, file upload
+const disbursementClientRoutes = require('./routes/disbursementClient');
+app.use('/api/v1/disbursement-clients', disbursementClientRoutes);
+
 // Peach Payments — ARCHIVED (2026-03-21). Agreement cancelled.
 // PayShap RTP handled directly via /api/v1/standardbank/payshap/rtp
 // Routes mounted only for /status endpoint (returns archived notice).

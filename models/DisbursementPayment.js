@@ -84,6 +84,20 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
       comment: 'MT940-confirmed amount in cents',
     },
+    fee_cents: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    },
+    payment_rail: {
+      type: DataTypes.STRING(20),
+      allowNull: false,
+      defaultValue: 'eft',
+    },
+    metadata: {
+      type: DataTypes.JSONB,
+      allowNull: true,
+    },
   }, {
     tableName: 'disbursement_payments',
     underscored: true,

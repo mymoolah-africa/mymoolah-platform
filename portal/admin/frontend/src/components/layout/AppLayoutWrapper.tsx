@@ -46,6 +46,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: 'Deposits', path: '/admin/unallocated-deposits', icon: Landmark },
       { label: 'Disbursements', path: '/admin/disbursements', icon: ArrowRightLeft },
+      { label: 'Disb. Clients', path: '/admin/disbursement-clients', icon: Briefcase },
       { label: 'Settlements', path: '/admin/settlements', icon: Layers },
       { label: 'Float Management', path: '/admin/floats', icon: Wallet },
     ],
@@ -80,6 +81,7 @@ const IS_PRODUCTION_ENV = ENV_LABEL === 'Production';
 /** Longer / more specific paths first */
 const ROUTE_TITLE_RULES: { test: (pathname: string) => boolean; title: string }[] = [
   { test: (p) => p.startsWith('/admin/unallocated-deposits'), title: 'Unallocated Deposits' },
+  { test: (p) => p.startsWith('/admin/disbursement-clients'), title: 'Disbursement Clients' },
   { test: (p) => p.startsWith('/admin/disbursements'), title: 'Disbursements' },
   { test: (p) => p.startsWith('/admin/settlements'), title: 'Settlement Management' },
   { test: (p) => p.startsWith('/admin/floats'), title: 'Float Management' },

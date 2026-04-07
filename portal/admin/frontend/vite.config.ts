@@ -15,8 +15,18 @@ export default defineConfig({
     port: 3003,
     host: true,
     proxy: {
-      '/api': {
+      '/api/v1/admin': {
         target: 'http://localhost:3002',
+        changeOrigin: true,
+        secure: false,
+        configure: (proxy) => {
+          proxy.on('proxyReq', (proxyReq) => {
+            proxyReq.removeHeader('origin');
+          });
+        },
+      },
+      '/api': {
+        target: 'http://localhost:3001',
         changeOrigin: true,
         secure: false,
         configure: (proxy) => {

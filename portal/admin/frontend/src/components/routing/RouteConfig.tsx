@@ -19,6 +19,8 @@ import { UnallocatedDepositsOverlay } from '../admin-overlays/UnallocatedDeposit
 import { DisbursementRunsOverlay } from '../admin-overlays/DisbursementRunsOverlay';
 import { CreateDisbursementRunOverlay } from '../admin-overlays/CreateDisbursementRunOverlay';
 import { DisbursementRunDetailOverlay } from '../admin-overlays/DisbursementRunDetailOverlay';
+import { DisbursementClientManagementOverlay } from '../admin-overlays/DisbursementClientManagementOverlay';
+import { DisbursementClientDetailOverlay } from '../admin-overlays/DisbursementClientDetailOverlay';
 
 const ProtectedRoute: React.FC = () => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -64,6 +66,8 @@ export const RouteConfig: React.FC = () => {
           <Route path="/admin/disbursements" element={<DisbursementRunsOverlay />} />
           <Route path="/admin/disbursements/create" element={<CreateDisbursementRunOverlay />} />
           <Route path="/admin/disbursements/:id" element={<DisbursementRunDetailOverlay />} />
+          <Route path="/admin/disbursement-clients" element={<DisbursementClientManagementOverlay />} />
+          <Route path="/admin/disbursement-clients/:clientId" element={<DisbursementClientDetailOverlay />} />
         </Route>
       </Route>
 
