@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-07 11:30  
-**Latest Feature**: **Portal Layout Consistency Fix (v2.86.4)** — Fixed sidebar "floating" between pages. Root cause: `index.html` `#root` had persistent `display: flex; align-items: center; justify-content: center` from loading spinner that centered the entire app. Fixed by scoping loading styles with `:has(.loading-container)`, adding `html/body/#root` height chain, and converting to React Router nested routes (single `AppLayoutWrapper` with `<Outlet/>`). Previous: Proxy auth token fix (v2.86.3), portal UI overhaul (v2.86.0–v2.86.2).  
-**Document Version**: 2.86.4  
-**Session logs**: `docs/session_logs/2026-04-07_1130_portal-layout-consistency-fix.md`, `docs/session_logs/2026-04-07_0200_start-all-services-auth-token-fix.md`  
+**Last Updated**: 2026-04-07 12:50  
+**Latest Feature**: **Portal Auth Security, CORS & Dropdown Fix (v2.86.5)** — ProtectedRoute now uses AuthContext (isAuthenticated + isLoading) instead of raw sessionStorage, preventing stale sessions from bypassing login. Added interactive user dropdown menu with Sign Out in header. Fixed CORS rejection when Vite proxy forwarded Codespaces Origin header to portal backend. Previous: Portal Layout Fix (v2.86.4), Proxy auth token fix (v2.86.3), portal UI overhaul (v2.86.0–v2.86.2).  
+**Document Version**: 2.86.5  
+**Session logs**: `docs/session_logs/2026-04-07_1250_portal-auth-cors-dropdown-fix.md`, `docs/session_logs/2026-04-07_1130_portal-layout-consistency-fix.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
