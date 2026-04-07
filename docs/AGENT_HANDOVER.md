@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-07 02:15  
-**Latest Feature**: **Proxy Auth Token Fix (v2.86.3)** — Fixed root cause of recurring `read ECONNRESET` in Codespaces: expired OAuth2 tokens in stale Cloud SQL Auth Proxies. `start-all-services.sh` now kills stale proxies, refreshes gcloud token non-interactively, then starts fresh proxies. Previous sessions: Portal UI overhaul approved (v2.86.0–v2.86.2), brand logos + colors + dev guide.  
-**Document Version**: 2.86.3  
-**Session logs**: `docs/session_logs/2026-04-07_0200_start-all-services-auth-token-fix.md`, `docs/session_logs/2026-04-07_0130_portal-ui-final-documentation.md`  
+**Last Updated**: 2026-04-07 11:30  
+**Latest Feature**: **Portal Layout Consistency Fix (v2.86.4)** — Fixed sidebar "floating" between pages. Root cause: `index.html` `#root` had persistent `display: flex; align-items: center; justify-content: center` from loading spinner that centered the entire app. Fixed by scoping loading styles with `:has(.loading-container)`, adding `html/body/#root` height chain, and converting to React Router nested routes (single `AppLayoutWrapper` with `<Outlet/>`). Previous: Proxy auth token fix (v2.86.3), portal UI overhaul (v2.86.0–v2.86.2).  
+**Document Version**: 2.86.4  
+**Session logs**: `docs/session_logs/2026-04-07_1130_portal-layout-consistency-fix.md`, `docs/session_logs/2026-04-07_0200_start-all-services-auth-token-fix.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -102,7 +102,10 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (April 7, 2026 - 02:15)**
+### **Latest Achievement (April 7, 2026 - 11:30)**
+**Portal Layout Consistency Fix (v2.86.4)** — Fixed sidebar "floating" between pages in MMAP. Three root causes: (1) `index.html` `#root` had persistent `display: flex; align-items: center; justify-content: center` from loading spinner CSS — centered the entire app instead of stretching edge-to-edge. Scoped with `:has(.loading-container)`. (2) No `html/body/#root` height chain — added outside `@layer` in `index.css`. (3) `AppLayoutWrapper` remounted on every navigation (each route had its own copy) — converted to React Router nested routes with single `<AppLayoutWrapper/>` using `<Outlet/>`. Sidebar now persists across navigation, no more visual flicker. Vite build passes. Session log: `docs/session_logs/2026-04-07_1130_portal-layout-consistency-fix.md`.
+
+### **Previous Achievement (April 7, 2026 - 02:15)**
 **Proxy Auth Token Fix (v2.86.3)** — Fixed root cause of recurring `read ECONNRESET` in Codespaces. Previous 3s stabilization pause only addressed cold-proxy timing; the real cause was **expired OAuth2 tokens** in stale Cloud SQL Auth Proxies (proxy held port open but returned 401 on every DB connection). `start-all-services.sh` Step 2 now: (1) kills all existing proxies on ports 6543/6544/6545, (2) refreshes gcloud access token non-interactively via `gcloud auth print-access-token`, (3) warns if refresh fails (user may need manual `gcloud auth login`), (4) starts fresh proxies with valid credentials. Tested by Andre in Codespaces — all 6 services started cleanly. Session log: `docs/session_logs/2026-04-07_0200_start-all-services-auth-token-fix.md`.
 
 ### **Previous Achievement (April 7, 2026 - 01:45)**
