@@ -5,7 +5,7 @@ require('dotenv').config({ path: require('path').resolve(__dirname, '../../.env'
 const app = require('./app');
 const { sequelize } = require('./models');
 
-const PORT = process.env.PORT || process.env.PORTAL_BACKEND_PORT || 3002;
+const PORT = process.env.PORTAL_BACKEND_PORT || 3002;
 const HOST = process.env.PORTAL_BACKEND_HOST || '0.0.0.0';
 
 // Test database connection
