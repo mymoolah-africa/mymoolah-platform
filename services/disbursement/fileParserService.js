@@ -18,7 +18,8 @@
 
 const { parse: csvParse } = require('csv-parse/sync');
 const { XMLParser } = require('fast-xml-parser');
-const XLSX = require('xlsx');
+let XLSX;
+try { XLSX = require('xlsx'); } catch { /* loaded lazily in parseExcel */ }
 
 const LOG_PREFIX = '[FileParser]';
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
@@ -354,6 +355,12 @@ function parseCSV(buffer) {
 
 function parseExcel(buffer) {
   assertBuffer(buffer);
+
+  if (!XLSX) {
+    try { XLSX = require('xlsx'); } catch {
+      throw new Error(`${LOG_PREFIX} xlsx package not installed. Run: npm install xlsx`);
+    }
+  }
 
   const workbook = XLSX.read(Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer), { type: 'buffer' });
   const sheetName = workbook.SheetNames[0];
