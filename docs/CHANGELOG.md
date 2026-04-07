@@ -1,5 +1,51 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-07 - Disbursement Phase 2 — API, Models & Portal UI (v2.89.0)
+
+### Summary
+Complete Phase 2 of the disbursement service: 5 Sequelize models, client management API (9 endpoints), 2 portal UI pages, notification/KYB wiring, Vite proxy fix.
+
+### New Files
+**Sequelize Models (5):**
+- `models/DisbursementClient.js` — corporate client entity with hasMany associations to fees, KYB docs, notifications, users, runs
+- `models/DisbursementClientFee.js` — per-client per-rail fee configuration (flat/percentage/combined)
+- `models/KybDocument.js` — KYB document with GPT-4o OCR extraction fields
+- `models/DisbursementNotificationPreference.js` — event/channel notification subscriptions
+- `models/DisbursementClientUser.js` — white-label portal user per client
+
+**API Layer (2):**
+- `controllers/disbursementClientController.js` — 9 methods: CRUD, KYB upload/review, fee config, beneficiary file parse
+- `routes/disbursementClient.js` — 9 endpoints with express-validator + rate limiting at `/api/v1/disbursement-clients`
+
+**Portal UI (2):**
+- `portal/.../DisbursementClientManagementOverlay.tsx` — client list, status/KYB filters, create modal
+- `portal/.../DisbursementClientDetailOverlay.tsx` — client detail, KYB documents table, fee configuration
+
+### Modified Files
+- `models/DisbursementPayment.js` — added fee_cents, payment_rail, metadata columns
+- `models/DisbursementRun.js` — added belongsTo(DisbursementClient) association
+- `server.js` — wired `/api/v1/disbursement-clients` route
+- `services/standardbank/disbursementService.js` — wired notificationEngine for submit/approve/reject events
+- `controllers/disbursementClientController.js` — wired kybComplianceService OCR on document upload
+- `portal/admin/frontend/vite.config.ts` — split proxy: admin → portal backend (3002), api → main backend (3001)
+- `portal/.../RouteConfig.tsx` — added client management + detail routes
+- `portal/.../AppLayoutWrapper.tsx` — added sidebar item + route title
+
+### API Endpoints Added
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/v1/disbursement-clients` | List clients (paginated, filterable) |
+| GET | `/api/v1/disbursement-clients/:clientId` | Get client with fees, KYB summary |
+| POST | `/api/v1/disbursement-clients` | Create new disbursement client |
+| PATCH | `/api/v1/disbursement-clients/:clientId` | Update client fields |
+| POST | `/api/v1/disbursement-clients/:clientId/kyb-documents` | Upload KYB document |
+| PATCH | `/api/v1/disbursement-clients/:clientId/kyb-documents/:docId` | Review KYB document |
+| GET | `/api/v1/disbursement-clients/:clientId/fees` | List fee configs |
+| POST | `/api/v1/disbursement-clients/:clientId/fees` | Create fee config |
+| POST | `/api/v1/disbursement-clients/:clientId/upload-beneficiaries` | Parse beneficiary file |
+
+---
+
 ## 2026-04-07 - Proxy Auth Token Fix (v2.86.3)
 
 ### Summary

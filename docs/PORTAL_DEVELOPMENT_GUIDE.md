@@ -149,6 +149,8 @@ import logoHorizontal from '../assets/logo-horizontal.png';
 | `/admin/disbursements` | `DisbursementRunsOverlay.tsx` | 178 | Disbursement run list, status chips | MEDIUM |
 | `/admin/disbursements/create` | `CreateDisbursementRunOverlay.tsx` | 319 | CSV upload, manual entry, create run | MEDIUM |
 | `/admin/disbursements/:id` | `DisbursementRunDetailOverlay.tsx` | 340 | Run detail, approve/reject, payment table | MEDIUM |
+| `/admin/disbursement-clients` | `DisbursementClientManagementOverlay.tsx` | ~350 | Client list, filters, create modal | MEDIUM |
+| `/admin/disbursement-clients/:clientId` | `DisbursementClientDetailOverlay.tsx` | ~500 | Client detail, KYB docs, fee config | MEDIUM |
 
 ### Placeholder — "Coming Soon" (properly styled with icons + feature grid)
 
@@ -182,6 +184,17 @@ import logoHorizontal from '../assets/logo-horizontal.png';
 | `GET` | `/api/v1/admin/transactions/:id` | `txnMonitor` | Admin | Transaction + journal entries |
 | `GET` | `/api/v1/admin/unallocated-deposits` | `adminController` | Admin | Unallocated deposit list |
 | `POST` | `/api/v1/admin/unallocated-deposits/:id/allocate` | `adminController` | Admin | Allocate deposit to user |
+| `GET` | `/api/v1/disbursement-clients` | `disbursementClientCtrl` | JWT | Client list (paginated) |
+| `GET` | `/api/v1/disbursement-clients/:id` | `disbursementClientCtrl` | JWT | Client detail + fees + KYB |
+| `POST` | `/api/v1/disbursement-clients` | `disbursementClientCtrl` | JWT | Create disbursement client |
+| `PATCH` | `/api/v1/disbursement-clients/:id` | `disbursementClientCtrl` | JWT | Update client |
+| `POST` | `/api/v1/disbursement-clients/:id/kyb-documents` | `disbursementClientCtrl` | JWT | Upload KYB document |
+| `PATCH` | `/api/v1/disbursement-clients/:id/kyb-documents/:docId` | `disbursementClientCtrl` | JWT | Review KYB document |
+| `GET` | `/api/v1/disbursement-clients/:id/fees` | `disbursementClientCtrl` | JWT | List fee configs |
+| `POST` | `/api/v1/disbursement-clients/:id/fees` | `disbursementClientCtrl` | JWT | Create fee config |
+| `POST` | `/api/v1/disbursement-clients/:id/upload-beneficiaries` | `disbursementClientCtrl` | JWT | Parse beneficiary file |
+
+Disbursement client endpoints are on the **main backend** (port 3001), not the portal backend. The Vite proxy routes `/api` (non-admin) to port 3001.
 
 All admin endpoints use `portalAuth('admin')` middleware. All DB queries use `portal/backend/helpers/getDbClient.js` (raw parameterized SQL, never ORM).
 

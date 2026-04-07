@@ -1,5 +1,5 @@
-**Last Updated**: April 5, 2026
-**Version**: 2.81.0 - Electricity Commission-Based Supplier Comparison
+**Last Updated**: April 7, 2026
+**Version**: 2.89.0 - Disbursement Phase 2 (Client Management API)
 **Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **EEZIAIRTIME PIN & COPY** ✅ **EASYPAY** ✅ **RECONCILIATION LIVE** ✅ **REFERRAL SYSTEM LIVE** ✅ **OTP SYSTEM LIVE** ✅ **MOBILEMART INTEGRATED** ✅ **ELECTRICITY SUPPLIER COMPARISON**
 
 ---
@@ -7,6 +7,9 @@
 ## Recent Updates
 
 **For full change history**, see [CHANGELOG.md](./CHANGELOG.md) and [AGENT_HANDOVER.md](./AGENT_HANDOVER.md).
+
+### v2.89.0 — Disbursement Client Management API (April 7, 2026)
+New `/api/v1/disbursement-clients` endpoints for corporate client onboarding, KYB document management, fee configuration, and beneficiary file parsing. See [Disbursement Client API](#disbursement-client-management) section below.
 
 ---
 
@@ -1997,6 +2000,115 @@ Every reconciliation action is logged in the immutable audit trail with:
 - **Framework**: `docs/RECONCILIATION_FRAMEWORK.md`
 - **Quick Start**: `docs/RECONCILIATION_QUICK_START.md`
 - **Session Log**: `docs/session_logs/2026-01-13_recon_system_implementation.md`
+
+---
+
+## DISBURSEMENT CLIENT MANAGEMENT
+
+Corporate client onboarding, KYB compliance, and fee configuration for the bulk disbursement platform.
+
+**Base Path**: `/api/v1/disbursement-clients`  
+**Authentication**: JWT Bearer token required  
+**Rate Limits**: 100 req/15min (reads), 30 req/15min (writes)
+
+### List Clients
+```
+GET /api/v1/disbursement-clients?page=1&limit=20&status=active&kyb_status=verified
+```
+**Response**: `{ success: true, data: { clients: [...], pagination: { total, page, limit, totalPages } } }`
+
+### Get Client Detail
+```
+GET /api/v1/disbursement-clients/:clientId
+```
+**Response**: Client with associated fees (current only), notification preferences, and KYB document count by status.
+
+### Create Client
+```
+POST /api/v1/disbursement-clients
+Content-Type: application/json
+
+{
+  "client_code": "ACME01",
+  "company_name": "Acme Corp (Pty) Ltd",
+  "contact_email": "payroll@acme.co.za",
+  "entity_type": "company",
+  "registration_number": "2020/123456/07",
+  "contact_name": "Jane Smith",
+  "contact_phone": "0821234567",
+  "float_limit": 500000.00
+}
+```
+**Validation**: `client_code` alphanumeric max 20, `company_name` required, `contact_email` valid email.  
+**Response**: `{ success: true, data: { id, client_code, api_key, ... } }` (API key auto-generated)
+
+### Update Client
+```
+PATCH /api/v1/disbursement-clients/:clientId
+Content-Type: application/json
+
+{ "status": "active", "float_limit": 1000000.00 }
+```
+**Updatable fields**: company_name, contact_name, contact_email, contact_phone, status, float_limit, white_label_slug, white_label_config, notification_channels.
+
+### Upload KYB Document
+```
+POST /api/v1/disbursement-clients/:clientId/kyb-documents
+Content-Type: application/json
+
+{
+  "document_type": "cor15",
+  "entity_type": "company",
+  "original_filename": "acme_cor15.pdf"
+}
+```
+**Document types**: cor15, id_document, proof_of_address, trust_deed, partnership_agreement, npo_certificate, bank_confirmation, tax_clearance.  
+**Note**: Triggers async GPT-4o OCR analysis via kybComplianceService.
+
+### Review KYB Document
+```
+PATCH /api/v1/disbursement-clients/:clientId/kyb-documents/:docId
+Content-Type: application/json
+
+{ "status": "verified" }
+```
+**Status values**: verified, rejected. If rejected, include `rejection_reason`.  
+**Auto-verify**: When all required documents for the entity type are verified, client `kyb_status` auto-updates to `verified`.
+
+### List Fee Configs
+```
+GET /api/v1/disbursement-clients/:clientId/fees
+```
+Returns current (effective_to IS NULL) and historical fee configurations.
+
+### Create Fee Config
+```
+POST /api/v1/disbursement-clients/:clientId/fees
+Content-Type: application/json
+
+{
+  "rail": "eft",
+  "fee_type": "flat",
+  "flat_fee_cents": 500,
+  "percentage_fee": 0,
+  "min_fee_cents": 0,
+  "max_fee_cents": null
+}
+```
+**Rails**: eft, payshap, wallet (wallet is always free in feeEngine).  
+**Fee types**: flat, percentage, flat_plus_percentage.  
+**Note**: Creating a new fee auto-expires the current fee for the same client+rail.
+
+### Parse Beneficiary File
+```
+POST /api/v1/disbursement-clients/:clientId/upload-beneficiaries
+Content-Type: application/json
+
+{ "file_path": "/tmp/beneficiaries.csv", "file_type": "csv" }
+```
+**Response**: `{ success: true, data: { beneficiaries: [...], warnings: [...], errors: [...] } }`  
+**Supported formats**: CSV, Excel (.xlsx), Pain.001 XML.  
+**Note**: Does NOT create a run — returns parsed data for portal preview.
 
 ---
 
