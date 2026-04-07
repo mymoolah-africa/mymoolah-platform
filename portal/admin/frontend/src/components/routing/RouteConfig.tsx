@@ -1,11 +1,10 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { AppLayoutWrapper } from '../layout/AppLayoutWrapper';
 
 import AdminLogin from '../../pages/AdminLogin';
 import AdminDashboard from '../../pages/AdminDashboard';
 
-// Admin Management Overlays
 import { UserManagementOverlay } from '../admin-overlays/UserManagementOverlay';
 import { TransactionMonitoringOverlay } from '../admin-overlays/TransactionMonitoringOverlay';
 import { FloatManagementOverlay } from '../admin-overlays/FloatManagementOverlay';
@@ -20,12 +19,7 @@ import { DisbursementRunsOverlay } from '../admin-overlays/DisbursementRunsOverl
 import { CreateDisbursementRunOverlay } from '../admin-overlays/CreateDisbursementRunOverlay';
 import { DisbursementRunDetailOverlay } from '../admin-overlays/DisbursementRunDetailOverlay';
 
-// Protected Route Component
-interface ProtectedRouteProps {
-  children: React.ReactNode;
-}
-
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
+const ProtectedRoute: React.FC = () => {
   const token = sessionStorage.getItem('portal_token');
   const user = sessionStorage.getItem('portal_user');
 
@@ -41,147 +35,36 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     return <Navigate to="/admin/login" replace />;
   }
 
-  return <>{children}</>;
+  return <Outlet />;
 };
 
-// Route Configuration Component
 export const RouteConfig: React.FC = () => {
   return (
     <Routes>
-      {/* ========================================================================
-          AUTHENTICATION ROUTES - Public Access
-          ======================================================================== */}
+      {/* Public */}
       <Route path="/admin/login" element={<AdminLogin />} />
-      
-      {/* ========================================================================
-          ADMIN PORTAL CORE ROUTES - Protected Access with Layout
-          ======================================================================== */}
-      <Route path="/admin/dashboard" element={
-        <ProtectedRoute>
-          <AppLayoutWrapper>
-            <AdminDashboard />
-          </AppLayoutWrapper>
-        </ProtectedRoute>
-      } />
-      
-      {/* ========================================================================
-          USER & ACCESS MANAGEMENT ROUTES - Protected Access
-          ======================================================================== */}
-      <Route path="/admin/users" element={
-        <ProtectedRoute>
-          <AppLayoutWrapper>
-            <UserManagementOverlay />
-          </AppLayoutWrapper>
-        </ProtectedRoute>
-      } />
-      <Route path="/admin/security" element={
-        <ProtectedRoute>
-          <AppLayoutWrapper>
-            <SecurityAuditOverlay />
-          </AppLayoutWrapper>
-        </ProtectedRoute>
-      } />
-      <Route path="/admin/partners" element={
-        <ProtectedRoute>
-          <AppLayoutWrapper>
-            <PartnerOnboardingOverlay />
-          </AppLayoutWrapper>
-        </ProtectedRoute>
-      } />
-      
-      {/* ========================================================================
-          FINANCIAL MANAGEMENT ROUTES - Protected Access
-          ======================================================================== */}
-      <Route path="/admin/transactions" element={
-        <ProtectedRoute>
-          <AppLayoutWrapper>
-            <TransactionMonitoringOverlay />
-          </AppLayoutWrapper>
-        </ProtectedRoute>
-      } />
-      <Route path="/admin/floats" element={
-        <ProtectedRoute>
-          <AppLayoutWrapper>
-            <FloatManagementOverlay />
-          </AppLayoutWrapper>
-        </ProtectedRoute>
-      } />
-      <Route path="/admin/settlements" element={
-        <ProtectedRoute>
-          <AppLayoutWrapper>
-            <SettlementManagementOverlay />
-          </AppLayoutWrapper>
-        </ProtectedRoute>
-      } />
-      
-      {/* ========================================================================
-          SERVICE & SYSTEM MANAGEMENT ROUTES - Protected Access
-          ======================================================================== */}
-      <Route path="/admin/services" element={
-        <ProtectedRoute>
-          <AppLayoutWrapper>
-            <ServiceManagementOverlay />
-          </AppLayoutWrapper>
-        </ProtectedRoute>
-      } />
-      <Route path="/admin/system" element={
-        <ProtectedRoute>
-          <AppLayoutWrapper>
-            <SystemConfigurationOverlay />
-          </AppLayoutWrapper>
-        </ProtectedRoute>
-      } />
-      
-      {/* ========================================================================
-          ANALYTICS & REPORTING ROUTES - Protected Access
-          ======================================================================== */}
-      <Route path="/admin/reports" element={
-        <ProtectedRoute>
-          <AppLayoutWrapper>
-            <ReportingAnalyticsOverlay />
-          </AppLayoutWrapper>
-        </ProtectedRoute>
-      } />
-      
-      {/* ========================================================================
-          TREASURY OPERATIONS ROUTES - Protected Access
-          ======================================================================== */}
-      <Route path="/admin/unallocated-deposits" element={
-        <ProtectedRoute>
-          <AppLayoutWrapper>
-            <UnallocatedDepositsOverlay />
-          </AppLayoutWrapper>
-        </ProtectedRoute>
-      } />
-      
-      {/* ========================================================================
-          DISBURSEMENT ROUTES - Wage/Salary Disbursements via SBSA H2H
-          ======================================================================== */}
-      <Route path="/admin/disbursements" element={
-        <ProtectedRoute>
-          <AppLayoutWrapper>
-            <DisbursementRunsOverlay />
-          </AppLayoutWrapper>
-        </ProtectedRoute>
-      } />
-      <Route path="/admin/disbursements/create" element={
-        <ProtectedRoute>
-          <AppLayoutWrapper>
-            <CreateDisbursementRunOverlay />
-          </AppLayoutWrapper>
-        </ProtectedRoute>
-      } />
-      <Route path="/admin/disbursements/:id" element={
-        <ProtectedRoute>
-          <AppLayoutWrapper>
-            <DisbursementRunDetailOverlay />
-          </AppLayoutWrapper>
-        </ProtectedRoute>
-      } />
-      
-      {/* ========================================================================
-          REDIRECT ROUTES - Navigation & Fallbacks
-          ======================================================================== */}
+
+      {/* Protected admin routes — single AppLayoutWrapper shell */}
+      <Route element={<ProtectedRoute />}>
+        <Route element={<AppLayoutWrapper />}>
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/users" element={<UserManagementOverlay />} />
+          <Route path="/admin/security" element={<SecurityAuditOverlay />} />
+          <Route path="/admin/partners" element={<PartnerOnboardingOverlay />} />
+          <Route path="/admin/transactions" element={<TransactionMonitoringOverlay />} />
+          <Route path="/admin/floats" element={<FloatManagementOverlay />} />
+          <Route path="/admin/settlements" element={<SettlementManagementOverlay />} />
+          <Route path="/admin/services" element={<ServiceManagementOverlay />} />
+          <Route path="/admin/system" element={<SystemConfigurationOverlay />} />
+          <Route path="/admin/reports" element={<ReportingAnalyticsOverlay />} />
+          <Route path="/admin/unallocated-deposits" element={<UnallocatedDepositsOverlay />} />
+          <Route path="/admin/disbursements" element={<DisbursementRunsOverlay />} />
+          <Route path="/admin/disbursements/create" element={<CreateDisbursementRunOverlay />} />
+          <Route path="/admin/disbursements/:id" element={<DisbursementRunDetailOverlay />} />
+        </Route>
+      </Route>
+
+      {/* Fallback redirects */}
       <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
       <Route path="/" element={<Navigate to="/admin/login" replace />} />
       <Route path="*" element={<Navigate to="/admin/login" replace />} />

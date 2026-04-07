@@ -1,5 +1,5 @@
-import React, { ReactNode, useMemo, useState } from 'react';
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import React, { useMemo, useState } from 'react';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import logoIcon from '../../assets/logo-icon.png';
 import {
@@ -22,10 +22,6 @@ import {
   Search,
   ChevronDown,
 } from 'lucide-react';
-
-interface AppLayoutWrapperProps {
-  children: ReactNode;
-}
 
 interface NavItem {
   label: string;
@@ -103,7 +99,7 @@ function getPageTitle(pathname: string): string {
   return 'Admin Portal';
 }
 
-export const AppLayoutWrapper: React.FC<AppLayoutWrapperProps> = ({ children }) => {
+export const AppLayoutWrapper: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -316,7 +312,9 @@ export const AppLayoutWrapper: React.FC<AppLayoutWrapperProps> = ({ children }) 
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6">
+          <Outlet />
+        </main>
       </div>
     </div>
   );

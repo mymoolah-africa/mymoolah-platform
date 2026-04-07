@@ -8,6 +8,24 @@
 @tailwind utilities;
 
 /* ──────────────────────────────────────────────────────────
+   App shell reset — MUST be outside @layer so it overrides
+   the index.html inline <style> that centers #root for the
+   loading spinner. Without this, the sidebar floats.
+   ────────────────────────────────────────────────────────── */
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+#root {
+  height: 100%;
+  display: block;
+  background: transparent;
+}
+
+/* ──────────────────────────────────────────────────────────
    Design Tokens — shadcn-compatible + MyMoolah brand
    These map to tailwind.config.js color references.
    ────────────────────────────────────────────────────────── */

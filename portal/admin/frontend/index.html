@@ -45,38 +45,36 @@
     <link rel="dns-prefetch" href="//fonts.googleapis.com" />
     <link rel="dns-prefetch" href="//fonts.gstatic.com" />
     
-    <!-- Critical CSS for loading state -->
+    <!-- Critical CSS for loading state (scoped to .loading-container) -->
     <style>
-      /* Loading spinner */
       .loading-spinner {
         display: inline-block;
         width: 20px;
         height: 20px;
         border: 3px solid #f3f3f3;
-        border-top: 3px solid #7c3aed;
+        border-top: 3px solid #86BE41;
         border-radius: 50%;
         animation: spin 1s linear infinite;
       }
-      
+
       @keyframes spin {
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
       }
-      
-      /* Initial loading state */
-      #root {
+
+      #root:has(.loading-container) {
         min-height: 100vh;
         display: flex;
         align-items: center;
         justify-content: center;
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        background: linear-gradient(135deg, #f8f9fa 0%, #f1f5f9 100%);
       }
-      
+
       .loading-container {
         text-align: center;
         color: #6b7280;
       }
-      
+
       .loading-container h1 {
         font-family: 'Montserrat', sans-serif;
         font-size: 1.5rem;
@@ -84,7 +82,7 @@
         margin-bottom: 1rem;
         color: #374151;
       }
-      
+
       .loading-container p {
         font-family: 'Montserrat', sans-serif;
         font-size: 0.875rem;
