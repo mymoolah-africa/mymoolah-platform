@@ -398,6 +398,87 @@ node scripts/verify-recon-audit-trail.js
 
 ---
 
+## 🏛️ **Admin Portal Deployment (Cloud Run)**
+
+### **Architecture**
+
+Single Cloud Run service — Express backend serves both the API (`/api/v1/admin/*`) and the React frontend static files. Same-origin eliminates CORS, simplifies CSP, and reduces attack surface. Banking-grade: aligned with Mojaloop Hub Operator Dashboard pattern.
+
+### **Services**
+
+| Environment | Service Name | Cloud SQL Instance | DB |
+|-------------|-------------|-------------------|-----|
+| Staging | `mymoolah-portal-staging` | `mmtp-pg-staging` | `mymoolah_staging` |
+| Production | `mymoolah-portal-production` | `mmtp-pg-production` | `mymoolah_production` |
+
+### **Deploy Command**
+
+```bash
+# Deploy to staging
+./scripts/deploy-portal.sh --staging
+
+# Deploy to production
+./scripts/deploy-portal.sh --production
+```
+
+### **What the Deploy Script Does**
+
+1. Authenticates with Google Cloud (`gcloud auth`)
+2. Submits to Cloud Build (two-step):
+   - Copies `scripts/db-connection-helper.js` into `portal/scripts/` for path compatibility
+   - Builds Docker image from `portal/Dockerfile` (multi-stage: frontend build + backend)
+3. Deploys to Cloud Run with:
+   - Cloud SQL instance connection
+   - Environment variables (`NODE_ENV`, `MM_DEPLOYMENT_ENV`, `PORTAL_ENV`, `DB_*`)
+   - Secrets from Secret Manager (`DB_PASSWORD`, `JWT_SECRET`)
+   - 512Mi memory, 1 CPU, 0–5 instances
+
+### **Environment Variables (set by deploy script)**
+
+| Variable | Value | Source |
+|----------|-------|--------|
+| `NODE_ENV` | `production` | `--set-env-vars` |
+| `MM_DEPLOYMENT_ENV` | `staging` or `production` | `--set-env-vars` |
+| `PORTAL_ENV` | `staging` or `production` | `--set-env-vars` |
+| `DB_NAME` | `mymoolah_staging` / `mymoolah_production` | `--set-env-vars` |
+| `DB_USER` | `mymoolah_app` | `--set-env-vars` |
+| `CLOUD_SQL_INSTANCE` | `mymoolah-db:africa-south1:mmtp-pg-*` | `--set-env-vars` |
+| `DB_PASSWORD` | From Secret Manager | `--set-secrets` |
+| `JWT_SECRET` | From Secret Manager | `--set-secrets` |
+
+### **Post-Deployment Verification**
+
+```bash
+# Get service URL
+SERVICE_URL=$(gcloud run services describe mymoolah-portal-staging \
+  --region africa-south1 --format='value(status.url)')
+
+# Test health
+curl $SERVICE_URL/health
+
+# Test API
+curl $SERVICE_URL/api/v1/admin/health
+
+# Test frontend (should return HTML)
+curl -s $SERVICE_URL/ | head -5
+```
+
+### **How DB Connectivity Works**
+
+- **Cloud Run**: `start.sh` constructs `DATABASE_URL` from `DB_PASSWORD` + `DB_NAME` + `CLOUD_SQL_INSTANCE` (Unix socket at `/cloudsql/...`). Both `models/index.js` and `getDbClient.js` detect `DATABASE_URL` and use it directly.
+- **Codespaces/local**: Falls back to `scripts/db-connection-helper.js` via proxy ports (6543/6544/6545). No code changes needed for local development.
+
+### **Key Files**
+
+| File | Purpose |
+|------|---------|
+| `portal/Dockerfile` | Multi-stage build (frontend + backend) |
+| `portal/start.sh` | Container entry point, constructs DATABASE_URL |
+| `portal/.dockerignore` | Excludes dev files from build context |
+| `scripts/deploy-portal.sh` | Cloud Build + Cloud Run deployment |
+
+---
+
 ## 🐳 Docker Deployment
 
 ### **Docker Configuration**

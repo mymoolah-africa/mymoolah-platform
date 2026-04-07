@@ -1,0 +1,38 @@
+# Node modules (installed in Dockerfile)
+**/node_modules/
+npm-debug.log*
+
+# Git
+.git/
+.gitignore
+
+# Environment files (secrets from Cloud Run env vars)
+.env
+.env.*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Tests
+coverage/
+*.test.js
+*.spec.js
+
+# Documentation
+*.md
+
+# Frontend source maps (built fresh in Stage 1)
+admin/frontend/dist/
+
+# Docker files
+Dockerfile
+.dockerignore
+docker-compose*.yml
+
+# Workspace root files (not needed)
+package.json
+package-lock.json

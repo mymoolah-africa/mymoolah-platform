@@ -1,6 +1,8 @@
 'use strict';
 
 const express = require('express');
+const path = require('path');
+const fs = require('fs');
 const cors = require('cors');
 const helmet = require('helmet');
 const crypto = require('crypto');
@@ -9,6 +11,9 @@ require('dotenv').config({ path: require('path').resolve(__dirname, '../../.env'
 
 const adminRoutes = require('./routes/admin');
 const authRoutes = require('./routes/auth');
+
+const FRONTEND_DIST = path.join(__dirname, '../admin/frontend/dist');
+const SERVING_FRONTEND = fs.existsSync(FRONTEND_DIST);
 
 const app = express();
 
@@ -21,8 +26,8 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      scriptSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:", "blob:"],
       connectSrc: ["'self'"],
       frameAncestors: ["'none'"],
       objectSrc: ["'none'"],
@@ -98,7 +103,21 @@ app.get('/health', (req, res) => {
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/admin/auth', authRoutes);
 
-// 404
+// Serve frontend static files (Cloud Run: single-service deployment)
+if (SERVING_FRONTEND) {
+  app.use(express.static(FRONTEND_DIST, { maxAge: '1h', etag: true }));
+
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api/') || req.path === '/health') {
+      return next();
+    }
+    res.sendFile(path.join(FRONTEND_DIST, 'index.html'));
+  });
+
+  console.log(`Serving frontend from ${FRONTEND_DIST}`);
+}
+
+// 404 (API routes only when frontend is served)
 app.use('*', (req, res) => {
   res.status(404).json({
     success: false,
