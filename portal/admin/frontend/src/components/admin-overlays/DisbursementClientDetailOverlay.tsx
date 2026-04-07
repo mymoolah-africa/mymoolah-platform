@@ -69,6 +69,16 @@ interface NotificationPreference {
   enabled: boolean;
 }
 
+interface ClientUser {
+  id: number;
+  email: string;
+  name: string;
+  role: string;
+  is_active: boolean;
+  last_login_at: string | null;
+  created_at: string;
+}
+
 /* ---------- Status badge color maps ---------- */
 
 const CLIENT_STATUS_BADGE: Record<string, string> = {
@@ -178,6 +188,12 @@ export const DisbursementClientDetailOverlay: React.FC = () => {
   const [notifForm, setNotifForm] = useState({ event_type: NOTIFICATION_EVENT_TYPES[0] as string, channel: 'webhook' as string });
   const [addingNotif, setAddingNotif] = useState(false);
 
+  /* Client users state */
+  const [clientUsers, setClientUsers] = useState<ClientUser[]>([]);
+  const [showUserForm, setShowUserForm] = useState(false);
+  const [userForm, setUserForm] = useState({ email: '', name: '', role: 'viewer', password: '' });
+  const [addingUser, setAddingUser] = useState(false);
+
   /* Action messages */
   const [actionMsg, setActionMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -191,6 +207,7 @@ export const DisbursementClientDetailOverlay: React.FC = () => {
       setFees(data.fees || []);
       setDocuments(data.kybDocumentSummary || []);
       setNotifications(data.notifications || []);
+      setClientUsers(data.users || []);
     } catch (err: any) {
       if (err?.response?.status === 404) {
         setNotFound(true);
@@ -332,6 +349,36 @@ export const DisbursementClientDetailOverlay: React.FC = () => {
       );
     } catch (err: any) {
       setActionMsg({ type: 'error', text: err?.response?.data?.error || 'Failed to toggle notification' });
+    }
+  };
+
+  /* ---------- Client user actions ---------- */
+
+  const addClientUser = async () => {
+    setAddingUser(true);
+    setActionMsg(null);
+    try {
+      await API.post(`/disbursement-clients/${clientId}/users`, userForm);
+      setActionMsg({ type: 'success', text: 'User added successfully.' });
+      setShowUserForm(false);
+      setUserForm({ email: '', name: '', role: 'viewer', password: '' });
+      await fetchClient();
+    } catch (err: any) {
+      setActionMsg({ type: 'error', text: err?.response?.data?.error || 'Failed to add user' });
+    } finally {
+      setAddingUser(false);
+    }
+  };
+
+  const toggleUserActive = async (userId: number, currentActive: boolean) => {
+    setActionMsg(null);
+    try {
+      await API.patch(`/disbursement-clients/${clientId}/users/${userId}`, {
+        is_active: !currentActive,
+      });
+      await fetchClient();
+    } catch (err: any) {
+      setActionMsg({ type: 'error', text: err?.response?.data?.error || 'Failed to update user status' });
     }
   };
 
@@ -781,6 +828,117 @@ export const DisbursementClientDetailOverlay: React.FC = () => {
                       {notif.enabled ? 'Enabled' : 'Disabled'}
                     </button>
                   </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* ============ Section 5: Client Users ============ */}
+      <div className="mymoolah-card overflow-hidden">
+        <div className="p-5 border-b border-gray-100 flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h3 className="admin-text-heading text-lg">Client Portal Users</h3>
+            <p className="text-xs text-gray-400 mt-0.5">
+              Manage portal login users for this disbursement client
+            </p>
+          </div>
+          <button onClick={() => setShowUserForm(!showUserForm)}
+            className="px-4 py-2 rounded-xl text-sm font-semibold bg-[var(--primary)] text-[var(--primary-foreground)]">
+            {showUserForm ? 'Cancel' : '+ Add User'}
+          </button>
+        </div>
+
+        {showUserForm && (
+          <div className="p-5 bg-gray-50 border-b border-gray-100">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Email</label>
+                <input type="email" value={userForm.email}
+                  onChange={(e) => setUserForm((p) => ({ ...p, email: e.target.value }))}
+                  placeholder="user@company.com"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-green-300" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Name</label>
+                <input type="text" value={userForm.name}
+                  onChange={(e) => setUserForm((p) => ({ ...p, name: e.target.value }))}
+                  placeholder="Full name"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-green-300" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Role</label>
+                <select value={userForm.role}
+                  onChange={(e) => setUserForm((p) => ({ ...p, role: e.target.value }))}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-green-300">
+                  <option value="admin">Admin</option>
+                  <option value="maker">Maker</option>
+                  <option value="checker">Checker</option>
+                  <option value="viewer">Viewer</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Password</label>
+                <input type="password" value={userForm.password}
+                  onChange={(e) => setUserForm((p) => ({ ...p, password: e.target.value }))}
+                  placeholder="Initial password"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-green-300" />
+              </div>
+            </div>
+            <div className="mt-4">
+              <button onClick={addClientUser} disabled={addingUser || !userForm.email || !userForm.name || !userForm.password}
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-50 bg-[var(--primary)] text-[var(--primary-foreground)]">
+                {addingUser ? 'Adding...' : 'Add User'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-100 text-left">
+                {['Name', 'Email', 'Role', 'Status', 'Last Login', 'Created'].map((h) => (
+                  <th key={h} className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {clientUsers.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
+                    No client users yet
+                  </td>
+                </tr>
+              ) : clientUsers.map((user) => (
+                <tr key={user.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-2.5 font-medium text-gray-800">{user.name}</td>
+                  <td className="px-4 py-2.5 text-gray-600 text-xs">{user.email}</td>
+                  <td className="px-4 py-2.5">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium uppercase ${
+                      user.role === 'admin' ? 'bg-blue-50 text-blue-700' :
+                      user.role === 'maker' ? 'bg-emerald-50 text-emerald-700' :
+                      user.role === 'checker' ? 'bg-amber-50 text-amber-700' :
+                      'bg-gray-100 text-gray-600'
+                    }`}>
+                      {user.role}
+                    </span>
+                  </td>
+                  <td className="px-4 py-2.5">
+                    <button
+                      onClick={() => toggleUserActive(user.id, user.is_active)}
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors ${
+                        user.is_active
+                          ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                          : 'bg-red-50 text-red-700 hover:bg-red-100'
+                      }`}
+                    >
+                      {user.is_active ? 'Active' : 'Inactive'}
+                    </button>
+                  </td>
+                  <td className="px-4 py-2.5 text-xs text-gray-500">{user.last_login_at ? fmtDate(user.last_login_at) : '\u2014'}</td>
+                  <td className="px-4 py-2.5 text-xs text-gray-500">{fmtDate(user.created_at)}</td>
                 </tr>
               ))}
             </tbody>

@@ -10,6 +10,7 @@
  */
 
 const { validationResult } = require('express-validator');
+const bcrypt = require('bcryptjs');
 const db = require('../models');
 const crypto = require('crypto');
 const { Op } = require('sequelize');
@@ -84,6 +85,12 @@ class DisbursementClientController {
           {
             model: db.DisbursementNotificationPreference,
             as: 'notificationPreferences',
+          },
+          {
+            model: db.DisbursementClientUser,
+            as: 'users',
+            attributes: ['id', 'client_id', 'email', 'name', 'role', 'is_active', 'last_login_at', 'created_at'],
+            required: false,
           },
         ],
       });
@@ -395,6 +402,100 @@ class DisbursementClientController {
     } catch (err) {
       console.error(`${LOG_PREFIX} uploadBeneficiaryFile:`, err.message);
       res.status(500).json({ success: false, error: 'Failed to parse beneficiary file' });
+    }
+  }
+
+  /** GET /:clientId/users — list all users for a client */
+  async listClientUsers(req, res) {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ success: false, error: errors.array()[0].msg });
+      }
+
+      const users = await db.DisbursementClientUser.findAll({
+        where: { client_id: req.params.clientId },
+        attributes: ['id', 'client_id', 'email', 'name', 'role', 'is_active', 'last_login_at', 'created_at'],
+        order: [['created_at', 'DESC']],
+      });
+
+      res.json({ success: true, data: { users } });
+    } catch (err) {
+      console.error(`${LOG_PREFIX} listClientUsers:`, err.message);
+      res.status(500).json({ success: false, error: 'Failed to fetch client users' });
+    }
+  }
+
+  /** POST /:clientId/users — create a new user for a client */
+  async createClientUser(req, res) {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ success: false, error: errors.array()[0].msg });
+      }
+
+      const { email, name, role, password } = req.body;
+
+      const existing = await db.DisbursementClientUser.findOne({
+        where: { client_id: req.params.clientId, email },
+      });
+      if (existing) {
+        return res.status(409).json({ success: false, error: 'A user with this email already exists for this client' });
+      }
+
+      const password_hash = await bcrypt.hash(password, 10);
+
+      const user = await db.DisbursementClientUser.create({
+        client_id: req.params.clientId,
+        email,
+        name,
+        role,
+        password_hash,
+      });
+
+      const { password_hash: _ph, ...userData } = user.toJSON();
+      res.status(201).json({ success: true, data: userData });
+    } catch (err) {
+      console.error(`${LOG_PREFIX} createClientUser:`, err.message);
+      res.status(500).json({ success: false, error: 'Failed to create client user' });
+    }
+  }
+
+  /** PATCH /:clientId/users/:userId — update a client user */
+  async updateClientUser(req, res) {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ success: false, error: errors.array()[0].msg });
+      }
+
+      const user = await db.DisbursementClientUser.findOne({
+        where: { id: req.params.userId, client_id: req.params.clientId },
+      });
+      if (!user) {
+        return res.status(404).json({ success: false, error: 'Client user not found' });
+      }
+
+      const updates = {};
+      if (req.body.name !== undefined) updates.name = req.body.name;
+      if (req.body.role !== undefined) updates.role = req.body.role;
+      if (req.body.is_active !== undefined) updates.is_active = req.body.is_active;
+      if (req.body.password) {
+        updates.password_hash = await bcrypt.hash(req.body.password, 10);
+      }
+
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ success: false, error: 'No valid fields to update' });
+      }
+
+      await user.update(updates);
+      await user.reload();
+
+      const { password_hash: _ph, ...userData } = user.toJSON();
+      res.json({ success: true, data: userData });
+    } catch (err) {
+      console.error(`${LOG_PREFIX} updateClientUser:`, err.message);
+      res.status(500).json({ success: false, error: 'Failed to update client user' });
     }
   }
 

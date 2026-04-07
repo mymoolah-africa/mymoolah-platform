@@ -183,4 +183,54 @@ router.post('/:clientId/upload-beneficiaries',
   controller.uploadBeneficiaryFile.bind(controller),
 );
 
+/* ------------------------------------------------------------------ */
+/*  Client User Management                                            */
+/* ------------------------------------------------------------------ */
+
+router.get('/:clientId/users',
+  authenticateToken,
+  standardLimit,
+  param('clientId').isInt({ min: 1 }),
+  controller.listClientUsers.bind(controller),
+);
+
+router.post('/:clientId/users',
+  authenticateToken,
+  strictLimit,
+  [
+    param('clientId').isInt({ min: 1 }),
+    body('email')
+      .notEmpty().withMessage('email is required')
+      .isEmail().withMessage('email must be a valid email'),
+    body('name')
+      .notEmpty().withMessage('name is required')
+      .isLength({ max: 255 }).withMessage('name max 255 characters'),
+    body('role')
+      .notEmpty().withMessage('role is required')
+      .isIn(['admin', 'maker', 'checker', 'viewer']).withMessage('role must be admin, maker, checker, or viewer'),
+    body('password')
+      .notEmpty().withMessage('password is required')
+      .isLength({ min: 8 }).withMessage('password must be at least 8 characters'),
+  ],
+  controller.createClientUser.bind(controller),
+);
+
+router.patch('/:clientId/users/:userId',
+  authenticateToken,
+  strictLimit,
+  [
+    param('clientId').isInt({ min: 1 }),
+    param('userId').isInt({ min: 1 }),
+    body('name').optional().isLength({ max: 255 }).withMessage('name max 255 characters'),
+    body('role')
+      .optional()
+      .isIn(['admin', 'maker', 'checker', 'viewer']).withMessage('role must be admin, maker, checker, or viewer'),
+    body('is_active').optional().isBoolean().withMessage('is_active must be a boolean'),
+    body('password')
+      .optional()
+      .isLength({ min: 8 }).withMessage('password must be at least 8 characters'),
+  ],
+  controller.updateClientUser.bind(controller),
+);
+
 module.exports = router;
