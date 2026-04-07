@@ -50,6 +50,7 @@ app.use(cors({
     if (!origin) return cb(null, true);
     if (allowedOrigins.includes(origin)) return cb(null, true);
     if (origin.endsWith('.app.github.dev') || origin.endsWith('.preview.app.github.dev')) return cb(null, true);
+    if (origin.endsWith('.run.app')) return cb(null, true);
     cb(new Error('CORS policy violation'));
   },
   credentials: true,
