@@ -1,5 +1,30 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-07 - Proxy Auth Token Fix (v2.86.3)
+
+### Summary
+Fixed root cause of recurring `read ECONNRESET` errors in Codespaces. Previous 3s stabilization pause only addressed cold-proxy timing; the real cause was expired OAuth2 tokens in stale Cloud SQL Auth Proxies.
+
+### Fix
+- `scripts/start-all-services.sh` Step 2 rewritten to:
+  1. Kill all existing proxies on ports 6543/6544/6545 (stale proxies with expired tokens silently return 401)
+  2. Refresh gcloud access token non-interactively via `gcloud auth print-access-token`
+  3. Warn if token refresh fails (user may need manual `gcloud auth login`)
+  4. Start fresh proxies with valid credentials
+  5. Wait 3s for TCP stabilization (retained from previous fix)
+
+### Root Cause
+| Symptom | Cause |
+|---------|-------|
+| `read ECONNRESET` on backend startup | Stale proxy held port open but returned HTTP 401 (expired OAuth2 token) |
+| Proxy appeared "running" (port open) | Proxy process alive but auth expired (~1 hour after `gcloud auth login`) |
+| Previous 3s sleep didn't help | Sleep addressed cold-proxy timing, not expired token issue |
+
+### Files Modified
+- `scripts/start-all-services.sh` — Step 2 rewritten
+
+---
+
 ## 2026-04-07 - Portal UI Complete + Brand Logos + Dev Guide (v2.86.2)
 
 ### Summary

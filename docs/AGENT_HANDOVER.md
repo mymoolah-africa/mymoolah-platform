@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-07 01:45  
-**Latest Feature**: **Portal UI Complete + Brand Logos + Dev Guide (v2.86.2)** — MMTP Admin Portal Clearflow "finance control room" visual overhaul approved by Andre. Official MyMoolah brand logos (green `#86BE41` + blue `#2D8CCA`) integrated: login brand panel (stacked logo), sidebar header (diamond icon), mobile header (diamond icon). Primary color updated from teal `#00B894` to brand green `#86BE41`. 5 screens fully styled, 4 functional w/ inline styles, 7 placeholders ready. Created `docs/PORTAL_DEVELOPMENT_GUIDE.md` with logo usage rules. Proxy stabilization fix in `start-all-services.sh`.  
-**Document Version**: 2.86.2  
-**Session logs**: `docs/session_logs/2026-04-07_0130_portal-ui-final-documentation.md`, `docs/session_logs/2026-04-06_2330_portal-ui-overhaul.md`  
+**Last Updated**: 2026-04-07 02:15  
+**Latest Feature**: **Proxy Auth Token Fix (v2.86.3)** — Fixed root cause of recurring `read ECONNRESET` in Codespaces: expired OAuth2 tokens in stale Cloud SQL Auth Proxies. `start-all-services.sh` now kills stale proxies, refreshes gcloud token non-interactively, then starts fresh proxies. Previous sessions: Portal UI overhaul approved (v2.86.0–v2.86.2), brand logos + colors + dev guide.  
+**Document Version**: 2.86.3  
+**Session logs**: `docs/session_logs/2026-04-07_0200_start-all-services-auth-token-fix.md`, `docs/session_logs/2026-04-07_0130_portal-ui-final-documentation.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -102,7 +102,10 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (April 7, 2026 - 01:45)**
+### **Latest Achievement (April 7, 2026 - 02:15)**
+**Proxy Auth Token Fix (v2.86.3)** — Fixed root cause of recurring `read ECONNRESET` in Codespaces. Previous 3s stabilization pause only addressed cold-proxy timing; the real cause was **expired OAuth2 tokens** in stale Cloud SQL Auth Proxies (proxy held port open but returned 401 on every DB connection). `start-all-services.sh` Step 2 now: (1) kills all existing proxies on ports 6543/6544/6545, (2) refreshes gcloud access token non-interactively via `gcloud auth print-access-token`, (3) warns if refresh fails (user may need manual `gcloud auth login`), (4) starts fresh proxies with valid credentials. Tested by Andre in Codespaces — all 6 services started cleanly. Session log: `docs/session_logs/2026-04-07_0200_start-all-services-auth-token-fix.md`.
+
+### **Previous Achievement (April 7, 2026 - 01:45)**
 **Portal UI Complete + Brand Logos + Dev Guide (v2.86.2)** — (1) Portal UI overhaul approved by Andre. 5 screens fully styled with CSS variables: Login (split-screen brand layout with stacked logo), Dashboard (KPI cards, settlements, alerts, entity table), AppLayoutWrapper (dark sidebar with diamond icon logo, header with page title), UserManagement (user list, KYC dots, detail drawer), TransactionMonitoring (transaction list, filters, journal drawer). 4 screens functional but use inline styles (UnallocatedDeposits, Disbursement×3). 7 placeholder "Coming Soon" screens with styled layouts. (2) Official MyMoolah brand logos integrated (3 PNG variants: stacked, icon, horizontal) — login brand panel, sidebar header, mobile header. (3) Primary color corrected from `#00B894` (teal) to `#86BE41` (MyMoolah brand green). Blue `#2D8CCA` confirmed as secondary. All CSS tokens updated. (4) Created `docs/PORTAL_DEVELOPMENT_GUIDE.md` — design tokens, logo usage rules, architecture, screen status, build tutorial, conventions, recommended build order. (5) SKILL.md brand color table updated with official RGB values. (6) Fixed `start-all-services.sh` — 3s proxy stabilization pause. Session logs: `docs/session_logs/2026-04-07_0130_portal-ui-final-documentation.md`, `docs/session_logs/2026-04-06_2330_portal-ui-overhaul.md`.
 
 ### **Previous Achievement (April 6, 2026 - 22:30)**
@@ -706,16 +709,19 @@ You're part of a **banking-grade software system** where:
 
 ## 🎯 **CURRENT SESSION SUMMARY**
 
-**Session Status**: ✅ **COMPLETE** — Portal UI Overhaul + Documentation + Proxy Fix (v2.86.1)  
-**Last Session**: 2026-04-07 01:30 — Portal UI approved, comprehensive documentation created, proxy startup stabilized
+**Session Status**: ✅ **COMPLETE** — Proxy Auth Token Fix (v2.86.3)  
+**Last Session**: 2026-04-07 02:15 — Fixed ECONNRESET root cause (expired OAuth2 tokens), all services running in Codespaces
 
-### **Most Recent Work (2026-04-07 01:45)**
+### **Most Recent Work (2026-04-07 02:15)**
+- **Proxy auth token fix**: Diagnosed real root cause of `read ECONNRESET` — expired OAuth2 tokens in stale Cloud SQL Auth Proxies (not cold-proxy timing). Proxy log showed `Error 401: Invalid authentication credentials` and `tls: bad certificate`.
+- **start-all-services.sh rewritten**: Step 2 now kills all stale proxies on 6543/6544/6545, refreshes gcloud token via `gcloud auth print-access-token`, then starts fresh proxies with valid credentials.
+- **Codespaces verified**: Andre ran `./scripts/start-all-services.sh` after pulling — all 6 services started cleanly, no ECONNRESET.
+
+### **Previous Work (2026-04-07 01:45)**
 - **Portal UI overhaul approved**: Andre confirmed he is happy with the portal styling (Clearflow "finance control room" aesthetic, MyMoolah brand colors).
 - **Brand logos integrated**: 3 official MyMoolah PNG logos added to `portal/admin/frontend/src/assets/` — stacked (login brand panel), icon (sidebar + mobile header), horizontal (future use). `vite-env.d.ts` added for TypeScript module declarations.
 - **Brand colors corrected**: Primary `--primary` updated from `#00B894` (teal) to `#86BE41` (MyMoolah brand green). Blue `#2D8CCA` confirmed. All CSS tokens, SKILL.md, and Portal Dev Guide updated.
 - **Portal Development Guide created**: `docs/PORTAL_DEVELOPMENT_GUIDE.md` v1.1.0 — architecture diagram, logo usage rules, design token reference, screen status matrix, step-by-step "build a screen" tutorial, conventions, recommended build order.
-- **Proxy stabilization fix**: `scripts/start-all-services.sh` waits 3s after proxy startup to reduce `read ECONNRESET`.
-- **All services confirmed running**: Codespaces backend healthy on port 3001, portal functional.
 
 ### **Previous Work (2026-04-06 21:00)**
 - **Portal Security Hardening & Rebuild (v2.85.0)**: 14+ backend security fixes (JWT HS512, hardcoded secrets removed, audit trail to DB, PII redaction), frontend auth rewired to real backend JWT, Clearflow-inspired dark sidebar navigation, dashboard rebuilt with real data, User Management and Transaction Monitoring screens built.
@@ -825,6 +831,7 @@ You're part of a **banking-grade software system** where:
 
 | Date | Update |
 |------|--------|
+| Apr 7 (02:15) | **Proxy Auth Token Fix (v2.86.3)**: Fixed root cause of `read ECONNRESET` — expired OAuth2 tokens in stale Cloud SQL Auth Proxies. `start-all-services.sh` now kills stale proxies + refreshes gcloud token non-interactively before starting fresh proxies. Tested and verified in Codespaces. Session log: `docs/session_logs/2026-04-07_0200_start-all-services-auth-token-fix.md` |
 | Apr 7 (01:45) | **Portal UI Complete + Brand Logos + Dev Guide (v2.86.2)**: Andre approved portal styling. Official MyMoolah logos (stacked, icon, horizontal) integrated in login + sidebar. Primary color corrected from `#00B894` to brand green `#86BE41`. Created `docs/PORTAL_DEVELOPMENT_GUIDE.md` v1.1.0 (design tokens, logo usage, architecture, screen status, build tutorial). SKILL.md brand colors updated. Proxy stabilization (3s pause). Session logs: `docs/session_logs/2026-04-07_0130_portal-ui-final-documentation.md`, `docs/session_logs/2026-04-06_2330_portal-ui-overhaul.md` |
 | Apr 6 (22:30) | **Codespaces Startup Script & Portal Auth Security Fix (v2.85.2)**: Created `start-all-services.sh` one-command startup. Migrated portal auth from localStorage to sessionStorage (banking-grade). Fixed Codespaces port forwarding 404 (browser cache). Session log: `docs/session_logs/2026-04-06_2230_startup-script-and-auth-fix.md` |
 | Apr 6 (22:00) | **Admin Portal DB Helper Migration & First Live Test (v2.85.1)**: All portal backend DB access migrated to `db-connection-helper.js`. Frontend build fixed (tsconfig, lucide-react icon, dist/ gitignore). Admin seed script created. Portal tested end-to-end in Codespaces: login, dashboard, sidebar all working. **UI styling is #1 priority for next session.** Session log: `docs/session_logs/2026-04-06_2200_portal-db-helper-and-testing.md` |
