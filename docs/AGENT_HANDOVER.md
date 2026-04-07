@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-07 18:30  
-**Latest Feature**: **Disbursement Phase 1 Complete + Portal Staging Live (v2.88.1)** — Phase 1 backend complete (7 services, 2 migrations, multi-rail disbursementService.js). Portal deployed to staging Cloud Run (K_SERVICE port fix). Migrations run on UAT + staging. **NEXT: Disbursement Phase 2 — API routes, controllers, Sequelize models, portal UI pages.** Previous: Disbursement Phase 1 Backend Services (v2.88.0).  
-**Document Version**: 2.88.1  
-**Session logs**: `docs/session_logs/2026-04-07_1830_portal-deploy-fix-and-session-wrap.md`, `docs/session_logs/2026-04-07_1630_disbursement-phase1-services.md`  
+**Last Updated**: 2026-04-07 21:00  
+**Latest Feature**: **Disbursement Phase 2 Complete (v2.89.0)** — Phase 2 built: 5 Sequelize models (DisbursementClient, ClientFee, KybDocument, NotificationPreference, ClientUser), client management API (9 endpoints), 2 portal UI pages (client list + detail/KYB/fees), notificationEngine wired into run events, kybComplianceService wired into doc upload, Vite proxy split fixed. **NEXT: Multer file upload, xlsx package, unit tests, PayShap RPP, white-label client portal.** Previous: Disbursement Phase 1 Complete + Portal Staging Live (v2.88.1).  
+**Document Version**: 2.89.0  
+**Session logs**: `docs/session_logs/2026-04-07_2100_disbursement-phase2-api-models-portal.md`, `docs/session_logs/2026-04-07_1830_portal-deploy-fix-and-session-wrap.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -102,7 +102,10 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (April 7, 2026 - 16:30)**
+### **Latest Achievement (April 7, 2026 - 21:00)**
+**Disbursement Phase 2 — API, Models & Portal UI (v2.89.0)** — Complete Phase 2 of the disbursement service. **5 new Sequelize models**: DisbursementClient, DisbursementClientFee, KybDocument, DisbursementNotificationPreference, DisbursementClientUser (auto-loaded by models/index.js). **Updated** DisbursementPayment model (added fee_cents, payment_rail, metadata). Added belongsTo(DisbursementClient) on DisbursementRun. **Client management API**: `disbursementClientController.js` (9 methods: CRUD, KYB upload/review with auto-OCR, fee configuration, beneficiary file parsing) + `routes/disbursementClient.js` (9 validated endpoints) wired at `/api/v1/disbursement-clients` in server.js. **Portal UI**: DisbursementClientManagementOverlay (client list, filters, create modal) + DisbursementClientDetailOverlay (detail view, KYB documents, fee config). Routes + sidebar registered. **Fixed** Vite proxy split: `/api/v1/admin` → portal backend (3002), `/api` → main backend (3001). **Wired** notificationEngine into disbursementService (submit/approve/reject fire-and-forget). **Wired** kybComplianceService GPT-4o OCR into document upload flow. All syntax checks + Vite build pass. No new migrations needed. Session log: `docs/session_logs/2026-04-07_2100_disbursement-phase2-api-models-portal.md`.
+
+### **Previous Achievement (April 7, 2026 - 16:30)**
 **Disbursement Phase 1 Backend Services (v2.88.0)** — Complete Phase 1 backend for the banking-grade disbursement service (Sessions 1-3). **2 migrations**: `20260408_01` creates 5 new tables (`disbursement_clients`, `disbursement_client_fees`, `kyb_documents`, `disbursement_notification_preferences`, `disbursement_client_users`) + alters `disbursement_payments` (adds `fee_cents`, `payment_rail`); `20260408_02` seeds 5 ledger accounts. **7 new services**: `feeEngine.js` (per-client fee calculation in cents), `clientFloatService.js` (ACID float with SELECT FOR UPDATE + double-entry JEs), `fileParserService.js` (CSV/Excel/Pain.001 XML + SA CDV), `kybComplianceService.js` (GPT-4o OCR for 5 entity types), `notificationEngine.js` (webhook HMAC + email, 8 event types), `sbsaSftpClientService.js` (GCS-based SFTP upload), `pain002PollerService.js` (GCS inbox poller). **Modified** `disbursementService.js` for multi-rail routing: wallet payments use MM's SBSA treasury account + MSISDN as reference (same EFT path). KYB gate on submission. Fee + float integrated into approval flow. PayShap RPP deferred (TODO). ~3,400 lines of new banking-grade code. **Migrations NOT yet run — run on UAT then staging.** Session log: `docs/session_logs/2026-04-07_1630_disbursement-phase1-services.md`.
 
 ### **Previous Achievement (April 7, 2026 - 15:00)**
