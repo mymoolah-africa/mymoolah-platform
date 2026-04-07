@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-07 12:50  
-**Latest Feature**: **Portal Auth Security, CORS & Dropdown Fix (v2.86.5)** — ProtectedRoute now uses AuthContext (isAuthenticated + isLoading) instead of raw sessionStorage, preventing stale sessions from bypassing login. Added interactive user dropdown menu with Sign Out in header. Fixed CORS rejection when Vite proxy forwarded Codespaces Origin header to portal backend. Previous: Portal Layout Fix (v2.86.4), Proxy auth token fix (v2.86.3), portal UI overhaul (v2.86.0–v2.86.2).  
-**Document Version**: 2.86.5  
-**Session logs**: `docs/session_logs/2026-04-07_1250_portal-auth-cors-dropdown-fix.md`, `docs/session_logs/2026-04-07_1130_portal-layout-consistency-fix.md`  
+**Last Updated**: 2026-04-07 15:00  
+**Latest Feature**: **Portal Cloud Run Staging Deployment (v2.87.0)** — MMTP Admin Portal deployed to GCP Cloud Run (staging) as single-service architecture (Express serves API + frontend from one origin). Created Dockerfile, deploy-portal.sh (--no-cache), start.sh (DATABASE_URL construction), .dockerignore. Fixed CORS for Vite crossorigin tags. Updated seed-portal-admin.js for multi-env. Portal live at https://mymoolah-portal-staging-4ekgjiko5a-bq.a.run.app. Previous: Portal Auth CORS Fix (v2.86.5), Layout Fix (v2.86.4), Proxy auth fix (v2.86.3), UI overhaul (v2.86.0–v2.86.2).  
+**Document Version**: 2.87.0  
+**Session logs**: `docs/session_logs/2026-04-07_1500_portal-cloud-run-staging-deployment.md`, `docs/session_logs/2026-04-07_1250_portal-auth-cors-dropdown-fix.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -102,7 +102,10 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (April 7, 2026 - 11:30)**
+### **Latest Achievement (April 7, 2026 - 15:00)**
+**Portal Cloud Run Staging Deployment (v2.87.0)** — MMTP Admin Portal deployed to GCP Cloud Run (staging) as single-service architecture. Express backend serves both API and frontend static files from one origin (banking-grade: no CORS between services, simpler CSP). Created multi-stage Dockerfile, `deploy-portal.sh` with `--no-cache` (no cached builds), `start.sh` entry point (constructs DATABASE_URL from Cloud Run env vars). Fixed Vite `crossorigin` CORS issue. Updated `seed-portal-admin.js` to accept `uat|staging|production` argument. Portal verified live: health endpoints, DB connection, login, dashboard. **Next session: portal layouts.** Session log: `docs/session_logs/2026-04-07_1500_portal-cloud-run-staging-deployment.md`.
+
+### **Previous Achievement (April 7, 2026 - 11:30)**
 **Portal Layout Consistency Fix (v2.86.4)** — Fixed sidebar "floating" between pages in MMAP. Three root causes: (1) `index.html` `#root` had persistent `display: flex; align-items: center; justify-content: center` from loading spinner CSS — centered the entire app instead of stretching edge-to-edge. Scoped with `:has(.loading-container)`. (2) No `html/body/#root` height chain — added outside `@layer` in `index.css`. (3) `AppLayoutWrapper` remounted on every navigation (each route had its own copy) — converted to React Router nested routes with single `<AppLayoutWrapper/>` using `<Outlet/>`. Sidebar now persists across navigation, no more visual flicker. Vite build passes. Session log: `docs/session_logs/2026-04-07_1130_portal-layout-consistency-fix.md`.
 
 ### **Previous Achievement (April 7, 2026 - 02:15)**
@@ -826,7 +829,8 @@ You're part of a **banking-grade software system** where:
 - Do NOT reactivate Peach Payments without explicit approval from Andre
 - Do NOT add `RmtInf.Ustrd` to Pain.013 — SBSA rejects it
 - npm audit: 9 remaining (5 low, 4 moderate) — all in transitive deps
-- Portal deployment to Cloud Run (staging first) once more screens are functional
+- ✅ Portal deployed to Cloud Run staging: https://mymoolah-portal-staging-4ekgjiko5a-bq.a.run.app
+- Portal production deployment pending (custom URL planned)
 
 ---
 
@@ -834,6 +838,7 @@ You're part of a **banking-grade software system** where:
 
 | Date | Update |
 |------|--------|
+| Apr 7 (15:00) | **Portal Cloud Run Staging Deployment (v2.87.0)**: Single-service architecture deployed to Cloud Run. Dockerfile (multi-stage), deploy-portal.sh (--no-cache), start.sh (DATABASE_URL), .dockerignore. CORS fix for Vite crossorigin. seed-portal-admin.js updated for multi-env. Portal live and verified. Session log: `docs/session_logs/2026-04-07_1500_portal-cloud-run-staging-deployment.md` |
 | Apr 7 (02:15) | **Proxy Auth Token Fix (v2.86.3)**: Fixed root cause of `read ECONNRESET` — expired OAuth2 tokens in stale Cloud SQL Auth Proxies. `start-all-services.sh` now kills stale proxies + refreshes gcloud token non-interactively before starting fresh proxies. Tested and verified in Codespaces. Session log: `docs/session_logs/2026-04-07_0200_start-all-services-auth-token-fix.md` |
 | Apr 7 (01:45) | **Portal UI Complete + Brand Logos + Dev Guide (v2.86.2)**: Andre approved portal styling. Official MyMoolah logos (stacked, icon, horizontal) integrated in login + sidebar. Primary color corrected from `#00B894` to brand green `#86BE41`. Created `docs/PORTAL_DEVELOPMENT_GUIDE.md` v1.1.0 (design tokens, logo usage, architecture, screen status, build tutorial). SKILL.md brand colors updated. Proxy stabilization (3s pause). Session logs: `docs/session_logs/2026-04-07_0130_portal-ui-final-documentation.md`, `docs/session_logs/2026-04-06_2330_portal-ui-overhaul.md` |
 | Apr 6 (22:30) | **Codespaces Startup Script & Portal Auth Security Fix (v2.85.2)**: Created `start-all-services.sh` one-command startup. Migrated portal auth from localStorage to sessionStorage (banking-grade). Fixed Codespaces port forwarding 404 (browser cache). Session log: `docs/session_logs/2026-04-06_2230_startup-script-and-auth-fix.md` |
