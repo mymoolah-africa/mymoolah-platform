@@ -204,7 +204,9 @@ class DisbursementClientController {
         return res.status(404).json({ success: false, error: 'Client not found' });
       }
 
-      const { document_type, entity_type, file_path, original_filename } = req.body;
+      const document_type = req.body.document_type;
+      const entity_type = req.body.entity_type;
+      const original_filename = req.file ? req.file.originalname : (req.body.original_filename || 'upload');
 
       if (!document_type || !entity_type) {
         return res.status(400).json({
@@ -214,7 +216,7 @@ class DisbursementClientController {
       }
 
       const fileUuid = crypto.randomUUID();
-      const gcsPath = `kyb-documents/${client.id}/${fileUuid}_${original_filename || 'upload'}`;
+      const gcsPath = `kyb-documents/${client.id}/${fileUuid}_${original_filename}`;
 
       const doc = await db.KybDocument.create({
         client_id: client.id,
@@ -351,7 +353,9 @@ class DisbursementClientController {
     }
   }
 
-  /** POST /:clientId/upload-beneficiaries — parse a beneficiary file for preview */
+  /** POST /:clientId/upload-beneficiaries — parse a beneficiary file for preview.
+   *  Accepts multipart file upload (field: "file") or JSON { file_path, original_filename }.
+   */
   async uploadBeneficiaryFile(req, res) {
     try {
       const client = await db.DisbursementClient.findByPk(req.params.clientId);
@@ -359,19 +363,33 @@ class DisbursementClientController {
         return res.status(404).json({ success: false, error: 'Client not found' });
       }
 
-      const { file_path, original_filename } = req.body;
-      if (!file_path) {
-        return res.status(400).json({ success: false, error: 'file_path is required' });
+      let buffer;
+      let filename;
+
+      if (req.file) {
+        buffer = req.file.buffer;
+        filename = req.file.originalname;
+      } else if (req.body.file_path) {
+        const fs = require('fs');
+        const path = require('path');
+        if (!fs.existsSync(req.body.file_path)) {
+          return res.status(400).json({ success: false, error: 'file_path does not exist' });
+        }
+        buffer = fs.readFileSync(req.body.file_path);
+        filename = req.body.original_filename || path.basename(req.body.file_path);
+      } else {
+        return res.status(400).json({ success: false, error: 'Upload a file or provide file_path' });
       }
 
-      const result = await parseFile(file_path, original_filename || file_path);
+      const result = parseFile(buffer, filename);
 
       res.json({
         success: true,
         data: {
-          beneficiaries: result.beneficiaries || [],
+          beneficiaries: result.beneficiaries || result,
           warnings: result.warnings || [],
           errors: result.errors || [],
+          filename,
         },
       });
     } catch (err) {

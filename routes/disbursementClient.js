@@ -12,9 +12,21 @@
 const express = require('express');
 const router = express.Router();
 const { body, query, param } = require('express-validator');
+const multer = require('multer');
 const controller = require('../controllers/disbursementClientController');
 const authenticateToken = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = ['.csv', '.xlsx', '.xls', '.xml'];
+    const ext = '.' + (file.originalname.split('.').pop() || '').toLowerCase();
+    if (allowed.includes(ext)) return cb(null, true);
+    cb(new Error(`Unsupported file type "${ext}". Accepted: ${allowed.join(', ')}`));
+  },
+});
 
 const standardLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -107,6 +119,7 @@ router.post('/:clientId/kyb-documents',
   authenticateToken,
   strictLimit,
   param('clientId').isInt({ min: 1 }),
+  upload.single('document'),
   controller.uploadKybDocument.bind(controller),
 );
 
@@ -166,6 +179,7 @@ router.post('/:clientId/upload-beneficiaries',
   authenticateToken,
   strictLimit,
   param('clientId').isInt({ min: 1 }),
+  upload.single('file'),
   controller.uploadBeneficiaryFile.bind(controller),
 );
 

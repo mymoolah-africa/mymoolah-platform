@@ -8,6 +8,7 @@ const VAT_RATE = 0.15;
 const VAT_DIVISOR = 1 + VAT_RATE; // 1.15
 const CLIENT_FLOAT_PREFIX = '2100-20-';
 const BANK_ACCOUNT = '1100-01-01';
+const USER_WALLET_ACCOUNT = '2100-01-01';
 const FEE_ACCOUNTS = { eft: '4000-30-01', payshap: '4000-30-02', wallet: '4000-30-01' };
 const VAT_CONTROL = '2300-30-01';
 const DEFAULT_PAGE_LIMIT = 50;
@@ -169,6 +170,13 @@ async function debitFloat(clientId, params) {
     const txnId = `DISB-${runId}-${Date.now()}`;
     const journalEntries = [];
 
+    // Wallet rail: internal liability transfer (no bank movement)
+    // EFT/PayShap: money leaves the bank to beneficiaries
+    const creditAccountCode = rail === 'wallet' ? USER_WALLET_ACCOUNT : BANK_ACCOUNT;
+    const creditDesc = rail === 'wallet'
+      ? `Wallet credit settlement — ${description}`
+      : `Bank settlement — ${description}`;
+
     // DR client float (liability decreases = debit)
     const je1 = await client.query(
       `INSERT INTO journal_entries (transaction_id, account_code, debit, credit, description, metadata, created_at)
@@ -177,13 +185,13 @@ async function debitFloat(clientId, params) {
     );
     journalEntries.push({ id: je1.rows[0].id, accountCode, debit: totalDebitCents, credit: 0 });
 
-    // CR SBSA bank account (asset increases via settlement)
+    // CR settlement account (bank for EFT/PayShap, user wallet for wallet rail)
     const je2 = await client.query(
       `INSERT INTO journal_entries (transaction_id, account_code, debit, credit, description, metadata, created_at)
        VALUES ($1, $2, 0, $3, $4, $5, NOW()) RETURNING id`,
-      [txnId, BANK_ACCOUNT, amountCents, `Bank settlement — ${description}`, JSON.stringify({ runId, rail })]
+      [txnId, creditAccountCode, amountCents, creditDesc, JSON.stringify({ runId, rail })]
     );
-    journalEntries.push({ id: je2.rows[0].id, accountCode: BANK_ACCOUNT, debit: 0, credit: amountCents });
+    journalEntries.push({ id: je2.rows[0].id, accountCode: creditAccountCode, debit: 0, credit: amountCents });
 
     // CR fee revenue (ex-VAT)
     if (feeExVatCents > 0) {
@@ -212,7 +220,7 @@ async function debitFloat(clientId, params) {
     );
     await client.query(
       `UPDATE ledger_accounts SET balance = balance + $1, updated_at = NOW() WHERE code = $2`,
-      [amountCents / 100, BANK_ACCOUNT]
+      [amountCents / 100, creditAccountCode]
     );
     if (feeExVatCents > 0) {
       await client.query(

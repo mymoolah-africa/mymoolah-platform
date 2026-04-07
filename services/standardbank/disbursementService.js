@@ -14,12 +14,12 @@
  *   classifyBeneficiaryRail() — Determines payment rail per beneficiary
  *
  * Supported rails:
- *   eft     — Standard EFT via Pain.001 → SBSA SFTP
- *   payshap — PayShap RPP (future phase — creates run but logs warning on approve)
- *   wallet  — MyMoolah wallet top-up via EFT to MM's treasury account with MSISDN as reference
+ *   eft     — Standard EFT via Pain.001 → SBSA SFTP (next-day settlement)
+ *   payshap — PayShap RPP instant payment via existing standardbankRppService
+ *   wallet  — Internal ledger transfer: debit client float, credit recipient wallet (no bank movement)
  *
  * @author MyMoolah Treasury Platform
- * @date 2026-03-17
+ * @date 2026-04-07
  */
 
 const db = require('../../models');
@@ -119,9 +119,6 @@ async function createRun(params) {
   const totalAmount = beneficiaries.reduce((s, b) => s + parseFloat(b.amount || 0), 0);
   if (totalAmount <= 0) throw new Error('Total amount must be greater than zero');
 
-  const mmTreasuryAccount = process.env.SBSA_DEBTOR_ACCOUNT;
-  const mmTreasuryBranch  = process.env.SBSA_DEBTOR_BRANCH || '051001';
-
   const runReference = await generateRunReference(payPeriod);
 
   const dbTx = await db.sequelize.transaction();
@@ -152,8 +149,14 @@ async function createRun(params) {
             'Must be 10 digits starting with 06, 07, or 08'
           );
         }
-        if (!mmTreasuryAccount) {
-          throw new Error('SBSA_DEBTOR_ACCOUNT env var is required for wallet disbursements');
+      }
+
+      if (paymentRail === 'eft' || paymentRail === 'payshap') {
+        if (!b.accountNumber) {
+          throw new Error(`Beneficiary "${b.name}" (index ${i}): accountNumber is required for ${paymentRail} payments`);
+        }
+        if (!b.branchCode) {
+          throw new Error(`Beneficiary "${b.name}" (index ${i}): branchCode is required for ${paymentRail} payments`);
         }
       }
 
@@ -163,13 +166,11 @@ async function createRun(params) {
         run_id:           run.id,
         employee_ref:     b.employeeRef || null,
         beneficiary_name: b.name,
-        account_number:   isWallet ? mmTreasuryAccount : b.accountNumber,
-        branch_code:      isWallet ? mmTreasuryBranch  : b.branchCode,
-        bank_name:        isWallet ? 'Standard Bank'   : (b.bankName || null),
+        account_number:   isWallet ? null : b.accountNumber,
+        branch_code:      isWallet ? null : b.branchCode,
+        bank_name:        isWallet ? null : (b.bankName || null),
         amount:           parseFloat(b.amount).toFixed(2),
-        reference:        isWallet
-          ? b.msisdn.substring(0, 35)
-          : (b.reference || `${runReference}`).substring(0, 35),
+        reference:        (b.reference || `${runReference}`).substring(0, 35),
         end_to_end_id:    generateEndToEndId(runReference, i + 1),
         status:           'pending',
         payment_rail:     paymentRail,
@@ -237,10 +238,12 @@ async function submitForApproval(runId, makerUserId) {
 /**
  * Checker approves a run.
  * Calculates fees, validates float sufficiency, debits client float,
- * builds Pain.001 XML and uploads to SBSA SFTP outbox.
- * Checker MUST be a different user from the maker (4-eyes principle).
+ * then processes each rail:
+ *   - EFT: builds Pain.001 XML, uploads to SBSA SFTP outbox
+ *   - PayShap: calls existing RPP service per payment (instant)
+ *   - Wallet: internal ledger transfer, credits recipient wallet directly (no bank movement)
  *
- * For PayShap rails: run is approved but Pain.001 is not generated (future phase).
+ * Checker MUST be a different user from the maker (4-eyes principle).
  *
  * @param {number} runId
  * @param {number} checkerUserId
@@ -273,58 +276,81 @@ async function approveRun(runId, checkerUserId) {
     throw new Error(`Failed to persist payment fees: ${feeUpdateErr.message}`);
   }
 
-  // ── Float sufficiency check + debit ──────────────────────────────────────
+  // ── Group payments by rail ───────────────────────────────────────────────
+  const eftPayments     = run.payments.filter((p) => (p.payment_rail || run.rail) === 'eft');
+  const payshapPayments = run.payments.filter((p) => (p.payment_rail || run.rail) === 'payshap');
+  const walletPayments  = run.payments.filter((p) => (p.payment_rail || run.rail) === 'wallet');
+
+  // ── Calculate per-rail totals for float debit ────────────────────────────
+  function sumCentsForPayments(payments) {
+    return payments.reduce((s, p) => {
+      const idx = run.payments.indexOf(p);
+      const fee = feeResult.fees[idx] ? feeResult.fees[idx].feeCents : 0;
+      return {
+        amountCents: s.amountCents + Math.round(parseFloat(p.amount) * 100),
+        feeCents: s.feeCents + fee,
+      };
+    }, { amountCents: 0, feeCents: 0 });
+  }
+
+  const grandTotalCents = feeResult.grandTotalCents;
+
+  // ── Float sufficiency check (total across all rails) ─────────────────────
   const { checkSufficientFloat, debitFloat } = require('../disbursement/clientFloatService');
 
-  const floatCheck = await checkSufficientFloat(run.client_id, feeResult.grandTotalCents);
+  const floatCheck = await checkSufficientFloat(run.client_id, grandTotalCents);
   if (!floatCheck.sufficient) {
     throw new Error(
       `Insufficient float: available ZAR ${(floatCheck.balanceCents / 100).toFixed(2)}, ` +
-      `required ZAR ${(feeResult.grandTotalCents / 100).toFixed(2)} ` +
+      `required ZAR ${(grandTotalCents / 100).toFixed(2)} ` +
       `(shortfall ZAR ${(floatCheck.shortfallCents / 100).toFixed(2)})`
     );
   }
 
-  await debitFloat(run.client_id, {
-    amountCents: feeResult.totalAmountCents,
-    feeCents:    feeResult.totalFeeCents,
-    rail:        run.rail,
-    runId:       run.id,
-    description: `Disbursement run ${run.run_reference}`,
-  });
-
-  logger.info(
-    `Float debited for run ${run.run_reference}: ` +
-    `amount=${feeResult.totalAmountCents}c fees=${feeResult.totalFeeCents}c grand=${feeResult.grandTotalCents}c`
-  );
-
-  // ── Determine which rails need Pain.001 vs other processing ──────────────
-  const hasPayshapPayments = run.payments.some(
-    (p) => (p.payment_rail || run.rail) === 'payshap'
-  );
-
-  if (hasPayshapPayments) {
-    // TODO: PayShap disbursements will use the RPP API in a future phase.
-    // For now the run is approved and float debited, but PayShap payments
-    // are not transmitted. They will remain in 'pending' status until the
-    // PayShap integration is implemented.
-    logger.warn(
-      `Run ${run.run_reference} contains PayShap payments — PayShap RPP processing ` +
-      'is not yet implemented. These payments will remain pending.'
-    );
+  // ── Debit float per rail group (different journal entries per rail) ───────
+  if (eftPayments.length > 0) {
+    const eftTotals = sumCentsForPayments(eftPayments);
+    await debitFloat(run.client_id, {
+      amountCents: eftTotals.amountCents,
+      feeCents:    eftTotals.feeCents,
+      rail:        'eft',
+      runId:       run.id,
+      description: `Disbursement run ${run.run_reference} (EFT)`,
+    });
+    logger.info(`Float debited for EFT: amount=${eftTotals.amountCents}c fees=${eftTotals.feeCents}c`);
   }
 
-  // Payments routed through EFT/wallet both use Pain.001 (wallet goes to MM treasury account)
-  const eftEligiblePayments = run.payments.filter(
-    (p) => (p.payment_rail || run.rail) !== 'payshap'
-  );
+  if (payshapPayments.length > 0) {
+    const payshapTotals = sumCentsForPayments(payshapPayments);
+    await debitFloat(run.client_id, {
+      amountCents: payshapTotals.amountCents,
+      feeCents:    payshapTotals.feeCents,
+      rail:        'payshap',
+      runId:       run.id,
+      description: `Disbursement run ${run.run_reference} (PayShap)`,
+    });
+    logger.info(`Float debited for PayShap: amount=${payshapTotals.amountCents}c fees=${payshapTotals.feeCents}c`);
+  }
 
+  if (walletPayments.length > 0) {
+    const walletTotals = sumCentsForPayments(walletPayments);
+    await debitFloat(run.client_id, {
+      amountCents: walletTotals.amountCents,
+      feeCents:    walletTotals.feeCents,
+      rail:        'wallet',
+      runId:       run.id,
+      description: `Disbursement run ${run.run_reference} (Wallet)`,
+    });
+    logger.info(`Float debited for Wallet: amount=${walletTotals.amountCents}c fees=${walletTotals.feeCents}c`);
+  }
+
+  // ── RAIL 1: Process EFT payments via Pain.001 + SFTP ─────────────────────
   let filename = null;
   let gcsPath  = null;
   let msgId    = null;
 
-  if (eftEligiblePayments.length > 0) {
-    const paymentLines = eftEligiblePayments.map((p) => ({
+  if (eftPayments.length > 0) {
+    const paymentLines = eftPayments.map((p) => ({
       endToEndId:      p.end_to_end_id,
       beneficiaryName: p.beneficiary_name,
       accountNumber:   p.account_number,
@@ -335,7 +361,7 @@ async function approveRun(runId, checkerUserId) {
 
     const pain001Result = buildPain001Bulk({
       runReference: run.run_reference,
-      rail:         run.rail === 'wallet' ? 'eft' : run.rail,
+      rail:         'eft',
       payments:     paymentLines,
     });
 
@@ -362,25 +388,184 @@ async function approveRun(runId, checkerUserId) {
     }
   }
 
+  // ── RAIL 2: Process PayShap payments via existing RPP service ─────────────
+  let payshapAccepted = 0;
+  let payshapFailed   = 0;
+
+  if (payshapPayments.length > 0) {
+    const { buildPain001 } = require('../../integrations/standardbank/builders/pain001Builder');
+    const sbClient = require('../../integrations/standardbank/client');
+
+    for (const payment of payshapPayments) {
+      try {
+        const merchantTxnId = `MM-DISB-RPP-${payment.end_to_end_id}`;
+        const { pain001: rppXml } = buildPain001({
+          merchantTransactionId: merchantTxnId,
+          amount:                parseFloat(payment.amount),
+          currency:              'ZAR',
+          creditorAccountNumber: payment.account_number,
+          creditorBankBranchCode: payment.branch_code,
+          creditorName:          payment.beneficiary_name,
+          remittanceInfo:        payment.reference || run.run_reference,
+          statementNarrative:    payment.reference || run.run_reference,
+        });
+
+        const sbResponse = await sbClient.initiatePayment(rppXml);
+
+        await payment.update({
+          status:       'accepted',
+          processed_at: new Date(),
+          metadata:     {
+            ...(payment.metadata || {}),
+            payshapResponse: sbResponse,
+            merchantTransactionId: merchantTxnId,
+          },
+        });
+        payshapAccepted++;
+        logger.info(`PayShap payment ${payment.end_to_end_id} sent: ${payment.beneficiary_name} ZAR ${payment.amount}`);
+      } catch (rppErr) {
+        await payment.update({
+          status:           'rejected',
+          rejection_reason: `PayShap RPP failed: ${rppErr.message}`,
+          processed_at:     new Date(),
+        });
+        payshapFailed++;
+        logger.error(`PayShap payment ${payment.end_to_end_id} failed: ${rppErr.message}`);
+      }
+    }
+    logger.info(`PayShap processing: ${payshapAccepted} accepted, ${payshapFailed} failed`);
+  }
+
+  // ── RAIL 3: Process wallet payments — internal ledger transfer ────────────
+  let walletAccepted = 0;
+  let walletFailed   = 0;
+
+  if (walletPayments.length > 0) {
+    const disbursementClient = await db.DisbursementClient.findByPk(run.client_id);
+
+    for (const payment of walletPayments) {
+      const walletTxn = await db.sequelize.transaction();
+      try {
+        const msisdn = payment.metadata && payment.metadata.msisdn;
+        if (!msisdn) {
+          throw new Error('Missing MSISDN in payment metadata');
+        }
+
+        const recipientUser = await db.User.findOne({
+          where: { phoneNumber: msisdn },
+          transaction: walletTxn,
+        });
+        if (!recipientUser) {
+          throw new Error(`No MyMoolah user found for ${msisdn}`);
+        }
+
+        const recipientWallet = await db.Wallet.findOne({
+          where: { userId: recipientUser.id, status: 'active' },
+          lock: db.Sequelize.Transaction.LOCK.UPDATE,
+          transaction: walletTxn,
+        });
+        if (!recipientWallet) {
+          throw new Error(`No active wallet for user ${msisdn}`);
+        }
+
+        await recipientWallet.credit(parseFloat(payment.amount), 'deposit', { transaction: walletTxn });
+
+        const txnId = `TXN-DISB-${run.run_reference}-${payment.end_to_end_id}-${Date.now()}`;
+        await db.Transaction.create({
+          transactionId:    txnId,
+          userId:           recipientUser.id,
+          walletId:         recipientWallet.walletId,
+          receiverWalletId: recipientWallet.walletId,
+          amount:           parseFloat(payment.amount),
+          type:             'deposit',
+          status:           'completed',
+          description:      `Disbursement from ${disbursementClient ? disbursementClient.company_name : 'Client'} (Ref: ${payment.reference || run.run_reference})`,
+          fee:              0,
+          currency:         'ZAR',
+          metadata: {
+            source:        'DISBURSEMENT_WALLET',
+            runId:         run.id,
+            runReference:  run.run_reference,
+            clientId:      run.client_id,
+            paymentId:     payment.id,
+            employeeRef:   payment.employee_ref,
+          },
+        }, { transaction: walletTxn });
+
+        await payment.update({
+          status:       'accepted',
+          processed_at: new Date(),
+          metadata:     {
+            ...(payment.metadata || {}),
+            walletCredited:   true,
+            recipientUserId:  recipientUser.id,
+            recipientWalletId: recipientWallet.walletId,
+            transactionId:    txnId,
+          },
+        }, { transaction: walletTxn });
+
+        await walletTxn.commit();
+        walletAccepted++;
+        logger.info(`Wallet payment ${payment.end_to_end_id} credited: ${msisdn} ZAR ${payment.amount}`);
+      } catch (walletErr) {
+        await walletTxn.rollback();
+        await payment.update({
+          status:           'rejected',
+          rejection_reason: `Wallet credit failed: ${walletErr.message}`,
+          processed_at:     new Date(),
+        });
+        walletFailed++;
+        logger.error(`Wallet payment ${payment.end_to_end_id} failed: ${walletErr.message}`);
+      }
+    }
+    logger.info(`Wallet processing: ${walletAccepted} accepted, ${walletFailed} failed`);
+  }
+
   // ── Update run status ────────────────────────────────────────────────────
+  const totalProcessed   = payshapAccepted + payshapFailed + walletAccepted + walletFailed;
+  const totalInstantFail = payshapFailed + walletFailed;
+  const totalInstantOk   = payshapAccepted + walletAccepted;
+  const eftPending       = eftPayments.length;
+
+  let runStatus = 'submitted';
+  if (eftPending === 0 && totalProcessed > 0) {
+    runStatus = totalInstantFail > 0
+      ? (totalInstantOk > 0 ? 'partial' : 'failed')
+      : 'completed';
+  }
+
   await run.update({
-    status:           'submitted',
+    status:           runStatus,
     checker_user_id:  checkerUserId,
     submitted_at:     new Date(),
+    completed_at:     runStatus === 'completed' ? new Date() : null,
+    success_count:    totalInstantOk,
+    failed_count:     totalInstantFail,
+    pending_count:    eftPending,
     pain001_filename: filename,
     pain001_gcs_path: gcsPath,
     metadata: {
       ...(run.metadata || {}),
-      pain001_msg_id:    msgId,
-      fee_total_cents:   feeResult.totalFeeCents,
-      fee_amount_cents:  feeResult.totalAmountCents,
-      fee_grand_cents:   feeResult.grandTotalCents,
-      fee_config_id:     feeResult.feeConfig ? feeResult.feeConfig.id : null,
-      payshap_pending:   hasPayshapPayments || undefined,
+      pain001_msg_id:     msgId,
+      fee_total_cents:    feeResult.totalFeeCents,
+      fee_amount_cents:   feeResult.totalAmountCents,
+      fee_grand_cents:    feeResult.grandTotalCents,
+      fee_config_id:      feeResult.feeConfig ? feeResult.feeConfig.id : null,
+      eft_count:          eftPayments.length,
+      payshap_count:      payshapPayments.length,
+      payshap_accepted:   payshapAccepted,
+      payshap_failed:     payshapFailed,
+      wallet_count:       walletPayments.length,
+      wallet_accepted:    walletAccepted,
+      wallet_failed:      walletFailed,
     },
   });
 
-  logger.info(`Run ${run.run_reference} approved and submitted`);
+  logger.info(
+    `Run ${run.run_reference} approved: ` +
+    `EFT=${eftPayments.length}(pending) PayShap=${payshapAccepted}ok/${payshapFailed}fail ` +
+    `Wallet=${walletAccepted}ok/${walletFailed}fail → status=${runStatus}`
+  );
 
   setImmediate(async () => {
     try {
@@ -392,6 +577,11 @@ async function approveRun(runId, checkerUserId) {
         totalCount: run.total_count,
         pain001Filename: filename,
         checkerUserId,
+        railSummary: {
+          eft: eftPayments.length,
+          payshap: { accepted: payshapAccepted, failed: payshapFailed },
+          wallet: { accepted: walletAccepted, failed: walletFailed },
+        },
       });
     } catch (notifyErr) {
       logger.warn('Notification failed (non-critical):', notifyErr.message);
@@ -551,16 +741,19 @@ async function resubmitFailed(originalRunId, makerUserId, corrections) {
     const entry = {
       employeeRef:    p.employee_ref,
       name:           p.beneficiary_name,
-      accountNumber:  fix.correctedAccountNumber || p.account_number,
-      branchCode:     fix.correctedBranchCode    || p.branch_code,
-      bankName:       p.bank_name,
       amount:         parseFloat(p.amount),
       reference:      p.reference,
       _retryOf:       p.id,
     };
 
-    if (isWalletPayment && p.metadata && p.metadata.msisdn) {
-      entry.msisdn = p.metadata.msisdn;
+    if (isWalletPayment) {
+      if (p.metadata && p.metadata.msisdn) {
+        entry.msisdn = p.metadata.msisdn;
+      }
+    } else {
+      entry.accountNumber = fix.correctedAccountNumber || p.account_number;
+      entry.branchCode    = fix.correctedBranchCode    || p.branch_code;
+      entry.bankName      = p.bank_name;
     }
 
     return entry;
