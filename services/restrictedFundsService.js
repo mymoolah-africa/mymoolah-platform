@@ -8,9 +8,13 @@ const ACCOUNT_FLASH_FLOAT = process.env.LEDGER_ACCOUNT_FLASH_FLOAT || '1200-10-0
 
 /**
  * Post the main deposit journal entry for a Flash voucher top-up.
- * DR  Flash Float (1200-10-04)      faceValue
- * CR  Client Float (2100-01-01)     netDeposit
- * CR  Commission Clearing           feeExVat    (handled separately by commissionVatService)
+ * Flash deducts 4% acceptance fee at source before daily net settlement.
+ * Our Flash Float increases by the NET amount only (faceValue - fee).
+ *
+ * DR  Flash Float (1200-10-04)      netDeposit  (what Flash settles to us)
+ * CR  Client Float (2100-01-01)     netDeposit  (what user wallet receives)
+ *
+ * Commission/fee accounting is handled separately by commissionVatService.
  *
  * Then post the restriction tracking journal:
  * DR  Client Float (2100-01-01)     netDeposit
@@ -21,8 +25,8 @@ async function postVoucherDepositAndRestriction({ reference, netDepositRand, fac
     reference: `VTOP-DEP-${reference}`,
     description: description || `Flash voucher deposit: ${reference}`,
     lines: [
-      { accountCode: ACCOUNT_FLASH_FLOAT, dc: 'debit', amount: faceValueRand, memo: 'Flash float (voucher face value)' },
-      { accountCode: ACCOUNT_CLIENT_FLOAT, dc: 'credit', amount: netDepositRand, memo: 'Client wallet credit (net of fee)' },
+      { accountCode: ACCOUNT_FLASH_FLOAT, dc: 'debit', amount: netDepositRand, memo: 'Flash float (net of Flash 4% fee)' },
+      { accountCode: ACCOUNT_CLIENT_FLOAT, dc: 'credit', amount: netDepositRand, memo: 'Client wallet credit' },
     ],
   });
 
@@ -49,7 +53,7 @@ async function postVoucherDepositAndRestriction({ reference, netDepositRand, fac
  * @returns {number} The amount actually released (0 if no restricted funds)
  */
 async function releaseRestrictedFunds(wallet, spendAmountRand, transactionId, options = {}) {
-  const restricted = parseFloat(wallet.restricted_balance || 0);
+  const restricted = parseFloat(wallet.restrictedBalance || 0);
   if (restricted <= 0) return 0;
 
   const releaseAmount = Math.min(restricted, parseFloat(spendAmountRand));
@@ -57,7 +61,7 @@ async function releaseRestrictedFunds(wallet, spendAmountRand, transactionId, op
 
   const releaseAmountRounded = parseFloat(releaseAmount.toFixed(2));
 
-  wallet.restricted_balance = parseFloat((restricted - releaseAmountRounded).toFixed(2));
+  wallet.restrictedBalance = parseFloat((restricted - releaseAmountRounded).toFixed(2));
   await wallet.save(options);
 
   try {

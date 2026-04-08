@@ -105,6 +105,10 @@ Implemented a dual-layer ringfencing mechanism for Flash voucher deposits (1Vouc
 
 - Flash voucher deposit flow was missing the main deposit journal entry (only posted commission). Fixed as part of this work.
 - The deposit flow was not atomic (no Sequelize transaction). Fixed.
+- **Auditing skill catch #1**: Deposit JE was unbalanced — debited `faceValueRand` but credited `netDepositRand`. Fixed to use `netDepositRand` on both sides (Flash deducts fee at source).
+- **Auditing skill catch #2**: `releaseRestrictedFunds` used `wallet.restricted_balance` (snake_case) but Sequelize exposes it as `wallet.restrictedBalance` (camelCase). Would have silently failed at runtime. Fixed.
+- **Fee structure catch**: Deal sheet says 4% **excl VAT**. Code deducted 4% flat (R4 on R100) but Flash deducts 4.6% (R4.60 incl VAT). MMTP was short R0.60 per R100 voucher. Fixed: total fee = 4% + 15% VAT = 4.6%.
+- **Commission service catch**: `commissionVatService` was incorrectly called for voucher top-ups, recording Flash's pass-through fee as MMTP revenue with output VAT. MMTP earns zero on this. Removed the call entirely.
 
 ---
 

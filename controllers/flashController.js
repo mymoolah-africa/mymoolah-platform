@@ -605,14 +605,18 @@ class FlashController {
 
             const reference = `VTOP-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
 
-            const FLASH_FEE_RATE = parseFloat(process.env.FLASH_VOUCHER_TOPUP_FEE_PCT || '4') / 100;
+            // Flash charges 4% excl VAT per deal sheet (Mar 2026).
+            // VAT at 15% is added on top. Total deduction = 4% + 0.6% = 4.6%.
+            // This is Flash's fee — MMTP earns zero markup. No output VAT for MMTP.
+            // MMTP recovers the full cost (fee + VAT) from the user's deposit.
+            const FLASH_FEE_RATE_EXCL_VAT = parseFloat(process.env.FLASH_VOUCHER_TOPUP_FEE_PCT || '4') / 100;
+            const VAT_RATE = 0.15;
             const useFlashAPI = process.env.FLASH_LIVE_INTEGRATION === 'true';
 
             let flashResponse = null;
             let faceValueCents = 0;
 
             if (useFlashAPI) {
-                console.log(`📞 Flash: Redeeming ${voucherType} voucher via API...`);
                 flashResponse = await this.authService.makeAuthenticatedRequest(
                     'POST',
                     '/1voucher/redeem',
@@ -628,14 +632,16 @@ class FlashController {
                         error: 'Flash returned an invalid or zero face value for this voucher'
                     });
                 }
-                console.log(`✅ Flash: Voucher redeemed — face value ${faceValueCents} cents`);
+                console.log(`Flash: Voucher redeemed — face value ${faceValueCents} cents`);
             } else {
                 faceValueCents = parseInt(req.body.simulatedAmount || '10000', 10);
                 flashResponse = { simulated: true, amount: faceValueCents };
-                console.log(`🧪 Simulation: Voucher top-up — face value ${faceValueCents} cents`);
+                console.log(`Simulation: Voucher top-up — face value ${faceValueCents} cents`);
             }
 
-            const feeCents = Math.round(faceValueCents * FLASH_FEE_RATE);
+            const feeExclVatCents = Math.round(faceValueCents * FLASH_FEE_RATE_EXCL_VAT);
+            const feeVatCents = Math.round(feeExclVatCents * VAT_RATE);
+            const feeCents = feeExclVatCents + feeVatCents;
             const netDepositCents = faceValueCents - feeCents;
 
             const { Wallet, Transaction, VasTransaction, VasProduct, sequelize } = require('../models');
@@ -664,7 +670,7 @@ class FlashController {
                     fixedFee: 0,
                     isPromotional: false,
                     isActive: true,
-                    metadata: { feeRate: FLASH_FEE_RATE, voucherType }
+                    metadata: { feeRateExclVat: FLASH_FEE_RATE_EXCL_VAT, vatRate: VAT_RATE, voucherType }
                 }
             });
 
@@ -697,8 +703,11 @@ class FlashController {
                         productCode,
                         pin: `****${pin.slice(-4)}`,
                         faceValueCents,
+                        feeExclVatCents,
+                        feeVatCents,
                         feeCents,
-                        feeRate: FLASH_FEE_RATE,
+                        feeRateExclVat: FLASH_FEE_RATE_EXCL_VAT,
+                        vatRate: VAT_RATE,
                         netDepositCents,
                         useFlashAPI,
                         flashResponse: useFlashAPI ? flashResponse : null,
@@ -712,7 +721,7 @@ class FlashController {
                 wallet.restrictedBalance = parseFloat((currentRestricted + netDepositRand).toFixed(2));
                 await wallet.save({ transaction: t });
 
-                console.log(`Wallet credited: R${netDepositRand.toFixed(2)} (face R${faceValueRand.toFixed(2)} - fee R${feeRand.toFixed(2)}), restricted: R${wallet.restrictedBalance}`);
+                console.log(`Wallet credited: R${netDepositRand.toFixed(2)} (face R${faceValueRand.toFixed(2)} - fee R${(feeExclVatCents/100).toFixed(2)} - VAT R${(feeVatCents/100).toFixed(2)}), restricted: R${wallet.restrictedBalance}`);
 
                 mainTransactionId = `VTOP-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
                 await Transaction.create({
@@ -734,7 +743,9 @@ class FlashController {
                         operationType: 'voucher_topup',
                         faceValue: faceValueRand,
                         fee: feeRand,
-                        feeRate: `${FLASH_FEE_RATE * 100}%`,
+                        feeExclVat: feeExclVatCents / 100,
+                        feeVat: feeVatCents / 100,
+                        feeRate: `${FLASH_FEE_RATE_EXCL_VAT * 100}% excl VAT`,
                         isVoucherTopup: true,
                         isRestricted: true,
                         restrictionSource: 'flash_voucher'
@@ -759,21 +770,9 @@ class FlashController {
                 console.error('Voucher deposit/restriction ledger posting failed:', ledgerError.message);
             }
 
-            try {
-                const { postCommissionVatAndLedger } = require('../services/commissionVatService');
-                await postCommissionVatAndLedger({
-                    commissionCents: feeCents,
-                    supplierCode: 'FLASH',
-                    serviceType: 'voucher_topup',
-                    walletTransactionId: mainTransactionId,
-                    sourceTransactionId: mainTransactionId,
-                    idempotencyKey: reference,
-                    purchaserUserId: req.user.id
-                });
-                console.log(`Ledger posted: Flash voucher fee R${feeRand.toFixed(2)}`);
-            } catch (ledgerError) {
-                console.error('Voucher top-up commission ledger posting failed:', ledgerError.message);
-            }
+            // No commissionVatService call — Flash's 4% + VAT fee is a pure pass-through
+            // cost to the user. MMTP earns zero markup, so there is no commission revenue
+            // and no output VAT. The fee is recorded in transaction/VAS metadata for audit.
 
             try {
                 await FlashTransaction.create({
@@ -788,6 +787,8 @@ class FlashController {
                         voucherType,
                         productCode,
                         faceValueCents,
+                        feeExclVatCents,
+                        feeVatCents,
                         feeCents,
                         netDepositCents,
                         flashResponse: useFlashAPI ? flashResponse : null
@@ -801,8 +802,10 @@ class FlashController {
                 success: true,
                 data: {
                     faceValue: faceValueRand,
-                    fee: feeRand,
-                    feeRate: `${FLASH_FEE_RATE * 100}%`,
+                    fee: feeExclVatCents / 100,
+                    feeVat: feeVatCents / 100,
+                    feeTotal: feeCents / 100,
+                    feeRate: `${FLASH_FEE_RATE_EXCL_VAT * 100}% excl VAT`,
                     netDeposit: netDepositRand,
                     transactionId: mainTransactionId,
                     reference,

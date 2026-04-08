@@ -13,7 +13,7 @@
 
 Dear Flash Team,
 
-Further to our commercial agreement for 1Voucher Redemption, FNB Voucher Redemption, and Flash Pay acceptance services (4.00% acceptance fee, daily net settlement), MyMoolah Treasury Platform (Pty) Ltd ("MMTP") hereby provides this formal undertaking regarding the controls we have implemented to prevent the cash-out of funds deposited via any Flash voucher cash-in mechanism.
+Further to our commercial agreement for 1Voucher Redemption, FNB Voucher Redemption, and Flash Pay acceptance services (4.00% acceptance fee exclusive of VAT, daily net settlement), MyMoolah Treasury Platform (Pty) Ltd ("MMTP") hereby provides this formal undertaking regarding the controls we have implemented to prevent the cash-out of funds deposited via any Flash voucher cash-in mechanism.
 
 ---
 
@@ -58,9 +58,12 @@ This account is a sub-ledger of our main Client Float Liability (`2100-01-01`) a
 ```
 Reference: VTOP-DEP-{unique-reference}
 
-DEBIT   1200-10-04  Flash Float Account                    R{face_value}
+DEBIT   1200-10-04  Flash Float Account                    R{net_deposit}
 CREDIT  2100-01-01  Client Float Liability                 R{net_deposit}
 ```
+
+Note: Flash Float is debited with the net deposit (face value minus Flash's 4%
+acceptance fee), since Flash deducts the fee at source before daily net settlement.
 
 **Restriction Tracking Journal Entry (posted atomically with deposit):**
 

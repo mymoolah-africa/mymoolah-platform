@@ -10,6 +10,12 @@ Implemented dual-layer ringfencing for Flash voucher deposits (1Voucher, FNB Vou
 - **Wallet column `restricted_balance`** provides fast O(1) runtime enforcement
 - **Reconciliation** verifies `SUM(wallets.restricted_balance) = 2100-01-02 net balance` hourly
 
+### Fee Structure Fix
+- Flash charges 4% **excl VAT** per deal sheet — total deduction is 4.6% (4% + 15% VAT)
+- Previous code deducted only 4% flat, shorting MMTP R0.60 per R100 voucher
+- MMTP earns zero markup on voucher top-ups — removed incorrect `commissionVatService` call (was recording Flash's fee as MMTP revenue with output VAT)
+- Fee + VAT now correctly deducted from user deposit; full breakdown in transaction metadata
+
 ### New Files
 - `migrations/20260409_01_add_restricted_balance_and_voucher_deposit_account.js` — adds `restricted_balance` column + seeds `2100-01-02`
 - `services/restrictedFundsService.js` — `postVoucherDepositAndRestriction()`, `releaseRestrictedFunds()` centralized helpers

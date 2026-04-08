@@ -232,15 +232,23 @@ CR  2100-01-01  Client Float Liability           R{amount}
 
 ### 3.16 Flash Voucher Deposit (Cash-In via 1Voucher / FNB Voucher / Flash Pay)
 
-User redeems a Flash voucher PIN to top up their wallet. Flash charges 4% acceptance fee.
+User redeems a Flash voucher PIN to top up their wallet. Flash charges 4% acceptance
+fee **exclusive of VAT** (per deal sheet Mar 2026). Total fee = 4% + 15% VAT = 4.6%.
+Flash deducts the full fee (incl VAT) at source before daily net settlement (T+1).
+MMTP passes the full cost through to the user — **MMTP earns zero markup, no output VAT**.
 Deposit is ringfenced — cannot be used for cash-out (AML control).
+
+Example on R100 voucher: fee R4.00 + VAT R0.60 = R4.60 → user receives R95.40.
 
 ```
 Reference: VTOP-DEP-{reference}
 
-DR  1200-10-04  Flash Float Account                    R{faceValue}
+DR  1200-10-04  Flash Float Account                    R{netDeposit}
 CR  2100-01-01  Client Float Liability                 R{netDeposit}
 ```
+
+Note: Flash Float is debited with the NET deposit (face value minus Flash's 4% fee
+minus VAT on fee). No commission JE — MMTP has no revenue on this transaction.
 
 Restriction tracking (posted alongside deposit):
 
