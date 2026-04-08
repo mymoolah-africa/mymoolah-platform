@@ -837,10 +837,10 @@ class FlashController {
                 success: true,
                 data: {
                     faceValue: faceValueRand,
-                    fee: feeExclVatCents / 100,
+                    fee: feeRand,
+                    feeExclVat: feeExclVatCents / 100,
                     feeVat: feeVatCents / 100,
-                    feeTotal: feeCents / 100,
-                    feeRate: `${FLASH_FEE_RATE_EXCL_VAT * 100}% excl VAT`,
+                    feeRate: `${FLASH_FEE_RATE_EXCL_VAT * 100}% + VAT`,
                     netDeposit: netDepositRand,
                     transactionId: mainTransactionId,
                     reference,
