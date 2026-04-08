@@ -183,31 +183,44 @@ log "Step 3/6: Starting main backend (port ${BACKEND_PORT}) → ${TARGET_ENV} DB
 
 ENV_FILE="${ROOT_DIR}/.env"
 
-if [ -f "${ENV_FILE}" ]; then
-  DATABASE_URL=$(node -e "
-    require('dotenv').config({ path: '${ENV_FILE}' });
-    const port = '${PROXY_PORT}';
-    let url;
-    if (process.env.DATABASE_URL) {
-      const u = new URL(process.env.DATABASE_URL);
-      u.hostname = '127.0.0.1';
-      u.port = port;
-      u.searchParams.set('sslmode', 'disable');
-      url = u.toString();
-    } else if (process.env.DB_USER && process.env.DB_PASSWORD && process.env.DB_NAME) {
-      const enc = encodeURIComponent(process.env.DB_PASSWORD);
-      url = 'postgres://' + process.env.DB_USER + ':' + enc + '@127.0.0.1:' + port + '/' + process.env.DB_NAME + '?sslmode=disable';
+# Build DATABASE_URL using db-connection-helper (handles passwords, DB names, ports per env)
+DATABASE_URL=$(node -e "
+  require('dotenv').config({ path: '${ENV_FILE}' });
+  const helper = require('${ROOT_DIR}/scripts/db-connection-helper');
+  const env = '${TARGET_ENV}';
+  let url;
+  if (env === 'production') url = helper.getProductionDatabaseURL();
+  else if (env === 'staging') url = helper.getStagingDatabaseURL();
+  else url = helper.getUATDatabaseURL();
+  console.log(url);
+" 2>/dev/null) || {
+  warn "db-connection-helper failed — falling back to .env"
+  if [ -f "${ENV_FILE}" ]; then
+    DATABASE_URL=$(node -e "
+      require('dotenv').config({ path: '${ENV_FILE}' });
+      const port = '${PROXY_PORT}';
+      let url;
+      if (process.env.DATABASE_URL) {
+        const u = new URL(process.env.DATABASE_URL);
+        u.hostname = '127.0.0.1';
+        u.port = port;
+        u.searchParams.set('sslmode', 'disable');
+        url = u.toString();
+      } else if (process.env.DB_USER && process.env.DB_PASSWORD && process.env.DB_NAME) {
+        const enc = encodeURIComponent(process.env.DB_PASSWORD);
+        url = 'postgres://' + process.env.DB_USER + ':' + enc + '@127.0.0.1:' + port + '/' + process.env.DB_NAME + '?sslmode=disable';
+      }
+      if (url) console.log(url);
+      else process.exit(1);
+    " 2>/dev/null) || {
+      warn "Could not build DATABASE_URL from .env — using UAT default"
+      DATABASE_URL="postgres://mymoolah_app:$(node -e "console.log(encodeURIComponent('B0t3s@Mymoolah'))")@127.0.0.1:${PROXY_PORT}/mymoolah?sslmode=disable"
     }
-    if (url) console.log(url);
-    else process.exit(1);
-  " 2>/dev/null) || {
-    warn "Could not build DATABASE_URL from .env — using UAT default"
+  else
+    warn ".env file not found — using UAT default DATABASE_URL"
     DATABASE_URL="postgres://mymoolah_app:$(node -e "console.log(encodeURIComponent('B0t3s@Mymoolah'))")@127.0.0.1:${PROXY_PORT}/mymoolah?sslmode=disable"
-  }
-else
-  warn ".env file not found — using UAT default DATABASE_URL"
-  DATABASE_URL="postgres://mymoolah_app:$(node -e "console.log(encodeURIComponent('B0t3s@Mymoolah'))")@127.0.0.1:${PROXY_PORT}/mymoolah?sslmode=disable"
-fi
+  fi
+}
 export DATABASE_URL
 
 # Load JWT_SECRET from .env or gcloud
