@@ -279,7 +279,7 @@ node scripts/test-zapper-credentials.js
 
 **Wallet + main API only** (no Admin Portal): `./scripts/one-click-restart-and-start.sh` — Cloud SQL Auth Proxy, Redis (if Docker available), main backend on port **3001**. See `docs/DATABASE_CONNECTION_GUIDE.md` for DB procedures.
 
-**Admin Portal + wallet + main API** (recommended for portal, disbursement clients, any UI that proxies `/api` from Vite on **3003**): `./scripts/start-all-services.sh` — starts proxies, main backend (**3001**), wallet dev server (**3000**), portal backend (**3002**), portal frontend (**3003**), sets Codespaces ports to Public. Backend processes run in the background; logs:
+**Admin Portal + wallet + main API** (recommended for portal, disbursement clients, any UI that proxies `/api` from Vite on **3003**): `./scripts/start-all-services.sh [uat|staging|production]` — starts proxies, main backend (**3001**), wallet dev server (**3000**), portal backend (**3002**), portal frontend (**3003**), sets Codespaces ports to Public. Default environment is **UAT** (`uat`). Pass `staging` to connect all services (Sequelize + db-connection-helper) to the **staging** database on port **6544**. Backend processes run in the background; logs:
 
 | Service | Log file |
 |---------|----------|

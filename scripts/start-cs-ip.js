@@ -2,19 +2,19 @@
 require("dotenv").config();
 const { spawn } = require("child_process");
 
+const PROXY_PORTS = new Set(['6543', '6544', '6545']);
+
 function configureDatabaseUrl(url) {
   try {
     const u = new URL(url);
     
-    // If using Cloud SQL Auth Proxy (127.0.0.1:6543), disable SSL
-    if (u.hostname === '127.0.0.1' && u.port === '6543') {
+    if (u.hostname === '127.0.0.1' && PROXY_PORTS.has(u.port)) {
       u.searchParams.set("sslmode", "disable");
       u.searchParams.delete("ssl");
-      console.log('ℹ️  Using Cloud SQL Auth Proxy - SSL disabled');
+      console.log(`ℹ️  Using Cloud SQL Auth Proxy on :${u.port} — SSL disabled`);
       return u.toString();
     }
     
-    // For direct connections, enable SSL
     u.searchParams.set("ssl", "true");
     u.searchParams.delete("sslmode");
     return u.toString();

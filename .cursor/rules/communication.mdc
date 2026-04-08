@@ -42,5 +42,5 @@ alwaysApply: true
   cd portal/admin/frontend && npm run build && cd ../../..   # if admin portal frontend changed
   ./scripts/one-click-restart-and-start.sh   # wallet / main API only
   ```
-  For **Admin Portal** or disbursement admin screens, use `./scripts/start-all-services.sh` instead; logs: `tail -f /tmp/mymoolah-logs/backend.log`.
+  For **Admin Portal** or disbursement admin screens, use `./scripts/start-all-services.sh [uat|staging]` instead (default `uat`; pass `staging` for staging DB); logs: `tail -f /tmp/mymoolah-logs/backend.log`.
 - When migrations were run: tell André which environments were migrated and the exact commands used

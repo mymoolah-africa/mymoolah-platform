@@ -12,7 +12,8 @@
 #
 # Sets all forwarded ports to Public visibility.
 #
-# Usage: ./scripts/start-all-services.sh
+# Usage: ./scripts/start-all-services.sh [uat|staging|production]
+#        Default: uat
 ##############################################################################
 
 set -euo pipefail
@@ -26,6 +27,20 @@ RED='\033[0;31m'
 CYAN='\033[0;36m'
 BOLD='\033[1m'
 NC='\033[0m'
+
+# ── Environment selection ─────────────────────────────────────
+TARGET_ENV="${1:-uat}"
+case "${TARGET_ENV}" in
+  uat)        PROXY_PORT=6543 ;;
+  staging)    PROXY_PORT=6544 ;;
+  production) PROXY_PORT=6545 ;;
+  *)
+    echo "Usage: $0 [uat|staging|production]"
+    echo "  Default: uat"
+    exit 1
+    ;;
+esac
+export MM_DEPLOYMENT_ENV="${TARGET_ENV}"
 
 LOG_DIR="/tmp/mymoolah-logs"
 mkdir -p "${LOG_DIR}"
@@ -78,9 +93,11 @@ kill_port() {
 # ──────────────────────────────────────────────────────────────
 # STEP 0: Clean up any running services
 # ──────────────────────────────────────────────────────────────
+ENV_LABEL=$(echo "${TARGET_ENV}" | tr '[:lower:]' '[:upper:]')
+
 echo ""
 echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${BOLD}  MyMoolah — Starting All Services${NC}"
+echo -e "${BOLD}  MyMoolah — Starting All Services  [${ENV_LABEL} — port ${PROXY_PORT}]${NC}"
 echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 
@@ -162,10 +179,9 @@ sleep 3
 # ──────────────────────────────────────────────────────────────
 # STEP 3: Build DATABASE_URL and start main backend
 # ──────────────────────────────────────────────────────────────
-log "Step 3/6: Starting main backend (port ${BACKEND_PORT})..."
+log "Step 3/6: Starting main backend (port ${BACKEND_PORT}) → ${TARGET_ENV} DB (proxy :${PROXY_PORT})..."
 
 ENV_FILE="${ROOT_DIR}/.env"
-PROXY_PORT=6543
 
 if [ -f "${ENV_FILE}" ]; then
   DATABASE_URL=$(node -e "
@@ -326,7 +342,7 @@ fi
 # ──────────────────────────────────────────────────────────────
 echo ""
 echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${BOLD}  All Services Started Successfully${NC}"
+echo -e "${BOLD}  All Services Started Successfully  [${ENV_LABEL}]${NC}"
 echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 
@@ -340,6 +356,7 @@ if [ -n "${CODESPACE_NAME:-}" ] && [ -n "${GITHUB_CODESPACES_PORT_FORWARDING_DOM
   echo -e "  ${GREEN}Portal Frontend${NC}    : ${BASE}-${PORTAL_FE_PORT}.${DOMAIN}/admin/login"
   echo ""
   echo -e "  ${CYAN}Cloud SQL Proxies${NC}  : UAT :6543 | Staging :6544 | Production :6545"
+  echo -e "  ${CYAN}Active DB${NC}          : ${BOLD}${ENV_LABEL} :${PROXY_PORT}${NC}  (MM_DEPLOYMENT_ENV=${TARGET_ENV})"
   echo -e "  ${CYAN}Redis${NC}              : :6379"
 else
   echo -e "  ${GREEN}Wallet Frontend${NC}    : http://localhost:${WALLET_FE_PORT}"
@@ -348,6 +365,7 @@ else
   echo -e "  ${GREEN}Portal Frontend${NC}    : http://localhost:${PORTAL_FE_PORT}/admin/login"
   echo ""
   echo -e "  ${CYAN}Cloud SQL Proxies${NC}  : UAT :6543 | Staging :6544 | Production :6545"
+  echo -e "  ${CYAN}Active DB${NC}          : ${BOLD}${ENV_LABEL} :${PROXY_PORT}${NC}  (MM_DEPLOYMENT_ENV=${TARGET_ENV})"
   echo -e "  ${CYAN}Redis${NC}              : :6379"
 fi
 

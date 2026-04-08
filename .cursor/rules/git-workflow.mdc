@@ -69,7 +69,7 @@ It handles in the correct order:
 - ❌ `npm start`
 - ❌ Any direct backend restart that bypasses `one-click-restart-and-start.sh`
 
-**Admin Portal / disbursement admin UI in Codespaces**: Use `./scripts/start-all-services.sh` so main backend (3001), portal backend (3002), portal Vite (3003), and wallet (3000) all run. Main backend logs: `tail -f /tmp/mymoolah-logs/backend.log`. See `docs/CODESPACES_TESTING_REQUIREMENT.md`.
+**Admin Portal / disbursement admin UI in Codespaces**: Use `./scripts/start-all-services.sh [uat|staging|production]` so main backend (3001), portal backend (3002), portal Vite (3003), and wallet (3000) all run. Default is `uat`; pass `staging` to connect to the staging DB (port 6544). Main backend logs: `tail -f /tmp/mymoolah-logs/backend.log`. See `docs/CODESPACES_TESTING_REQUIREMENT.md`.
 
 ## Migration Proxy Prerequisite
 
