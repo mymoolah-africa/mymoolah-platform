@@ -203,11 +203,12 @@ export const DisbursementClientDetailOverlay: React.FC = () => {
     try {
       const res = await API.get(`/disbursement-clients/${clientId}`);
       const data = res.data.data;
-      setClient(data.client);
-      setFees(data.fees || []);
-      setDocuments(data.kybDocumentSummary || []);
-      setNotifications(data.notifications || []);
-      setClientUsers(data.users || []);
+      const { fees, kybDocumentSummary, notificationPreferences, users, ...clientData } = data;
+      setClient(clientData as DisbursementClient);
+      setFees(fees || []);
+      setDocuments(kybDocumentSummary || []);
+      setNotifications(notificationPreferences || []);
+      setClientUsers(users || []);
     } catch (err: any) {
       if (err?.response?.status === 404) {
         setNotFound(true);
