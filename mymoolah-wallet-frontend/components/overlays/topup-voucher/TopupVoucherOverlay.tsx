@@ -45,7 +45,8 @@ const VOUCHER_OPTIONS: { id: VoucherType; label: string; description: string; ic
   },
 ];
 
-const FEE_PCT = 4;
+const FEE_PCT_EXCL_VAT = 4;
+const FEE_TOTAL_PCT = 4.6;
 
 export function TopupVoucherOverlay() {
   const navigate = useNavigate();
@@ -171,7 +172,7 @@ export function TopupVoucherOverlay() {
           <Alert style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0' }}>
             <Info className="w-4 h-4" style={{ color: '#16a34a' }} />
             <AlertDescription style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#166534' }}>
-              A {FEE_PCT}% redemption fee applies. You'll receive {100 - FEE_PCT}% of the voucher face value in your wallet.
+              A {FEE_PCT_EXCL_VAT}% + VAT redemption fee applies. You'll receive R{(100 - FEE_TOTAL_PCT).toFixed(2)} per R100 voucher in your wallet.
             </AlertDescription>
           </Alert>
 
@@ -244,7 +245,7 @@ export function TopupVoucherOverlay() {
                 {selectedOption.label}
               </p>
               <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '11px', color: '#6b7280', margin: 0 }}>
-                {FEE_PCT}% fee applies
+                {FEE_PCT_EXCL_VAT}% + VAT fee applies
               </p>
             </div>
           </div>
@@ -282,7 +283,7 @@ export function TopupVoucherOverlay() {
           <Alert style={{ backgroundColor: '#fffbeb', border: '1px solid #fde68a' }}>
             <Info className="w-4 h-4" style={{ color: '#d97706' }} />
             <AlertDescription style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#92400e' }}>
-              A {FEE_PCT}% redemption fee will be deducted. For a R100 voucher, R{FEE_PCT.toFixed(2)} fee is deducted and R{(100 - FEE_PCT).toFixed(2)} is deposited into your wallet.
+              A {FEE_PCT_EXCL_VAT}% + VAT redemption fee will be deducted. For a R100 voucher, R{FEE_TOTAL_PCT.toFixed(2)} fee is deducted and R{(100 - FEE_TOTAL_PCT).toFixed(2)} is deposited into your wallet.
             </AlertDescription>
           </Alert>
 
