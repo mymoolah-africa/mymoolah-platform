@@ -133,32 +133,10 @@ export function TransactionHistoryPage() {
              };
            });
 
-          const expandedTransactions: typeof transformedTransactions = [];
-          for (const tx of transformedTransactions) {
-            if (tx.metadata?.isVoucherTopup && tx.metadata?.faceValue && tx.metadata?.fee) {
-              expandedTransactions.push({
-                ...tx,
-                id: `${tx.id}-gross`,
-                amount: Math.abs(tx.metadata.faceValue),
-                type: 'money_in' as const,
-              });
-              expandedTransactions.push({
-                ...tx,
-                id: `${tx.id}-fee`,
-                amount: -Math.abs(tx.metadata.fee),
-                type: 'money_out' as const,
-                description: 'Transaction fee',
-                metadata: { ...tx.metadata, isTopUpFee: true },
-              });
-            } else {
-              expandedTransactions.push(tx);
-            }
-          }
-
           if (append) {
-            setTransactions(prev => [...prev, ...expandedTransactions]);
+            setTransactions(prev => [...prev, ...transformedTransactions]);
           } else {
-            setTransactions(expandedTransactions);
+            setTransactions(transformedTransactions);
           }
           
           // Handle keyset pagination data from backend

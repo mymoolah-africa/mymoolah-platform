@@ -702,9 +702,20 @@ class WalletController {
         // (re-processing caused EPVOUCHER-REF/EXP duplicates in otherForRecent)
         const flashCashoutGroups = new Map();
         const easypayCashoutGroups = new Map();
+        const voucherTopupGroups = new Map();
         const otherForRecent = [];
         otherTransactions.forEach((tx) => {
           const metadata = tx.metadata || {};
+          // Flash voucher top-up: group by vasTransactionId (main has isVoucherTopupAmount, fee has isTopUpFee)
+          if (metadata.isVoucherTopup && (metadata.isVoucherTopupAmount || metadata.isTopUpFee)) {
+            const key = metadata.vasTransactionId;
+            if (!key) { otherForRecent.push(tx); return; }
+            if (!voucherTopupGroups.has(key)) voucherTopupGroups.set(key, { main: null, fee: null });
+            const g = voucherTopupGroups.get(key);
+            if (metadata.isVoucherTopupAmount) g.main = tx;
+            else if (metadata.isTopUpFee) g.fee = tx;
+            return;
+          }
           // Flash Eezi Cash: group by vasTransactionId (main has isFlashCashoutAmount, fee has isFlashCashoutFee)
           if (metadata.isFlashCashoutAmount || metadata.isFlashCashoutFee) {
             const key = metadata.vasTransactionId;
@@ -776,6 +787,14 @@ class WalletController {
             });
           }
         });
+        const combinedVoucherTopupRows = [];
+        voucherTopupGroups.forEach((g) => {
+          if (g.main && g.fee) {
+            const netAmount = parseFloat(g.main.amount) + parseFloat(g.fee.amount);
+            combinedVoucherTopupRows.push({ ...g.main, amount: netAmount, metadata: { ...(g.main.metadata || {}), combinedTopup: true } });
+          } else if (g.main) combinedVoucherTopupRows.push(g.main);
+          else if (g.fee) combinedVoucherTopupRows.push(g.fee);
+        });
         const combinedCashoutRows = [];
         flashCashoutGroups.forEach((g) => {
           if (g.main && g.fee) {
@@ -814,7 +833,7 @@ class WalletController {
           else if (g.fee) combinedRtpRows.push(g.fee);
         });
         normalizedRows.length = 0;
-        normalizedRows.push(...combinedRefunds, ...combinedCashoutRows, ...combinedUsdcRows, ...combinedRppRows, ...combinedRtpRows, ...otherForRecent);
+        normalizedRows.push(...combinedRefunds, ...combinedVoucherTopupRows, ...combinedCashoutRows, ...combinedUsdcRows, ...combinedRppRows, ...combinedRtpRows, ...otherForRecent);
         normalizedRows.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       }
 

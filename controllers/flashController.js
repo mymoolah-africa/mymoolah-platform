@@ -715,25 +715,29 @@ class FlashController {
                     }
                 }, { transaction: t });
 
-                await wallet.credit(netDepositRand, 'deposit', { transaction: t });
+                const voucherLabel = voucherType === 'fnb' ? 'FNB Voucher' : voucherType === 'flashpay' ? 'Flash Pay' : '1Voucher';
+
+                await wallet.credit(faceValueRand, 'deposit', { transaction: t });
+
+                await wallet.debit(feeRand, 'fee', { transaction: t });
 
                 const currentRestricted = parseFloat(wallet.restrictedBalance || 0);
                 wallet.restrictedBalance = parseFloat((currentRestricted + netDepositRand).toFixed(2));
                 await wallet.save({ transaction: t });
 
-                console.log(`Wallet credited: R${netDepositRand.toFixed(2)} (face R${faceValueRand.toFixed(2)} - fee R${(feeExclVatCents/100).toFixed(2)} - VAT R${(feeVatCents/100).toFixed(2)}), restricted: R${wallet.restrictedBalance}`);
+                console.log(`Wallet: credit R${faceValueRand.toFixed(2)} (face) - debit R${feeRand.toFixed(2)} (fee) = net R${netDepositRand.toFixed(2)}, restricted: R${wallet.restrictedBalance}`);
 
                 mainTransactionId = `VTOP-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
                 await Transaction.create({
                     transactionId: mainTransactionId,
                     userId: req.user.id,
                     walletId: wallet.walletId,
-                    amount: netDepositRand,
+                    amount: faceValueRand,
                     type: 'deposit',
                     status: 'completed',
-                    description: `${voucherType === 'fnb' ? 'FNB Voucher' : voucherType === 'flashpay' ? 'Flash Pay' : '1Voucher'} top-up`,
+                    description: `${voucherLabel} top-up`,
                     currency: wallet.currency,
-                    fee: feeRand,
+                    fee: 0,
                     metadata: {
                         vasTransactionId,
                         vasType: 'voucher_topup',
@@ -747,8 +751,38 @@ class FlashController {
                         feeVat: feeVatCents / 100,
                         feeRate: `${FLASH_FEE_RATE_EXCL_VAT * 100}% excl VAT`,
                         isVoucherTopup: true,
+                        isVoucherTopupAmount: true,
                         isRestricted: true,
                         restrictionSource: 'flash_voucher'
+                    }
+                }, { transaction: t });
+
+                const feeTransactionId = `VTOP-FEE-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+                await Transaction.create({
+                    transactionId: feeTransactionId,
+                    userId: req.user.id,
+                    walletId: wallet.walletId,
+                    amount: -feeRand,
+                    type: 'fee',
+                    status: 'completed',
+                    description: 'Transaction fee',
+                    currency: wallet.currency,
+                    fee: 0,
+                    metadata: {
+                        vasTransactionId,
+                        vasType: 'voucher_topup',
+                        voucherType,
+                        reference,
+                        supplierCode: 'FLASH',
+                        operationType: 'voucher_topup_fee',
+                        faceValue: faceValueRand,
+                        feeAmount: feeRand,
+                        feeExclVat: feeExclVatCents / 100,
+                        feeVat: feeVatCents / 100,
+                        feeRate: `${FLASH_FEE_RATE_EXCL_VAT * 100}% excl VAT`,
+                        isTopUpFee: true,
+                        isVoucherTopup: true,
+                        relatedTransactionId: mainTransactionId
                     }
                 }, { transaction: t });
 
@@ -763,9 +797,10 @@ class FlashController {
                     reference,
                     netDepositRand,
                     faceValueRand,
+                    feeRand,
                     description: `Flash ${voucherType} voucher deposit`
                 });
-                console.log(`Ledger posted: deposit + restriction JEs for ${reference}`);
+                console.log(`Ledger posted: gross deposit + fee + restriction JEs for ${reference}`);
             } catch (ledgerError) {
                 console.error('Voucher deposit/restriction ledger posting failed:', ledgerError.message);
             }

@@ -7,26 +7,41 @@ const ACCOUNT_CLIENT_FLOAT_RESTRICTED = process.env.LEDGER_ACCOUNT_CLIENT_FLOAT_
 const ACCOUNT_FLASH_FLOAT = process.env.LEDGER_ACCOUNT_FLASH_FLOAT || '1200-10-04';
 
 /**
- * Post the main deposit journal entry for a Flash voucher top-up.
- * Flash deducts 4% acceptance fee at source before daily net settlement.
- * Our Flash Float increases by the NET amount only (faceValue - fee).
+ * Post three balanced journal entries for a Flash voucher top-up:
  *
- * DR  Flash Float (1200-10-04)      netDeposit  (what Flash settles to us)
- * CR  Client Float (2100-01-01)     netDeposit  (what user wallet receives)
+ * JE1 — Gross Deposit (face value):
+ *   DR  Flash Float (1200-10-04)    faceValue   (gross receivable from Flash)
+ *   CR  Client Float (2100-01-01)   faceValue   (gross credit to user)
  *
- * Commission/fee accounting is handled separately by commissionVatService.
+ * JE2 — Fee Deduction (Flash's 4% excl VAT + 15% VAT):
+ *   DR  Client Float (2100-01-01)   fee         (fee charged to user)
+ *   CR  Flash Float (1200-10-04)    fee         (Flash retains this from settlement)
  *
- * Then post the restriction tracking journal:
- * DR  Client Float (2100-01-01)     netDeposit
- * CR  Client Float Restricted       netDeposit
+ * JE3 — Restriction Tracking (AML ringfence):
+ *   DR  Client Float (2100-01-01)   netDeposit  (reclassify to restricted)
+ *   CR  Client Float Restricted     netDeposit  (ringfenced voucher deposit)
+ *
+ * Net ledger effect:
+ *   Flash Float:           DR faceValue - CR fee = DR netDeposit (what Flash settles)
+ *   Client Float:          CR faceValue - DR fee - DR netDeposit = 0
+ *   Client Float Restricted: CR netDeposit (user's restricted balance)
  */
-async function postVoucherDepositAndRestriction({ reference, netDepositRand, faceValueRand, description }) {
+async function postVoucherDepositAndRestriction({ reference, netDepositRand, faceValueRand, feeRand, description }) {
   const depositJE = await ledgerService.postJournalEntry({
     reference: `VTOP-DEP-${reference}`,
-    description: description || `Flash voucher deposit: ${reference}`,
+    description: description || `Flash voucher deposit (gross face value): ${reference}`,
     lines: [
-      { accountCode: ACCOUNT_FLASH_FLOAT, dc: 'debit', amount: netDepositRand, memo: 'Flash float (net of Flash 4% fee)' },
-      { accountCode: ACCOUNT_CLIENT_FLOAT, dc: 'credit', amount: netDepositRand, memo: 'Client wallet credit' },
+      { accountCode: ACCOUNT_FLASH_FLOAT, dc: 'debit', amount: faceValueRand, memo: 'Flash float — gross face value' },
+      { accountCode: ACCOUNT_CLIENT_FLOAT, dc: 'credit', amount: faceValueRand, memo: 'Client wallet credit — gross face value' },
+    ],
+  });
+
+  const feeJE = await ledgerService.postJournalEntry({
+    reference: `VTOP-FEE-${reference}`,
+    description: `Flash voucher fee (4% excl VAT + 15% VAT): ${reference}`,
+    lines: [
+      { accountCode: ACCOUNT_CLIENT_FLOAT, dc: 'debit', amount: feeRand, memo: 'Fee charged to user (Flash 4% excl VAT + VAT)' },
+      { accountCode: ACCOUNT_FLASH_FLOAT, dc: 'credit', amount: feeRand, memo: 'Flash retains fee from settlement' },
     ],
   });
 
@@ -39,7 +54,7 @@ async function postVoucherDepositAndRestriction({ reference, netDepositRand, fac
     ],
   });
 
-  return { depositJE, restrictionJE };
+  return { depositJE, feeJE, restrictionJE };
 }
 
 /**
