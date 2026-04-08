@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-08 09:45  
-**Latest Feature**: **Disbursement portal hardening (v2.92.0)** — Main API accepts portal JWTs (`JWT_SECRET` + `PORTAL_JWT_SECRET` verify). `listClients` fixed for portal users (`portalUserId` — no more `created_by: undefined` 500). Admin **Client Portal Users**: `GET/POST/PATCH .../disbursement-clients/:id/users` + Section 5 in client detail overlay. `client_code` validation: letters, digits, hyphens (e.g. `MMTP-001`). **Codespaces**: document `start-all-services.sh` for portal (logs `/tmp/mymoolah-logs/*.log`, no pm2). **NEXT:** End-to-end client + client-user + white-label login; staging smoke. Previous: Phase 3 (v2.91.0).  
-**Document Version**: 2.92.0  
-**Session logs**: `docs/session_logs/2026-04-08_0930_disbursement-portal-codespaces-docs.md`, `docs/session_logs/2026-04-07_2345_disbursement-phase3-complete.md`, `docs/session_logs/2026-04-07_2230_disbursement-wallet-fix-rpp-multer.md`  
+**Last Updated**: 2026-04-09 14:30  
+**Latest Feature**: **Flash Voucher Deposit Ringfencing (v2.93.0)** — Dual-layer AML control: ledger sub-account `2100-01-02` (Client Float Restricted) + wallet `restricted_balance` column. Flash voucher deposits (1Voucher, FNB, Flash Pay) are ringfenced from cash-out (eeziCash, EasyPay cash-out). FIFO release on allowed spend (VAS, QR, P2P, PayShap, bills, EasyPay standalone, MoolahMove). Fixed missing deposit JE + atomic Sequelize transaction in `redeemVoucherTopup`. Hourly recon check for restricted balance drift. Formal undertaking letter drafted for Flash. **NEXT:** Run migration UAT → staging → production. Test and send Flash undertaking. Previous: Disbursement portal hardening (v2.92.0).  
+**Document Version**: 2.93.0  
+**Session logs**: `docs/session_logs/2026-04-09_1400_flash-voucher-ringfencing.md`, `docs/session_logs/2026-04-08_0930_disbursement-portal-codespaces-docs.md`, `docs/session_logs/2026-04-07_2345_disbursement-phase3-complete.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
