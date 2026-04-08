@@ -356,15 +356,21 @@ class WalletController {
       }
 
       // Perform the transfer
+      const senderTransactionId = `TXN-${Date.now()}-SEND`;
+      const receiverTransactionId = `TXN-${Date.now()}-RECEIVE`;
       const senderNewBalance = parseFloat(senderWallet.balance) - parseFloat(amount);
       const receiverNewBalance = parseFloat(receiverWallet.balance) + parseFloat(amount);
 
       await senderWallet.update({ balance: senderNewBalance });
+      try {
+        const { releaseRestrictedFunds } = require('../services/restrictedFundsService');
+        await releaseRestrictedFunds(senderWallet, amount, senderTransactionId);
+      } catch (releaseErr) {
+        console.error('[restrictedFunds] Release failed:', releaseErr.message);
+      }
       await receiverWallet.update({ balance: receiverNewBalance });
 
       // Create transaction records
-      const senderTransactionId = `TXN-${Date.now()}-SEND`;
-      const receiverTransactionId = `TXN-${Date.now()}-RECEIVE`;
       
       // Use the user-entered description if provided, otherwise create a default one
       const userDescription = description || 'Money transfer';

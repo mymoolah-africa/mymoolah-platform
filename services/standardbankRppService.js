@@ -112,6 +112,12 @@ async function initiateRppPayment(params) {
 
     // Debit wallet (principal + total fee)
     await wallet.debit(totalDebit, 'debit', { transaction: txn });
+    try {
+      const { releaseRestrictedFunds } = require('./restrictedFundsService');
+      await releaseRestrictedFunds(wallet, totalDebit, merchantTransactionId, { transaction: txn });
+    } catch (releaseErr) {
+      console.error('[restrictedFunds] Release failed:', releaseErr.message);
+    }
 
     // Record SBSA transaction
     const sbt = await db.StandardBankTransaction.create(

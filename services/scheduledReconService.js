@@ -59,6 +59,7 @@ class ScheduledReconService {
     await this._checkCommissionIntegrity();
     await this._checkNegativeWallets();
     await this._checkSolvency();
+    await this._checkRestrictedBalance();
 
     const elapsedMs = Date.now() - startMs;
     const verdict = this.failCount > 0 ? 'FAIL' : this.warnCount > 0 ? 'WARN' : 'PASS';
@@ -257,12 +258,48 @@ class ScheduledReconService {
     `, { type: sequelize.QueryTypes.SELECT });
     const clientFloat = parseFloat(clientRow?.balance || 0);
 
-    const backingAssets = bankBal + totalFloats;
+    const [restrictedRow] = await sequelize.query(`
+      SELECT
+        COALESCE(SUM(CASE WHEN jl.dc = 'credit' THEN jl.amount ELSE 0 END), 0) -
+        COALESCE(SUM(CASE WHEN jl.dc = 'debit' THEN jl.amount ELSE 0 END), 0) AS balance
+      FROM journal_lines jl
+      JOIN ledger_accounts la ON la.id = jl."accountId"
+      WHERE la.code = '2100-01-02'
+    `, { type: sequelize.QueryTypes.SELECT });
+    const restrictedFloat = parseFloat(restrictedRow?.balance || 0);
 
-    if (clientFloat <= backingAssets + 0.01) {
-      this._pass('SOLVENCY', `Client Float R${clientFloat.toFixed(2)} <= Bank R${bankBal.toFixed(2)} + Floats R${totalFloats.toFixed(2)} = R${backingAssets.toFixed(2)}`);
+    const backingAssets = bankBal + totalFloats;
+    const totalClientLiability = clientFloat + restrictedFloat;
+
+    if (totalClientLiability <= backingAssets + 0.01) {
+      this._pass('SOLVENCY', `Client+Restricted R${totalClientLiability.toFixed(2)} (2100-01-01 R${clientFloat.toFixed(2)} + 2100-01-02 R${restrictedFloat.toFixed(2)}) <= Bank R${bankBal.toFixed(2)} + Floats R${totalFloats.toFixed(2)} = R${backingAssets.toFixed(2)}`);
     } else {
-      this._fail('SOLVENCY', `Client Float R${clientFloat.toFixed(2)} > Bank R${bankBal.toFixed(2)} + Floats R${totalFloats.toFixed(2)} = R${backingAssets.toFixed(2)} — UNDERFUNDED R${(clientFloat - backingAssets).toFixed(2)}`);
+      this._fail('SOLVENCY', `Client+Restricted R${totalClientLiability.toFixed(2)} (2100-01-01 R${clientFloat.toFixed(2)} + 2100-01-02 R${restrictedFloat.toFixed(2)}) > Bank R${bankBal.toFixed(2)} + Floats R${totalFloats.toFixed(2)} = R${backingAssets.toFixed(2)} — UNDERFUNDED R${(totalClientLiability - backingAssets).toFixed(2)}`);
+    }
+  }
+
+  async _checkRestrictedBalance() {
+    const [walletRow] = await sequelize.query(
+      'SELECT COALESCE(SUM(restricted_balance), 0) AS total FROM wallets WHERE restricted_balance > 0',
+      { type: sequelize.QueryTypes.SELECT }
+    );
+    const walletRestricted = parseFloat(walletRow?.total || 0);
+
+    const [ledgerRow] = await sequelize.query(`
+      SELECT
+        COALESCE(SUM(CASE WHEN jl.dc = 'credit' THEN jl.amount ELSE 0 END), 0) -
+        COALESCE(SUM(CASE WHEN jl.dc = 'debit' THEN jl.amount ELSE 0 END), 0) AS balance
+      FROM journal_lines jl
+      JOIN ledger_accounts la ON la.id = jl."accountId"
+      WHERE la.code = '2100-01-02'
+    `, { type: sequelize.QueryTypes.SELECT });
+    const ledgerRestricted = parseFloat(ledgerRow?.balance || 0);
+
+    const diff = Math.abs(walletRestricted - ledgerRestricted);
+    if (diff <= 0.01) {
+      this._pass('RESTRICTED_BALANCE', `Wallet restricted (R${walletRestricted.toFixed(2)}) = Ledger 2100-01-02 (R${ledgerRestricted.toFixed(2)})`);
+    } else {
+      this._fail('RESTRICTED_BALANCE', `DRIFT: Wallet restricted (R${walletRestricted.toFixed(2)}) vs Ledger 2100-01-02 (R${ledgerRestricted.toFixed(2)}) DIFF=R${diff.toFixed(2)}`);
     }
   }
 

@@ -233,17 +233,24 @@ module.exports = {
         return res.status(400).json({ success: false, message: 'Insufficient balance' });
       }
 
-      const newPayerBal = parseFloat(payerWallet.balance) - parseFloat(pr.amount);
-      const newRequesterBal = parseFloat(requesterWallet.balance) + parseFloat(pr.amount);
-      await payerWallet.update({ balance: newPayerBal }, { transaction: t });
-      await requesterWallet.update({ balance: newRequesterBal }, { transaction: t });
-
-      // BANKING-GRADE APPROACH: Unique transaction IDs with payment request ID
-      // Database unique constraint on transactionId prevents duplicates
       const timestamp = Date.now();
       const randomSuffix = Math.random().toString(36).substring(2, 8).toUpperCase();
       const senderTransactionId = `TXN-${timestamp}-PR${pr.id}-SEND-${randomSuffix}`;
       const receiverTransactionId = `TXN-${timestamp}-PR${pr.id}-RECV-${randomSuffix}`;
+
+      const newPayerBal = parseFloat(payerWallet.balance) - parseFloat(pr.amount);
+      const newRequesterBal = parseFloat(requesterWallet.balance) + parseFloat(pr.amount);
+      await payerWallet.update({ balance: newPayerBal }, { transaction: t });
+      try {
+        const { releaseRestrictedFunds } = require('../services/restrictedFundsService');
+        await releaseRestrictedFunds(payerWallet, pr.amount, senderTransactionId, { transaction: t });
+      } catch (releaseErr) {
+        console.error('[restrictedFunds] Release failed:', releaseErr.message);
+      }
+      await requesterWallet.update({ balance: newRequesterBal }, { transaction: t });
+
+      // BANKING-GRADE APPROACH: Unique transaction IDs with payment request ID
+      // Database unique constraint on transactionId prevents duplicates
       
       const userDescription = pr.description || 'Payment request';
       const senderDesc = `${requester.firstName} ${requester.lastName} | ${userDescription}`.trim();

@@ -1,5 +1,44 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-09 - Flash Voucher Deposit Ringfencing — AML Cash-Out Restriction (v2.93.0)
+
+### Summary
+Implemented dual-layer ringfencing for Flash voucher deposits (1Voucher, FNB Voucher, Flash Pay) to prevent cash-out of voucher-deposited funds (AML/FICA compliance). Fixed missing main deposit journal entry in the Flash voucher top-up flow and wrapped the deposit in an atomic Sequelize transaction.
+
+### Architecture
+- **Ledger sub-account `2100-01-02`** (Client Float Liability — Restricted) tracks restricted funds in double-entry ledger
+- **Wallet column `restricted_balance`** provides fast O(1) runtime enforcement
+- **Reconciliation** verifies `SUM(wallets.restricted_balance) = 2100-01-02 net balance` hourly
+
+### New Files
+- `migrations/20260409_01_add_restricted_balance_and_voucher_deposit_account.js` — adds `restricted_balance` column + seeds `2100-01-02`
+- `services/restrictedFundsService.js` — `postVoucherDepositAndRestriction()`, `releaseRestrictedFunds()` centralized helpers
+
+### Features
+- **Cash-out enforcement (3 channels BLOCKED):** eeziCash PIN (app + USSD), EasyPay cash-out voucher — restricted funds cannot be cashed out
+- **Restriction release (FIFO):** All allowed spend paths (VAS, QR, P2P, PayShap RPP, MoolahMove, EasyPay standalone) decrement `restricted_balance` and post release journal entries
+- **Deposit journal entries (previously missing):** `DR 1200-10-04 Flash Float / CR 2100-01-01 Client Float` + restriction tracking JE
+
+### Modified Files
+- `models/Wallet.js` — `restrictedBalance` field, `canCashOut()`, `spendRestricted()` methods
+- `controllers/flashController.js` — atomic deposit flow, restriction tracking, cash-out enforcement on `purchaseCashOutPin`
+- `controllers/voucherController.js` — cash-out enforcement on `issueEasyPayCashout`, release on standalone voucher
+- `services/ussdMenuService.js` — cash-out enforcement on `purchaseEeziVoucher`, release on allowed USSD flows
+- `routes/overlayServices.js` — release on VAS airtime/data/electricity/bills
+- `services/productPurchaseService.js` — release on voucher purchases
+- `controllers/qrPaymentController.js` — release on QR payment
+- `controllers/walletController.js` — release on P2P send
+- `services/standardbankRppService.js` — release on PayShap RPP
+- `controllers/requestController.js` — release on payment request approve
+- `services/scheduledReconService.js` — `_checkRestrictedBalance()` solvency check, updated solvency equation
+- `scripts/production-full-audit.js` — restricted balance integrity check (section 3d)
+
+### Documentation
+- `docs/CHART_OF_ACCOUNTS.md` — account `2100-01-02`, journal templates (3.16), solvency update, env var
+- `docs/FLASH_VOUCHER_RINGFENCING_UNDERTAKING.md` — formal undertaking email to Flash
+
+---
+
 ## 2026-04-08 - Disbursement portal fixes, client users, Codespaces docs (v2.92.0)
 
 ### Summary

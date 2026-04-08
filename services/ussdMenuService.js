@@ -484,7 +484,7 @@ async function handleCashOutConfirm(session, input) {
   const total = parseFloat((amount + SMS_FEE_AMOUNT).toFixed(2));
   const userId = session.data.userId;
 
-  const balCheck = await checkBalanceAndLimits(userId, total);
+  const balCheck = await checkBalanceAndLimits(userId, total, { isCashOut: true });
   if (!balCheck.ok) return endSession(balCheck.message);
 
   try {
@@ -781,15 +781,23 @@ async function getWalletBalance(userId) {
   return parseFloat(rows[0].balance).toFixed(2);
 }
 
-async function checkBalanceAndLimits(userId, amountRand) {
+async function checkBalanceAndLimits(userId, amountRand, options = {}) {
   const [walletRows] = await sequelize.query(
-    'SELECT balance FROM wallets WHERE "userId" = $1 LIMIT 1',
+    'SELECT balance, restricted_balance FROM wallets WHERE "userId" = $1 LIMIT 1',
     { bind: [userId] }
   );
   if (!walletRows.length) return { ok: false, message: 'Wallet not found.' };
   const balance = parseFloat(walletRows[0].balance);
   if (balance < amountRand) {
     return { ok: false, message: `Insufficient balance. Bal: R${balance.toFixed(2)}` };
+  }
+
+  if (options.isCashOut) {
+    const restricted = parseFloat(walletRows[0].restricted_balance || 0);
+    const unrestricted = balance - restricted;
+    if (unrestricted < amountRand) {
+      return { ok: false, message: `Voucher deposit funds cannot be cashed out. Available: R${Math.max(0, unrestricted).toFixed(2)}` };
+    }
   }
 
   const [userRows] = await sequelize.query(
@@ -878,10 +886,10 @@ async function purchaseEeziVoucher(userId, amountRand, sessionId) {
       return { success: false, error: 'Wallet not found.' };
     }
 
-    const canDebit = wallet.canDebit(amountRand);
-    if (!canDebit.allowed) {
+    const cashOutCheck = wallet.canCashOut(amountRand);
+    if (!cashOutCheck.allowed) {
       await t.rollback();
-      return { success: false, error: canDebit.reason === 'Insufficient balance' ? 'Insufficient balance.' : canDebit.reason };
+      return { success: false, error: cashOutCheck.reason === 'Insufficient balance' ? 'Insufficient balance.' : cashOutCheck.reason };
     }
 
     const accountNumber = process.env.FLASH_ACCOUNT_NUMBER;
@@ -982,11 +990,19 @@ async function purchaseEeziProduct(userId, amountRand, sessionId, isEeziPower) {
     const eeziPin = extractPinFromResponse(response);
     if (!eeziPin) { await t.rollback(); return { success: false, error: 'PIN not received. Try again.' }; }
 
-    await wallet.debit(amountRand, 'withdraw', { transaction: t });
-
     const productLabel = isEeziPower ? 'eeziPower' : 'eeziAirtime';
     const vasType = isEeziPower ? 'electricity' : 'airtime';
     const txnId = `TXN-USSD-${Date.now()}-${productLabel.toUpperCase()}`;
+
+    await wallet.debit(amountRand, 'withdraw', { transaction: t });
+
+    try {
+      const { releaseRestrictedFunds } = require('./restrictedFundsService');
+      await releaseRestrictedFunds(wallet, amountRand, txnId, { transaction: t });
+    } catch (releaseErr) {
+      console.error('[restrictedFunds] Release failed:', releaseErr.message);
+    }
+
     await Transaction.create({
       transactionId: txnId,
       userId,
@@ -1072,9 +1088,17 @@ async function purchaseVoucherByBrand(userId, brand, amountRand, sessionId) {
 
     if (!pin) { await t.rollback(); return { success: false, error: 'Voucher PIN not received.' }; }
 
+    const txnId = `TXN-USSD-${Date.now()}-VOUCHER`;
+
     await wallet.debit(amountRand, 'payment', { transaction: t });
 
-    const txnId = `TXN-USSD-${Date.now()}-VOUCHER`;
+    try {
+      const { releaseRestrictedFunds } = require('./restrictedFundsService');
+      await releaseRestrictedFunds(wallet, amountRand, txnId, { transaction: t });
+    } catch (releaseErr) {
+      console.error('[restrictedFunds] Release failed:', releaseErr.message);
+    }
+
     await Transaction.create({
       transactionId: txnId,
       userId,
@@ -1112,11 +1136,20 @@ async function sendMoneyToUser(senderId, receiverId, amountRand, sessionId, send
     const receiverWallet = await Wallet.findOne({ where: { userId: receiverId }, lock: t.LOCK.UPDATE, transaction: t });
     if (!receiverWallet) { await t.rollback(); return { success: false, error: 'Receiver wallet not found.' }; }
 
+    const senderTxnId = `TXN-USSD-${Date.now()}-SEND`;
+
     await senderWallet.debit(amountRand, 'send', { transaction: t });
+
+    try {
+      const { releaseRestrictedFunds } = require('./restrictedFundsService');
+      await releaseRestrictedFunds(senderWallet, amountRand, senderTxnId, { transaction: t });
+    } catch (releaseErr) {
+      console.error('[restrictedFunds] Release failed:', releaseErr.message);
+    }
+
     const newReceiverBal = parseFloat(receiverWallet.balance) + amountRand;
     await receiverWallet.update({ balance: newReceiverBal }, { transaction: t });
 
-    const senderTxnId = `TXN-USSD-${Date.now()}-SEND`;
     const receiverTxnId = `TXN-USSD-${Date.now()}-RECV`;
 
     await Transaction.create({

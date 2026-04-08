@@ -95,6 +95,15 @@ module.exports = (sequelize, DataTypes) => {
         min: 0,
       },
     },
+    restrictedBalance: {
+      type: DataTypes.DECIMAL(15, 2),
+      allowNull: true,
+      defaultValue: 0.00,
+      field: 'restricted_balance',
+      validate: {
+        min: 0,
+      },
+    },
     lastTransactionAt: {
       type: DataTypes.DATE,
       allowNull: true,
@@ -273,6 +282,42 @@ module.exports = (sequelize, DataTypes) => {
     
     await this.save(options);
     return this;
+  };
+
+  /**
+   * Check if the wallet has enough UNRESTRICTED balance for a cash-out.
+   * Flash voucher deposit funds are ringfenced and cannot be cashed out.
+   * Use this instead of canDebit() at all cash-out enforcement points.
+   */
+  Wallet.prototype.canCashOut = function(amount, options = {}) {
+    const numericAmount = parseFloat(amount);
+    const restricted = parseFloat(this.restrictedBalance || 0);
+    const unrestricted = parseFloat(this.balance) - restricted;
+
+    if (unrestricted < numericAmount) {
+      const shortfall = (numericAmount - unrestricted).toFixed(2);
+      return {
+        allowed: false,
+        reason: `Insufficient unrestricted balance for cash-out. R${shortfall} of your balance is from voucher deposits and cannot be cashed out. Available for cash-out: R${Math.max(0, unrestricted).toFixed(2)}`
+      };
+    }
+
+    return this.canDebit(numericAmount, options);
+  };
+
+  /**
+   * Decrement restricted_balance when spending on an allowed service (FIFO).
+   * Returns the amount released. Does NOT post ledger entries (caller or
+   * restrictedFundsService.releaseRestrictedFunds handles that).
+   */
+  Wallet.prototype.spendRestricted = async function(amount, options = {}) {
+    const restricted = parseFloat(this.restrictedBalance || 0);
+    if (restricted <= 0) return 0;
+
+    const release = Math.min(restricted, parseFloat(amount));
+    this.restrictedBalance = parseFloat((restricted - release).toFixed(2));
+    await this.save(options);
+    return release;
   };
 
   Wallet.prototype.verifyKYC = async function(verifiedBy = 'system') {

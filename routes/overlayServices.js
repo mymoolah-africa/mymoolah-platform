@@ -1846,6 +1846,13 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
       // Debit purchaser wallet (only after successful MobileMart fulfillment)
       await wallet.debit(normalizedAmount, 'payment', { transaction });
 
+      try {
+        const { releaseRestrictedFunds } = require('../services/restrictedFundsService');
+        await releaseRestrictedFunds(wallet, normalizedAmount, vasTransactionId);
+      } catch (releaseErr) {
+        console.error('[restrictedFunds] Release failed:', releaseErr.message);
+      }
+
       // Create wallet ledger transaction
       const ledgerTransactionId = `TXN-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
 
@@ -2835,6 +2842,13 @@ router.post('/electricity/purchase', auth, async (req, res) => {
     // Debit wallet for electricity purchase
     await wallet.debit(amount, 'payment');
 
+    try {
+      const { releaseRestrictedFunds } = require('../services/restrictedFundsService');
+      await releaseRestrictedFunds(wallet, amount, transactionId);
+    } catch (releaseErr) {
+      console.error('[restrictedFunds] Release failed:', releaseErr.message);
+    }
+
     // Create wallet ledger transaction for history
     const ledgerTransactionId = `TXN-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
     const { Transaction } = require('../models');
@@ -3572,6 +3586,13 @@ router.post('/bills/pay', auth, async (req, res) => {
 
     // Debit wallet for bill payment
     await wallet.debit(amount, 'payment');
+
+    try {
+      const { releaseRestrictedFunds } = require('../services/restrictedFundsService');
+      await releaseRestrictedFunds(wallet, amount, transactionId);
+    } catch (releaseErr) {
+      console.error('[restrictedFunds] Release failed:', releaseErr.message);
+    }
 
     // Create wallet ledger transaction for history
     const ledgerTransactionId = `TXN-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;

@@ -638,7 +638,9 @@ class FlashController {
             const feeCents = Math.round(faceValueCents * FLASH_FEE_RATE);
             const netDepositCents = faceValueCents - feeCents;
 
-            const { Wallet, Transaction, VasTransaction, VasProduct } = require('../models');
+            const { Wallet, Transaction, VasTransaction, VasProduct, sequelize } = require('../models');
+            const { postVoucherDepositAndRestriction } = require('../services/restrictedFundsService');
+
             const wallet = await Wallet.findOne({ where: { userId: req.user.id } });
 
             if (!wallet) {
@@ -666,64 +668,96 @@ class FlashController {
                 }
             });
 
-            const vasTransactionId = `VAS-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
-            await VasTransaction.create({
-                transactionId: vasTransactionId,
-                userId: req.user.id,
-                walletId: wallet.walletId,
-                vasProductId: vasProduct.id,
-                vasType: 'voucher_topup',
-                transactionType: 'topup',
-                supplierId: 'FLASH',
-                supplierProductId: `FLASH_${voucherType.toUpperCase()}_TOPUP`,
-                amount: faceValueCents,
-                fee: feeCents,
-                totalAmount: netDepositCents,
-                mobileNumber: null,
-                status: 'completed',
-                reference,
-                supplierReference: flashResponse?.transactionId || flashResponse?.reference || reference,
-                metadata: {
-                    voucherType,
-                    productCode,
-                    pin: `****${pin.slice(-4)}`,
-                    faceValueCents,
-                    feeCents,
-                    feeRate: FLASH_FEE_RATE,
-                    netDepositCents,
-                    useFlashAPI,
-                    flashResponse: useFlashAPI ? flashResponse : null,
-                    processedAt: new Date().toISOString()
-                }
-            });
+            const netDepositRand = netDepositCents / 100;
+            const faceValueRand = faceValueCents / 100;
+            const feeRand = feeCents / 100;
 
-            await wallet.credit(netDepositCents / 100, 'deposit');
-            console.log(`💳 Wallet credited: R${(netDepositCents / 100).toFixed(2)} (face R${(faceValueCents / 100).toFixed(2)} − fee R${(feeCents / 100).toFixed(2)})`);
-
-            const mainTransactionId = `VTOP-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
-            await Transaction.create({
-                transactionId: mainTransactionId,
-                userId: req.user.id,
-                walletId: wallet.walletId,
-                amount: netDepositCents / 100,
-                type: 'deposit',
-                status: 'completed',
-                description: `${voucherType === 'fnb' ? 'FNB Voucher' : voucherType === 'flashpay' ? 'Flash Pay' : '1Voucher'} top-up`,
-                currency: wallet.currency,
-                fee: feeCents / 100,
-                metadata: {
-                    vasTransactionId,
+            const t = await sequelize.transaction();
+            let mainTransactionId;
+            try {
+                const vasTransactionId = `VAS-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+                await VasTransaction.create({
+                    transactionId: vasTransactionId,
+                    userId: req.user.id,
+                    walletId: wallet.walletId,
+                    vasProductId: vasProduct.id,
                     vasType: 'voucher_topup',
-                    voucherType,
+                    transactionType: 'topup',
+                    supplierId: 'FLASH',
+                    supplierProductId: `FLASH_${voucherType.toUpperCase()}_TOPUP`,
+                    amount: faceValueCents,
+                    fee: feeCents,
+                    totalAmount: netDepositCents,
+                    mobileNumber: null,
+                    status: 'completed',
                     reference,
-                    supplierCode: 'FLASH',
-                    operationType: 'voucher_topup',
-                    faceValue: faceValueCents / 100,
-                    fee: feeCents / 100,
-                    feeRate: `${FLASH_FEE_RATE * 100}%`,
-                    isVoucherTopup: true
-                }
-            });
+                    supplierReference: flashResponse?.transactionId || flashResponse?.reference || reference,
+                    metadata: {
+                        voucherType,
+                        productCode,
+                        pin: `****${pin.slice(-4)}`,
+                        faceValueCents,
+                        feeCents,
+                        feeRate: FLASH_FEE_RATE,
+                        netDepositCents,
+                        useFlashAPI,
+                        flashResponse: useFlashAPI ? flashResponse : null,
+                        processedAt: new Date().toISOString()
+                    }
+                }, { transaction: t });
+
+                await wallet.credit(netDepositRand, 'deposit', { transaction: t });
+
+                const currentRestricted = parseFloat(wallet.restrictedBalance || 0);
+                wallet.restrictedBalance = parseFloat((currentRestricted + netDepositRand).toFixed(2));
+                await wallet.save({ transaction: t });
+
+                console.log(`Wallet credited: R${netDepositRand.toFixed(2)} (face R${faceValueRand.toFixed(2)} - fee R${feeRand.toFixed(2)}), restricted: R${wallet.restrictedBalance}`);
+
+                mainTransactionId = `VTOP-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+                await Transaction.create({
+                    transactionId: mainTransactionId,
+                    userId: req.user.id,
+                    walletId: wallet.walletId,
+                    amount: netDepositRand,
+                    type: 'deposit',
+                    status: 'completed',
+                    description: `${voucherType === 'fnb' ? 'FNB Voucher' : voucherType === 'flashpay' ? 'Flash Pay' : '1Voucher'} top-up`,
+                    currency: wallet.currency,
+                    fee: feeRand,
+                    metadata: {
+                        vasTransactionId,
+                        vasType: 'voucher_topup',
+                        voucherType,
+                        reference,
+                        supplierCode: 'FLASH',
+                        operationType: 'voucher_topup',
+                        faceValue: faceValueRand,
+                        fee: feeRand,
+                        feeRate: `${FLASH_FEE_RATE * 100}%`,
+                        isVoucherTopup: true,
+                        isRestricted: true,
+                        restrictionSource: 'flash_voucher'
+                    }
+                }, { transaction: t });
+
+                await t.commit();
+            } catch (txError) {
+                await t.rollback();
+                throw txError;
+            }
+
+            try {
+                await postVoucherDepositAndRestriction({
+                    reference,
+                    netDepositRand,
+                    faceValueRand,
+                    description: `Flash ${voucherType} voucher deposit`
+                });
+                console.log(`Ledger posted: deposit + restriction JEs for ${reference}`);
+            } catch (ledgerError) {
+                console.error('Voucher deposit/restriction ledger posting failed:', ledgerError.message);
+            }
 
             try {
                 const { postCommissionVatAndLedger } = require('../services/commissionVatService');
@@ -732,13 +766,13 @@ class FlashController {
                     supplierCode: 'FLASH',
                     serviceType: 'voucher_topup',
                     walletTransactionId: mainTransactionId,
-                    sourceTransactionId: vasTransactionId,
+                    sourceTransactionId: mainTransactionId,
                     idempotencyKey: reference,
                     purchaserUserId: req.user.id
                 });
-                console.log(`📒 Ledger posted: Flash voucher fee R${(feeCents / 100).toFixed(2)}`);
+                console.log(`Ledger posted: Flash voucher fee R${feeRand.toFixed(2)}`);
             } catch (ledgerError) {
-                console.error('⚠️ Voucher top-up ledger posting failed:', ledgerError.message);
+                console.error('Voucher top-up commission ledger posting failed:', ledgerError.message);
             }
 
             try {
@@ -760,19 +794,20 @@ class FlashController {
                     }
                 });
             } catch (auditErr) {
-                console.error('⚠️ FlashTransaction audit record failed:', auditErr.message);
+                console.error('FlashTransaction audit record failed:', auditErr.message);
             }
 
             res.json({
                 success: true,
                 data: {
-                    faceValue: faceValueCents / 100,
-                    fee: feeCents / 100,
+                    faceValue: faceValueRand,
+                    fee: feeRand,
                     feeRate: `${FLASH_FEE_RATE * 100}%`,
-                    netDeposit: netDepositCents / 100,
+                    netDeposit: netDepositRand,
                     transactionId: mainTransactionId,
                     reference,
                     voucherType,
+                    restricted: true,
                     timestamp: new Date().toISOString()
                 }
             });
@@ -1077,14 +1112,15 @@ class FlashController {
                 });
             }
 
-            // Check sufficient balance
-            if (wallet.balance < (totalCustomerChargeCents / 100)) {
+            // Cash-out restriction: Flash voucher deposits cannot be cashed out (AML ringfencing)
+            const cashOutCheck = wallet.canCashOut(totalCustomerChargeCents / 100);
+            if (!cashOutCheck.allowed) {
                 return res.status(400).json({
                     success: false,
-                    error: 'Insufficient wallet balance',
+                    error: cashOutCheck.reason,
                     details: {
                         required: totalCustomerChargeCents / 100,
-                        available: wallet.balance
+                        available: parseFloat(wallet.balance) - parseFloat(wallet.restrictedBalance || 0)
                     }
                 });
             }

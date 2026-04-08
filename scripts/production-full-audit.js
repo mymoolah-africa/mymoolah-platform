@@ -16,6 +16,7 @@
  *   3. Wallet reconciliation: wallet.balance matches net transaction flow
  *   3b. Negative wallet balance detection (material weakness)
  *   3c. Wallet aggregate vs ledger account 2100-01-01
+ *   3d. Restricted balance: wallets.restricted_balance vs ledger 2100-01-02
  *   4. Float reconciliation: supplier_floats.currentBalance matches ledger
  *
  *  COMPLETENESS:
@@ -257,6 +258,27 @@ function journalRefLinksVas(refs, vasTransactionId, vasTsKey, walletTxnId, maxDr
       fail(`Wallet aggregate (${money(walletAggregate)}) != Ledger 2100-01-01 (${money(walletLedgerBal)}) DIFF=${money(walletLedgerDiff)}`, 'ACCURACY');
     } else {
       pass(`Wallet aggregate (${money(walletAggregate)}) = Ledger 2100-01-01 (${money(walletLedgerBal)})`, 'ACCURACY');
+    }
+
+    section('Restricted Balance Integrity');
+    const restrictedWalletResult = await c.query('SELECT COALESCE(SUM(restricted_balance), 0) AS total FROM wallets WHERE restricted_balance > 0');
+    const restrictedWalletTotal = parseFloat(restrictedWalletResult.rows[0].total || 0);
+
+    const restrictedLedgerResult = await c.query(`
+      SELECT
+        COALESCE(SUM(CASE WHEN jl.dc = 'credit' THEN jl.amount ELSE 0 END), 0) -
+        COALESCE(SUM(CASE WHEN jl.dc = 'debit' THEN jl.amount ELSE 0 END), 0) as ledger_balance
+      FROM journal_lines jl
+      JOIN ledger_accounts la ON la.id = jl."accountId"
+      WHERE la.code = '2100-01-02'
+    `);
+    const restrictedLedgerTotal = parseFloat(restrictedLedgerResult.rows[0].ledger_balance || 0);
+    const restrictedDiff = Math.abs(restrictedWalletTotal - restrictedLedgerTotal);
+
+    if (restrictedDiff > 0.01) {
+      fail(`Restricted balance drift: Wallets (${money(restrictedWalletTotal)}) != Ledger 2100-01-02 (${money(restrictedLedgerTotal)}) DIFF=${money(restrictedDiff)}`, 'ACCURACY');
+    } else {
+      pass(`Restricted balance: Wallets (${money(restrictedWalletTotal)}) = Ledger 2100-01-02 (${money(restrictedLedgerTotal)})`, 'ACCURACY');
     }
 
     // MyMoolah-issued vouchers only (portal "MyMoolah Voucher" — not EasyPay / overlay catalog)

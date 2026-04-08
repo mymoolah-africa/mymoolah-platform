@@ -81,6 +81,7 @@ clearing accounts, and funds held on behalf of others. Normal side: **credit**
 | Code | Name | Normal | Migration | Used By | Notes |
 |------|------|--------|-----------|---------|-------|
 | `2100-01-01` | Client Float Liability | credit | `20260224_03` | walletController, requestController, voucherController, overlayServices, flashController, rtpService, rppService, referralPayoutService, productPurchaseService, backfill scripts | **Core account** — aggregate of all user wallet balances; must equal `Σ wallets.balance` |
+| `2100-01-02` | Client Float Liability — Restricted (Voucher Deposits) | credit | `20260409_01` | `restrictedFundsService.js`, `flashController.js` | Ring-fenced Flash voucher deposit funds (1Voucher, FNB Voucher, Flash Pay); cannot be cashed out; released when spent on allowed services |
 | `2100-02-01` | Client Clearing Account | credit | `20260224_03` | — | Settlement clearing between client and MMTP (reserved) |
 | `2100-05-01` | Merchant Ad Float | credit | `20260224_03` | `adService.js` | Watch-to-Earn merchant prefunded float |
 | `2200-01-01` | MM Commission Clearing | credit | `20260224_03` | `commissionVatService.js`, `qrPaymentController.js` | Commission holding before recognition |
@@ -228,6 +229,38 @@ Reference: VOUCHER-REDEEM-{transactionId}
 DR  2500-01-01  Voucher Clearing                 R{amount}
 CR  2100-01-01  Client Float Liability           R{amount}
 ```
+
+### 3.16 Flash Voucher Deposit (Cash-In via 1Voucher / FNB Voucher / Flash Pay)
+
+User redeems a Flash voucher PIN to top up their wallet. Flash charges 4% acceptance fee.
+Deposit is ringfenced — cannot be used for cash-out (AML control).
+
+```
+Reference: VTOP-DEP-{reference}
+
+DR  1200-10-04  Flash Float Account                    R{faceValue}
+CR  2100-01-01  Client Float Liability                 R{netDeposit}
+```
+
+Restriction tracking (posted alongside deposit):
+
+```
+Reference: VTOP-RESTRICT-{reference}
+
+DR  2100-01-01  Client Float Liability                 R{netDeposit}
+CR  2100-01-02  Client Float — Restricted              R{netDeposit}
+```
+
+Restriction release (when user spends on allowed services):
+
+```
+Reference: RESTRICT-RELEASE-{transactionId}
+
+DR  2100-01-02  Client Float — Restricted              R{releaseAmount}
+CR  2100-01-01  Client Float Liability                 R{releaseAmount}
+```
+
+Where `releaseAmount = min(restricted_balance, spend_amount)` (FIFO).
 
 ### 3.8 Director Loan Capital Injection
 
@@ -394,7 +427,7 @@ Tolerance: **R0.01**. Variance above this is a **CRITICAL FAIL**.
 ### 5.2 Client Fund Safeguarding (CRITICAL)
 
 ```
-Client Float Liability (2100-01-01 net balance)
+Client Float Liability (2100-01-01 + 2100-01-02 net balance)
   ≤  Bank (1100-01-01 net balance)
    + Σ Supplier Floats (1200-10-XX net balances)
 ```
@@ -509,7 +542,7 @@ developed in parallel. Claim the next available code within your range.
 | `1300-xx-xx` | Lending Receivables | Loan book, interest receivable | Reserved (Section 9.3) |
 | `1400-xx-xx` | Insurance Assets | Premium receivables, claims recoverable | Reserved (Section 9.4) |
 | `1500-xx-xx` | Investment Assets | MMF holdings, savings instruments | Reserved (Section 9.9) |
-| `2100-01-xx` | Client Float Liabilities | User wallet aggregate | **LIVE** (01 main) |
+| `2100-01-xx` | Client Float Liabilities | User wallet aggregate | **LIVE** (01 main, 02 restricted/voucher) |
 | `2100-02-xx` | Client Clearing | Settlement clearing | **LIVE** (01 clearing) |
 | `2100-05-xx` | Merchant Floats | Ad, loyalty, merchant prefunding | **LIVE** (01 ad float) |
 | `2200-01-xx` | Commission Clearing | Commission holding before recognition | **LIVE** (01 clearing) |
@@ -548,6 +581,7 @@ sensible defaults. This allows per-environment overrides without code changes.
 | Env Var | Default | Account | Used In |
 |---------|---------|---------|---------|
 | `LEDGER_ACCOUNT_CLIENT_FLOAT` | `2100-01-01` | Client Float Liability | walletController, requestController, overlayServices, flashController, referralPayoutService, productPurchaseService, standardbankRtpService, standardbankRppService, standardbankDepositNotificationService |
+| `LEDGER_ACCOUNT_CLIENT_FLOAT_RESTRICTED` | `2100-01-02` | Client Float — Restricted | restrictedFundsService |
 | `LEDGER_ACCOUNT_BANK` | `1100-01-01` | Standard Bank Current Account | standardbankRtpService, standardbankRppService, standardbankDepositNotificationService |
 | `LEDGER_ACCOUNT_UNALLOCATED` | `2600-01-01` | Unallocated Deposits / Suspense | standardbankDepositNotificationService |
 | `LEDGER_ACCOUNT_REFERRAL_PAYABLE` | `2200-03-01` | Referral Commission Payable | referralPayoutService |

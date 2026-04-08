@@ -210,10 +210,16 @@ class ProductPurchaseService {
 
         // Debit wallet and create transaction history
         const debitAmountRand = Number((pricing.totalAmount / 100).toFixed(2));
+        const transactionId = `VOUCHER_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
         await wallet.debit(debitAmountRand, 'payment', { transaction });
 
-        const transactionId = `VOUCHER_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+        try {
+          const { releaseRestrictedFunds } = require('./restrictedFundsService');
+          await releaseRestrictedFunds(wallet, debitAmountRand, transactionId, { transaction });
+        } catch (releaseErr) {
+          console.error('[restrictedFunds] Release failed:', releaseErr.message);
+        }
 
         walletTransaction = await Transaction.create({
           transactionId,

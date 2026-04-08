@@ -775,11 +775,10 @@ exports.issueEasyPayCashout = async (req, res) => {
       return res.status(400).json({ error: 'Wallet is not active' });
     }
 
-    // Check wallet balance
-    if (parseFloat(wallet.balance) < totalRequired) {
-      return res.status(400).json({ 
-        error: `Insufficient balance. Required: R${totalRequired.toFixed(2)} (Voucher: R${amount.toFixed(2)} + Fee: R${userFee.toFixed(2)}). Available: R${parseFloat(wallet.balance).toFixed(2)}` 
-      });
+    // Cash-out restriction: Flash voucher deposits cannot be cashed out (AML ringfencing)
+    const cashOutCheck = wallet.canCashOut(totalRequired);
+    if (!cashOutCheck.allowed) {
+      return res.status(400).json({ error: cashOutCheck.reason });
     }
 
     // Get EasyPay Cash-out Float Account
@@ -1060,8 +1059,16 @@ exports.issueEasyPayStandaloneVoucher = async (req, res) => {
     try {
       // Use transaction to ensure atomicity
       const result = await sequelize.transaction(async (t) => {
+        const voucherTransactionId = `EPVOUCHER-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         // Debit user wallet (voucher amount + fee)
         await wallet.debit(totalRequired, 'easypay_voucher_creation', { transaction: t });
+
+        try {
+          const { releaseRestrictedFunds } = require('../services/restrictedFundsService');
+          await releaseRestrictedFunds(wallet, totalRequired, voucherTransactionId, { transaction: t });
+        } catch (releaseErr) {
+          console.error('[restrictedFunds] Release failed:', releaseErr.message);
+        }
 
         // Create EasyPay standalone voucher (active immediately, like MMVoucher)
         const voucher = await Voucher.create({
@@ -1086,7 +1093,6 @@ exports.issueEasyPayStandaloneVoucher = async (req, res) => {
         }, { transaction: t });
 
         // Create transaction 1: Voucher purchase debit
-        const voucherTransactionId = `EPVOUCHER-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         await Transaction.create({
           transactionId: voucherTransactionId,
           userId: req.user.id,

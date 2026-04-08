@@ -875,7 +875,15 @@ class QRPaymentController {
       const dbTransactionStart = Date.now();
       const result = await sequelize.transaction(async (t) => {
         // Debit wallet (payment amount + total fee)
+        const transactionId = `QR_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
         await wallet.debit(totalDebitAmount, 'qr_payment', { transaction: t });
+
+        try {
+          const { releaseRestrictedFunds } = require('../services/restrictedFundsService');
+          await releaseRestrictedFunds(wallet, totalDebitAmount, transactionId, { transaction: t });
+        } catch (releaseErr) {
+          console.error('[restrictedFunds] Release failed:', releaseErr.message);
+        }
 
         // Credit Zapper float account with:
         // 1. Payment amount (goes to merchant)
@@ -889,7 +897,6 @@ class QRPaymentController {
         });
 
         // Create payment transaction record (shows invoice amount only, tip is in metadata but not displayed)
-        const transactionId = `QR_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
         const paymentTransaction = await Transaction.create({
           transactionId: transactionId,
           userId: userId,
