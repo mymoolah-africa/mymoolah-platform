@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-09 14:30  
-**Latest Feature**: **Flash Voucher Deposit Ringfencing (v2.93.0)** — Dual-layer AML control: ledger sub-account `2100-01-02` (Client Float Restricted) + wallet `restricted_balance` column. Flash voucher deposits (1Voucher, FNB, Flash Pay) are ringfenced from cash-out (eeziCash, EasyPay cash-out). FIFO release on allowed spend (VAS, QR, P2P, PayShap, bills, EasyPay standalone, MoolahMove). Fixed missing deposit JE + atomic Sequelize transaction in `redeemVoucherTopup`. Hourly recon check for restricted balance drift. Formal undertaking letter drafted for Flash. **NEXT:** Run migration UAT → staging → production. Test and send Flash undertaking. Previous: Disbursement portal hardening (v2.92.0).  
-**Document Version**: 2.93.0  
-**Session logs**: `docs/session_logs/2026-04-09_1400_flash-voucher-ringfencing.md`, `docs/session_logs/2026-04-08_0930_disbursement-portal-codespaces-docs.md`, `docs/session_logs/2026-04-07_2345_disbursement-phase3-complete.md`  
+**Last Updated**: 2026-04-08 17:10  
+**Latest Feature**: **Flash Voucher Audit-Grade Transactions (v2.93.1)** — Critical audit fix: voucher top-up now creates two Transaction records (gross face value + fee debit) with three balanced JEs (gross deposit, fee deduction, restriction), matching eeziCash/EasyPay/QR pattern. Fixed fee display across all screens (confirmation card, info banners). Dashboard groups into net row; Transaction History shows both rows. Migrations already run on UAT + staging + production. **NEXT:** Test Flash Pay voucher type. Send Flash ringfencing undertaking letter. Deploy to production. Previous: Ringfencing v2.93.0, Disbursement portal v2.92.0.  
+**Document Version**: 2.93.1  
+**Session logs**: `docs/session_logs/2026-04-08_1700_flash-voucher-frontend-fixes.md`, `docs/session_logs/2026-04-09_1400_flash-voucher-ringfencing.md`, `docs/session_logs/2026-04-08_0930_disbursement-portal-codespaces-docs.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---

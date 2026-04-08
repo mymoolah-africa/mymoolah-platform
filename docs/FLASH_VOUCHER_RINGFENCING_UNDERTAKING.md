@@ -51,21 +51,29 @@ All Flash voucher deposits are posted to a dedicated sub-liability account in ou
 |---|---|---|---|
 | `2100-01-02` | Client Float Liability — Restricted (Voucher Deposits) | Liability | Credit |
 
-This account is a sub-ledger of our main Client Float Liability (`2100-01-01`) and tracks the aggregate restricted balance across all users. Every Flash voucher deposit generates immutable, idempotent double-entry journal entries:
+This account is a sub-ledger of our main Client Float Liability (`2100-01-01`) and tracks the aggregate restricted balance across all users. Every Flash voucher deposit generates three immutable, idempotent, balanced double-entry journal entries:
 
-**Deposit Journal Entry:**
+**JE1 — Gross Deposit (face value):**
 
 ```
 Reference: VTOP-DEP-{unique-reference}
 
-DEBIT   1200-10-04  Flash Float Account                    R{net_deposit}
-CREDIT  2100-01-01  Client Float Liability                 R{net_deposit}
+DEBIT   1200-10-04  Flash Float Account                    R{face_value}
+CREDIT  2100-01-01  Client Float Liability                 R{face_value}
 ```
 
-Note: Flash Float is debited with the net deposit (face value minus Flash's 4%
-acceptance fee), since Flash deducts the fee at source before daily net settlement.
+**JE2 — Fee Deduction (Flash's 4% excl VAT + 15% VAT = 4.6%):**
 
-**Restriction Tracking Journal Entry (posted atomically with deposit):**
+```
+Reference: VTOP-FEE-{unique-reference}
+
+DEBIT   2100-01-01  Client Float Liability                 R{fee}
+CREDIT  1200-10-04  Flash Float Account                    R{fee}
+```
+
+Net ledger effect on Flash Float: DR face_value − CR fee = DR net_deposit (what Flash settles to MMTP).
+
+**JE3 — Restriction Tracking (posted atomically with deposit):**
 
 ```
 Reference: VTOP-RESTRICT-{unique-reference}

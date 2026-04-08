@@ -1,6 +1,6 @@
 # MyMoolah Treasury Platform — Chart of Accounts
 
-**Last Updated**: 2026-04-04
+**Last Updated**: 2026-04-08
 **Document Version**: 1.0.0
 **Classification**: Internal — Banking-Grade Financial Architecture
 **Owner**: MyMoolah Treasury / Finance
@@ -240,18 +240,23 @@ Deposit is ringfenced — cannot be used for cash-out (AML control).
 
 Example on R100 voucher: fee R4.00 + VAT R0.60 = R4.60 → user receives R95.40.
 
+**JE1 — Gross Deposit (face value):**
 ```
 Reference: VTOP-DEP-{reference}
 
-DR  1200-10-04  Flash Float Account                    R{netDeposit}
-CR  2100-01-01  Client Float Liability                 R{netDeposit}
+DR  1200-10-04  Flash Float Account                    R{faceValue}
+CR  2100-01-01  Client Float Liability                 R{faceValue}
 ```
 
-Note: Flash Float is debited with the NET deposit (face value minus Flash's 4% fee
-minus VAT on fee). No commission JE — MMTP has no revenue on this transaction.
+**JE2 — Fee Deduction (Flash's 4% excl VAT + 15% VAT = 4.6%):**
+```
+Reference: VTOP-FEE-{reference}
 
-Restriction tracking (posted alongside deposit):
+DR  2100-01-01  Client Float Liability                 R{fee}
+CR  1200-10-04  Flash Float Account                    R{fee}
+```
 
+**JE3 — Restriction Tracking (AML ringfence):**
 ```
 Reference: VTOP-RESTRICT-{reference}
 
@@ -259,8 +264,20 @@ DR  2100-01-01  Client Float Liability                 R{netDeposit}
 CR  2100-01-02  Client Float — Restricted              R{netDeposit}
 ```
 
-Restriction release (when user spends on allowed services):
+**Net ledger effect** (e.g. R100 voucher):
+- Flash Float: DR R100 − CR R4.60 = DR R95.40 (receivable from Flash settlement)
+- Client Float (2100-01-01): CR R100 − DR R4.60 − DR R95.40 = 0
+- Client Float Restricted (2100-01-02): CR R95.40
 
+No commission JE — MMTP earns zero markup on this pass-through fee.
+
+**Transaction records** (two rows, matching eeziCash/EasyPay pattern):
+1. +R{faceValue} (type 'deposit', `isVoucherTopupAmount: true`)
+2. −R{fee} (type 'fee', `isTopUpFee: true`)
+
+**Wallet operations**: `wallet.credit(faceValue)` then `wallet.debit(fee)` = net +R{netDeposit}.
+
+**Restriction release** (when user spends on allowed services):
 ```
 Reference: RESTRICT-RELEASE-{transactionId}
 

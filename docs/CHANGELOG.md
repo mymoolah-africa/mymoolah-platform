@@ -1,5 +1,38 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-08 - Flash Voucher Audit-Grade Transactions & Fee Display Fixes (v2.93.1)
+
+### Summary
+Critical audit fix: Flash voucher top-up now creates two separate Transaction records (gross face value + fee) with three balanced journal entries, matching the eeziCash/EasyPay/QR pattern. Fixed fee display across all frontend screens (confirmation card, info banners, Transaction History, Recent Transactions).
+
+### Audit Fix — Banking-Grade Transaction Records
+- **Before**: Single Transaction record with net amount (R95.40), fee buried in metadata, no fee JE — FAIL per auditing skill
+- **After**: Two Transaction records (+R100 deposit, -R4.60 fee) + three balanced JEs (gross deposit, fee deduction, restriction)
+- Wallet operations: `wallet.credit(faceValue)` then `wallet.debit(fee)` = net deposit
+- Matches eeziCash, EasyPay cash-out, and QR payment transaction patterns exactly
+
+### Three Journal Entries (per auditing skill requirements)
+1. **JE1 (Gross Deposit)**: DR 1200-10-04 Flash Float R{faceValue} / CR 2100-01-01 Client Float R{faceValue}
+2. **JE2 (Fee Deduction)**: DR 2100-01-01 Client Float R{fee} / CR 1200-10-04 Flash Float R{fee}
+3. **JE3 (Restriction)**: DR 2100-01-01 Client Float R{netDeposit} / CR 2100-01-02 Client Float Restricted R{netDeposit}
+
+### Frontend Display Fixes
+- **Confirmation card**: `fee` API field returned R4.00 (excl VAT) — fixed to return R4.60 (total incl VAT)
+- **Info banners**: Static text said "4% / R4.00 / R96.00" — corrected to "4% + VAT / R4.60 / R95.40"
+- **Transaction History**: Shows two rows (face value + fee) — backend creates both records natively
+- **Recent Transactions (Dashboard)**: Groups face + fee into single net row (R95.40) via `voucherTopupGroups`
+- **Reverted** frontend-only expansion in TransactionHistoryPage.tsx (no longer needed)
+
+### Modified Files
+- `controllers/flashController.js` — Two Transaction records, gross wallet credit + fee debit, corrected API response `fee` field
+- `services/restrictedFundsService.js` — Three JEs (gross deposit, fee, restriction) instead of two (net-only)
+- `controllers/walletController.js` — Dashboard voucher top-up grouping (face + fee → net row)
+- `mymoolah-wallet-frontend/pages/TransactionHistoryPage.tsx` — Reverted frontend expansion
+- `mymoolah-wallet-frontend/components/overlays/topup-voucher/TopupVoucherOverlay.tsx` — Fee info text corrected
+- `docs/CHART_OF_ACCOUNTS.md` — Section 3.16 updated with 3-JE pattern
+
+---
+
 ## 2026-04-09 - Flash Voucher Deposit Ringfencing — AML Cash-Out Restriction (v2.93.0)
 
 ### Summary
