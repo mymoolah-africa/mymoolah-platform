@@ -38,7 +38,9 @@ alwaysApply: true
 - After completing work, always give André the exact Codespaces commands to test:
   ```bash
   git pull origin main
-  cd mymoolah-wallet-frontend && npm run build && cd ..   # if frontend changed
-  ./scripts/one-click-restart-and-start.sh
+  cd mymoolah-wallet-frontend && npm run build && cd ..   # if wallet frontend changed
+  cd portal/admin/frontend && npm run build && cd ../../..   # if admin portal frontend changed
+  ./scripts/one-click-restart-and-start.sh   # wallet / main API only
   ```
+  For **Admin Portal** or disbursement admin screens, use `./scripts/start-all-services.sh` instead; logs: `tail -f /tmp/mymoolah-logs/backend.log`.
 - When migrations were run: tell André which environments were migrated and the exact commands used

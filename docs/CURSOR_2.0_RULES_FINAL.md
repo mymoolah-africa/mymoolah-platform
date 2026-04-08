@@ -81,7 +81,9 @@ cd mymoolah-wallet-frontend && npm run build && cd ..
 - ❌ `npm start`
 - ❌ Any direct backend restart that bypasses `one-click-restart-and-start.sh`
 
-`./scripts/one-click-restart-and-start.sh` is the ONLY correct way to restart the backend in Codespaces. It handles the Cloud SQL Auth Proxy, Redis container, GCP credentials, DATABASE_URL construction and backend startup in the correct order. Any other method will result in a broken Cloud SQL connection.
+`./scripts/one-click-restart-and-start.sh` is the ONLY correct way to restart **only** the main backend in Codespaces. It handles the Cloud SQL Auth Proxy, Redis container, GCP credentials, DATABASE_URL construction and backend startup in the correct order. Any other method will result in a broken Cloud SQL connection.
+
+**Admin Portal / disbursement admin UI**: When testing the MMTP Admin Portal (Vite on port 3003), use `./scripts/start-all-services.sh` instead so main backend (3001), portal backend (3002), portal frontend (3003), and wallet (3000) all run. Background logs: `tail -f /tmp/mymoolah-logs/backend.log` (and sibling files). See `docs/CODESPACES_TESTING_REQUIREMENT.md` and `docs/PORTAL_DEVELOPMENT_GUIDE.md`.
 
 ---
 

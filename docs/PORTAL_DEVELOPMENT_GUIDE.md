@@ -1,6 +1,6 @@
 # MMTP Admin Portal — Development Guide
 
-**Version**: 1.1.0 (2026-04-07)  
+**Version**: 1.1.1 (2026-04-08)  
 **Status**: Active development — UI overhaul complete, brand logos integrated, building out remaining screens  
 **Skill reference**: `.agents/skills/admin-portal-builder/SKILL.md`
 
@@ -358,7 +358,12 @@ git pull origin main
 cd portal/admin/frontend && npm install && npm run build && cd ../../..
 ./scripts/start-all-services.sh
 ```
-Portal frontend: port 3003, portal backend: port 3002.
+Portal frontend: port 3003, portal backend: port 3002. Main wallet API: port 3001 (required for disbursement and other `/api` calls proxied from Vite).
+
+**Logs** (services run in background; no `pm2` in Codespaces):
+- Main backend: `/tmp/mymoolah-logs/backend.log`
+- Portal backend: `/tmp/mymoolah-logs/portal-backend.log`
+- Portal frontend: `/tmp/mymoolah-logs/portal-frontend.log`
 
 ---
 

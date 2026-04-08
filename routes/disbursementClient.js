@@ -68,9 +68,9 @@ router.post('/',
   strictLimit,
   [
     body('client_code')
+      .trim()
       .notEmpty().withMessage('client_code is required')
-      .isAlphanumeric().withMessage('client_code must be alphanumeric')
-      .isLength({ max: 20 }).withMessage('client_code max 20 characters'),
+      .matches(/^[A-Za-z0-9-]{1,20}$/).withMessage('client_code: letters, numbers, hyphens only (max 20)'),
     body('company_name')
       .notEmpty().withMessage('company_name is required')
       .isLength({ max: 255 }).withMessage('company_name max 255 characters'),

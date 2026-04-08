@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-07 23:45  
-**Latest Feature**: **Disbursement Phase 3 Complete (v2.91.0)** — All SBSA Wage Disbursement Plan sub-phases (A-E) now fully implemented. Phase 3: CSS migration (5 overlays → design system tokens), CRITICAL FIX for maker/checker JWT resolution (`portalUserId` vs `id`), `requireDisbursementAccess` route middleware, SFTP results delivery channel (Sub-phase E), 139 unit tests (feeEngine/clientFloat/fileParser), `docs/DISBURSEMENT_API.md` (852 lines), notification settings UI (Section 4 in client detail), white-label client portal (11 new files: auth, controllers, routes, 6 React pages). **NEXT: Codespaces testing, seed client user for portal, staging deployment.** Previous: Disbursement Wallet Fix (v2.90.0).  
-**Document Version**: 2.91.0  
-**Session logs**: `docs/session_logs/2026-04-07_2345_disbursement-phase3-complete.md`, `docs/session_logs/2026-04-07_2230_disbursement-wallet-fix-rpp-multer.md`  
+**Last Updated**: 2026-04-08 09:45  
+**Latest Feature**: **Disbursement portal hardening (v2.92.0)** — Main API accepts portal JWTs (`JWT_SECRET` + `PORTAL_JWT_SECRET` verify). `listClients` fixed for portal users (`portalUserId` — no more `created_by: undefined` 500). Admin **Client Portal Users**: `GET/POST/PATCH .../disbursement-clients/:id/users` + Section 5 in client detail overlay. `client_code` validation: letters, digits, hyphens (e.g. `MMTP-001`). **Codespaces**: document `start-all-services.sh` for portal (logs `/tmp/mymoolah-logs/*.log`, no pm2). **NEXT:** End-to-end client + client-user + white-label login; staging smoke. Previous: Phase 3 (v2.91.0).  
+**Document Version**: 2.92.0  
+**Session logs**: `docs/session_logs/2026-04-08_0930_disbursement-portal-codespaces-docs.md`, `docs/session_logs/2026-04-07_2345_disbursement-phase3-complete.md`, `docs/session_logs/2026-04-07_2230_disbursement-wallet-fix-rpp-multer.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -102,7 +102,10 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (April 7, 2026 - 23:45)**
+### **Latest Achievement (April 8, 2026 - 09:45)**
+**Disbursement portal hardening (v2.92.0)** — **Auth**: `middleware/auth.js` tries `JWT_SECRET` then `PORTAL_JWT_SECRET` so portal admin tokens work on main-backend routes (`/api/v1/disbursement-clients`, etc.). **listClients**: Portal JWTs carry `portalUserId` not `id`; non-admin branch no longer sets `created_by` to `undefined` (Sequelize 500). Portal callers with `portalUserId` see full client list. **Client portal users**: CRUD under `/api/v1/disbursement-clients/:clientId/users`; `getClient` includes `users` (excludes `password_hash`); admin overlay Section 5. **Validation**: `client_code` pattern `^[A-Za-z0-9-]{1,20}$`. **Docs**: `CODESPACES_TESTING_REQUIREMENT` v1.1.0 (one-click vs `start-all-services.sh`, log paths), `CURSOR_2.0_RULES_FINAL`, `git-workflow.mdc`, `PORTAL_DEVELOPMENT_GUIDE` v1.1.1, `DEVELOPMENT_GUIDE`, `DISBURSEMENT_API`, `SBSA_WAGE_DISBURSEMENT_PLAN` status, `CHANGELOG` v2.92.0. Session log: `docs/session_logs/2026-04-08_0930_disbursement-portal-codespaces-docs.md`.
+
+### **Previous Achievement (April 7, 2026 - 23:45)**
 **Disbursement Phase 3 Complete (v2.91.0)** — All SBSA Wage Disbursement Plan sub-phases (A-E) fully implemented. **CSS migration**: 5 portal overlays migrated from inline hex to design system tokens (`--primary`, `--success-color`, `--destructive`, Tailwind class maps). **CRITICAL FIX**: `disbursementController.js` was using `req.user?.id` which is `undefined` for portal JWTs — added `resolveUserId()` that reads `portalUserId || id`. Added `requireDisbursementAccess` route middleware. **SFTP results delivery** (Sub-phase E): `notificationEngine.js` extended with `buildResultsCsv()` + `sendSftpResults()` via GCS; wired into `disbursementNotificationService.js` (fire-and-forget). **139 unit tests**: `feeEngine` (32), `clientFloatService` (39), `fileParserService` (68) — all passing. **API docs**: `docs/DISBURSEMENT_API.md` (852 lines) — Quick Start, 17 endpoints, webhook contract, ISO 20022 rejection codes, CSV format. **Notification settings UI**: Section 4 added to `DisbursementClientDetailOverlay.tsx` — event types x channels with toggle badges. **White-label client portal**: 11 new files — `clientPortalAuth.js` middleware, auth + portal controllers, routes at `/api/v1/client-portal`, 6 React pages (login, layout, dashboard, runs list, run detail, upload), `ClientAuthContext`, wired in `server.js` + `RouteConfig` + `AppProviders`. Vite build: 1445 modules, zero errors. Session log: `docs/session_logs/2026-04-07_2345_disbursement-phase3-complete.md`.
 
 ### **Previous Achievement (April 7, 2026 - 22:30)**
@@ -274,7 +277,7 @@ The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade fin
 7. Phase 3 (Future): Redis conversation memory across sessions
 8. **Treasury / audit (optional)**: With proxies healthy, re-run `node scripts/production-full-audit.js --production` after material activity; automate referral commission JEs when `referral_earnings` rows are created (see tech debt register — ledger drift was corrected manually Apr 3).
 
-**⚠️ CODESPACES STARTUP — CRITICAL REMINDER**: ALWAYS use `bash scripts/start-codespace-with-proxy.sh` (NOT `npm start`). The backend requires the Cloud SQL Auth Proxy on port 6543. If you get `ECONNREFUSED 127.0.0.1:6543`, the proxy is not running — run the startup script. If you get `EADDRINUSE: 0.0.0.0:3001`, run `fuser -k 3001/tcp` first.
+**⚠️ CODESPACES STARTUP — CRITICAL REMINDER**: Main backend + proxy: `./scripts/one-click-restart-and-start.sh` or `bash scripts/start-codespace-with-proxy.sh` (NOT raw `npm start`). **Admin Portal** (disbursement clients, Vite 3003): `./scripts/start-all-services.sh` — then `tail -f /tmp/mymoolah-logs/backend.log` for errors. Cloud SQL Auth Proxy must listen on 6543. If `ECONNREFUSED 127.0.0.1:6543`, start proxies. If `EADDRINUSE: 0.0.0.0:3001`, free the port first.
 
 **SBSA PayShap UAT** - Obtain OneHub credentials from Standard Bank; run migrations; set STANDARDBANK_PAYSHAP_ENABLED=true and SBSA_* env vars; whitelist callback URLs; test RPP/RTP flows. See `docs/SBSA_PAYSHAP_UAT_GUIDE.md`.
 

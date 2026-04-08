@@ -2,7 +2,7 @@
 
 **Status**: ✅ **MANDATORY** - All testing must be performed in Codespaces  
 **Last Updated**: March 4, 2026  
-**Version**: 1.0.1
+**Version**: 1.1.0
 
 ---
 
@@ -277,13 +277,22 @@ node scripts/test-zapper-credentials.js
 
 ## 🚀 **START SERVICES**
 
-**Backend** (auto-starts on open via postStart). Manual: `npm run start:cs-ip` from project root.
+**Wallet + main API only** (no Admin Portal): `./scripts/one-click-restart-and-start.sh` — Cloud SQL Auth Proxy, Redis (if Docker available), main backend on port **3001**. See `docs/DATABASE_CONNECTION_GUIDE.md` for DB procedures.
 
-**Frontend**: `cd mymoolah-wallet-frontend && npm run dev` (port 3000).
+**Admin Portal + wallet + main API** (recommended for portal, disbursement clients, any UI that proxies `/api` from Vite on **3003**): `./scripts/start-all-services.sh` — starts proxies, main backend (**3001**), wallet dev server (**3000**), portal backend (**3002**), portal frontend (**3003**), sets Codespaces ports to Public. Backend processes run in the background; logs:
 
-**DB Connection**: Use `./scripts/one-click-restart-and-start.sh` — starts Redis, Cloud SQL Auth Proxy, and backend. See `docs/DATABASE_CONNECTION_GUIDE.md` for full DB procedures.
+| Service | Log file |
+|---------|----------|
+| Main backend | `tail -f /tmp/mymoolah-logs/backend.log` |
+| Portal backend | `tail -f /tmp/mymoolah-logs/portal-backend.log` |
+| Portal frontend (Vite) | `tail -f /tmp/mymoolah-logs/portal-frontend.log` |
+| Wallet frontend | `tail -f /tmp/mymoolah-logs/wallet-frontend.log` |
 
-Set `CORS_ORIGINS` in backend `.env` to your 3000 forwarded URL. Set `VITE_API_BASE_URL` in frontend `.env.local` to your backend forwarded host.
+**Note**: `pm2` is not used in Codespaces; use the log files above for debugging (e.g. `listClients`, JWT, DB errors).
+
+Manual alternative: `npm run start:cs-ip` from project root (main backend only). Wallet frontend: `cd mymoolah-wallet-frontend && npm run dev` (port 3000).
+
+Set `CORS_ORIGINS` in backend `.env` to your forwarded URLs. For Vite dev portal, proxy targets are in `portal/admin/frontend/vite.config.ts` (`/api` → 3001, `/api/v1/admin` → 3002).
 
 ---
 
@@ -310,7 +319,7 @@ Before running any tests, verify:
 
 ---
 
-**Last Updated**: January 9, 2025  
+**Last Updated**: April 8, 2026  
 **Maintained By**: MyMoolah Development Team  
 **Status**: ✅ **ACTIVE** - All agents must follow this requirement
 

@@ -29,6 +29,7 @@ Welcome to the MyMoolah Treasury Platform development guide! This platform is bu
 - **Production Environment**: Google Cloud Services Production (Production credentials, real customers)
 - **Deployments**: Run `deploy-backend.sh` and `deploy-wallet.sh` from **Local Mac** (uses Google Cloud Build — no Docker Desktop needed)
 - **Migrations**: Run `run-migrations-master.sh` from **Codespaces** (Cloud SQL Auth Proxy running)
+- **Codespaces startup**: Main backend + proxy only → `./scripts/one-click-restart-and-start.sh`. **Admin Portal** (disbursement clients, etc.) → `./scripts/start-all-services.sh` (main 3001, portal BE 3002, portal FE 3003, wallet 3000); logs: `/tmp/mymoolah-logs/*.log`. Details: `docs/CODESPACES_TESTING_REQUIREMENT.md`.
 - **See:** `scripts/README_DEPLOYMENT.md` for "Where to Run What" and typical workflow; `DEVELOPMENT_DEPLOYMENT_WORKFLOW.md` for complete workflow
 
 ---

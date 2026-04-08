@@ -65,13 +65,20 @@ git add . && git commit -m "[description]" && git push origin main
 
 Agent always commits AND pushes. User pulls in Codespaces.
 
-### Restart in Codespaces (ONLY correct method)
+### Restart in Codespaces
 
+**Main backend + proxy only:**
 ```bash
 ./scripts/one-click-restart-and-start.sh
 ```
 
-Never `pm2 restart all`, never `node server.js`, never `npm start`.
+**Admin Portal + wallet + main API** (disbursement admin, Vite on 3003):
+```bash
+./scripts/start-all-services.sh
+# Logs: tail -f /tmp/mymoolah-logs/backend.log
+```
+
+Never `pm2 restart all`, never `node server.js`, never `npm start` for the main backend without the proxy script.
 
 ---
 
@@ -105,7 +112,8 @@ Never `pm2 restart all`, never `node server.js`, never `npm start`.
 | Session logs | `docs/session_logs/` |
 | DB helper | `scripts/db-connection-helper.js` |
 | Migration script | `scripts/run-migrations-master.sh` |
-| Restart script | `scripts/one-click-restart-and-start.sh` |
+| Restart (main only) | `scripts/one-click-restart-and-start.sh` |
+| Start all (portal) | `scripts/start-all-services.sh` |
 | USSD integration guide | `docs/USSD_INTEGRATION_GUIDE.md` |
 | USSD state machine | `services/ussdMenuService.js` |
 | USSD auth/PIN | `services/ussdAuthService.js` |

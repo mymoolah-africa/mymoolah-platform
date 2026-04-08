@@ -1,9 +1,9 @@
 # SBSA H2H Wage Disbursement — Implementation Plan
 
-**Date**: 2026-03-17  
-**Status**: PLANNED — Not yet in development. Execute after Phase 2 (SFTP H2H) is stable and Melissa (SBSA) has signed on.  
+**Date**: 2026-03-17 (status note 2026-04-08)  
+**Status**: **In progress (platform)** — Admin portal + APIs + white-label client portal + disbursement services are live in repo; SBSA H2H production go-live still gated on Melissa/SBSA sign-off and env config. Use `docs/AGENT_HANDOVER.md`, `docs/DISBURSEMENT_API.md`, and `docs/CHANGELOG.md` for what is shipped.  
 **Rail**: EFT (primary) / RTC (urgent payments) via SBSA H2H SFTP Push/Pull  
-**Portal**: Admin portal only — not exposed on wallet  
+**Portal**: Admin portal + optional white-label client portal (`/api/v1/client-portal`); wallet unchanged  
 **Dependencies**: `docs/SBSA_H2H_SETUP_GUIDE.md`, `integrations/standardbank/builders/pain001Builder.js`
 
 ---

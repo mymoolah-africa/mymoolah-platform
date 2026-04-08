@@ -791,7 +791,7 @@ POST /api/v1/disbursement-clients
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `client_code` | string | Yes | Unique alphanumeric code (max 20 chars) |
+| `client_code` | string | Yes | Unique code: letters, digits, hyphens only (max 20 chars), e.g. `MMTP-001` |
 | `company_name` | string | Yes | Company legal name (max 255 chars) |
 | `contact_email` | string | Yes | Primary contact email |
 | `entity_type` | string | No | `company` (default), `sole_proprietor`, `trust`, `partnership`, `npo` |

@@ -1,5 +1,31 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-08 - Disbursement portal fixes, client users, Codespaces docs (v2.92.0)
+
+### Summary
+Portal JWT compatibility on the main API, fixed disbursement client list for admin portal users, admin UI to manage client portal logins, relaxed `client_code` validation (hyphens allowed), and documentation for Codespaces multi-service startup and log locations.
+
+### Fixes
+- **`middleware/auth.js`**: Verify Bearer tokens with `JWT_SECRET` then `PORTAL_JWT_SECRET` so portal-issued admin JWTs work on main-backend routes (e.g. `/api/v1/disbursement-clients`).
+- **`disbursementClientController.listClients`**: Avoid Sequelize `WHERE created_by = undefined` — portal JWTs use `portalUserId`, not `id`; portal callers see full client list when not using wallet-only scoping.
+
+### Features
+- **Client portal users (admin-managed)**: `GET/POST/PATCH /api/v1/disbursement-clients/:clientId/users`; `getClient` includes `users` without `password_hash`. Admin overlay Section 5 “Client Portal Users” (create user, toggle active).
+
+### API / validation
+- **`client_code`**: Allowed charset is letters, digits, hyphens; max length 20 (`routes/disbursementClient.js`). Examples: `MMTP-001`, `ACME-001`.
+
+### Documentation
+- `docs/CODESPACES_TESTING_REQUIREMENT.md` v1.1.0 — when to use `one-click-restart-and-start.sh` vs `start-all-services.sh`, `/tmp/mymoolah-logs` table, no pm2 note.
+- `docs/CURSOR_2.0_RULES_FINAL.md`, `.cursor/rules/git-workflow.mdc` — portal startup clarification.
+- `docs/PORTAL_DEVELOPMENT_GUIDE.md` v1.1.1 — log file paths.
+- `docs/DEVELOPMENT_GUIDE.md` — Codespaces startup bullet.
+- `docs/DISBURSEMENT_API.md` — `client_code` field description.
+- `docs/SBSA_WAGE_DISBURSEMENT_PLAN.md` — status note aligned with shipped disbursement work.
+- `docs/AGENT_HANDOVER.md`, `docs/session_logs/2026-04-08_0930_disbursement-portal-codespaces-docs.md`
+
+---
+
 ## 2026-04-07 - Disbursement Phase 2 — API, Models & Portal UI (v2.89.0)
 
 ### Summary
