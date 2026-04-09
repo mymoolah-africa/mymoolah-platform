@@ -24,6 +24,8 @@ Planned and implemented Phase 1 of the EasyPay Cash-In integration using the off
 - [x] Task 8: Add EasyPay to `supplier-commissions.json`
 - [x] Task 9: Rewrite CoA Section 3.1 with correct 2-JE pattern + T+2 settlement
 - [x] Task 10: Update TPPP certification across 4 documentation files
+- [x] Task 13: USSD "Top-up at Retail" flow (More menu option 8, PIN generation, SMS delivery)
+- [x] Task 14: Success SMS on wallet credit in paymentNotification handler
 
 ---
 
@@ -43,9 +45,11 @@ Planned and implemented Phase 1 of the EasyPay Cash-In integration using the off
 - `migrations/20260409_01_add_userId_to_bills.js` — NEW: adds `userId` FK to `bills` table with index
 - `models/Bill.js` — Added `userId` field, uncommented `Bill.belongsTo(User)` association
 - `routes/easypay.js` — Wired `easypayAuthMiddleware` to 3 V5 endpoints (ping stays public)
-- `controllers/easyPayController.js` — Rewrote `paymentNotification` (wallet credit, JEs, Transactions), fixed all `authorisationRequest` responses with Amount/expiryDate
+- `controllers/easyPayController.js` — Rewrote `paymentNotification` (wallet credit, JEs, Transactions, success SMS), fixed all `authorisationRequest` responses with Amount/expiryDate
 - `controllers/voucherController.js` — `issueEasyPayVoucher` now creates Bill record alongside Voucher for V5 lookup
 - `services/easyPayDepositService.js` — NEW: `calculateEasyPayFee()` + `postEasyPayDeposit()` 2-JE pattern
+- `services/ussdMenuService.js` — NEW: "Top-up at Retail" flow (option 8 in More menu, 3 state handlers, SMS PIN delivery)
+- `utils/easyPayUtils.js` — Added `generateEasyPayNumber()` for shared use (USSD + future channels)
 - `env.template` — Added fee env vars, set MM margin to 0
 - `config/supplier-commissions.json` — Added EASYPAY entry (zero commission, pass-through)
 - `docs/CHART_OF_ACCOUNTS.md` — Section 3.1 rewritten with correct 2-JE pattern + T+2

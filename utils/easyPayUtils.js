@@ -84,6 +84,14 @@ function generateTestEasyPayNumber(receiverId = '2021', accountNumber = '1234567
   return `9${receiverId}${paddedAccount}${checkDigit}`;
 }
 
+function generateEasyPayNumber(receiverId) {
+  const prefix = '9';
+  const rid = receiverId || process.env.EASYPAY_RECEIVER_ID || '5063';
+  const accountNumber = Math.floor(Math.random() * 100000000).toString().padStart(8, '0');
+  const checkDigit = calculateLuhnCheckDigit(rid + accountNumber);
+  return prefix + rid + accountNumber + checkDigit;
+}
+
 module.exports = {
   validateEasyPayNumber,
   extractReceiverId,
@@ -91,5 +99,6 @@ module.exports = {
   extractCheckDigit,
   parseEasyPayNumber,
   generateTestEasyPayNumber,
+  generateEasyPayNumber,
   calculateLuhnCheckDigit
 };

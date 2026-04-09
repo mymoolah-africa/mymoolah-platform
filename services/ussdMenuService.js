@@ -13,6 +13,7 @@ const EEZI_AIRTIME_AMOUNTS = [5, 10, 29, 55, 110];
 const EEZI_POWER_AMOUNTS = [20, 50, 100, 200, 500];
 const VOUCHER_AMOUNTS = [10, 25, 50, 100, 200, 500];
 const BETTING_VOUCHER_AMOUNTS = [50, 100, 200, 500, 1000];
+const TOPUP_RETAIL_AMOUNTS = [50, 100, 200, 500, 1000, 2000, 4000];
 
 const SMS_FEE_AMOUNT = parseFloat(process.env.SMS_FEE_AMOUNT || '0.40');
 const SMS_FEE_EX_VAT = parseFloat((SMS_FEE_AMOUNT / 1.15).toFixed(2));
@@ -103,6 +104,8 @@ const STATE_HANDLERS = {
   VOUCHER_BRAND: handleVoucherBrand,
   VOUCHER_AMOUNT: handleVoucherAmount,
   VOUCHER_CONFIRM: handleVoucherConfirm,
+  TOPUP_RETAIL_AMOUNT: handleTopupRetailAmount,
+  TOPUP_RETAIL_CONFIRM: handleTopupRetailConfirm,
 };
 
 // ─── WELCOME ────────────────────────────────────────────────────────────────
@@ -505,7 +508,7 @@ async function handleCashOutConfirm(session, input) {
 // ─── MORE MENU ──────────────────────────────────────────────────────────────
 
 function moreMenuText() {
-  return 'More\n1 Airtime for Others\n2 Buy Electricity\n3 Buy Voucher\n4 Mini Statement\n5 Change PIN\n6 Referral Code\n7 Help\n0 Back';
+  return 'More\n1 Airtime for Others\n2 Buy Electricity\n3 Buy Voucher\n4 Mini Statement\n5 Change PIN\n6 Referral Code\n7 Help\n8 Top-up at Retail\n0 Back';
 }
 
 async function handleMoreMenu(session, input) {
@@ -517,8 +520,89 @@ async function handleMoreMenu(session, input) {
     case '5': return continueSession('Enter current PIN:', 'CHANGE_PIN');
     case '6': return handleReferralCode(session, input);
     case '7': return handleHelp(session, input);
+    case '8': return continueSession(topupRetailMenuText(), 'TOPUP_RETAIL_AMOUNT');
     case '0': return continueSession(mainMenuText(), 'MAIN_MENU');
     default: return continueSession('Invalid choice.\n' + moreMenuText(), 'MORE_MENU');
+  }
+}
+
+// ─── TOP-UP AT RETAIL (EasyPay Cash-In) ─────────────────────────────────────
+
+function topupRetailMenuText() {
+  return 'Top-up at EasyPay\n' + TOPUP_RETAIL_AMOUNTS.map((a, i) => `${i + 1} R${a}`).join('\n') + '\n0 Back';
+}
+
+async function handleTopupRetailAmount(session, input) {
+  if (input === '0') return continueSession(moreMenuText(), 'MORE_MENU');
+  const idx = parseInt(input, 10) - 1;
+  if (isNaN(idx) || idx < 0 || idx >= TOPUP_RETAIL_AMOUNTS.length) {
+    return continueSession('Invalid choice.\n' + topupRetailMenuText(), 'TOPUP_RETAIL_AMOUNT');
+  }
+  const amount = TOPUP_RETAIL_AMOUNTS[idx];
+  return continueSession(
+    `Top-up R${amount} at EasyPay\nFee deducted by EasyPay.\n1 Yes 2 No`,
+    'TOPUP_RETAIL_CONFIRM',
+    { topupRetailAmount: amount }
+  );
+}
+
+async function handleTopupRetailConfirm(session, input) {
+  if (input === '2' || input === '0') return continueSession(topupRetailMenuText(), 'TOPUP_RETAIL_AMOUNT');
+  if (input !== '1') return continueSession('1 Yes\n2 No', 'TOPUP_RETAIL_CONFIRM');
+
+  const amount = session.data.topupRetailAmount;
+  const userId = session.data.userId;
+
+  try {
+    const { generateEasyPayNumber } = require('../utils/easyPayUtils');
+    const { Voucher, Bill } = require('../models');
+
+    const easyPayCode = generateEasyPayNumber();
+    const expiresAt = new Date(Date.now() + 96 * 60 * 60 * 1000);
+    const receiverId = process.env.EASYPAY_RECEIVER_ID || '5063';
+
+    const user = await User.findByPk(userId);
+
+    await Voucher.create({
+      userId: userId,
+      voucherCode: easyPayCode,
+      easyPayCode,
+      originalAmount: amount,
+      balance: 0,
+      status: 'pending_payment',
+      voucherType: 'easypay_topup',
+      expiresAt,
+      metadata: {
+        issuedTo: session.msisdn,
+        issuedBy: 'ussd',
+        callbackReceived: false,
+        smsSent: true,
+        channel: 'ussd'
+      }
+    });
+
+    await Bill.create({
+      userId: userId,
+      easyPayNumber: easyPayCode,
+      accountNumber: easyPayCode.substring(5, 13),
+      receiverId: receiverId,
+      amount: amount * 100,
+      minAmount: amount * 100,
+      maxAmount: amount * 100,
+      dueDate: expiresAt.toISOString().split('T')[0],
+      status: 'pending',
+      billType: 'wallet_topup',
+      customerName: user ? (user.name || user.phoneNumber || 'MyMoolah User') : 'MyMoolah User',
+      description: `USSD wallet top-up R${amount.toFixed(2)}`
+    });
+
+    sendPinSmsAsync(session.msisdn, easyPayCode, amount, null, 'easypayTopup');
+
+    const formatted = easyPayCode.replace(/(\d{1})(\d{4})(\d{4})(\d{4})(\d{1})/, '$1 $2 $3 $4 $5');
+    return endSession(`EasyPay PIN:\n${formatted}\nPay R${amount} at any\nEasyPay retailer.\nValid 4 days.\nPIN sent via SMS.`);
+  } catch (err) {
+    console.error('[USSD] EasyPay top-up error:', err.message);
+    return endSession('Service error. Try again later.');
   }
 }
 
@@ -1253,6 +1337,10 @@ function sendPinSmsAsync(msisdn, pin, amount, recipient, productType, brandName)
         await smsService.sendUssdEeziPowerSms(e164, pin, amount);
       } else if (productType === 'voucher') {
         await smsService.sendUssdVoucherSms(e164, pin, amount, brandName || 'Voucher');
+      } else if (productType === 'easypayTopup') {
+        const formatted = pin.replace(/(\d{1})(\d{4})(\d{4})(\d{4})(\d{1})/, '$1 $2 $3 $4 $5');
+        const msg = `MyMoolah: Your EasyPay Top-up PIN: ${formatted}. Pay R${amount} at any EasyPay retailer. Valid 4 days. Dial *120*5616# for more.`;
+        await smsService.sendSms(e164, msg.substring(0, 160), { type: 'ussd', reference: `USSD-EPTOP-${Date.now()}` });
       }
     } catch (smsErr) {
       console.error(`[USSD] PIN SMS error (non-blocking):`, smsErr.message);
