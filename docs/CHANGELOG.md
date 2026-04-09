@@ -1,5 +1,15 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-09 - Transact: EasyPay top-up tile enabled (v2.94.2)
+
+### Summary
+Removed the disabled "Coming Soon" state on **Transact → Top-up at EasyPay** so the tile is fully interactive and navigates to `/topup-easypay` (Bill Payment Receiver V5 and USSD top-up are live).
+
+### Modified
+- `mymoolah-wallet-frontend/pages/TransactPage.tsx` — `available: true`, badge "New" (success), removed `comingSoon`
+
+---
+
 ## 2026-04-08 - Flash Voucher Audit-Grade Transactions & Fee Display Fixes (v2.93.1)
 
 ### Summary
