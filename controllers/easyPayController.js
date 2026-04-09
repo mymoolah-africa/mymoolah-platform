@@ -313,7 +313,7 @@ class EasyPayController {
           type: 'deposit',
           amount: grossAmountRand,
           fee: 0,
-          description: `EasyPay deposit at ${MerchantId || 'POS'}`,
+          description: `Top-up @ EasyPay: ${EasyPayNumber}`,
           status: 'completed',
           reference: `${transactionRef}-DEP`,
           metadata: {
@@ -324,7 +324,10 @@ class EasyPayController {
             posReference: Reference || null,
             paymentDate: PaymentDate || null,
             grossAmount: grossAmountRand,
-            netAmount: netAmount
+            netAmount: netAmount,
+            isEasyPayDeposit: true,
+            isEasyPayDepositAmount: true,
+            vasTransactionId: transactionRef
           }
         }, { transaction: t });
 
@@ -334,7 +337,7 @@ class EasyPayController {
           type: 'fee',
           amount: -totalFee,
           fee: totalFee,
-          description: `EasyPay deposit fee (R${feeExclVat.toFixed(2)} + R${vat.toFixed(2)} VAT)`,
+          description: `EasyPay Fee (R${feeExclVat.toFixed(2)} + R${vat.toFixed(2)} VAT)`,
           status: 'completed',
           reference: `${transactionRef}-FEE`,
           metadata: {
@@ -343,7 +346,10 @@ class EasyPayController {
             feeExclVat: feeExclVat,
             vat: vat,
             totalFee: totalFee,
-            parentTransactionRef: `${transactionRef}-DEP`
+            parentTransactionRef: `${transactionRef}-DEP`,
+            isEasyPayDeposit: true,
+            isEasyPayDepositFee: true,
+            vasTransactionId: transactionRef
           }
         }, { transaction: t });
 

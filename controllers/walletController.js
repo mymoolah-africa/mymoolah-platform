@@ -716,6 +716,16 @@ class WalletController {
             else if (metadata.isTopUpFee) g.fee = tx;
             return;
           }
+          // EasyPay V5 deposit: group by vasTransactionId (main has isEasyPayDepositAmount, fee has isEasyPayDepositFee)
+          if (metadata.isEasyPayDeposit && (metadata.isEasyPayDepositAmount || metadata.isEasyPayDepositFee)) {
+            const key = metadata.vasTransactionId;
+            if (!key) { otherForRecent.push(tx); return; }
+            if (!voucherTopupGroups.has(key)) voucherTopupGroups.set(key, { main: null, fee: null });
+            const g = voucherTopupGroups.get(key);
+            if (metadata.isEasyPayDepositAmount) g.main = tx;
+            else if (metadata.isEasyPayDepositFee) g.fee = tx;
+            return;
+          }
           // Flash Eezi Cash: group by vasTransactionId (main has isFlashCashoutAmount, fee has isFlashCashoutFee)
           if (metadata.isFlashCashoutAmount || metadata.isFlashCashoutFee) {
             const key = metadata.vasTransactionId;
