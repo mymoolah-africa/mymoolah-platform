@@ -1372,6 +1372,7 @@ node scripts/md-to-pdf.js <path-to-markdown-file>
 
 # Examples
 node scripts/md-to-pdf.js docs/integrations/EasyPay_API_Integration_Guide.md
+node scripts/md-to-pdf.js docs/integrations/EasyPay_V5_PARTNER_QA_CHECKLIST.md
 node scripts/md-to-pdf.js README.md
 node scripts/md-to-pdf.js docs/API_DOCUMENTATION.md
 ```

@@ -119,6 +119,8 @@ Never `pm2 restart all`, never `node server.js`, never `npm start` for the main 
 | USSD auth/PIN | `services/ussdAuthService.js` |
 | USSD sessions | `services/ussdSessionService.js` |
 | Chart of Accounts | `docs/CHART_OF_ACCOUNTS.md` |
+| EasyPay V5 partner Q&A (meeting + finalisation) | `docs/integrations/EasyPay_V5_PARTNER_QA_CHECKLIST.md` |
+| EasyPay integration guide (V5 + legacy) | `docs/integrations/EasyPay_API_Integration_Guide.md` |
 | Portal dev guide | `docs/PORTAL_DEVELOPMENT_GUIDE.md` |
 | Portal frontend | `portal/admin/frontend/src/` |
 | Portal backend | `portal/backend/` |

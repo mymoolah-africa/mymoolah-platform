@@ -1,5 +1,17 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-10 - EasyPay V5 partner Q&A checklist + doc alignment (v2.94.3)
+
+### Summary
+Single **partner meeting pack** for EasyPay (Lesaka): `docs/integrations/EasyPay_V5_PARTNER_QA_CHECKLIST.md` (questions A–E, post-meeting engineering §F). **EasyPay_API_Integration_Guide.md** bumped to **v1.1.0** — V5 as canonical Phase 1 cash-in (§1.2, §4.0, Appendix A diagram), legacy top-up settlement marked confirm-with-EP, integration checklist + recon pointers updated. **API_DOCUMENTATION**, **CHART_OF_ACCOUNTS** §3.1, **USSD_INTEGRATION_GUIDE**, **AGENT_HANDOVER**, **README**, **CLAUDE**, **env.template** cross-linked or aligned.
+
+### New / updated docs
+- `docs/integrations/EasyPay_V5_PARTNER_QA_CHECKLIST.md` (new)
+- `docs/integrations/EasyPay_API_Integration_Guide.md` (v1.1.0)
+- `docs/session_logs/2026-04-10_1200_easypay-v5-partner-qa-docs.md`
+
+---
+
 ## 2026-04-09 - EasyPay issue 500: `bills.userId` migration (ops note)
 
 ### Symptom

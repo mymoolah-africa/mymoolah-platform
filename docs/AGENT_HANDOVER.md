@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-09 22:00  
-**Latest Feature**: **EasyPay V5 BillPayment Receiver Integration (v2.94.0)** — Implemented Phase 1 Cash-In using EasyPay's official V5 protocol. Key changes: `paymentNotification` now credits wallet (gross) + debits fee + posts 2 JEs (deposit + fee) + creates 2 Transaction records. Auth middleware wired to V5 routes. Bill model linked to users via `userId` FK. New `easyPayDepositService.js` with 2-JE pattern. Fee structure: R5.50 + handling% + VAT (deducted at source by EasyPay, MMTP earns zero). CoA Section 3.1 rewritten. TPPP docs updated (received 12 Mar 2026). **NEXT:** If wallet EasyPay issue returns 500 (`bills.userId` missing), run `./scripts/run-migrations-master.sh uat` (migration `20260409_01_add_userId_to_bills.js`). Then staging/production when deploying. EasyPay meeting: handling%, settlement ref format, min/max amounts, SessionToken. Update placeholders after meeting. Previous: Flash Voucher v2.93.1, Ringfencing v2.93.0.  
-**Document Version**: 2.94.0  
-**Session logs**: `docs/session_logs/2026-04-09_2200_easypay-v5-implementation.md`, `docs/session_logs/2026-04-08_1700_flash-voucher-frontend-fixes.md`, `docs/session_logs/2026-04-09_1400_flash-voucher-ringfencing.md`  
+**Last Updated**: 2026-04-10  
+**Latest Feature**: **EasyPay V5 documentation + Partner Q&A pack (v2.94.3)** — Added `docs/integrations/EasyPay_V5_PARTNER_QA_CHECKLIST.md` (numbered questions A–E for EasyPay meeting, post-meeting MMTP checklist §F). Updated `EasyPay_API_Integration_Guide.md` to v1.1.0: V5 as Phase 1 cash-in (§1.2, §4.0, Appendix A top-up diagram), legacy top-up settlement marked confirm-with-EP, integration checklist and recon pointers aligned. CoA §3.1 links to partner checklist for T+2 bank ref / recon file. **Migration `20260409_01_add_userId_to_bills`**: applied UAT/staging/production (André 2026-04-09). **NEXT:** EasyPay meeting → answer checklist → update env (`EASYPAY_TOPUP_*`), optional `paymentNotification` fee fields if EP provides them, recon automation, deprecate legacy settlement doc path if E1 confirmed. Previous: EasyPay V5 implementation v2.94.0–2.94.2, Flash v2.93.1.  
+**Document Version**: 2.94.3  
+**Session logs**: `docs/session_logs/2026-04-10_1200_easypay-v5-partner-qa-docs.md`, `docs/session_logs/2026-04-09_2200_easypay-v5-implementation.md`, `docs/session_logs/2026-04-08_1700_flash-voucher-frontend-fixes.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -41,6 +41,7 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 | Test in Codespaces | `docs/CODESPACES_TESTING_REQUIREMENT.md` |
 | Portal development | `docs/PORTAL_DEVELOPMENT_GUIDE.md` |
 | Ledger Chart of Accounts | `docs/CHART_OF_ACCOUNTS.md` |
+| EasyPay V5 partner questions & finalisation | `docs/integrations/EasyPay_V5_PARTNER_QA_CHECKLIST.md` + `docs/integrations/EasyPay_API_Integration_Guide.md` |
 | Deploy | `docs/DEPLOYMENT_GUIDE.md`, `docs/archive/deployment/GCP_PRODUCTION_DEPLOYMENT.md` |
 | API contracts | `docs/API_DOCUMENTATION.md` |
 | Recent chat context | `docs/session_logs/` (2-3 most recent) |

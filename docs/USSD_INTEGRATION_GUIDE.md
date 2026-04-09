@@ -2,7 +2,7 @@
 
 **Audience:** Engineering, security, compliance, and Cellfind / MNO integration partners  
 **Classification:** Internal / partner technical documentation  
-**Last updated:** 2026-03-25
+**Last updated:** 2026-04-10
 
 ---
 
@@ -25,6 +25,7 @@ The **MyMoolah USSD channel** exposes wallet and value-added services (VAS) over
 | **Vouchers** | 6 brands: 1Voucher, OTT, Blu, Betway, Hollywood Bets, SupaBets. PIN via SMS (R0.40 fee). |
 | **Mini statement** | Last five completed transactions (abbreviated). |
 | **PIN management** | Set USSD PIN (new users / migration), change PIN (authenticated), progressive lockout on failures. |
+| **Top-up at Retail (EasyPay)** | **More** menu option **8**: user selects amount, confirms; MMTP generates **14-digit EasyPay PIN**, creates **`vouchers` + `bills`** (with `userId`) for **Bill Payment Receiver V5** lookup; PIN on-screen and via SMS (no wallet debit). Same data model as `POST /api/v1/vouchers/easypay/issue`. Open fee/settlement details: `docs/integrations/EasyPay_V5_PARTNER_QA_CHECKLIST.md`. |
 
 Additional items (referral code display, help) are exposed under the **More** submenu.
 

@@ -188,7 +188,8 @@ No commission JE — MMTP earns zero on this pass-through.
 Reference: `EP-SETTLE-{batchRef}-{date}`
 
 The settlement batch total equals the sum of all net deposits (gross − fee) for that day.
-Settlement reference format: TBC with EasyPay (placeholder matching logic).
+
+**Settlement reference / bank narrative / daily file format**: capture from EasyPay in writing and implement auto-matching — see `docs/integrations/EasyPay_V5_PARTNER_QA_CHECKLIST.md` §C (questions C1–C2).
 
 ### 3.2 PayShap RTP Inbound (Request-to-Pay — Paid Callback)
 

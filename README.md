@@ -153,7 +153,7 @@ Supplier Tables
 - Real-time balance updates and validation
 
 ### **Supplier Integrations**
-- **EasyPay**: Bill payments and utilities (7 API endpoints)
+- **EasyPay**: Bill Payment Receiver **V5** for wallet cash-in (`/billpayment/v1/*`); partner Q&A: `docs/integrations/EasyPay_V5_PARTNER_QA_CHECKLIST.md`; full guide: `docs/integrations/EasyPay_API_Integration_Guide.md`
 - **Flash**: Airtime, data, and VAS services (5 API endpoints)
 - **MobileMart**: Mobile services and products (5 API endpoints)
 - **AI Comparison**: Smart supplier comparison and best deals

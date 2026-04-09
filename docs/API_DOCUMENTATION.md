@@ -697,14 +697,31 @@ POST /api/v1/overlay/electricity/purchase
 
 ## 🎫 **VOUCHER API**
 
-### **EasyPay Top-up @ EasyPay**
+### **EasyPay — Bill Payment Receiver V5 (Phase 1 cash-in)**
+
+The **EasyPay switch** calls MMTP on **`/billpayment/v1/*`** (canonical) or **`/api/v1/easypay/*`** (alias). **Wallet credit** occurs on **`POST .../paymentNotification`** after successful POS payment.
+
+| Method | Path | Notes |
+|--------|------|--------|
+| GET | `/billpayment/v1/ping` | Health |
+| POST | `/billpayment/v1/infoRequest` | Bill lookup |
+| POST | `/billpayment/v1/authorisationRequest` | Pre-auth |
+| POST | `/billpayment/v1/paymentNotification` | Finalise payment; credit wallet + ledger |
+
+**Auth**: `Authorization: SessionToken {token}` (token = `EASYPAY_API_KEY`), or `X-API-Key`; UAT may allow Bearer for simulation — see `middleware/easypayAuth.js`.
+
+**Spec**: `integrations/easypay/EasypayReceiverV5.yaml`. **Partner questions / recon**: `docs/integrations/EasyPay_V5_PARTNER_QA_CHECKLIST.md`. **Guide**: `docs/integrations/EasyPay_API_Integration_Guide.md` v1.1.0.
+
+---
+
+### **EasyPay Top-up — issue PIN (app API)**
 
 #### **1. Create Top-up Request**
 ```http
 POST /api/v1/vouchers/easypay/issue
 ```
 
-**Description**: Creates a new EasyPay top-up request. No wallet debit occurs - user pays at EasyPay store, then wallet is credited on settlement.
+**Description**: Creates EasyPay top-up **Voucher** + **Bill** (`userId` set) for V5 lookup. No wallet debit — user pays at EasyPay; wallet is credited when **`paymentNotification`** is received (not via this endpoint).
 
 **Authentication**: Required (JWT Bearer token)
 
@@ -737,14 +754,16 @@ POST /api/v1/vouchers/easypay/issue
 - Amount range: R50 - R4000
 - Voucher expires 4 days (96 hours) after creation
 - Wallet balance remains unchanged (no debit on creation)
-- User must pay at EasyPay store to complete top-up
+- Requires DB migration `20260409_01_add_userId_to_bills` (`bills.userId`)
+- User must pay at EasyPay store; **V5** completes the flow via **`/billpayment/v1/paymentNotification`**
 
-#### **2. Process Settlement Callback**
+#### **2. Legacy settlement-style callback (confirm with EasyPay)**
 ```http
-POST /api/v1/vouchers/easypay/settlement
+POST /api/v1/vouchers/easypay/topup/settlement
 ```
+(There is also `POST /api/v1/vouchers/easypay/settlement` in routes — treat both as **legacy** until EasyPay confirms E1 in the partner checklist.)
 
-**Description**: Processes EasyPay settlement callback when user pays at store. Credits wallet with net amount (gross - fees).
+**Description**: Older MMTP-documented callback shape. **Phase 1 production** should use **V5** above. Confirm with EasyPay whether this route is still used by any switch flow — see **EasyPay_V5_PARTNER_QA_CHECKLIST.md** (E1).
 
 **Authentication**: API Key (EasyPay integration)
 
@@ -774,15 +793,10 @@ POST /api/v1/vouchers/easypay/settlement
 }
 ```
 
-**Transaction Creation**:
-- Creates two transaction records:
-  1. Deposit: Net amount (R97.50) - "Top-up @ EasyPay: {PIN}"
-  2. Fee: Negative amount (-R2.50) - "Transaction Fee"
+**Transaction behaviour (if this legacy path is still active)**:
+- May differ from **V5** `paymentNotification` (which credits **gross** then debits **pass-through** fee per `easyPayDepositService.js`).
 
-**Fee Structure**:
-- Total Fee: R2.50 (configurable)
-- Provider Fee: R2.00 (`EASYPAY_TOPUP_PROVIDER_FEE`)
-- MM Margin: R0.50 (`EASYPAY_TOPUP_MM_MARGIN`)
+**V5 fee model** (current production path): R5.50 excl. VAT + cash handling % + VAT; MMTP margin zero — see `env.template` `EASYPAY_TOPUP_*` and partner checklist §B.
 
 #### **3. Cancel Top-up Voucher**
 ```http

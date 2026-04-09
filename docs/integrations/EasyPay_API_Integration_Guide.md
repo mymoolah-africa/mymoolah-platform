@@ -1,10 +1,10 @@
 # EasyPay API Integration Guide
 
-**Version**: 1.0.4  
-**Last Updated**: March 24, 2026  
+**Version**: 1.1.0  
+**Last Updated**: April 10, 2026  
 **API Provider**: MyMoolah Treasury Platform  
-**Integration Partner**: EasyPay South Africa  
-**Status**: ✅ Production Ready
+**Integration Partner**: EasyPay South Africa (Lesaka)  
+**Status**: Phase 1 **Top-up @ EasyPay** live on **Bill Payment Receiver V5** — partner Q&A for fee precision, settlement reference format, and recon file: see **[EasyPay_V5_PARTNER_QA_CHECKLIST.md](./EasyPay_V5_PARTNER_QA_CHECKLIST.md)**.
 
 ---
 
@@ -21,7 +21,8 @@
 9. [Production Deployment](#production-deployment)
 10. [Reconciliation](#reconciliation)
 11. [Support & SLAs](#support--slas)
-12. [Appendices](#appendices)
+12. [Partner Q&A & V5 finalisation](#12-partner-qa--v5-finalisation)
+13. [Appendices](#13-appendices)
 
 ---
 
@@ -35,29 +36,42 @@ MyMoolah Treasury Platform provides three core EasyPay integration services:
 2. **Cash-out @ EasyPay**: Enables MyMoolah users to withdraw cash from their wallets at any EasyPay merchant location
 3. **Standalone Voucher**: Enables MyMoolah users to create EasyPay vouchers for use as payment at any EasyPay merchant (online or in-store)
 
-### 1.2 Integration Architecture
+### 1.2 Integration Architecture (Phase 1 — Top-up / cash-in)
+
+**Authoritative protocol**: EasyPay **Bill Payment Receiver V5** (`integrations/easypay/EasypayReceiverV5.yaml`). MMTP exposes:
+
+- `POST /billpayment/v1/infoRequest`
+- `POST /billpayment/v1/authorisationRequest`
+- `POST /billpayment/v1/paymentNotification`
+
+Equivalent alias (same router): `/api/v1/easypay/*`.
+
+MMTP **creates** the **14-digit bill number** when the user requests a top-up (wallet app: `POST /api/v1/vouchers/easypay/issue`; USSD: More → Top-up at Retail). A **`bills`** row (with `userId`) plus **`vouchers`** row enables V5 lookup and wallet credit on `paymentNotification`.
 
 ```mermaid
 sequenceDiagram
     participant User as MyMoolah User
-    participant App as MM Mobile App
-    participant API as MM Backend API
+    participant App as MM App or USSD
+    participant API as MMTP API
     participant EP as EasyPay Terminal
-    participant EPBackend as EasyPay Backend
-    
-    Note over User,EPBackend: Top-up @ EasyPay Flow
-    User->>App: Request Top-up (R100)
-    App->>API: POST /vouchers/easypay/topup/issue
-    API-->>App: 14-digit PIN (9123412345678)
-    App-->>User: Display PIN
-    User->>EP: Present PIN + R100 cash
-    EP->>EPBackend: Verify PIN
-    EPBackend->>API: POST /vouchers/easypay/topup/settlement
-    API-->>EPBackend: 200 OK (Settled)
-    EPBackend-->>EP: Payment Confirmed
-    EP-->>User: Receipt
-    Note over User: Wallet credited instantly
+    participant EPSwitch as EasyPay Switch
+
+    User->>App: Request top-up (amount)
+    App->>API: Issue PIN (issue flow)
+    API-->>App: 14-digit PIN + Bill created
+    App-->>User: Show PIN (SMS optional USSD)
+    User->>EP: Present PIN + pay cash
+    EP->>EPSwitch: Presentment
+    EPSwitch->>API: POST /billpayment/v1/infoRequest
+    API-->>EPSwitch: Bill details
+    EPSwitch->>API: POST /billpayment/v1/authorisationRequest
+    API-->>EPSwitch: Authorisation
+    EPSwitch->>API: POST /billpayment/v1/paymentNotification
+    API-->>EPSwitch: EchoData (V5 PaymentResponse)
+    Note over API: Wallet credit + fees + ledger JEs
 ```
+
+**Legacy note**: Sections §4.1+ describing `POST /api/v1/vouchers/easypay/topup/settlement` document an **older MMTP-assumed** callback shape. **Confirm with EasyPay** whether that path is still used for any switch flow; Phase 1 cash-in **must** align with **V5** per **[Partner Q&A checklist](./EasyPay_V5_PARTNER_QA_CHECKLIST.md)** (question E1).
 
 ### 1.3 Key Features
 
@@ -107,21 +121,24 @@ For **EasyPay legal and PASA/NPS** discussions, the intended model is:
 
 ### 2.2 Integration Checklist
 
-- [ ] Obtain UAT API credentials (API key)
-- [ ] Configure IP whitelist (if required)
-- [ ] Implement authentication flow (X-API-Key header)
-- [ ] Integrate settlement endpoints
-- [ ] Implement idempotency (X-Idempotency-Key header)
-- [ ] Test with UAT test users
-- [ ] Complete reconciliation testing
-- [ ] Request production credentials
-- [ ] Deploy to production
+- [ ] Obtain UAT credentials: **`SessionToken`** (V5) per `Authorization: SessionToken {token}` — stored as `EASYPAY_API_KEY` on MMTP; see §3 and **[Partner Q&A](./EasyPay_V5_PARTNER_QA_CHECKLIST.md)** (D1)
+- [ ] Configure IP whitelist (EasyPay egress CIDRs) — **[Partner Q&A](./EasyPay_V5_PARTNER_QA_CHECKLIST.md)** (D2)
+- [ ] **V5**: Wire switch to MMTP **`/billpayment/v1/*`** (info → authorisation → paymentNotification)
+- [ ] Confirm **no parallel** top-up settlement path unless agreed — **[Partner Q&A](./EasyPay_V5_PARTNER_QA_CHECKLIST.md)** (E1)
+- [ ] Run DB migration **`20260409_01_add_userId_to_bills`** on each environment (§2.1) before wallet/USSD issue flows
+- [ ] Close **[Partner Q&A](./EasyPay_V5_PARTNER_QA_CHECKLIST.md)** (fees, min/max, bank ref, recon file) and update MMTP env / recon jobs
+- [ ] Legacy: X-API-Key settlement tests (§4.1+) only if EasyPay confirms they still apply
+- [ ] Test with UAT test users (wallet + retail terminal)
+- [ ] Complete reconciliation testing (T+2 bank + optional EP file)
+- [ ] Request production credentials and deploy
 - [ ] Monitor first 48 hours
 
 ### 2.3 5-Minute Quick Test
 
+> **Phase 1 live path**: Wallet credit happens on **`POST /billpayment/v1/paymentNotification`** after issue (`POST /api/v1/vouchers/easypay/issue`). The curls below target the **legacy** `.../topup/settlement` route — use only if EasyPay confirms that path is still required (**[Partner Q&A E1](./EasyPay_V5_PARTNER_QA_CHECKLIST.md)**).
+
 ```bash
-# 1. Test Top-up Settlement Endpoint
+# 1. Test Top-up Settlement Endpoint (legacy — confirm with EasyPay)
 curl -X POST https://staging.mymoolah.africa/api/v1/vouchers/easypay/topup/settlement \
   -H "Content-Type: application/json" \
   -H "X-API-Key: your_uat_api_key_here" \
@@ -236,7 +253,23 @@ X-Request-ID: {UUID} (optional but recommended)
 
 ## 4. API Endpoints
 
-### 4.1 Top-up @ EasyPay Settlement
+### 4.0 Bill Payment Receiver V5 (Phase 1 — Top-up cash-in) — **primary**
+
+These endpoints implement the official EasyPay receiver contract. **Authentication**: `easypayAuthMiddleware` — prefer **`Authorization: SessionToken {token}`** where `token` matches MMTP `EASYPAY_API_KEY`; `X-API-Key` and (UAT) JWT Bearer are accepted per `middleware/easypayAuth.js`.
+
+| Method | Path (canonical) | Path (alias) | Purpose |
+|--------|------------------|--------------|---------|
+| GET | `/billpayment/v1/ping` | `/api/v1/easypay/ping` | Health check (no auth) |
+| POST | `/billpayment/v1/infoRequest` | `/api/v1/easypay/infoRequest` | Account / bill lookup |
+| POST | `/billpayment/v1/authorisationRequest` | `/api/v1/easypay/authorisationRequest` | Pre-payment authorisation |
+| POST | `/billpayment/v1/paymentNotification` | `/api/v1/easypay/paymentNotification` | Final payment; MMTP credits wallet + posts ledger |
+
+**OpenAPI**: `integrations/easypay/EasypayReceiverV5.yaml`  
+**Outstanding partner answers**: fee field semantics, settlement reference, recon file — **[EasyPay_V5_PARTNER_QA_CHECKLIST.md](./EasyPay_V5_PARTNER_QA_CHECKLIST.md)**.
+
+---
+
+### 4.1 Top-up @ EasyPay Settlement (legacy callback — confirm with EasyPay)
 
 #### Endpoint
 
@@ -1013,6 +1046,8 @@ To obtain production credentials, submit the following to `integrations@mymoolah
 
 ## 10. Reconciliation
 
+**V5 cash-in (T+2)**: Bank credits to MMTP must be matchable to ledger account **1200-10-02** (EasyPay Top-up Float). Exact **statement reference format** and any **EasyPay-supplied daily file** are documented after the partner meeting — see **[EasyPay_V5_PARTNER_QA_CHECKLIST.md](./EasyPay_V5_PARTNER_QA_CHECKLIST.md)** §C and `docs/CHART_OF_ACCOUNTS.md` §3.1.
+
 ### 10.1 SFTP-Based Reconciliation (Primary Method)
 
 MyMoolah operates a **secure SFTP server** for automated daily reconciliation file exchange. This is the **recommended** reconciliation method for production environments.
@@ -1287,11 +1322,21 @@ In case of production issues:
 
 ---
 
-## 12. Appendices
+## 12. Partner Q&A & V5 finalisation
+
+All numbered questions for EasyPay (protocol, fees, settlement, credentials, legacy routes) and the **post-meeting MMTP engineering checklist** live in:
+
+**[EasyPay_V5_PARTNER_QA_CHECKLIST.md](./EasyPay_V5_PARTNER_QA_CHECKLIST.md)**
+
+Use that file in partner meetings and tick off **§ F** after written answers are received.
+
+---
+
+## 13. Appendices
 
 ### Appendix A: Sequence Diagrams
 
-#### Top-up Flow (Detailed)
+#### Top-up Flow (Detailed) — V5 BillPayment Receiver
 
 ```mermaid
 sequenceDiagram
@@ -1301,29 +1346,29 @@ sequenceDiagram
     participant API as MM API
     participant DB as Database
     participant EPTerm as EP Terminal
-    participant EPBack as EP Backend
-    
-    U->>App: Tap "Top-up @ EasyPay"
-    App->>U: Enter amount (R50-R4000)
-    U->>App: Submit R100
-    App->>API: POST /vouchers/easypay/topup/issue
-    API->>DB: Create Voucher (status: pending)
-    DB-->>API: Voucher ID + PIN
+    participant EPSwitch as EP Switch
+
+    U->>App: Top-up @ EasyPay
+    App->>U: Amount (R50–R4000)
+    U->>App: Submit
+    App->>API: POST /vouchers/easypay/issue
+    API->>DB: Create Voucher + Bill (userId)
+    DB-->>API: PIN
     API-->>App: 14-digit PIN
-    App-->>U: Display PIN+QR code
-    
-    Note over U,EPTerm: User goes to EasyPay store
-    U->>EPTerm: Present PIN + R100 cash
-    EPTerm->>EPBack: Validate PIN
-    EPBack->>API: POST /vouchers/easypay/topup/settlement<br/>(X-API-Key, X-Idempotency-Key)
-    API->>DB: Update voucher (status: redeemed)
-    API->>DB: Credit wallet (settlement amount)
-    API->>DB: Create transaction record
-    API-->>EPBack: 200 OK (settled)
-    EPBack-->>EPTerm: Confirmed
+    App-->>U: Display PIN
+
+    Note over U,EPTerm: Retail payment
+    U->>EPTerm: PIN + cash
+    EPTerm->>EPSwitch: Presentment
+    EPSwitch->>API: POST /billpayment/v1/infoRequest
+    API->>DB: Bill lookup
+    API-->>EPSwitch: Info response
+    EPSwitch->>API: POST /billpayment/v1/authorisationRequest
+    API-->>EPSwitch: Authorisation
+    EPSwitch->>API: POST /billpayment/v1/paymentNotification
+    API->>DB: Credit wallet, fees, ledger, mark paid
+    API-->>EPSwitch: EchoData
     EPTerm-->>U: Receipt
-    
-    Note over U: Wallet credited instantly
 ```
 
 #### Cash-out Flow (Detailed)
@@ -1394,6 +1439,8 @@ sequenceDiagram
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.1.0 | 2026-04-10 | **V5 as Phase 1 cash-in**: Updated §1.2 architecture (mermaid), added §4.0 V5 endpoint table, §2.2 checklist, §10 V5 recon pointer, new §12 Partner Q&A link to `EasyPay_V5_PARTNER_QA_CHECKLIST.md`; marked §4.1 top-up settlement as legacy pending EP confirmation; header status + Lesaka |
+| 1.0.4 | 2026-03-24 | TPPP / NPS positioning (§1.4), prerequisites |
 | 1.0.2 | 2026-01-16 | Added comprehensive environment endpoints (QA/Test, Staging, Production), API key management section, IP whitelisting instructions, and test data scenarios |
 | 1.0.1 | 2026-01-16 | Removed fee and margin references (commercial agreement pending) |
 | 1.0.0 | 2026-01-16 | Initial release - Banking-grade API documentation |

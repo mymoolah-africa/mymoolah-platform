@@ -108,6 +108,11 @@ Planned and implemented Phase 1 of the EasyPay Cash-In integration using the off
 
 ## Questions/Unresolved Items (for EasyPay Meeting)
 
+**Superseded by canonical checklist** (numbered A–E + post-meeting §F):  
+`docs/integrations/EasyPay_V5_PARTNER_QA_CHECKLIST.md` (2026-04-10).
+
+Legacy short list (for grep continuity):
+
 1. Cash handling fee %: exact rate for cash deposits (range 0.20%-0.50%)? Is fee in V5 payload?
 2. Settlement reference format for auto-reconciliation of `1200-10-02`
 3. Min/max deposit amounts (currently R50-R4000)
