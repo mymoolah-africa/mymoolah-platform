@@ -96,6 +96,14 @@ For **EasyPay legal and PASA/NPS** discussions, the intended model is:
 - UAT environment access credentials
 - Technical contact designated for integration support
 - Firewall rules configured for API access
+- **Database (mandatory for Phase 1 Cash-In / V5):** After pulling code that includes `issueEasyPayVoucher` + Bill linkage, run migrations so `bills.userId` exists. Without it, `POST /api/v1/vouchers/easypay/issue` returns **500** with `column "userId" of relation "bills" does not exist`.
+
+  ```bash
+  # Codespaces / local via Cloud SQL Auth Proxy on 6543 (UAT)
+  ./scripts/run-migrations-master.sh uat
+  ```
+
+  Migration file: `migrations/20260409_01_add_userId_to_bills.js`. Repeat for staging and production when promoting the release.
 
 ### 2.2 Integration Checklist
 

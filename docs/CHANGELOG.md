@@ -1,5 +1,24 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-09 - EasyPay issue 500: `bills.userId` migration (ops note)
+
+### Symptom
+`POST /api/v1/vouchers/easypay/issue` fails with Sequelize `42703` — **column "userId" of relation "bills" does not exist**.
+
+### Fix
+Apply pending migrations (adds `bills.userId` for V5 bill lookup):
+
+```bash
+./scripts/run-migrations-master.sh uat   # Codespaces proxy :6543
+# staging / production when promoting
+./scripts/run-migrations-master.sh staging
+./scripts/run-migrations-master.sh production
+```
+
+Documented in `docs/integrations/EasyPay_API_Integration_Guide.md` §2.1.
+
+---
+
 ## 2026-04-09 - Transact: EasyPay top-up tile enabled (v2.94.2)
 
 ### Summary
