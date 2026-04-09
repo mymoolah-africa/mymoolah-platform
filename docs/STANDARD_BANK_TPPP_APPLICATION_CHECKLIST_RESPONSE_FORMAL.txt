@@ -470,7 +470,7 @@ Current Certifications:
 - ISO 27001 (Information Security Management) - Pending
 - PCI DSS Level 1 (Payment Card Industry Data Security Standard) - Pending
 - FICA Registration - Pending
-- PASA TPPP Registration - Pending
+- PASA TPPP Registration - Received 12 March 2026 (valid to 28 Feb 2027)
 
 Status: COMPLETE - Technical compliance demonstrated with code evidence
 

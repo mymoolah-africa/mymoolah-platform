@@ -670,7 +670,7 @@ exports.issueEasyPayVoucher = async (req, res) => {
     }
 
     // Get user's wallet
-    const { Wallet, Transaction } = require('../models');
+    const { Wallet, Transaction, Bill } = require('../models');
     const wallet = await Wallet.findOne({ where: { userId: req.user.id } });
 
     if (!wallet) {
@@ -706,6 +706,25 @@ exports.issueEasyPayVoucher = async (req, res) => {
           description: voucherData.description || null,
           merchant: voucherData.merchant || null
         }
+      });
+
+      // Create Bill record for V5 BillPayment Receiver API lookup
+      const { extractReceiverId } = require('../utils/easyPayUtils');
+      const receiverId = extractReceiverId(easyPayCode) || process.env.EASYPAY_RECEIVER_ID || '5063';
+
+      await Bill.create({
+        userId: req.user.id,
+        easyPayNumber: easyPayCode,
+        accountNumber: easyPayCode.substring(5, 13),
+        receiverId: receiverId,
+        amount: amount * 100,
+        minAmount: amount * 100,
+        maxAmount: amount * 100,
+        dueDate: expiresAt.toISOString().split('T')[0],
+        status: 'pending',
+        billType: 'wallet_topup',
+        customerName: req.user.name || req.user.phoneNumber || 'MyMoolah User',
+        description: `Wallet top-up R${amount.toFixed(2)}`
       });
 
       // No transaction record created - no wallet movement on request creation

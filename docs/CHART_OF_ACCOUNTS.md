@@ -140,14 +140,55 @@ idempotency, and `DECIMAL(18,2)` precision.
 
 ### 3.1 EasyPay Deposit (Cash-In)
 
-User pays cash at EasyPay retailer; MMTP receives notification and credits wallet.
+User pays cash at EasyPay retailer. EasyPay's BillPayment Receiver V5 protocol calls
+MMTP's `/billpayment/v1/paymentNotification`. MMTP credits user wallet immediately.
+EasyPay settles to MMTP's Standard Bank account **T+2** in a single daily batch.
 
-```
-Reference: DEP-{transactionId}
+**Fee**: R5.50 excl VAT + cash handling fee (TBC% — placeholder 0.30%) per transaction.
+MMTP passes full cost through to user — MMTP earns zero markup.
+EasyPay deducts the fee at source (MMTP receives net in settlement).
+VAT on fee is throughput (in-out), no output VAT for MMTP.
 
-DR  1100-01-01  Standard Bank Current Account    R100.00
-CR  2100-01-01  Client Float Liability            R100.00
-```
+**Example**: R100 deposit, total fee R6.67 (R5.80 excl VAT + R0.87 VAT):
+
+**JE1 — Gross Deposit (face value):**
+
+| | Account | Code | DR | CR |
+|---|---------|------|-----|-----|
+| DR | EasyPay Top-up Float | 1200-10-02 | R100.00 | |
+| CR | Client Float Liability | 2100-01-01 | | R100.00 |
+
+Reference: `EP-DEP-{transactionId}`
+
+**JE2 — Fee Deduction (EasyPay fee, pass-through):**
+
+| | Account | Code | DR | CR |
+|---|---------|------|-----|-----|
+| DR | Client Float Liability | 2100-01-01 | R6.67 | |
+| CR | EasyPay Top-up Float | 1200-10-02 | | R6.67 |
+
+Reference: `EP-FEE-{transactionId}`
+
+**Net ledger effect:**
+- EasyPay Float (1200-10-02): DR R100.00 − CR R6.67 = **DR R93.33** (receivable from EasyPay T+2 settlement)
+- Client Float (2100-01-01): CR R100.00 − DR R6.67 = **CR R93.33** (user net balance increase)
+
+No commission JE — MMTP earns zero on this pass-through.
+
+**Wallet**: `credit(R100.00)` then `debit(R6.67)` = net +R93.33
+**Transaction records**: two rows (+R100.00 deposit, −R6.67 fee)
+
+**T+2 Settlement (when EasyPay bank payment arrives):**
+
+| | Account | Code | DR | CR |
+|---|---------|------|-----|-----|
+| DR | Standard Bank Current Account | 1100-01-01 | R{batchTotal} | |
+| CR | EasyPay Top-up Float | 1200-10-02 | | R{batchTotal} |
+
+Reference: `EP-SETTLE-{batchRef}-{date}`
+
+The settlement batch total equals the sum of all net deposits (gross − fee) for that day.
+Settlement reference format: TBC with EasyPay (placeholder matching logic).
 
 ### 3.2 PayShap RTP Inbound (Request-to-Pay — Paid Callback)
 

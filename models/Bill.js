@@ -4,8 +4,7 @@ const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class Bill extends Model {
     static associate(models) {
-      // Define associations here if needed
-      // Bill.belongsTo(models.User, { foreignKey: 'userId' });
+      Bill.belongsTo(models.User, { foreignKey: 'userId' });
     }
   }
 
@@ -14,6 +13,15 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true
+    },
+    userId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'users',
+        key: 'id'
+      },
+      comment: 'MyMoolah user ID — links EasyPay bill to wallet owner'
     },
     easyPayNumber: {
       type: DataTypes.STRING(14),

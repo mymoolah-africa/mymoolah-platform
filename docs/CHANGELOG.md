@@ -3377,6 +3377,7 @@ Complete overhaul of banking-grade support system (RAG) with 9 critical bug fixe
 
 ## 2025-12-11 - 📝 SBSA T-PPP submission & phase-1 scope documented
 - Standard Bank (SBSA) submitted our T-PPP registration to PASA; integration meeting scheduled next Wednesday to receive API details.
+- **Update**: TPPP certification received from PASA on 12 March 2026 (valid to 28 Feb 2027)
 - Phase 1 (documented only, no code changes): 
   1) Deposit notification API → validate reference to wallet/float; credit on success, return error on invalid reference.
   2) Enable PayShap API service for outbound payments (wallet/float → external bank) and Request Money from external banks.

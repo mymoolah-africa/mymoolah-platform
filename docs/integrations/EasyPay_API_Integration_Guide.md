@@ -76,7 +76,7 @@ For **EasyPay legal and PASA/NPS** discussions, the intended model is:
    EasyPay acts as a **regulated TPPP collection channel**. The end-user pays cash at a retail terminal against a **MyMoolah-issued PIN**. EasyPay **settles to MyMoolah as the single named creditor**. There is no onward settlement to multiple sub-creditors within this leg.
 
 2. **Post-settlement**  
-   After settlement, funds are accounted for under **MyMoolah’s PASA Third-Party Payment Provider (TPPP) programme**, **sponsored by Standard Bank**, with a **TPPP Creditor Account** at Standard Bank. Wallet crediting, VAS, and other product legs are **outside EasyPay’s collection mandate** and are subject to sponsor-bank oversight and MyMoolah’s own FICA/AML controls.
+   After settlement, funds are accounted for under **MyMoolah’s PASA-certified T-PPP since 12 March 2026 (valid to 28 Feb 2027)**, **sponsored by Standard Bank**, with a **TPPP Creditor Account** at Standard Bank. Wallet crediting, VAS, and other product legs are **outside EasyPay’s collection mandate** and are subject to sponsor-bank oversight and MyMoolah’s own FICA/AML controls.
 
 3. **Phase 2 (Cash-out @ EasyPay)**  
    Treated as a **separate** product (future): user instruction to disburse cash at terminal; not part of Phase 1 legal scoping unless explicitly agreed.

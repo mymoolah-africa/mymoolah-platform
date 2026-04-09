@@ -109,5 +109,14 @@
       "dstv":        { "fixedFee": 330, "commission": 0 },
       "multichoice": { "fixedFee": 330, "commission": 0 }
     }
+  },
+
+  "EASYPAY": {
+    "topup": {
+      "default": 0,
+      "passThrough": true,
+      "feeStructure": "fixed_plus_percentage",
+      "note": "MMTP earns zero margin. EasyPay deducts R5.50 + handling% + VAT at source. Full cost passed to user."
+    }
   }
 }
