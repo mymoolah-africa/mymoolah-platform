@@ -42,6 +42,8 @@ chemaname = public
 
 # EasyPay — contains SessionToken, do not commit
 docs/COPY_PASTE_THEODORE_EMAIL.txt
+# EasyPay UAT test PINs (generated locally; do not commit — enumerateable credentials)
+docs/integrations/easypay_test_pins.csv
 
 # Docker container ID artifacts (created by redis/proxy startup)
 Running
