@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
 **Last Updated**: 2026-04-10  
-**Latest Feature**: **EasyPay V5 documentation + Partner Q&A pack (v2.94.3)** — Added `docs/integrations/EasyPay_V5_PARTNER_QA_CHECKLIST.md` (numbered questions A–E for EasyPay meeting, post-meeting MMTP checklist §F). Updated `EasyPay_API_Integration_Guide.md` to v1.1.0: V5 as Phase 1 cash-in (§1.2, §4.0, Appendix A top-up diagram), legacy top-up settlement marked confirm-with-EP, integration checklist and recon pointers aligned. CoA §3.1 links to partner checklist for T+2 bank ref / recon file. **Migration `20260409_01_add_userId_to_bills`**: applied UAT/staging/production (André 2026-04-09). **NEXT:** EasyPay meeting → answer checklist → update env (`EASYPAY_TOPUP_*`), optional `paymentNotification` fee fields if EP provides them, recon automation, deprecate legacy settlement doc path if E1 confirmed. Previous: EasyPay V5 implementation v2.94.0–2.94.2, Flash v2.93.1.  
-**Document Version**: 2.94.3  
-**Session logs**: `docs/session_logs/2026-04-10_1200_easypay-v5-partner-qa-docs.md`, `docs/session_logs/2026-04-09_2200_easypay-v5-implementation.md`, `docs/session_logs/2026-04-08_1700_flash-voucher-frontend-fixes.md`  
+**Latest Feature**: **EasyPay V5 finalisation plan (v2.95.0)** — Post-EP meeting: V5 confirmed as sole cash-in route, legacy settlement routes to be removed. Cash handling fee is variable (from SFTP recon, not V5 payload) — MMTP absorbs as CoS. New CoA account `5000-10-02` planned. Created `docs/EASYPAY_V5_FINALISATION_PLAN.md` — comprehensive 6-task implementation brief. **NEXT:** Execute plan Tasks 1–6 (new agent). André to request sample SFTP recon file + egress IPs from EasyPay. Previous: v2.94.3 partner Q&A pack, v2.94.0–2.94.2 V5 implementation, Flash v2.93.1.  
+**Document Version**: 2.95.0  
+**Session logs**: `docs/session_logs/2026-04-10_1400_easypay-v5-finalisation-plan.md`, `docs/session_logs/2026-04-10_1200_easypay-v5-partner-qa-docs.md`, `docs/session_logs/2026-04-09_2200_easypay-v5-implementation.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -41,6 +41,7 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 | Test in Codespaces | `docs/CODESPACES_TESTING_REQUIREMENT.md` |
 | Portal development | `docs/PORTAL_DEVELOPMENT_GUIDE.md` |
 | Ledger Chart of Accounts | `docs/CHART_OF_ACCOUNTS.md` |
+| EasyPay V5 implementation plan | `docs/EASYPAY_V5_FINALISATION_PLAN.md` |
 | EasyPay V5 partner questions & finalisation | `docs/integrations/EasyPay_V5_PARTNER_QA_CHECKLIST.md` + `docs/integrations/EasyPay_API_Integration_Guide.md` |
 | Deploy | `docs/DEPLOYMENT_GUIDE.md`, `docs/archive/deployment/GCP_PRODUCTION_DEPLOYMENT.md` |
 | API contracts | `docs/API_DOCUMENTATION.md` |
