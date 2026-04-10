@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
 **Last Updated**: 2026-04-10  
-**Latest Feature**: **EasyPay V5 agent handover + Gmail MCP (v2.95.1)** — Created `docs/EASYPAY_V5_AGENT_HANDOVER.md` (15-section onboarding brief for next agent). Gmail MCP configured (`@mcp-z/mcp-gmail`, OAuth Desktop). Branded email signature (`config/email-signature.html`). SBSA SFTP tested from GCP VM (34.35.137.166) — still blocked on port 5022, reply drafted for Colette. **NEXT:** New agent executes V5 plan Tasks 1–6 per `docs/EASYPAY_V5_AGENT_HANDOVER.md`. Andre to send EP sample recon file + egress IP requests. Previous: v2.95.0 finalisation plan, v2.94.3 partner Q&A, v2.94.0–2.94.2 V5 implementation.  
-**Document Version**: 2.95.1  
-**Session logs**: `docs/session_logs/2026-04-10_1500_easypay-v5-handover-gmail-sftp.md`, `docs/session_logs/2026-04-10_1400_easypay-v5-finalisation-plan.md`, `docs/session_logs/2026-04-10_1200_easypay-v5-partner-qa-docs.md`  
+**Latest Feature**: **EasyPay V5 finalisation implemented (v2.96.0)** — Executed all 6 tasks: fee model fixed to flat R6.33 (R5.50 + VAT), legacy settlement routes removed (security fix), new CoA `5000-10-02` (EasyPay Cash Handling Fee), `postCashHandlingCost()` added for batch recon, test PIN generator created, SFTP credentials email drafted, full doc sweep. **NEXT:** Andre runs migrations (UAT/staging/production), generates test PINs, sends credentials to EasyPay, requests sample SFTP recon file + egress IPs. Next agent builds SFTP recon parser + batch recon job + T+2 settlement JE. Previous: v2.95.1 agent handover, v2.95.0 finalisation plan, v2.94.3 partner Q&A.  
+**Document Version**: 2.96.0  
+**Session logs**: `docs/session_logs/2026-04-10_1700_easypay-v5-finalisation-implementation.md`, `docs/session_logs/2026-04-10_1500_easypay-v5-handover-gmail-sftp.md`, `docs/session_logs/2026-04-10_1400_easypay-v5-finalisation-plan.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---

@@ -1,5 +1,27 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-10 - EasyPay V5 finalisation implementation (v2.96.0)
+
+### Summary
+Executed the 6-task EasyPay V5 Phase 1 Cash-In finalisation plan. Fee model changed to flat R6.33 (R5.50 + VAT) — cash handling % removed. New CoA account `5000-10-02` (Cost of Sales: EasyPay Cash Handling Fee) for MMTP-absorbed costs. Legacy settlement routes removed (security fix: unauthenticated endpoint). New `postCashHandlingCost()` function for batch recon. Test PIN generation script created (~50 PINs for EasyPay UAT). SFTP credentials email drafted. Full documentation sweep across CoA, Integration Guide, Partner QA, supplier-commissions, and env.template.
+
+### Code changes
+- `services/easyPayDepositService.js` — removed `handlingPct` from fee calc (now flat R6.33); added `postCashHandlingCost()` for batch JE3; exported `ACCOUNT_EASYPAY_CASH_HANDLING`
+- `controllers/easyPayController.js` — defensive `parseFloat(Amount)` on paymentNotification
+- `routes/vouchers.js` — removed legacy settlement routes (`/easypay/topup/settlement`, `/easypay/settlement`); removed unused middleware imports
+- `migrations/20260410_01_create_easypay_cash_handling_account.js` — seeds `5000-10-02` ledger account
+- `scripts/generate-easypay-test-pins.js` — generates ~50 test Bills in UAT DB + CSV output
+- `env.template` — removed `EASYPAY_TOPUP_CASH_HANDLING_PCT`; added `LEDGER_ACCOUNT_EASYPAY_CASH_HANDLING=5000-10-02`
+
+### Documentation updates
+- `docs/CHART_OF_ACCOUNTS.md` — added `5000-10-02` to expenses, updated §3.1 JE pattern to 3-JE flow, updated §7 + §8
+- `docs/integrations/EasyPay_V5_PARTNER_QA_CHECKLIST.md` — marked §F items completed
+- `docs/integrations/EasyPay_API_Integration_Guide.md` — legacy settlement marked REMOVED
+- `docs/integrations/EASYPAY_UAT_CREDENTIALS_EMAIL_DRAFT.md` — new email draft for EasyPay
+- `config/supplier-commissions.json` — updated EASYPAY.topup note
+
+---
+
 ## 2026-04-10 - EasyPay V5 agent handover + Gmail MCP + SBSA SFTP test (v2.95.1)
 
 ### Summary
