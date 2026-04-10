@@ -71,7 +71,7 @@ sequenceDiagram
     Note over API: Wallet credit + fees + ledger JEs
 ```
 
-**Legacy note**: Sections §4.1+ describing `POST /api/v1/vouchers/easypay/topup/settlement` document an **older MMTP-assumed** callback shape. **Confirm with EasyPay** whether that path is still used for any switch flow; Phase 1 cash-in **must** align with **V5** per **[Partner Q&A checklist](./EasyPay_V5_PARTNER_QA_CHECKLIST.md)** (question E1).
+**Legacy note (2026-04-10)**: The legacy **`POST /api/v1/vouchers/easypay/topup/settlement`** path has been **removed** from MMTP. §4.1 retains a **historical** contract description only. Phase 1 cash-in uses **V5** (`/billpayment/v1/paymentNotification`, §4.0) per **[Partner Q&A checklist](./EasyPay_V5_PARTNER_QA_CHECKLIST.md)** (E1: V5-only).
 
 ### 1.3 Key Features
 
@@ -124,10 +124,10 @@ For **EasyPay legal and PASA/NPS** discussions, the intended model is:
 - [ ] Obtain UAT credentials: **`SessionToken`** (V5) per `Authorization: SessionToken {token}` — stored as `EASYPAY_API_KEY` on MMTP; see §3 and **[Partner Q&A](./EasyPay_V5_PARTNER_QA_CHECKLIST.md)** (D1)
 - [ ] Configure IP whitelist (EasyPay egress CIDRs) — **[Partner Q&A](./EasyPay_V5_PARTNER_QA_CHECKLIST.md)** (D2)
 - [ ] **V5**: Wire switch to MMTP **`/billpayment/v1/*`** (info → authorisation → paymentNotification)
-- [ ] Confirm **no parallel** top-up settlement path unless agreed — **[Partner Q&A](./EasyPay_V5_PARTNER_QA_CHECKLIST.md)** (E1)
+- [x] Confirm **no parallel** top-up settlement path — **[Partner Q&A](./EasyPay_V5_PARTNER_QA_CHECKLIST.md)** (E1: **V5-only**; legacy top-up settlement **removed** 2026-04-10)
 - [ ] Run DB migration **`20260409_01_add_userId_to_bills`** on each environment (§2.1) before wallet/USSD issue flows
 - [ ] Close **[Partner Q&A](./EasyPay_V5_PARTNER_QA_CHECKLIST.md)** (fees, min/max, bank ref, recon file) and update MMTP env / recon jobs
-- [ ] Legacy: X-API-Key settlement tests (§4.1+) only if EasyPay confirms they still apply
+- [ ] **Cash-out / standalone voucher** settlement (§4.1+): X-API-Key settlement tests where those callback routes remain; **not** applicable to top-up cash-in (use V5 §4.0)
 - [ ] Test with UAT test users (wallet + retail terminal)
 - [ ] Complete reconciliation testing (T+2 bank + optional EP file)
 - [ ] Request production credentials and deploy
@@ -135,23 +135,23 @@ For **EasyPay legal and PASA/NPS** discussions, the intended model is:
 
 ### 2.3 5-Minute Quick Test
 
-> **Phase 1 live path**: Wallet credit happens on **`POST /billpayment/v1/paymentNotification`** after issue (`POST /api/v1/vouchers/easypay/issue`). The curls below target the **legacy** `.../topup/settlement` route — use only if EasyPay confirms that path is still required (**[Partner Q&A E1](./EasyPay_V5_PARTNER_QA_CHECKLIST.md)**).
+> **Phase 1 live path**: Wallet credit happens on **`POST /billpayment/v1/paymentNotification`** after issue (`POST /api/v1/vouchers/easypay/issue`). The first curl block below is **REMOVED (2026-04-10)** — historical only; **do not run**. Remaining curls are **cash-out** and **standalone voucher** settlement where still applicable (**[Partner Q&A E1](./EasyPay_V5_PARTNER_QA_CHECKLIST.md)**).
 
 ```bash
-# 1. Test Top-up Settlement Endpoint (legacy — confirm with EasyPay)
-curl -X POST https://staging.mymoolah.africa/api/v1/vouchers/easypay/topup/settlement \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: your_uat_api_key_here" \
-  -H "X-Idempotency-Key: test-topup-$(date +%s)" \
-  -H "X-Request-ID: test-request-$(uuidgen)" \
-  -d '{
-    "easypay_code": "9123412345678",
-    "settlement_amount": 100.00,
-    "merchant_id": "EP_TEST_MERCHANT_001",
-    "transaction_id": "EP_TXN_20260116_001",
-    "terminal_id": "EP_TERMINAL_001",
-    "timestamp": "2026-01-16T13:40:33+02:00"
-  }'
+# 1. Top-up settlement — REMOVED 2026-04-10 (historical example only; endpoint deleted — use V5 §4.0)
+# curl -X POST https://staging.mymoolah.africa/api/v1/vouchers/easypay/topup/settlement \
+#   -H "Content-Type: application/json" \
+#   -H "X-API-Key: your_uat_api_key_here" \
+#   -H "X-Idempotency-Key: test-topup-$(date +%s)" \
+#   -H "X-Request-ID: test-request-$(uuidgen)" \
+#   -d '{
+#     "easypay_code": "9123412345678",
+#     "settlement_amount": 100.00,
+#     "merchant_id": "EP_TEST_MERCHANT_001",
+#     "transaction_id": "EP_TXN_20260116_001",
+#     "terminal_id": "EP_TERMINAL_001",
+#     "timestamp": "2026-01-16T13:40:33+02:00"
+#   }'
 
 # 2. Test Cash-out Settlement Endpoint
 curl -X POST https://staging.mymoolah.africa/api/v1/vouchers/easypay/cashout/settlement \
@@ -269,9 +269,14 @@ These endpoints implement the official EasyPay receiver contract. **Authenticati
 
 ---
 
-### 4.1 Top-up @ EasyPay Settlement (legacy callback — confirm with EasyPay)
+### 4.1 Top-up @ EasyPay Settlement (REMOVED 2026-04-10 — historical reference)
+
+> **REMOVED (2026-04-10)**: This endpoint has been removed. EasyPay V5 BillPayment Receiver
+> (`/billpayment/v1/paymentNotification`) is the only cash-in path. See Section 4.0.
 
 #### Endpoint
+
+**REMOVED** — documented for audit/history only:
 
 ```http
 POST /api/v1/vouchers/easypay/topup/settlement
@@ -279,7 +284,7 @@ POST /api/v1/vouchers/easypay/topup/settlement
 
 #### Description
 
-Called by EasyPay when a user presents a Top-up PIN at a cashier and pays cash. This endpoint credits the user's MyMoolah wallet with the settlement amount.
+**Historical:** Called by EasyPay when a user presents a Top-up PIN at a cashier and pays cash. This endpoint credited the user's MyMoolah wallet with the settlement amount. **This route is no longer deployed**; use **§4.0** V5 `paymentNotification` instead.
 
 #### Request
 
@@ -782,7 +787,7 @@ MyMoolah provides three environments for EasyPay integration:
 **Purpose**: Initial development and integration testing
 
 **Settlement Endpoints**:
-- **Top-up**: `POST https://staging.mymoolah.africa/api/v1/vouchers/easypay/topup/settlement`
+- **Top-up**: **REMOVED (2026-04-10)** — was `POST .../vouchers/easypay/topup/settlement`; cash-in uses **V5** `/billpayment/v1/paymentNotification` (§4.0)
 - **Cash-out**: `POST https://staging.mymoolah.africa/api/v1/vouchers/easypay/cashout/settlement`
 - **Standalone Voucher**: `POST https://staging.mymoolah.africa/api/v1/vouchers/easypay/voucher/settlement`
 
@@ -800,7 +805,7 @@ MyMoolah provides three environments for EasyPay integration:
 **Purpose**: Pre-production testing and UAT sign-off
 
 **Settlement Endpoints**:
-- **Top-up**: `POST https://staging.mymoolah.africa/api/v1/vouchers/easypay/topup/settlement`
+- **Top-up**: **REMOVED (2026-04-10)** — was `POST .../vouchers/easypay/topup/settlement`; cash-in uses **V5** `/billpayment/v1/paymentNotification` (§4.0)
 - **Cash-out**: `POST https://staging.mymoolah.africa/api/v1/vouchers/easypay/cashout/settlement`
 - **Standalone Voucher**: `POST https://staging.mymoolah.africa/api/v1/vouchers/easypay/voucher/settlement`
 
@@ -818,7 +823,7 @@ MyMoolah provides three environments for EasyPay integration:
 **Purpose**: Live production traffic
 
 **Settlement Endpoints**:
-- **Top-up**: `POST https://api-mm.mymoolah.africa/api/v1/vouchers/easypay/topup/settlement`
+- **Top-up**: **REMOVED (2026-04-10)** — was `POST .../vouchers/easypay/topup/settlement`; cash-in uses **V5** `/billpayment/v1/paymentNotification` (§4.0)
 - **Cash-out**: `POST https://api-mm.mymoolah.africa/api/v1/vouchers/easypay/cashout/settlement`
 - **Standalone Voucher**: `POST https://api-mm.mymoolah.africa/api/v1/vouchers/easypay/voucher/settlement`
 
@@ -1439,7 +1444,7 @@ sequenceDiagram
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 1.1.0 | 2026-04-10 | **V5 as Phase 1 cash-in**: Updated §1.2 architecture (mermaid), added §4.0 V5 endpoint table, §2.2 checklist, §10 V5 recon pointer, new §12 Partner Q&A link to `EasyPay_V5_PARTNER_QA_CHECKLIST.md`; marked §4.1 top-up settlement as legacy pending EP confirmation; header status + Lesaka |
+| 1.1.0 | 2026-04-10 | **V5 as Phase 1 cash-in**: Updated §1.2 architecture (mermaid), added §4.0 V5 endpoint table, §2.2 checklist, §10 V5 recon pointer, new §12 Partner Q&A link to `EasyPay_V5_PARTNER_QA_CHECKLIST.md`; §4.1 top-up settlement documented then **removed** 2026-04-10 (E1 V5-only; see §4.0); header status + Lesaka |
 | 1.0.4 | 2026-03-24 | TPPP / NPS positioning (§1.4), prerequisites |
 | 1.0.2 | 2026-01-16 | Added comprehensive environment endpoints (QA/Test, Staging, Production), API key management section, IP whitelisting instructions, and test data scenarios |
 | 1.0.1 | 2026-01-16 | Removed fee and margin references (commercial agreement pending) |

@@ -116,7 +116,7 @@
       "default": 0,
       "passThrough": true,
       "feeStructure": "fixed_plus_percentage",
-      "note": "MMTP earns zero margin. EasyPay deducts R5.50 + handling% + VAT at source. Full cost passed to user."
+      "note": "flat R5.50 + VAT (R6.33) user fee; no handling % charged to user; cash handling absorbed by MMTP as CoS"
     }
   }
 }

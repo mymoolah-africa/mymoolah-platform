@@ -118,6 +118,7 @@ Expense accounts track costs incurred. Normal side: **debit**
 | Code | Name | Normal | Migration | Used By | Notes |
 |------|------|--------|-----------|---------|-------|
 | `5000-10-01` | Cost of Sales: PayShap SBSA Fee | debit | `20260224_03`, `20260224_02` | `standardbankRtpService.js`, `standardbankRppService.js` | SBSA fee per PayShap RPP/RTP transaction (R5.00 ex-VAT per txn) |
+| `5000-10-02` | Cost of Sales: EasyPay Cash Handling Fee | debit | `20260410_01` | `easyPayDepositService.js` (batch recon job) | Variable per-merchant cash handling cost; MMTP absorbs; posted from SFTP recon file |
 | `5100-02-01` | Referral Expense | debit | `20260405_01` | `production-full-audit.js` | Referral commission expense; currently referenced only in audit reconciliation — accrual posting path TBD |
 | `5100-03-01` | Ad Reward Expense | debit | `20260224_03` | `adService.js` | Watch-to-Earn user reward payout (R2–R3 per view) |
 
@@ -144,12 +145,12 @@ User pays cash at EasyPay retailer. EasyPay's BillPayment Receiver V5 protocol c
 MMTP's `/billpayment/v1/paymentNotification`. MMTP credits user wallet immediately.
 EasyPay settles to MMTP's Standard Bank account **T+2** in a single daily batch.
 
-**Fee**: R5.50 excl VAT + cash handling fee (TBC% — placeholder 0.30%) per transaction.
-MMTP passes full cost through to user — MMTP earns zero markup.
+**Fee**: R5.50 excl VAT + 15% VAT = R6.33 flat per transaction.
+User pays R6.33 flat fee. MMTP absorbs the variable cash handling cost as Cost of Sales (5000-10-02).
 EasyPay deducts the fee at source (MMTP receives net in settlement).
 VAT on fee is throughput (in-out), no output VAT for MMTP.
 
-**Example**: R100 deposit, total fee R6.67 (R5.80 excl VAT + R0.87 VAT):
+**Example**: R100 deposit, total fee R6.33 (R5.50 excl VAT + R0.83 VAT):
 
 **JE1 — Gross Deposit (face value):**
 
@@ -164,19 +165,28 @@ Reference: `EP-DEP-{transactionId}`
 
 | | Account | Code | DR | CR |
 |---|---------|------|-----|-----|
-| DR | Client Float Liability | 2100-01-01 | R6.67 | |
-| CR | EasyPay Top-up Float | 1200-10-02 | | R6.67 |
+| DR | Client Float Liability | 2100-01-01 | R6.33 | |
+| CR | EasyPay Top-up Float | 1200-10-02 | | R6.33 |
 
-Reference: `EP-FEE-{transactionId}`
+Reference: `EP-FEE-{transactionId}` (R5.50 excl VAT + R0.83 VAT)
 
-**Net ledger effect:**
-- EasyPay Float (1200-10-02): DR R100.00 − CR R6.67 = **DR R93.33** (receivable from EasyPay T+2 settlement)
-- Client Float (2100-01-01): CR R100.00 − DR R6.67 = **CR R93.33** (user net balance increase)
+**JE3 — Cash Handling Cost (batch, after SFTP file):**
 
-No commission JE — MMTP earns zero on this pass-through.
+```
+JE3 — Cash Handling Cost (batch, MMTP absorbs):
+DR  5000-10-02  CoS: EasyPay Cash Handling Fee    R{handlingCost}
+CR  1200-10-02  EasyPay Top-up Float               R{handlingCost}
+Reference: EP-HANDLING-{batchRef}-{txnId}
+```
 
-**Wallet**: `credit(R100.00)` then `debit(R6.67)` = net +R93.33
-**Transaction records**: two rows (+R100.00 deposit, −R6.67 fee)
+**Net ledger effect (3-JE pattern):**
+- **After JE1–JE2 (per deposit):** EasyPay Float (1200-10-02): DR R100.00 − CR R6.33 = **DR R93.67** (receivable from EasyPay T+2 settlement, before batch handling adjustment). Client Float (2100-01-01): CR R100.00 − DR R6.33 = **CR R93.67** (user net balance increase).
+- **JE3 (batch, after SFTP file):** Recognises variable cash handling absorbed by MMTP: DR **5000-10-02** / CR **1200-10-02** for `R{handlingCost}` per matched transaction — reduces EasyPay float by the handling component while posting CoS.
+
+No commission JE — MMTP earns zero. Cash handling cost absorbed as operating expense.
+
+**Wallet**: `credit(R100.00)` then `debit(R6.33)` = net +R93.67
+**Transaction records**: two rows (+R100.00 deposit, −R6.33 fee)
 
 **T+2 Settlement (when EasyPay bank payment arrives):**
 
@@ -630,7 +640,7 @@ developed in parallel. Claim the next available code within your range.
 | `4300-xx-xx` | Insurance Premium Income | Premium collections | Reserved (Section 9.4) |
 | `4400-xx-xx` | Subscription Revenue | Monthly subscription fees | Reserved (Section 9.10) |
 | `4500-xx-xx` | Stokvel Fee Revenue | Administration, transaction fees | Reserved (Section 9.5) |
-| `5000-10-xx` | Cost of Sales | PayShap SBSA fees, supplier costs | **LIVE** (01 SBSA fee) |
+| `5000-10-xx` | Cost of Sales | PayShap SBSA fees, supplier costs; **02** EasyPay cash handling (CoS) | **LIVE** (01 SBSA fee, 02 EasyPay cash handling) |
 | `5100-01-xx` | Operating Expenses — General | Office, cloud, SaaS | Reserved |
 | `5100-02-xx` | Referral / Affiliate Expense | Commission expense recognition | Code-referenced (01 referral) |
 | `5100-03-xx` | Reward / Loyalty Expense | Ad rewards, cashback, loyalty points | **LIVE** (01 ad reward) |
@@ -661,6 +671,7 @@ sensible defaults. This allows per-environment overrides without code changes.
 | `LEDGER_ACCOUNT_FLASH_FLOAT` | `1200-10-04` | Flash Float Account | flashController |
 | `LEDGER_ACCOUNT_ZAPPER_FLOAT` | `1200-10-01` | Zapper Float Account | qrPaymentController |
 | `LEDGER_ACCOUNT_EASYPAY_TOPUP_FLOAT` | `1200-10-02` | EasyPay Top-up Float | migration scripts |
+| `LEDGER_ACCOUNT_EASYPAY_CASH_HANDLING` | `5000-10-02` | CoS: EasyPay Cash Handling | `easyPayDepositService.js` |
 | `LEDGER_ACCOUNT_EASYPAY_CASHOUT_FLOAT` | `1200-10-03` | EasyPay Cash-out Float | voucherController |
 | `LEDGER_ACCOUNT_MOBILEMART_FLOAT` | `1200-10-05` | MobileMart Float | migration scripts |
 | `LEDGER_ACCOUNT_USDC_FEE_CLEARING` | `9999-00-01` | USDC Fee Clearing / Suspense | usdcTransactionService |
@@ -839,7 +850,7 @@ different clearing participants.
 | Assets | `1200-20-05` | TCIB Float — Capitec Corridor | asset | debit |
 | Assets | `1200-20-10` | TCIB Float — General / Other | asset | debit |
 | Revenue | `4000-20-02` | TCIB Transaction Fee Revenue | revenue | credit |
-| Expense | `5000-10-02` | TCIB Settlement Cost | expense | debit |
+| Expense | `5000-10-03` | TCIB Settlement Cost | expense | debit |
 
 **Key Considerations**:
 

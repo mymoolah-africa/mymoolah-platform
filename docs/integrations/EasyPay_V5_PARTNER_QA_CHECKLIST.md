@@ -75,12 +75,13 @@ MyMoolah **Phase 1 — Top-up @ EasyPay (cash-in)** is implemented on **EasyPay�
 
 Use EasyPay’s written answers to close these out:
 
-- [ ] Update **Secret Manager / env**: `EASYPAY_TOPUP_CASH_HANDLING_PCT`, `EASYPAY_TOPUP_FIXED_FEE_EXCL_VAT` (if changed), any new vars for EP-supplied fee fields.
+- [x] Update **Secret Manager / env**: done (`EASYPAY_TOPUP_CASH_HANDLING_PCT` removed, `LEDGER_ACCOUNT_EASYPAY_CASH_HANDLING=5000-10-02` added).
+- [x] **Fee model**: confirmed flat R5.50 + VAT = R6.33; cash handling is variable, from SFTP recon file, MMTP absorbs.
 - [ ] If **authoritative fee/net** appears in V5 payload: adjust **`paymentNotification`** in `controllers/easyPayController.js` and **`easyPayDepositService.js`** to use EP values (with fallbacks and audit logging).
 - [ ] **Frontend / USSD copy**: align estimated fee text with confirmed formula and min/max.
-- [ ] **Reconciliation**: implement matching using **C1–C2** answers (`docs/CHART_OF_ACCOUNTS.md` §3.1 T+2 settlement JE references this).
+- [ ] **Reconciliation**: pending SFTP sample file from EasyPay.
 - [ ] **Docs**: mark this checklist **Complete** with date + link to EP email/PDF; bump `EasyPay_API_Integration_Guide.md` version.
-- [ ] **Legacy route**: if E1 = V5-only for cash-in, schedule deprecation or document “not used by EP switch”.
+- [x] **Legacy route**: E1 confirmed V5-only; legacy settlement routes removed 2026-04-10.
 
 ---
 

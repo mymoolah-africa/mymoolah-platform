@@ -295,7 +295,7 @@ class EasyPayController {
         return res.status(200).json({ EchoData });
       }
 
-      const grossAmountCents = Amount || bill.amount;
+      const grossAmountCents = parseFloat(Amount) || bill.amount;
       const grossAmountRand = grossAmountCents / 100;
 
       const { totalFee, netAmount, feeExclVat, vat } = calculateEasyPayFee(grossAmountRand);

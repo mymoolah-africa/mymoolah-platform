@@ -2,8 +2,6 @@ const express = require('express');
 const router = express.Router();
 const voucherController = require('../controllers/voucherController');
 const authMiddleware = require('../middleware/auth');
-const { idempotencyMiddleware } = require('../middleware/idempotency');
-const { easypayAuthMiddleware } = require('../middleware/easypayAuth');
 
 // Issue a new voucher
 router.post('/issue', authMiddleware, voucherController.issueVoucher);
@@ -11,40 +9,16 @@ router.post('/issue', authMiddleware, voucherController.issueVoucher);
 // Issue EasyPay Top-up voucher
 router.post('/easypay/topup/issue', authMiddleware, voucherController.issueEasyPayVoucher);
 
-// Process EasyPay Top-up settlement callback
-// Note: This route is for EasyPay callbacks and UAT simulation
-// Authentication: API key required (X-API-Key header)
-// Idempotency: Prevents duplicate processing (X-Idempotency-Key header)
-router.post('/easypay/topup/settlement', easypayAuthMiddleware, idempotencyMiddleware, (req, res, next) => {
-  console.log('🔔 Route matched: /easypay/topup/settlement', {
-    method: req.method,
-    path: req.path,
-    url: req.url,
-    body: req.body
-  });
-  next();
-}, voucherController.processEasyPaySettlement);
+// ─────────────────────────────────────────────────────────────────────────────
+// Legacy EasyPay settlement routes — REMOVED (2026-04-10)
+// V5 BillPayment Receiver (routes/easypay.js) is the ONLY cash-in path.
+// EasyPay confirmed 10 April meeting: settlement routes were MMTP assumptions,
+// not used by EasyPay's switch. Removed for security (was unauthenticated).
+// Git history preserves the code for audit trail.
+// ─────────────────────────────────────────────────────────────────────────────
 
-// ─────────────────────────────────────────────────────────────────────────────
-// EasyPay Cash-Out routes — DISABLED (2026-02-21)
-// EasyPay Cash-Out is NOT activated. Only Cash-In (Top-Up) is in scope.
-// Routes are commented out to prevent accidental exposure.
-// Controller code is preserved for audit trail and future activation if needed.
-// ─────────────────────────────────────────────────────────────────────────────
-// router.post('/easypay/cashout/issue', authMiddleware, voucherController.issueEasyPayCashout);
-// router.post('/easypay/cashout/settlement', easypayAuthMiddleware, idempotencyMiddleware, voucherController.processEasyPayCashoutSettlement);
-// router.delete('/easypay/cashout/:voucherId', authMiddleware, voucherController.cancelEasyPayCashout);
-
-// ─────────────────────────────────────────────────────────────────────────────
-// EasyPay Standalone Voucher routes — DISABLED (2026-02-21)
-// Not in scope for current activation. Preserved for future use.
-// ─────────────────────────────────────────────────────────────────────────────
-// router.post('/easypay/voucher/issue', authMiddleware, voucherController.issueEasyPayStandaloneVoucher);
-// router.post('/easypay/voucher/settlement', easypayAuthMiddleware, idempotencyMiddleware, voucherController.processEasyPayStandaloneVoucherSettlement);
-
-// Legacy routes (for backward compatibility)
+// Legacy PIN issuance alias (still needed — used by app + USSD for PIN generation)
 router.post('/easypay/issue', authMiddleware, voucherController.issueEasyPayVoucher);
-router.post('/easypay/settlement', voucherController.processEasyPaySettlement);
 
 // Redeem a voucher (must be authenticated so we credit the redeemer's wallet)
 router.post('/redeem', authMiddleware, voucherController.redeemVoucher);
