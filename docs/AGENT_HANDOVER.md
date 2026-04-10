@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
 **Last Updated**: 2026-04-10  
-**Latest Feature**: **EasyPay V5 finalisation plan (v2.95.0)** — Post-EP meeting: V5 confirmed as sole cash-in route, legacy settlement routes to be removed. Cash handling fee is variable (from SFTP recon, not V5 payload) — MMTP absorbs as CoS. New CoA account `5000-10-02` planned. Created `docs/EASYPAY_V5_FINALISATION_PLAN.md` — comprehensive 6-task implementation brief. **NEXT:** Execute plan Tasks 1–6 (new agent). André to request sample SFTP recon file + egress IPs from EasyPay. Previous: v2.94.3 partner Q&A pack, v2.94.0–2.94.2 V5 implementation, Flash v2.93.1.  
-**Document Version**: 2.95.0  
-**Session logs**: `docs/session_logs/2026-04-10_1400_easypay-v5-finalisation-plan.md`, `docs/session_logs/2026-04-10_1200_easypay-v5-partner-qa-docs.md`, `docs/session_logs/2026-04-09_2200_easypay-v5-implementation.md`  
+**Latest Feature**: **EasyPay V5 agent handover + Gmail MCP (v2.95.1)** — Created `docs/EASYPAY_V5_AGENT_HANDOVER.md` (15-section onboarding brief for next agent). Gmail MCP configured (`@mcp-z/mcp-gmail`, OAuth Desktop). Branded email signature (`config/email-signature.html`). SBSA SFTP tested from GCP VM (34.35.137.166) — still blocked on port 5022, reply drafted for Colette. **NEXT:** New agent executes V5 plan Tasks 1–6 per `docs/EASYPAY_V5_AGENT_HANDOVER.md`. Andre to send EP sample recon file + egress IP requests. Previous: v2.95.0 finalisation plan, v2.94.3 partner Q&A, v2.94.0–2.94.2 V5 implementation.  
+**Document Version**: 2.95.1  
+**Session logs**: `docs/session_logs/2026-04-10_1500_easypay-v5-handover-gmail-sftp.md`, `docs/session_logs/2026-04-10_1400_easypay-v5-finalisation-plan.md`, `docs/session_logs/2026-04-10_1200_easypay-v5-partner-qa-docs.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -41,7 +41,8 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 | Test in Codespaces | `docs/CODESPACES_TESTING_REQUIREMENT.md` |
 | Portal development | `docs/PORTAL_DEVELOPMENT_GUIDE.md` |
 | Ledger Chart of Accounts | `docs/CHART_OF_ACCOUNTS.md` |
-| EasyPay V5 implementation plan | `docs/EASYPAY_V5_FINALISATION_PLAN.md` |
+| EasyPay V5 agent onboarding (START HERE) | `docs/EASYPAY_V5_AGENT_HANDOVER.md` |
+| EasyPay V5 implementation plan (6 tasks) | `docs/EASYPAY_V5_FINALISATION_PLAN.md` |
 | EasyPay V5 partner questions & finalisation | `docs/integrations/EasyPay_V5_PARTNER_QA_CHECKLIST.md` + `docs/integrations/EasyPay_API_Integration_Guide.md` |
 | Deploy | `docs/DEPLOYMENT_GUIDE.md`, `docs/archive/deployment/GCP_PRODUCTION_DEPLOYMENT.md` |
 | API contracts | `docs/API_DOCUMENTATION.md` |

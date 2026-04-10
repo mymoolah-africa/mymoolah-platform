@@ -1,5 +1,36 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-10 - EasyPay V5 agent handover + Gmail MCP + SBSA SFTP test (v2.95.1)
+
+### Summary
+Created comprehensive 15-section agent handover script (`docs/EASYPAY_V5_AGENT_HANDOVER.md`) for next agent to execute V5 Phase 1 Cash-In finalisation (6 tasks, EasyPay contacts, email timeline, V5 payload reference, files map, subagent strategy). Set up Gmail MCP integration (`@mcp-z/mcp-gmail` with OAuth Desktop). Built branded HTML email signature (`config/email-signature.html`). Tested SBSA SFTP from GCP VM (34.35.137.166) — both TEST and PROD servers still timeout on port 5022 (SBSA firewall issue). Drafted reply to Colette with test evidence.
+
+### New / updated files
+- `docs/EASYPAY_V5_AGENT_HANDOVER.md` (new) — 15-section onboarding brief
+- `config/email-signature.html` (new) — branded email signature for Gmail MCP
+- `docs/session_logs/2026-04-10_1500_easypay-v5-handover-gmail-sftp.md` (new)
+- `docs/AGENT_HANDOVER.md` — updated to v2.95.1
+- `docs/CHANGELOG.md` — this entry
+
+### Gmail MCP configuration
+- Package: `@mcp-z/mcp-gmail` (stdio + loopback OAuth)
+- OAuth: Desktop app client type (required for Cursor)
+- Config: `~/.cursor/mcp.json`
+- Note: Cannot reply in-thread — use manual Gmail for threaded replies
+
+---
+
+## 2026-04-10 - EasyPay V5 finalisation plan (v2.95.0)
+
+### Summary
+Post-EasyPay meeting planning session. V5 confirmed as sole cash-in route. Legacy settlement routes to be removed. Cash handling fee is variable (SFTP recon), MMTP absorbs. New CoA `5000-10-02` (Cost of Sales: EasyPay Cash Handling Fee). Created `docs/EASYPAY_V5_FINALISATION_PLAN.md` — 6-task implementation brief.
+
+### New / updated files
+- `docs/EASYPAY_V5_FINALISATION_PLAN.md` (new)
+- `docs/session_logs/2026-04-10_1400_easypay-v5-finalisation-plan.md` (new)
+
+---
+
 ## 2026-04-10 - EasyPay V5 partner Q&A checklist + doc alignment (v2.94.3)
 
 ### Summary
