@@ -11,6 +11,8 @@ Hi Malusi and Razeen,
 
 Following our meeting on 10 April, here are the UAT credentials for testing the V5 BillPayment Receiver integration.
 
+I will send the test PIN spreadsheet (`easypay_test_pins.csv`) in a **separate email** after this one.
+
 ## 1. V5 Receiver Endpoints
 
 | Environment | Base URL |
@@ -44,7 +46,9 @@ Please share your SSH public key so we can add it to the server. Files uploaded 
 
 ## 4. Test Data
 
-Attached: `easypay_test_pins.csv` containing ~50 test PINs covering:
+I will send `easypay_test_pins.csv` in a **separate email** shortly after this one (same recipients).
+
+The file contains ~50 test PIN rows covering:
 - Happy path (various amounts R50 - R4,000)
 - Already paid (expect ResponseCode 5)
 - Expired (expect ResponseCode 3)
