@@ -93,16 +93,9 @@ async function run() {
     }
 
     if (apiResult && apiResult.variable.length === 0 && apiResult.all.length > 0) {
-      console.log('  No variable products found — checking if any pinless products have an amount range...');
-      const rangeProducts = apiResult.all.filter(p => {
-        const min = p.minimumAmount || p.minAmount || 0;
-        const max = p.maximumAmount || p.maxAmount || 0;
-        return max > min && max > 100;
-      });
-      if (rangeProducts.length > 0) {
-        console.log(`  Found ${rangeProducts.length} products with amount ranges — treating as variable`);
-        networkProducts = groupByNetwork(rangeProducts);
-      }
+      console.log('  No variable products found — MobileMart marks all pinless as fixedAmount.');
+      console.log('  Using first pinless product per network as the merchantProductId (API accepts any amount at runtime).');
+      networkProducts = groupByNetwork(apiResult.all);
     }
 
     for (const network of NETWORKS) {
@@ -144,6 +137,7 @@ async function run() {
         where: { supplierId: supplier.id, name: productName, type: vasType },
         defaults: {
           supplierId: supplier.id, brandId: brand.id, name: productName, type: vasType,
+          supplierProductId: supplierProductId,
           status: 'active', denominations: [], isFeatured: false, sortOrder: 0,
           metadata: { source: 'mobilemart-seed', seeded: true }
         }
