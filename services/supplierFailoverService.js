@@ -136,9 +136,10 @@ class SupplierFailoverService {
    * @param {Function} opts.purchaseFn     - async (variant, supplierCode) => result — the actual API call
    * @param {Object} opts.context          - { userId, beneficiaryId, network } for logging
    * @param {number} opts.maxAttempts      - Max failover attempts (default 3)
+   * @param {Array}  opts.additionalCandidates - Synthetic variants to try after DB alternatives (env-var fallback)
    * @returns {Promise<Object>} { success, result, variant, supplierCode, failoverUsed }
    */
-  async executeWithFailover({ primaryVariant, amountCents, purchaseFn, context = {}, maxAttempts = 3 }) {
+  async executeWithFailover({ primaryVariant, amountCents, purchaseFn, context = {}, maxAttempts = 3, additionalCandidates = [] }) {
     const triedSupplierCodes = new Set();
     const triedVariantIds = new Set();
     let attempts = 0;
@@ -156,7 +157,7 @@ class SupplierFailoverService {
       console.log(`[SupplierFailover] Skipping primary ${primarySupplierCode} — circuit OPEN`);
     }
 
-    // Pre-fetch alternatives (deduplicate skip logs per supplier)
+    // Pre-fetch alternatives from DB
     const alternatives = await this.findAlternativeVariants(primaryVariant, amountCents);
     const skippedReasons = {};
     for (const alt of alternatives) {
@@ -175,6 +176,20 @@ class SupplierFailoverService {
       }
 
       candidates.push(alt);
+    }
+
+    // Append caller-supplied synthetic candidates (env-var fallback for electricity)
+    for (const extra of additionalCandidates) {
+      const extraCode = extra.supplier?.code;
+      if (!extraCode) continue;
+      const alreadyPresent = candidates.some(c => c.supplier?.code === extraCode);
+      if (alreadyPresent) continue;
+      if (circuitBreaker.isOpen(extraCode)) {
+        skippedReasons[extraCode] = 'circuit OPEN';
+        continue;
+      }
+      console.log(`[SupplierFailover] Adding synthetic fallback candidate: ${extraCode}`);
+      candidates.push(extra);
     }
 
     for (const [code, reason] of Object.entries(skippedReasons)) {

@@ -2542,12 +2542,30 @@ router.post('/electricity/purchase', auth, async (req, res) => {
         supplier: { code: supplier || (useMobileMartAPI ? 'MOBILEMART' : 'FLASH') }
       };
 
+      // When using env-var fallback (no DB ProductVariant), build synthetic
+      // alternatives so the failover engine can try both suppliers.
+      let additionalCandidates = [];
+      if (!productVariant && useMobileMartAPI && useFlashAPI) {
+        const altSupplier = supplier === 'MOBILEMART' ? 'FLASH' : 'MOBILEMART';
+        if (!supplierCircuitBreaker.isOpen(altSupplier)) {
+          additionalCandidates = [{
+            id: -1,
+            supplierProductId: null,
+            provider: beneficiary.metadata?.meterType || 'Electricity',
+            priceType: 'variable',
+            product: { type: 'electricity', name: 'Electricity Prepaid' },
+            supplier: { code: altSupplier }
+          }];
+        }
+      }
+
       const failoverResult = await supplierFailoverSvc.executeWithFailover({
         primaryVariant: effectiveVariant,
         amountCents: amountInCentsValue,
         purchaseFn,
         context: { userId: req.user.id, beneficiaryId, network: beneficiary.metadata?.meterType },
-        maxAttempts: 3
+        maxAttempts: 3,
+        additionalCandidates
       });
 
       if (!failoverResult.success) {

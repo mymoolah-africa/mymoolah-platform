@@ -136,11 +136,17 @@ export function ElectricityOverlay() {
       console.error('Purchase failed:', err);
       const responseData = err.response?.data;
       const isTimeout = responseData?.isTimeout || responseData?.errorCode?.includes('TIMEOUT');
+      const isMeterMin = responseData?.errorCode === 'METER_MIN_AMOUNT';
       
       if (isTimeout) {
         setErrorModalTitle('Provider Slow to Respond');
         setErrorModalMessage(
           'The electricity provider is taking too long to respond. Your wallet has not been charged. Please try again in a few minutes.'
+        );
+      } else if (isMeterMin) {
+        setErrorModalTitle('Minimum Amount Required');
+        setErrorModalMessage(
+          responseData?.message || 'The amount is below the minimum purchase amount for this meter. Please try a higher amount.'
         );
       } else {
         setErrorModalTitle('Purchase Failed');

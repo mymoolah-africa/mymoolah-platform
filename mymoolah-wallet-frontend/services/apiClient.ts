@@ -49,7 +49,7 @@ class ApiClient {
         const errorMessage = data.error || data.message || `HTTP ${response.status}`;
         const error = new Error(errorMessage);
         (error as any).status = response.status;
-        (error as any).response = data;
+        (error as any).response = { data, status: response.status, statusText: response.statusText };
         throw error;
       }
 
