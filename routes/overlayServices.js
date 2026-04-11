@@ -1169,6 +1169,7 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
           );
           
           console.log('✅ MobileMart API confirmed delivery:', JSON.stringify(supplierFulfillmentResult, null, 2));
+          supplierCircuitBreaker.recordSuccess('MOBILEMART');
           
         } catch (mobilemartError) {
           // Log error details in a way that's visible in Cloud Logging
@@ -1189,8 +1190,11 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
             } : {})
           });
 
-          // Defer rollback: only roll when we return error (failover may succeed and need the txn)
-          
+          // Record circuit breaker state for transient errors
+          if (require('../services/supplierCircuitBreaker').constructor.isTransientError(mobilemartError)) {
+            supplierCircuitBreaker.recordFailure('MOBILEMART');
+          }
+
           // Extract detailed error information from MobileMart API response
           const errorResponse = mobilemartError.response?.data || {};
           const mobilemartErrorCode = errorResponse.fulcrumErrorCode || errorResponse.errorCode || '';
@@ -1217,13 +1221,17 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
             }
           });
 
-          // Check if this is Error 1002 (Cannot source product) - upstream provider issue
+          // Failover on ANY supplier error (not just 1002) — try alternative suppliers
           // VAS_FAILOVER_ENABLED: UAT=.env has false (bypass); Staging/Production use GCS (true) for exhaustive failover
           const vasFailoverEnabled = process.env.VAS_FAILOVER_ENABLED !== 'false';
           const is1002 = mobilemartErrorCode === '1002' || mobilemartErrorCode === 1002 || mobilemartErrorMessage?.includes('Cannot source product');
 
-          if (is1002 && vasFailoverEnabled) {
-            console.log('⚠️ MobileMart Error 1002: Product unavailable. Exhaustive failover enabled - trying all alternatives in commission order...');
+          // Terminal errors that should NOT trigger failover (user-side issues, not supplier issues)
+          const terminalErrorCodes = ['1013']; // 1013 = invalid mobile number — failover won't help
+          const isTerminal = terminalErrorCodes.includes(String(mobilemartErrorCode));
+
+          if (!isTerminal && vasFailoverEnabled) {
+            console.log(`⚠️ MobileMart Error ${mobilemartErrorCode}: Failover enabled — trying all alternatives in commission order...`);
 
             const MAX_FAILOVER_ATTEMPTS = 3;
             const triedVariantIds = new Set([variantId]);
@@ -1284,6 +1292,8 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
                     supplier = altSupplier;
                     productCode = altProductCode;
                     type = altType;
+                    supplierCircuitBreaker.recordSuccess(altSupplier);
+                    failoverUsed = true;
                     await productAvailabilityLogger.logAvailabilityIssue({
                       variantId, supplierCode: supplier || 'MOBILEMART', productName: productVariant?.product?.name || productCode || 'Unknown',
                       productType: type, errorCode: mobilemartErrorCode?.toString() || null, errorMessage: mobilemartErrorMessage || null,
@@ -1308,6 +1318,8 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
                     supplier = altSupplier;
                     productCode = altProductCode;
                     type = altType;
+                    supplierCircuitBreaker.recordSuccess(altSupplier);
+                    failoverUsed = true;
                     await productAvailabilityLogger.logAvailabilityIssue({
                       variantId, supplierCode: supplier || 'MOBILEMART', productName: productVariant?.product?.name || productCode || 'Unknown',
                       productType: type, errorCode: mobilemartErrorCode?.toString() || null, errorMessage: mobilemartErrorMessage || null,
@@ -1320,10 +1332,11 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
                   }
                 } catch (attemptErr) {
                   const attemptErrorCode = attemptErr.response?.data?.fulcrumErrorCode || attemptErr.response?.data?.errorCode || attemptErr.flashError?.code;
-                  const isAttempt1002 = attemptErrorCode === '1002' || attemptErrorCode === 1002 || (attemptErr.message && attemptErr.message.includes('Cannot source product'));
+                  const isTransientAttempt = require('../services/supplierCircuitBreaker').constructor.isTransientError(attemptErr);
+                  if (isTransientAttempt) supplierCircuitBreaker.recordFailure(altSupplier);
                   lastAttemptError = attemptErr;
-                  console.warn(`❌ Failover attempt ${attempts} (${altSupplier}) failed: ${attemptErr.message}${isAttempt1002 ? ' (1002)' : ''}`);
-                  if (!isAttempt1002) break;
+                  console.warn(`❌ Failover attempt ${attempts} (${altSupplier}) failed (transient=${isTransientAttempt}): ${attemptErr.message}`);
+                  // Continue trying other alternatives regardless of error type
                 }
               }
 
@@ -1343,8 +1356,8 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
             } catch (fallbackError) {
               console.error('❌ VAS failover error:', fallbackError.message);
             }
-          } else if (is1002 && !vasFailoverEnabled) {
-            console.log('⚠️ MobileMart Error 1002: VAS_FAILOVER_ENABLED=false (UAT mask) - failing on first 1002');
+          } else if (!isTerminal && !vasFailoverEnabled) {
+            console.log(`⚠️ MobileMart Error ${mobilemartErrorCode}: VAS_FAILOVER_ENABLED=false — failing without failover`);
           }
 
           // When failover did NOT succeed, return error
@@ -1567,8 +1580,14 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
             console.log('✅ Flash API confirmed delivery:', JSON.stringify(supplierFulfillmentResult, null, 2));
           }
 
+          supplierCircuitBreaker.recordSuccess('FLASH');
+
         } catch (flashError) {
           console.error(`❌ Flash API fulfillment failed: ${flashError.message}`);
+
+          if (require('../services/supplierCircuitBreaker').constructor.isTransientError(flashError)) {
+            supplierCircuitBreaker.recordFailure('FLASH');
+          }
 
           // Log availability issue
           const flashAvailLogger = require('../services/productAvailabilityLogger');
@@ -1586,12 +1605,18 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
             metadata: { network: beneficiary.metadata?.network || null }
           }).catch(() => {});
 
-          // ─── Flash Failover: try MobileMart for pinless airtime/data ──────
+          // ─── Flash Failover: try ALL alternative suppliers (not just MobileMart) ──────
           const flashFailoverEnabled = process.env.VAS_FAILOVER_ENABLED !== 'false';
-          if (flashFailoverEnabled && productVariant && process.env.MOBILEMART_LIVE_INTEGRATION === 'true') {
-            console.log('[SupplierFailover] Flash failed — attempting MobileMart failover...');
+          if (flashFailoverEnabled && productVariant) {
+            console.log('[SupplierFailover] Flash failed — attempting failover to any available supplier...');
             const altVariants = await supplierFailoverSvc.findAlternativeVariants(productVariant, amountInCentsValue);
-            const mmAlt = altVariants.find(a => a.supplier?.code === 'MOBILEMART' && !supplierCircuitBreaker.isOpen('MOBILEMART'));
+            const mmAlt = altVariants.find(a => {
+              const altCode = a.supplier?.code;
+              if (!altCode || altCode === 'FLASH') return false;
+              const envKey = `${altCode}_LIVE_INTEGRATION`;
+              if (process.env[envKey] !== 'true' && !(altCode === 'MOBILEMART' && process.env.MOBILEMART_LIVE_INTEGRATION === 'true')) return false;
+              return !supplierCircuitBreaker.isOpen(altCode);
+            });
 
             if (mmAlt) {
               try {
@@ -2463,279 +2488,79 @@ router.post('/electricity/purchase', auth, async (req, res) => {
       }
     }
 
-    // Supplier-specific minimum amount validation
-    const supplierMinAmounts = { MOBILEMART: 30, FLASH: 10 };
-    const resolvedMinAmount = supplierMinAmounts[(supplier || '').toUpperCase()] || minAmount;
-    if (amount < resolvedMinAmount) {
-      return res.status(400).json({
-        success: false,
-        error: `Minimum electricity purchase for this supplier is R${resolvedMinAmount}`,
-        errorCode: 'AMOUNT_TOO_LOW',
-        minAmount: resolvedMinAmount
-      });
-    }
+    // Supplier-specific minimum validation is handled by the failover engine:
+    // If MobileMart rejects R20 (min R30), the engine tries Flash (min R10).
+    // Global min (R10) was already validated above.
 
     let electricityToken;
     let mobileMartTransactionId;
     let mobileMartResponse;
     let flashTransactionId;
     let flashResponse;
+    let failoverResultSupplier = supplier;
 
-    if (supplier === 'MOBILEMART' && useMobileMartAPI) {
-      // PRODUCTION/STAGING: Use real MobileMart API with retry on timeout
-      const MAX_RETRIES = 1;
-      let lastError = null;
+    const vasExecutor = require('../services/vasSupplierExecutor');
+    const anyLiveSupplier = useMobileMartAPI || useFlashAPI;
 
-      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-        try {
-          const MobileMartAuthService = require('../services/mobilemartAuthService');
-          const mobileMartService = new MobileMartAuthService();
+    if (anyLiveSupplier) {
+      // ─── Universal failover: try primary, then all alternatives ───
+      const purchaseFn = async (variant, supplierCodeArg) => {
+        const code = supplierCodeArg || variant?.supplier?.code || supplier;
+        return vasExecutor.execute(variant, code, 'electricity', {
+          meterNumber,
+          amount,
+          supplierProductCode: variant?.supplierProductId || supplierProductCode,
+          beneficiary,
+          userId: req.user.id,
+          beneficiaryId
+        });
+      };
 
-          // Step 1: Resolve merchantProductId from variant or fetch from API
-          let merchantProductId = supplierProductCode || null;
+      // Build a synthetic variant if no productVariant was resolved from DB
+      const effectiveVariant = productVariant || {
+        id: 0,
+        supplierProductId: supplierProductCode,
+        provider: beneficiary.metadata?.meterType || 'Electricity',
+        priceType: 'variable',
+        product: { type: 'electricity', name: 'Electricity Prepaid' },
+        supplier: { code: supplier || (useMobileMartAPI ? 'MOBILEMART' : 'FLASH') }
+      };
 
-          if (merchantProductId) {
-            if (attempt === 0) console.log(`📞 MobileMart: Using resolved merchantProductId=${merchantProductId} from ProductVariant`);
-            else console.log(`🔄 MobileMart: Retry attempt ${attempt} — using resolved merchantProductId=${merchantProductId}`);
-          } else {
-            if (attempt === 0) console.log('📞 MobileMart: No variant — fetching utility products from API...');
-            else console.log(`🔄 MobileMart: Retry attempt ${attempt} — fetching utility products...`);
+      const failoverResult = await supplierFailoverSvc.executeWithFailover({
+        primaryVariant: effectiveVariant,
+        amountCents: amountInCentsValue,
+        purchaseFn,
+        context: { userId: req.user.id, beneficiaryId, network: beneficiary.metadata?.meterType },
+        maxAttempts: 3
+      });
 
-            const productsResponse = await mobileMartService.makeAuthenticatedRequest(
-              'GET',
-              '/utility/products'
-            );
-            const products = productsResponse.products || productsResponse || [];
-            const utilityProduct = products[0];
-
-            if (!utilityProduct || !utilityProduct.merchantProductId) {
-              throw new Error('No utility products available from MobileMart');
-            }
-            merchantProductId = utilityProduct.merchantProductId;
-            console.log(`✅ Found utility product: ${utilityProduct.name || 'Electricity'} (${merchantProductId})`);
-          }
-
-          // Step 2: Prevend - validate meter and get prevendTransactionId
-          const prevendRequestId = `PRE_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-          const prevendParams = new URLSearchParams({
-            merchantProductId: merchantProductId,
-            requestId: prevendRequestId,
-            meterNumber: meterNumber,
-            amount: amount.toString()
-          });
-          
-          console.log(`📞 MobileMart Prevend: ${prevendParams.toString()}`);
-          const prevendResponse = await mobileMartService.makeAuthenticatedRequest(
-            'GET',
-            `/utility/prevend?${prevendParams.toString()}`
-          );
-          console.log('✅ MobileMart Prevend Response:', JSON.stringify(prevendResponse, null, 2));
-
-          const prevendTransactionId = prevendResponse.transactionId || prevendResponse.prevendTransactionId;
-          if (!prevendTransactionId) {
-            throw new Error('MobileMart prevend did not return transactionId');
-          }
-          console.log(`✅ Prevend Transaction ID: ${prevendTransactionId}`);
-
-          // Step 3: Purchase - complete the transaction
-          const purchasePayload = {
-            requestId: `ELEC_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
-            prevendTransactionId: prevendTransactionId,
-            tenderType: 'CreditCard'
-          };
-
-          console.log('📞 MobileMart Purchase Request:', JSON.stringify(purchasePayload, null, 2));
-          const purchaseResponse = await mobileMartService.makeAuthenticatedRequest(
-            'POST',
-            '/utility/purchase',
-            purchasePayload
-          );
-          console.log('✅ MobileMart Purchase Response:', JSON.stringify(purchaseResponse, null, 2));
-
-          // Extract electricity token from MobileMart response
-          mobileMartResponse = purchaseResponse;
-          mobileMartTransactionId = purchaseResponse.transactionId;
-          
-          if (purchaseResponse.additionalDetails && Array.isArray(purchaseResponse.additionalDetails.tokens)) {
-            const tokens = purchaseResponse.additionalDetails.tokens;
-            console.log('🔍 Raw tokens from MobileMart:', JSON.stringify(tokens, null, 2));
-            
-            const tokenValues = tokens.map(t => {
-              if (typeof t === 'string') return t;
-              if (typeof t === 'object') return t.token || t.value || t.tokenValue || t.pin || JSON.stringify(t);
-              return String(t);
-            });
-            
-            electricityToken = tokenValues.join(' ');
-            console.log(`✅ Extracted electricity token: ${electricityToken}`);
-          } else {
-            electricityToken = purchaseResponse.additionalDetails?.receiptNumber || 
-                              purchaseResponse.additionalDetails?.reference ||
-                              'TOKEN_PENDING';
-            console.log(`⚠️ No tokens array found, using fallback: ${electricityToken}`);
-          }
-
-          lastError = null;
-          break; // Success — exit retry loop
-
-        } catch (apiError) {
-          lastError = apiError;
-          const isTimeout = apiError.code === 'ECONNABORTED' || (apiError.message && apiError.message.includes('timeout'));
-
-          console.error(`❌ MobileMart API Error (attempt ${attempt + 1}/${MAX_RETRIES + 1}):`, apiError.message);
-          console.error('❌ MobileMart Error Details:', {
-            error: apiError.message,
-            response: apiError.response?.data,
-            status: apiError.response?.status,
-            isTimeout,
-            attempt: attempt + 1
-          });
-
-          if (isTimeout && attempt < MAX_RETRIES) {
-            console.log(`🔄 MobileMart prevend timed out — retrying in 2s (attempt ${attempt + 2}/${MAX_RETRIES + 1})...`);
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            continue;
-          }
-          // Non-timeout errors or final attempt — break out and return error
-          break;
-        }
-      }
-
-      if (lastError) {
-        const apiError = lastError;
-        const isTimeout = apiError.code === 'ECONNABORTED' || (apiError.message && apiError.message.includes('timeout'));
-        const mobileMartError = apiError.response?.data || {};
-        const errorCode = isTimeout ? 'TIMEOUT' : (mobileMartError.fulcrumErrorCode || mobileMartError.errorCode || 'UNKNOWN');
-        const errorMessage = isTimeout
-          ? 'The electricity provider is taking too long to respond. Please try again in a few minutes.'
-          : (mobileMartError.title || mobileMartError.detail || mobileMartError.message || apiError.message);
-        
+      if (!failoverResult.success) {
+        const isTimeout = (failoverResult.error || '').toLowerCase().includes('timeout');
         return res.status(isTimeout ? 504 : 500).json({
           success: false,
-          error: 'Failed to purchase electricity from MobileMart',
-          errorCode: `MOBILEMART_${errorCode}`,
-          message: errorMessage,
-          isTimeout: isTimeout,
+          error: 'Failed to purchase electricity',
+          errorCode: failoverResult.errorCode || 'ALL_SUPPLIERS_FAILED',
+          message: failoverResult.error || 'All electricity suppliers failed',
+          isTimeout,
           details: {
-            mobileMartErrorCode: errorCode,
-            mobileMartError: errorMessage,
-            meterNumber: meterNumber,
-            amount: amount,
-            httpStatus: apiError.response?.status
+            triedSuppliers: failoverResult.triedSuppliers || [],
+            attempts: failoverResult.attempts || 0,
+            meterNumber,
+            amount
           }
         });
       }
-    } else if (supplier === 'FLASH' && useFlashAPI) {
-      // PRODUCTION/STAGING: Use real Flash API with retry on timeout
-      const FLASH_MAX_RETRIES = 1;
-      let flashLastError = null;
 
-      // Derive service provider from beneficiary's meterType for Flash
-      const flashServiceProvider = (beneficiary.metadata?.meterType || 'ESKOM').toUpperCase().replace(/\s+/g, '_');
-
-      for (let attempt = 0; attempt <= FLASH_MAX_RETRIES; attempt++) {
-        try {
-          const FlashAuthService = require('../services/flashAuthService');
-          const flashService = new FlashAuthService();
-
-          if (attempt === 0) console.log(`📞 Flash: Looking up meter (provider=${flashServiceProvider})...`);
-          else console.log(`🔄 Flash: Retry attempt ${attempt} — looking up meter...`);
-
-          const lookupResponse = await flashService.makeAuthenticatedRequest(
-            'POST',
-            '/prepaid-utilities/lookup',
-            {
-              meterNumber: meterNumber,
-              serviceProvider: flashServiceProvider
-            }
-          );
-          console.log('✅ Flash Meter Lookup Response:', JSON.stringify(lookupResponse, null, 2));
-
-          if (!lookupResponse.isValid) {
-            throw new Error('Meter number not found or invalid');
-          }
-
-          const purchasePayload = {
-            reference: `ELEC_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
-            accountNumber: process.env.FLASH_ACCOUNT_NUMBER || 'FLASH001234',
-            meterNumber: meterNumber,
-            amount: Math.round(amount * 100),
-            productCode: supplierProductCode || 1,
-            serviceProvider: flashServiceProvider || 'ESKOM',
-            metadata: {
-              source: 'ElectricityOverlay',
-              userId: req.user.id,
-              beneficiaryId: beneficiaryId
-            }
-          };
-
-          console.log('📞 Flash Purchase Request:', JSON.stringify(purchasePayload, null, 2));
-          const purchaseResponse = await flashService.makeAuthenticatedRequest(
-            'POST',
-            '/prepaid-utilities/purchase',
-            purchasePayload
-          );
-          console.log('✅ Flash Purchase Response:', JSON.stringify(purchaseResponse, null, 2));
-
-          flashResponse = purchaseResponse;
-          flashTransactionId = purchaseResponse.transactionId || purchaseResponse.reference;
-          
-          electricityToken = purchaseResponse.token || 
-                            purchaseResponse.tokenNumber ||
-                            purchaseResponse.pin ||
-                            purchaseResponse.serialNumber ||
-                            purchaseResponse.additionalDetails?.token ||
-                            'TOKEN_PENDING';
-          
-          console.log(`✅ Flash electricity token: ${electricityToken}`);
-          flashLastError = null;
-          break; // Success — exit retry loop
-
-        } catch (apiError) {
-          flashLastError = apiError;
-          const isTimeout = apiError.code === 'ECONNABORTED' || (apiError.message && apiError.message.includes('timeout'));
-
-          console.error(`❌ Flash API Error (attempt ${attempt + 1}/${FLASH_MAX_RETRIES + 1}):`, apiError.message);
-          console.error('❌ Flash Error Details:', {
-            error: apiError.message,
-            response: apiError.response?.data,
-            status: apiError.response?.status,
-            isTimeout,
-            attempt: attempt + 1
-          });
-
-          if (isTimeout && attempt < FLASH_MAX_RETRIES) {
-            console.log(`🔄 Flash timed out — retrying in 2s (attempt ${attempt + 2}/${FLASH_MAX_RETRIES + 1})...`);
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            continue;
-          }
-          break;
-        }
-      }
-
-      if (flashLastError) {
-        const apiError = flashLastError;
-        const isTimeout = apiError.code === 'ECONNABORTED' || (apiError.message && apiError.message.includes('timeout'));
-        const flashError = apiError.response?.data || {};
-        const errorCode = isTimeout ? 'TIMEOUT' : (flashError.errorCode || flashError.code || 'UNKNOWN');
-        const errorMessage = isTimeout
-          ? 'The electricity provider is taking too long to respond. Please try again in a few minutes.'
-          : (flashError.message || flashError.detail || apiError.message);
-        
-        return res.status(isTimeout ? 504 : 500).json({
-          success: false,
-          error: 'Failed to purchase electricity from Flash',
-          errorCode: `FLASH_${errorCode}`,
-          message: errorMessage,
-          isTimeout: isTimeout,
-          details: {
-            flashErrorCode: errorCode,
-            flashError: errorMessage,
-            meterNumber: meterNumber,
-            amount: amount,
-            httpStatus: apiError.response?.status
-          }
-        });
+      electricityToken = failoverResult.result.token;
+      failoverUsed = failoverResult.failoverUsed;
+      failoverResultSupplier = failoverResult.supplierCode;
+      if (failoverResult.variant) productVariant = failoverResult.variant;
+      if (failoverResult.result.supplier === 'MOBILEMART') {
+        mobileMartTransactionId = failoverResult.result.supplierTransactionId;
+        mobileMartResponse = failoverResult.result.supplierResponse;
+      } else if (failoverResult.result.supplier === 'FLASH') {
+        flashTransactionId = failoverResult.result.supplierTransactionId;
+        flashResponse = failoverResult.result.supplierResponse;
       }
     } else {
       // UAT/SIMULATION: Use fake token for UI testing
@@ -2765,9 +2590,9 @@ router.post('/electricity/purchase', auth, async (req, res) => {
       });
     }
 
-    // Derive supplier from resolved ProductVariant (or env-var fallback)
-    const supplierId = (supplier || 'FLASH').toUpperCase();
-    const supplierProductId = supplierProductCode || (supplierId === 'MOBILEMART' ? 'MOBILEMART_UTILITY' : 'FLASH_ELECTRICITY_PREPAID');
+    // Derive supplier from winning failover result (or original supplier)
+    const supplierId = (failoverResultSupplier || supplier || 'FLASH').toUpperCase();
+    const supplierProductId = (productVariant?.supplierProductId || supplierProductCode) || (supplierId === 'MOBILEMART' ? 'MOBILEMART_UTILITY' : 'FLASH_ELECTRICITY_PREPAID');
 
     const [vasProduct] = await VasProduct.findOrCreate({
       where: {
@@ -3361,133 +3186,77 @@ router.post('/bills/pay', auth, async (req, res) => {
       supplierProductId = selectedVariant.supplierProductId || 'FLASH_BILL_PAYMENT';
     }
     
-    // Determine if using live MobileMart API or simulation
-    const useMobileMartAPI = process.env.MOBILEMART_LIVE_INTEGRATION === 'true' && supplierCode === 'MOBILEMART';
     let billPaymentReceipt;
     let mobileMartTransactionId;
     let mobileMartResponse;
+    let billFailoverUsed = false;
+    let winningSupplierCode = supplierCode;
 
     const amountInCentsValue = Math.round(Number(amount) * 100);
     const accountNumber = beneficiary.identifier;
+    const anyLiveBillSupplier = process.env.MOBILEMART_LIVE_INTEGRATION === 'true' || process.env.FLASH_LIVE_INTEGRATION === 'true';
 
-    if (useMobileMartAPI) {
-      // PRODUCTION/STAGING: Use real MobileMart API
-      try {
-        const MobileMartAuthService = require('../services/mobilemartAuthService');
-        const mobileMartService = new MobileMartAuthService();
+    if (anyLiveBillSupplier) {
+      // ─── Universal failover: try primary, then all alternatives ───
+      const vasExecutor = require('../services/vasSupplierExecutor');
+      const supplierCircuitBreaker = require('../services/supplierCircuitBreaker');
+      const supplierFailoverSvc = require('../services/supplierFailoverService');
 
-        // Step 1: Resolve merchantProductId from synced catalog first (fast), then live API fallback
-        let merchantProductId = selectedVariant?.supplierProductId || null;
-        if (!merchantProductId) {
-          console.log('📞 MobileMart: supplierProductId not in catalog, fetching products from API...');
-          const productsResponse = await mobileMartService.makeAuthenticatedRequest(
-            'GET',
-            '/bill-payment/products'
-          );
-          const products = productsResponse.products || productsResponse || [];
-
-          const billerLower = billerName.toLowerCase();
-          const firstWord = billerLower.replace(/[^a-z0-9]+.*$/, '');
-          const shortName = firstWord.length >= 3 ? firstWord.slice(0, 3) : firstWord;
-          const matchProduct = (p) => {
-            const pn = (p.productName || p.contentCreator || '').toLowerCase();
-            return pn.includes(billerLower) || billerLower.includes(pn) ||
-              pn.includes(firstWord) ||
-              (shortName.length >= 3 && pn.includes(shortName));
-          };
-          const billProduct = products.find(matchProduct);
-
-          if (!billProduct || !billProduct.merchantProductId) {
-            throw new Error(
-              products.length === 0
-                ? 'No bill payment products available from MobileMart'
-                : `No MobileMart product found for biller "${billerName}". Available billers may not include this one.`
-            );
-          }
-          merchantProductId = billProduct.merchantProductId;
-        }
-        console.log(`✅ Resolved merchantProductId: ${merchantProductId} for biller: ${billerName}`);
-
-        // Step 2: Prevend - validate account and get prevendTransactionId
-        const prevendRequestId = `BILLPRE_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-        const prevendParams = new URLSearchParams({
-          merchantProductId,
-          requestId: prevendRequestId,
-          accountNumber: accountNumber,
-          amount: amount.toString()
+      const billPurchaseFn = async (variant, supplierCodeArg) => {
+        const code = supplierCodeArg || variant?.supplier?.code || supplierCode;
+        return vasExecutor.execute(variant, code, 'bill_payment', {
+          merchantProductId: variant?.supplierProductId || selectedVariant?.supplierProductId,
+          meterNumber: accountNumber,
+          amount: numericAmount,
+          beneficiary,
+          userId: req.user.id,
+          billerName
         });
-        
-        console.log(`📞 MobileMart Bill Payment Prevend: ${prevendParams.toString()}`);
-        const prevendResponse = await mobileMartService.makeAuthenticatedRequest(
-          'GET',
-          `/v2/bill-payment/prevend?${prevendParams.toString()}`
-        );
-        console.log('✅ MobileMart Prevend Response:', typeof prevendResponse === 'string' ? '(truncated)' : JSON.stringify(prevendResponse, null, 2));
+      };
 
-        if (typeof prevendResponse === 'string' && prevendResponse.trim().startsWith('<')) {
-          throw new Error('MobileMart prevend returned HTML instead of JSON - check API endpoint URL');
-        }
-        const prevendTransactionId = prevendResponse?.transactionId || prevendResponse?.prevendTransactionId;
-        if (!prevendTransactionId) {
-          throw new Error('MobileMart prevend did not return transactionId');
-        }
-        console.log(`✅ Prevend Transaction ID: ${prevendTransactionId}`);
+      const effectiveVariant = selectedVariant || {
+        id: 0,
+        supplierProductId: supplierProductId,
+        provider: billerName,
+        priceType: 'variable',
+        product: { type: 'bill_payment', name: `Bill Payment - ${billerName}` },
+        supplier: { code: (supplierCode || 'MOBILEMART').toUpperCase() }
+      };
 
-        // Step 3: Pay - complete the transaction
-        const payPayload = {
-          requestId: `BILLPAY_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
-          prevendTransactionId: prevendTransactionId,
-          tenderType: 'CreditCard',
-          amount: parseFloat(amount)
-        };
+      const failoverResult = await supplierFailoverSvc.executeWithFailover({
+        primaryVariant: effectiveVariant,
+        amountCents: amountInCentsValue,
+        purchaseFn: billPurchaseFn,
+        context: { userId: req.user.id, beneficiaryId, network: billerName },
+        maxAttempts: 3
+      });
 
-        console.log('📞 MobileMart Bill Payment Request:', JSON.stringify(payPayload, null, 2));
-        const payResponse = await mobileMartService.makeAuthenticatedRequest(
-          'POST',
-          '/v2/bill-payment/pay',
-          payPayload
-        );
-        console.log('✅ MobileMart Bill Payment Response:', JSON.stringify(payResponse, null, 2));
-
-        // Extract receipt from MobileMart response
-        mobileMartResponse = payResponse;
-        mobileMartTransactionId = payResponse.transactionId;
-        billPaymentReceipt = payResponse.reference || payResponse.receiptNumber || mobileMartTransactionId;
-
-      } catch (apiError) {
-        console.error('❌ MobileMart Bill Payment API Error:', apiError.message);
-        console.error('❌ MobileMart Error Details:', {
-          error: apiError.message,
-          response: apiError.response?.data,
-          status: apiError.response?.status,
-          stack: apiError.stack
-        });
-        
-        // Extract MobileMart error details for frontend display
-        const mobileMartError = apiError.response?.data || {};
-        const errorCode = mobileMartError.fulcrumErrorCode || mobileMartError.errorCode || 'UNKNOWN';
-        const errorMessage = mobileMartError.title || mobileMartError.detail || mobileMartError.message || apiError.message;
-        
+      if (!failoverResult.success) {
         return res.status(500).json({
           success: false,
-          error: 'Failed to process bill payment via MobileMart',
-          errorCode: `MOBILEMART_${errorCode}`,
-          message: errorMessage,
+          error: 'Failed to process bill payment',
+          errorCode: failoverResult.errorCode || 'ALL_SUPPLIERS_FAILED',
+          message: failoverResult.error || 'All bill payment suppliers failed',
           details: {
-            mobileMartErrorCode: errorCode,
-            mobileMartError: errorMessage,
-            accountNumber: accountNumber,
-            amount: amount,
-            billerName: billerName,
-            httpStatus: apiError.response?.status
+            triedSuppliers: failoverResult.triedSuppliers || [],
+            attempts: failoverResult.attempts || 0,
+            accountNumber,
+            amount,
+            billerName
           }
         });
       }
+
+      billPaymentReceipt = failoverResult.result.token;
+      mobileMartTransactionId = failoverResult.result.supplierTransactionId;
+      mobileMartResponse = failoverResult.result.supplierResponse;
+      billFailoverUsed = failoverResult.failoverUsed;
+      winningSupplierCode = failoverResult.supplierCode || supplierCode;
+      if (failoverResult.variant) selectedVariant = failoverResult.variant;
     } else {
-      // MobileMart not live -- guard against real money movement
+      // No live supplier — guard against real money movement
       const deploymentEnv = (process.env.MM_DEPLOYMENT_ENV || '').toLowerCase();
       if (deploymentEnv === 'uat' || deploymentEnv === 'development') {
-        // UAT only: return simulated response for UX testing without wallet debit
         console.log(`[BILL-SIM] UAT simulation for ${billerName}, account ${accountNumber}, amount ${amount}`);
         return res.json({
           success: true,
@@ -3503,12 +3272,11 @@ router.post('/bills/pay', auth, async (req, res) => {
           }
         });
       }
-      // Staging / Production: hard block — downstream settlement cannot happen
       return res.status(503).json({
         success: false,
         error: 'Bill payment service unavailable',
         code: 'SUPPLIER_NOT_CONFIGURED',
-        message: 'MobileMart bill payment integration is not enabled for this environment. Contact support.'
+        message: 'Bill payment integration is not enabled for this environment. Contact support.'
       });
     }
 
@@ -3520,14 +3288,17 @@ router.post('/bills/pay', auth, async (req, res) => {
       });
     }
 
+    const resolvedBillSupplier = (winningSupplierCode || supplierCode || 'MOBILEMART').toUpperCase();
+    const resolvedBillProductId = selectedVariant?.supplierProductId || supplierProductId || `${resolvedBillSupplier}_BILL_PAYMENT`;
+
     const [vasProduct] = await VasProduct.findOrCreate({
       where: {
-        supplierId: useMobileMartAPI ? 'MOBILEMART' : supplierCode,
-        supplierProductId: useMobileMartAPI ? 'MOBILEMART_BILL_PAYMENT' : supplierProductId
+        supplierId: resolvedBillSupplier,
+        supplierProductId: resolvedBillProductId
       },
       defaults: {
-        supplierId: useMobileMartAPI ? 'MOBILEMART' : supplierCode,
-        supplierProductId: useMobileMartAPI ? 'MOBILEMART_BILL_PAYMENT' : supplierProductId,
+        supplierId: resolvedBillSupplier,
+        supplierProductId: resolvedBillProductId,
         productName: `Bill Payment - ${billerName}`,
         vasType: 'bill_payment',
         transactionType: 'topup',
@@ -3542,7 +3313,7 @@ router.post('/bills/pay', auth, async (req, res) => {
         isActive: true,
         metadata: {
           autoCreated: true,
-          useMobileMartAPI
+          anyLiveBillSupplier
         }
       }
     });
@@ -3556,8 +3327,8 @@ router.post('/bills/pay', auth, async (req, res) => {
       vasProductId: vasProduct.id,
       vasType: 'bill_payment',
       transactionType: 'topup',
-      supplierId: useMobileMartAPI ? 'MOBILEMART' : supplierCode,
-      supplierProductId: useMobileMartAPI ? 'MOBILEMART_BILL_PAYMENT' : supplierProductId,
+      supplierId: resolvedBillSupplier,
+      supplierProductId: resolvedBillProductId,
       amount: amountInCentsValue,
       fee: 0,
       totalAmount: amountInCentsValue,
@@ -3569,14 +3340,15 @@ router.post('/bills/pay', auth, async (req, res) => {
         beneficiaryId,
         type: 'bill_payment',
         userId: req.user.id,
-        simulated: !useMobileMartAPI,
+        simulated: !anyLiveBillSupplier,
         billerName: billerName,
         accountNumber: accountNumber,
         amountCents: amountInCentsValue,
         productVariantId: selectedVariant?.id || null,
+        failoverUsed: billFailoverUsed,
         processedAt: new Date().toISOString(),
         billPaymentReceipt: billPaymentReceipt,
-        ...(useMobileMartAPI && mobileMartResponse ? {
+        ...(mobileMartResponse ? {
           mobilemartResponse: mobileMartResponse,
           mobilemartTransactionId: mobileMartTransactionId,
           mobilemartFulfilled: true
@@ -3609,8 +3381,8 @@ router.post('/bills/pay', auth, async (req, res) => {
         beneficiaryName: beneficiary.name,
         beneficiaryAccount: accountNumber,
         billerName: billerName,
-        supplierCode: useMobileMartAPI ? 'MOBILEMART' : supplierCode,
-        supplierProductId: useMobileMartAPI ? 'MOBILEMART_BILL_PAYMENT' : supplierProductId,
+        supplierCode: resolvedBillSupplier,
+        supplierProductId: resolvedBillProductId,
         idempotencyKey,
         vasTransactionId: transaction.id,
         vasType: 'bill_payment',
@@ -3618,8 +3390,8 @@ router.post('/bills/pay', auth, async (req, res) => {
         channel: 'overlay_services',
         billPaymentReceipt: billPaymentReceipt,
         purchasedAt: new Date().toISOString(),
-        useMobileMartAPI,
-        ...(useMobileMartAPI && mobileMartTransactionId ? {
+        failoverUsed: billFailoverUsed,
+        ...(mobileMartTransactionId ? {
           mobilemartTransactionId: mobileMartTransactionId
         } : {})
       },
@@ -3676,8 +3448,9 @@ router.post('/bills/pay', auth, async (req, res) => {
       billPaymentReceipt: billPaymentReceipt,
       purchasedAt: new Date().toISOString(),
       status: 'completed',
-      useMobileMartAPI,
-      ...(useMobileMartAPI && mobileMartTransactionId ? {
+      failoverUsed: billFailoverUsed,
+      resolvedSupplier: resolvedBillSupplier,
+      ...(mobileMartTransactionId ? {
         mobilemartTransactionId: mobileMartTransactionId
       } : {})
     };
@@ -3722,7 +3495,8 @@ router.post('/bills/pay', auth, async (req, res) => {
         reference: idempotencyKey,
         receipt: billPaymentReceipt,
         beneficiaryIsMyMoolahUser: !!beneficiaryUser,
-        usedMobileMartAPI: useMobileMartAPI
+        resolvedSupplier: resolvedBillSupplier,
+        failoverUsed: billFailoverUsed
       }
     });
 

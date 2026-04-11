@@ -149,13 +149,23 @@ class SupplierFailoverService {
     // Pre-fetch alternatives
     const alternatives = await this.findAlternativeVariants(primaryVariant, amountCents);
     for (const alt of alternatives) {
-      // Skip if that supplier's circuit is also open
       const altCode = alt.supplier?.code;
-      if (!circuitBreaker.isOpen(altCode)) {
-        candidates.push(alt);
-      } else {
+      if (!altCode) continue;
+
+      // Skip if that supplier's circuit is open
+      if (circuitBreaker.isOpen(altCode)) {
         console.log(`[SupplierFailover] Skipping alternative ${altCode} — circuit OPEN`);
+        continue;
       }
+
+      // Skip if that supplier is not enabled in env vars
+      const envKey = `${altCode.toUpperCase()}_LIVE_INTEGRATION`;
+      if (process.env[envKey] !== 'true') {
+        console.log(`[SupplierFailover] Skipping alternative ${altCode} — ${envKey} not enabled`);
+        continue;
+      }
+
+      candidates.push(alt);
     }
 
     if (candidates.length === 0) {
