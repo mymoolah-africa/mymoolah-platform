@@ -130,7 +130,7 @@ async function run() {
 
       const [brand] = await ProductBrand.findOrCreate({
         where: { name: display },
-        defaults: { name: display, category: vasType === 'airtime' ? 'airtime' : 'data_bundles', isActive: true, metadata: { source: 'mobilemart-seed' } }
+        defaults: { name: display, category: 'other', isActive: true, metadata: { source: 'mobilemart-seed' } }
       });
 
       const [product] = await Product.findOrCreate({
