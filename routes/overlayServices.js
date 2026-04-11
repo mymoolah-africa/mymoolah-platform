@@ -1253,6 +1253,11 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
                 deal => !triedVariantIds.has(deal.variantId)
               );
 
+              console.log(`🔍 Failover: ${candidates.length} alternative candidate(s) found (excluded ${triedVariantIds.size} already-tried)`);
+              if (candidates.length === 0) {
+                console.log(`🔍 Failover: bestDeals returned ${(alternatives.bestDeals || []).length} total, triedVariantIds: [${[...triedVariantIds]}]`);
+              }
+
               for (const alt of candidates) {
                 if (attempts >= MAX_FAILOVER_ATTEMPTS) break;
 
@@ -1264,17 +1269,23 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
                   ]
                 });
 
-                if (!altVariant) continue;
+                if (!altVariant) {
+                  console.log(`⚠️ Failover: variant ${alt.variantId} not found or inactive — skipping`);
+                  continue;
+                }
 
                 const altSupplier = altVariant.supplier?.code || alt.supplierCode;
                 const altProductCode = altVariant.supplierProductId;
                 const altType = altVariant.product?.type || type;
 
-                if (altSupplier !== 'FLASH' && altSupplier !== 'MOBILEMART') continue;
+                if (altSupplier !== 'FLASH' && altSupplier !== 'MOBILEMART') {
+                  console.log(`⚠️ Failover: skipping ${altSupplier} — not a supported supplier`);
+                  continue;
+                }
 
                 attempts++;
                 triedVariantIds.add(alt.variantId);
-                console.log(`🔄 Failover attempt ${attempts}/${MAX_FAILOVER_ATTEMPTS}: ${alt.productName} from ${altSupplier}`);
+                console.log(`🔄 Failover attempt ${attempts}/${MAX_FAILOVER_ATTEMPTS}: ${alt.productName} from ${altSupplier} (variantId=${alt.variantId}, productCode=${altProductCode})`);
 
                 try {
                   if (altSupplier === 'FLASH' && process.env.FLASH_LIVE_INTEGRATION === 'true') {
@@ -1330,6 +1341,9 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
                     });
                     console.log(`✅ Failover success: ${altSupplier}`);
                     break;
+                  } else {
+                    const envKey = `${altSupplier}_LIVE_INTEGRATION`;
+                    console.warn(`⚠️ Failover: ${altSupplier} matched but ${envKey}=${process.env[envKey] || 'unset'} — skipping`);
                   }
                 } catch (attemptErr) {
                   const attemptErrorCode = attemptErr.response?.data?.fulcrumErrorCode || attemptErr.response?.data?.errorCode || attemptErr.flashError?.code;
@@ -1337,7 +1351,6 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
                   if (isTransientAttempt) supplierCircuitBreaker.recordFailure(altSupplier);
                   lastAttemptError = attemptErr;
                   console.warn(`❌ Failover attempt ${attempts} (${altSupplier}) failed (transient=${isTransientAttempt}): ${attemptErr.message}`);
-                  // Continue trying other alternatives regardless of error type
                 }
               }
 
