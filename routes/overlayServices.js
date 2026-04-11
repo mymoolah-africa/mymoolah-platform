@@ -1239,44 +1239,46 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
             let attempts = 0;
 
             try {
-              const SupplierComparisonService = require('../services/supplierComparisonService');
-              const { ProductVariant: PVModel } = require('../models');
-              const comparisonService = new SupplierComparisonService();
-              const alternatives = await comparisonService.compareProducts(
-                type,
-                amountInCentsValue,
-                beneficiary.metadata?.network || null
-              );
+              const { ProductVariant: PVModel, Supplier: SupModel, Product: ProdModel } = require('../models');
+              const { Op } = require('sequelize');
 
-              // All alternatives in commission order (bestDeals already sorted), excluding already-tried
-              const candidates = (alternatives.bestDeals || []).filter(
-                deal => !triedVariantIds.has(deal.variantId)
-              );
+              const network = beneficiary.metadata?.network || null;
+              const altWhere = {
+                vasType: type,
+                status: 'active',
+                id: { [Op.notIn]: [...triedVariantIds] },
+                minAmount: { [Op.lte]: amountInCentsValue },
+                maxAmount: { [Op.gte]: amountInCentsValue }
+              };
+              if (network) altWhere.provider = { [Op.iLike]: `%${network}%` };
 
-              console.log(`🔍 Failover: ${candidates.length} alternative candidate(s) found (excluded ${triedVariantIds.size} already-tried)`);
-              if (candidates.length === 0) {
-                console.log(`🔍 Failover: bestDeals returned ${(alternatives.bestDeals || []).length} total, triedVariantIds: [${[...triedVariantIds]}]`);
-              }
+              const altVariants = await PVModel.findAll({
+                where: altWhere,
+                include: [
+                  { model: SupModel, as: 'supplier', attributes: ['id', 'code', 'name'] },
+                  { model: ProdModel, as: 'product', attributes: ['id', 'name', 'type'] }
+                ],
+                order: [['commission', 'DESC']],
+                limit: 5
+              });
+
+              const candidates = altVariants.map(v => ({
+                variantId: v.id,
+                supplierCode: v.supplier?.code,
+                productName: v.product?.name || 'Unknown',
+                supplierProductId: v.supplierProductId,
+                commission: v.commission
+              }));
+
+              console.log(`🔍 Failover: ${candidates.length} alternative candidate(s) found from ProductVariant (excluded variantIds: [${[...triedVariantIds]}], network: ${network})`);
+              candidates.forEach(c => console.log(`   → ${c.productName} from ${c.supplierCode} (variant=${c.variantId}, commission=${c.commission}%)`));
 
               for (const alt of candidates) {
                 if (attempts >= MAX_FAILOVER_ATTEMPTS) break;
 
-                const altVariant = await PVModel.findOne({
-                  where: { id: alt.variantId, status: 'active' },
-                  include: [
-                    { model: require('../models').Supplier, as: 'supplier', attributes: ['id', 'code', 'name'] },
-                    { model: require('../models').Product, as: 'product', attributes: ['id', 'name', 'type'] }
-                  ]
-                });
-
-                if (!altVariant) {
-                  console.log(`⚠️ Failover: variant ${alt.variantId} not found or inactive — skipping`);
-                  continue;
-                }
-
-                const altSupplier = altVariant.supplier?.code || alt.supplierCode;
-                const altProductCode = altVariant.supplierProductId;
-                const altType = altVariant.product?.type || type;
+                const altSupplier = alt.supplierCode;
+                const altProductCode = alt.supplierProductId;
+                const altType = type;
 
                 if (altSupplier !== 'FLASH' && altSupplier !== 'MOBILEMART') {
                   console.log(`⚠️ Failover: skipping ${altSupplier} — not a supported supplier`);
