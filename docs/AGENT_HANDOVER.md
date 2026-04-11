@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
 **Last Updated**: 2026-04-11  
-**Latest Feature**: **Airtime failover bugfix + PII redaction + electricity min validation (v2.97.1)** — Fixed 3 critical bugs preventing airtime failover from executing: `ProductVariant is not defined` crash, `v_best_offers` view only returns winners (no alternatives found), silent skip when Flash integration not enabled. Failover now queries `product_variants` directly. Added PII redaction for electricity logs (consumer names/addresses/meter numbers). Added `minimumPurchaseAmount` validation before electricity purchase. Deployed to staging + production. Previous: v2.97.0 universal VAS failover.  
-**Document Version**: 2.97.1  
-**Session logs**: `docs/session_logs/2026-04-11_1200_airtime-failover-bugfix-pii-redaction.md`, `docs/session_logs/2026-04-10_2100_universal-vas-supplier-failover.md`, `docs/session_logs/2026-04-10_1700_easypay-v5-finalisation-implementation.md`  
+**Latest Feature**: **Electricity METER_MIN_AMOUNT failover + apiClient error fix (v2.97.2)** — Fixed 3 issues: (1) apiClient.ts `err.response` not wrapping body in `{data}` — error messages swallowed across ALL overlays; (2) no Flash failover for electricity when MobileMart rejects with METER_MIN_AMOUNT (only 1 MobileMart ProductVariant in DB); (3) ElectricityOverlay now shows "Minimum Amount Required" with actual minimum. Root cause for user 0720213994: meter 04285639987 has R339.26 municipality minimum (City of Cape Town debt). Previous: v2.97.1 airtime failover bugfix.  
+**Document Version**: 2.97.2  
+**Session logs**: `docs/session_logs/2026-04-11_1330_electricity-failover-meter-min-fix.md`, `docs/session_logs/2026-04-11_1200_airtime-failover-bugfix-pii-redaction.md`, `docs/session_logs/2026-04-10_2100_universal-vas-supplier-failover.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
