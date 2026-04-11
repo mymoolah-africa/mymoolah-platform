@@ -26,7 +26,8 @@ class CatalogSyncController {
       console.error('Error getting catalog sync status:', error);
       res.status(500).json({
         success: false,
-        error: 'Failed to get catalog synchronization status'
+        message: 'Failed to get catalog synchronization status',
+        errorCode: 'CATALOG_STATUS_FAILED'
       });
     }
   }
@@ -67,7 +68,8 @@ class CatalogSyncController {
       console.error('Error triggering daily sweep:', error);
       res.status(500).json({
         success: false,
-        error: 'Failed to trigger daily catalog sweep'
+        message: 'Failed to trigger daily catalog sweep',
+        errorCode: 'DAILY_SWEEP_TRIGGER_FAILED'
       });
     }
   }
@@ -108,7 +110,8 @@ class CatalogSyncController {
       console.error('Error triggering frequent update:', error);
       res.status(500).json({
         success: false,
-        error: 'Failed to trigger frequent catalog update'
+        message: 'Failed to trigger frequent catalog update',
+        errorCode: 'FREQUENT_UPDATE_TRIGGER_FAILED'
       });
     }
   }
@@ -140,7 +143,8 @@ class CatalogSyncController {
       console.error('Error starting catalog sync service:', error);
       res.status(500).json({
         success: false,
-        error: 'Failed to start catalog synchronization service'
+        message: 'Failed to start catalog synchronization service',
+        errorCode: 'CATALOG_START_FAILED'
       });
     }
   }
@@ -172,7 +176,8 @@ class CatalogSyncController {
       console.error('Error stopping catalog sync service:', error);
       res.status(500).json({
         success: false,
-        error: 'Failed to stop catalog synchronization service'
+        message: 'Failed to stop catalog synchronization service',
+        errorCode: 'CATALOG_STOP_FAILED'
       });
     }
   }
@@ -218,8 +223,8 @@ class CatalogSyncController {
       console.error('Error refreshing best offers:', error);
       res.status(500).json({
         success: false,
-        error: 'Failed to refresh best offers',
-        message: error.message
+        message: 'Failed to refresh best offers view',
+        errorCode: 'BEST_OFFERS_REFRESH_FAILED'
       });
     }
   }
@@ -244,7 +249,8 @@ class CatalogSyncController {
       console.error('Error getting sync stats:', error);
       res.status(500).json({
         success: false,
-        error: 'Failed to get synchronization statistics'
+        message: 'Failed to get synchronization statistics',
+        errorCode: 'SYNC_STATS_FAILED'
       });
     }
   }
@@ -315,8 +321,8 @@ class CatalogSyncController {
 
       res.status(500).json({
         success: false,
-        error: 'Catalog sweep failed',
-        message: error.message,
+        message: 'Catalog sweep failed',
+        errorCode: 'CATALOG_SWEEP_FAILED',
         data: { durationMs, triggeredBy },
       });
     }
@@ -346,7 +352,8 @@ class CatalogSyncController {
       console.error('Error in catalog sync health check:', error);
       res.status(500).json({
         success: false,
-        error: 'Catalog synchronization service health check failed'
+        message: 'Catalog synchronization health check failed',
+        errorCode: 'CATALOG_HEALTH_CHECK_FAILED'
       });
     }
   }

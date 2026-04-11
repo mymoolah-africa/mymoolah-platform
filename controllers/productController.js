@@ -374,19 +374,22 @@ class ProductController {
     } catch (error) {
       console.error('Error purchasing product:', error);
       
-      // Handle specific error types
-      if (error.message.includes('not found')) {
+      if (error.message?.includes('not found')) {
         return res.status(404).json({
           success: false,
-          error: error.message,
+          error: 'Product not found',
+          errorCode: 'PRODUCT_NOT_FOUND',
+          message: 'Product information could not be loaded. Please try again.',
           timestamp: new Date().toISOString()
         });
       }
 
-      if (error.message.includes('limit') || error.message.includes('constraint')) {
+      if (error.message?.includes('limit') || error.message?.includes('constraint')) {
         return res.status(400).json({
           success: false,
-          error: error.message,
+          error: 'Purchase constraint',
+          errorCode: 'PRODUCT_PURCHASE_CONSTRAINT',
+          message: 'This purchase could not be completed due to a limit or constraint.',
           timestamp: new Date().toISOString()
         });
       }

@@ -98,8 +98,8 @@ class GoogleReviewController {
       console.error('Error generating Google review:', error);
       res.status(500).json({
         success: false,
-        message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
+        message: 'Failed to generate Google review',
+        errorCode: 'REVIEW_GENERATION_FAILED'
       });
     }
   }
@@ -159,7 +159,8 @@ class GoogleReviewController {
       console.error('Error fetching reviews:', error);
       res.status(500).json({
         success: false,
-        message: 'Internal server error'
+        message: 'Failed to retrieve reviews',
+        errorCode: 'REVIEWS_FETCH_FAILED'
       });
     }
   }
@@ -202,7 +203,8 @@ class GoogleReviewController {
       console.error('Error fetching review:', error);
       res.status(500).json({
         success: false,
-        message: 'Internal server error'
+        message: 'Failed to retrieve review',
+        errorCode: 'REVIEW_FETCH_FAILED'
       });
     }
   }
@@ -251,7 +253,8 @@ class GoogleReviewController {
       console.error('Error generating review response:', error);
       res.status(500).json({
         success: false,
-        message: 'Internal server error'
+        message: 'Failed to generate review response',
+        errorCode: 'REVIEW_RESPONSE_GENERATION_FAILED'
       });
     }
   }
@@ -309,8 +312,8 @@ class GoogleReviewController {
       console.error('Error posting response to Google:', error);
       res.status(500).json({
         success: false,
-        message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
+        message: 'Failed to post response to Google',
+        errorCode: 'GOOGLE_POST_FAILED'
       });
     }
   }
@@ -336,7 +339,8 @@ class GoogleReviewController {
       console.error('Error checking Google API status:', error);
       res.status(500).json({
         success: false,
-        message: 'Internal server error'
+        message: 'Failed to check Google API status',
+        errorCode: 'GOOGLE_API_STATUS_FAILED'
       });
     }
   }
@@ -360,7 +364,8 @@ class GoogleReviewController {
       console.error('Error generating authorization URL:', error);
       res.status(500).json({
         success: false,
-        message: 'Internal server error'
+        message: 'Failed to generate authorization URL',
+        errorCode: 'AUTH_URL_GENERATION_FAILED'
       });
     }
   }
@@ -399,7 +404,8 @@ class GoogleReviewController {
       console.error('Error handling OAuth callback:', error);
       res.status(500).json({
         success: false,
-        message: 'Internal server error'
+        message: 'Failed to complete authorization',
+        errorCode: 'OAUTH_CALLBACK_FAILED'
       });
     }
   }
@@ -444,7 +450,8 @@ class GoogleReviewController {
       console.error('Error fetching review analytics:', error);
       res.status(500).json({
         success: false,
-        message: 'Internal server error'
+        message: 'Failed to retrieve review analytics',
+        errorCode: 'REVIEW_ANALYTICS_FAILED'
       });
     }
   }

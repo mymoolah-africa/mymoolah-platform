@@ -46,8 +46,8 @@ const secureErrorLogging = (err, req, res, next) => {
   // Send sanitized error response
   res.status(err.status || 500).json({
     success: false,
-    message: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message,
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    message: 'Internal server error',
+    errorCode: 'INTERNAL_ERROR'
   });
 };
 

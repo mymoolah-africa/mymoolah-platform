@@ -38,6 +38,7 @@ export function FlashEeziCashOverlay() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [copiedPIN, setCopiedPIN] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   
   // Success state
   const [voucherToken, setVoucherToken] = useState<string>('');
@@ -214,6 +215,8 @@ export function FlashEeziCashOverlay() {
         status: error.status,
         response: error.response
       });
+      const errorMsg = error?.response?.data?.message || error?.message || 'Transaction failed. Please try again or contact support.';
+      setErrorMessage(errorMsg);
       setCurrentStep('error');
     } finally {
       setIsSubmitting(false);
@@ -854,7 +857,7 @@ export function FlashEeziCashOverlay() {
                   fontSize: '12px',
                   color: '#991b1b'
                 }}>
-                  Transaction failed. Please try again or contact support.
+                  {errorMessage || 'Transaction failed. Please try again or contact support.'}
                 </p>
               </AlertDescription>
             </Alert>

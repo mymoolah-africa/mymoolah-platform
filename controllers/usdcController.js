@@ -45,7 +45,8 @@ class UsdcController {
       });
     } catch (error) {
       console.error('[UsdcController] Failed to get rate', {
-        error: error.message,
+        errorType: error.constructor?.name,
+        errorCode: error.code,
         userId: req.user?.id
       });
       
@@ -53,7 +54,7 @@ class UsdcController {
         success: false,
         error: {
           code: 'RATE_FETCH_ERROR',
-          message: 'Failed to get current exchange rate. Please try again.'
+          message: 'USDC operation could not be completed. Please try again.'
         }
       });
     }
@@ -99,9 +100,9 @@ class UsdcController {
       });
     } catch (error) {
       console.error('[UsdcController] Failed to get quote', {
-        error: error.message,
-        userId: req.user?.id,
-        zarAmount: req.body.zarAmount
+        errorType: error.constructor?.name,
+        errorCode: error.code,
+        userId: req.user?.id
       });
 
       if (error.code === 'INSUFFICIENT_KYC_TIER') {
@@ -109,7 +110,7 @@ class UsdcController {
           success: false,
           error: {
             code: error.code,
-            message: error.message,
+            message: 'Your KYC tier is insufficient for this operation. Please upgrade your account.',
             requiredTier: error.requiredTier,
             currentTier: error.currentTier
           }
@@ -126,7 +127,7 @@ class UsdcController {
         });
       }
       const isValrAuthError = error.response?.status === 401 ||
-        /401|API key or secret is invalid|VALR.*request failed/i.test(error.message || '');
+        /401|API key or secret is invalid|VALR.*request failed/i.test(error.message || ''); // server-side check only
       if (isValrAuthError) {
         return res.status(503).json({
           success: false,
@@ -229,20 +230,17 @@ class UsdcController {
       });
     } catch (error) {
       console.error('[UsdcController] Failed to execute send', {
-        error: error.message,
-        code: error.code,
-        userId: req.user?.id,
-        zarAmount: req.body.zarAmount,
-        beneficiaryId: req.body.beneficiaryId
+        errorType: error.constructor?.name,
+        errorCode: error.code,
+        userId: req.user?.id
       });
 
-      // Handle specific error codes
       if (error.code === 'INSUFFICIENT_KYC_TIER') {
         return res.status(403).json({
           success: false,
           error: {
             code: error.code,
-            message: error.message,
+            message: 'Your KYC tier is insufficient for this operation. Please upgrade your account.',
             requiredTier: error.requiredTier,
             currentTier: error.currentTier
           }
@@ -254,7 +252,7 @@ class UsdcController {
           success: false,
           error: {
             code: error.code,
-            message: error.message,
+            message: 'Transaction limit exceeded. Please try a smaller amount.',
             limitDetails: error.limitDetails
           }
         });
@@ -265,7 +263,7 @@ class UsdcController {
           success: false,
           error: {
             code: error.code,
-            message: error.message,
+            message: 'Insufficient balance for this transaction.',
             required: error.required / 100,
             available: error.available / 100
           }
@@ -277,7 +275,7 @@ class UsdcController {
           success: false,
           error: {
             code: error.code,
-            message: error.message,
+            message: 'This beneficiary was recently added. Please wait before sending.',
             cooldownUntil: error.cooldownUntil
           }
         });
@@ -337,7 +335,8 @@ class UsdcController {
       });
     } catch (error) {
       console.error('[UsdcController] Failed to get transactions', {
-        error: error.message,
+        errorType: error.constructor?.name,
+        errorCode: error.code,
         userId: req.user?.id
       });
       
@@ -383,9 +382,9 @@ class UsdcController {
       });
     } catch (error) {
       console.error('[UsdcController] Failed to get transaction', {
-        error: error.message,
-        userId: req.user?.id,
-        transactionId: req.params.transactionId
+        errorType: error.constructor?.name,
+        errorCode: error.code,
+        userId: req.user?.id
       });
       
       res.status(500).json({
@@ -434,8 +433,8 @@ class UsdcController {
       });
     } catch (error) {
       console.error('[UsdcController] Failed to validate address', {
-        error: error.message,
-        address: req.body.address
+        errorType: error.constructor?.name,
+        errorCode: error.code
       });
       
       res.status(500).json({
@@ -476,7 +475,8 @@ class UsdcController {
       });
     } catch (error) {
       console.error('[UsdcController] Health check failed', {
-        error: error.message
+        errorType: error.constructor?.name,
+        errorCode: error.code
       });
       
       res.status(503).json({

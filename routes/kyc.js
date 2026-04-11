@@ -33,11 +33,12 @@ router.get('/', async (req, res) => {
       data: kycData
     });
   } catch (error) {
-    console.error('❌ Error in KYC getAll route:', error);
+    console.error('KYC list error:', error.message);
     res.status(500).json({
       success: false,
-      error: 'Internal server error',
-      details: error.message
+      error: 'Failed to retrieve KYC records',
+      errorCode: 'KYC_STATUS_FAILED',
+      message: 'Could not load KYC records. Please try again.'
     });
   }
 });
@@ -67,10 +68,12 @@ router.post('/upload', authenticateToken, upload.single('document'), async (req,
   try {
     await kycController.uploadDocument(req, res);
   } catch (error) {
-    console.error('❌ Error in KYC upload route:', error);
+    console.error('KYC upload error:', error.message);
     res.status(500).json({
-      error: 'UPLOAD_ROUTE_ERROR',
-      message: 'Error processing upload'
+      success: false,
+      error: 'Failed to upload document',
+      errorCode: 'KYC_UPLOAD_FAILED',
+      message: 'Could not process your document upload. Please try again.'
     });
   }
 });
@@ -95,12 +98,12 @@ router.post('/upload-documents', authenticateToken, upload.fields([
     
     
   } catch (error) {
-    console.error('❌ Error in KYC upload-documents route:', error);
-    console.error('❌ Error stack:', error.stack);
+    console.error('KYC upload-documents error:', error.message);
     res.status(500).json({
-      error: 'UPLOAD_ROUTE_ERROR',
-      message: 'Error processing upload',
-      details: error.message
+      success: false,
+      error: 'Failed to upload documents',
+      errorCode: 'KYC_UPLOAD_FAILED',
+      message: 'Could not process your document upload. Please try again.'
     });
   }
 });
@@ -110,10 +113,12 @@ router.post('/upload-document', authenticateToken, upload.single('document'), as
   try {
     await kycController.uploadDocument(req, res);
   } catch (error) {
-    console.error('❌ Error in KYC upload-document route:', error);
+    console.error('KYC upload-document error:', error.message);
     res.status(500).json({
-      error: 'UPLOAD_ROUTE_ERROR',
-      message: 'Error processing upload'
+      success: false,
+      error: 'Failed to upload document',
+      errorCode: 'KYC_UPLOAD_FAILED',
+      message: 'Could not process your document upload. Please try again.'
     });
   }
 });
@@ -127,10 +132,12 @@ router.get('/status/:userId?', authenticateToken, async (req, res) => {
     }
     await kycController.getKYCStatus(req, res);
   } catch (error) {
-    console.error('❌ Error in KYC status route:', error);
+    console.error('KYC status error:', error.message);
     res.status(500).json({
-      error: 'STATUS_ROUTE_ERROR',
-      message: 'Error getting KYC status'
+      success: false,
+      error: 'Failed to get KYC status',
+      errorCode: 'KYC_STATUS_FAILED',
+      message: 'Could not retrieve your KYC status. Please try again.'
     });
   }
 });
@@ -140,10 +147,12 @@ router.post('/manual-verify', authenticateToken, async (req, res) => {
   try {
     await kycController.manualVerifyKYC(req, res);
   } catch (error) {
-    console.error('❌ Error in manual KYC verification route:', error);
+    console.error('KYC manual verification error:', error.message);
     res.status(500).json({
-      error: 'MANUAL_VERIFICATION_ROUTE_ERROR',
-      message: 'Error during manual verification'
+      success: false,
+      error: 'Failed to verify KYC',
+      errorCode: 'KYC_VERIFICATION_FAILED',
+      message: 'Could not complete manual verification. Please try again.'
     });
   }
 });
@@ -153,10 +162,12 @@ router.get('/accepted-documents/:documentType', async (req, res) => {
   try {
     await kycController.getAcceptedDocuments(req, res);
   } catch (error) {
-    console.error('❌ Error in accepted documents route:', error);
+    console.error('KYC accepted documents error:', error.message);
     res.status(500).json({
-      error: 'DOCUMENTS_ROUTE_ERROR',
-      message: 'Error getting accepted documents'
+      success: false,
+      error: 'Failed to get accepted documents',
+      errorCode: 'KYC_STATUS_FAILED',
+      message: 'Could not load accepted document types. Please try again.'
     });
   }
 });
@@ -194,10 +205,12 @@ router.post('/update-status', authenticateToken, async (req, res) => {
       user: updatedUser
     });
   } catch (error) {
-    console.error('❌ Error updating KYC status:', error);
+    console.error('KYC status update error:', error.message);
     res.status(500).json({
-      error: 'STATUS_UPDATE_ERROR',
-      message: 'Error updating KYC status'
+      success: false,
+      error: 'Failed to update KYC status',
+      errorCode: 'KYC_STATUS_FAILED',
+      message: 'Could not update your KYC status. Please try again.'
     });
   }
 });
@@ -229,8 +242,8 @@ router.post('/reset/:userId', async (req, res) => {
 
     return res.json({ success: true, message: 'KYC reset completed', data: { userId: targetUserId, deleted } });
   } catch (error) {
-    console.error('❌ Error in KYC reset route:', error);
-    return res.status(500).json({ success: false, message: 'Failed to reset KYC', error: error.message });
+    console.error('KYC reset error:', error.message);
+    return res.status(500).json({ success: false, error: 'Failed to reset KYC', errorCode: 'KYC_VERIFICATION_FAILED', message: 'Could not reset KYC state. Please try again.' });
   }
 });
 

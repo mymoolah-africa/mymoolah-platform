@@ -52,7 +52,8 @@ router.post('/scheduled-payout', verifyCloudSchedulerToken, async (req, res) => 
     res.status(500).json({
       success: false,
       error: 'Referral payout failed',
-      message: error.message,
+      errorCode: 'REFERRAL_PAYOUT_FAILED',
+      message: 'Referral operation could not be completed. Please try again.',
       data: { durationMs, triggeredBy },
     });
   }

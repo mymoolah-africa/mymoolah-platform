@@ -578,8 +578,8 @@ exports.testAirtimeData = async (req, res) => {
     console.error('Error testing airtime data:', error);
     res.status(500).json({ 
       success: false, 
-      message: 'Failed to test airtime data.',
-      error: error.message
+      errorCode: 'AIRTIME_TEST_FAILED',
+      message: 'Airtime purchase could not be completed. Please try again.'
     });
   }
 };

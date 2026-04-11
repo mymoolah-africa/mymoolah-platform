@@ -143,8 +143,8 @@ class FeedbackController {
       console.error('Feedback submission error:', error);
       res.status(500).json({
         success: false,
-        message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
+        message: 'Failed to submit feedback',
+        errorCode: 'FEEDBACK_SUBMISSION_FAILED'
       });
     }
   }
@@ -224,7 +224,8 @@ class FeedbackController {
       console.error('Get feedback error:', error);
       res.status(500).json({
         success: false,
-        message: 'Internal server error'
+        message: 'Failed to retrieve feedback',
+        errorCode: 'FEEDBACK_FETCH_FAILED'
       });
     }
   }
@@ -272,7 +273,8 @@ class FeedbackController {
       console.error('Get feedback by ID error:', error);
       res.status(500).json({
         success: false,
-        message: 'Internal server error'
+        message: 'Failed to retrieve feedback details',
+        errorCode: 'FEEDBACK_DETAIL_FAILED'
       });
     }
   }
@@ -313,7 +315,8 @@ class FeedbackController {
       console.error('Update feedback status error:', error);
       res.status(500).json({
         success: false,
-        message: 'Internal server error'
+        message: 'Failed to update feedback status',
+        errorCode: 'FEEDBACK_STATUS_UPDATE_FAILED'
       });
     }
   }
@@ -338,7 +341,8 @@ class FeedbackController {
       console.error('Get categories error:', error);
       res.status(500).json({
         success: false,
-        message: 'Internal server error'
+        message: 'Failed to retrieve feedback categories',
+        errorCode: 'CATEGORIES_FETCH_FAILED'
       });
     }
   }
@@ -434,7 +438,8 @@ class FeedbackController {
       console.error('Generate content error:', error);
       res.status(500).json({
         success: false,
-        message: 'Internal server error'
+        message: 'Failed to generate content',
+        errorCode: 'CONTENT_GENERATION_FAILED'
       });
     }
   }
@@ -515,7 +520,8 @@ class FeedbackController {
       console.error('Get analytics error:', error);
       res.status(500).json({
         success: false,
-        message: 'Internal server error'
+        message: 'Failed to retrieve feedback analytics',
+        errorCode: 'FEEDBACK_ANALYTICS_FAILED'
       });
     }
   }
@@ -634,7 +640,8 @@ class FeedbackController {
       console.error('Get content history error:', error);
       res.status(500).json({
         success: false,
-        message: 'Internal server error'
+        message: 'Failed to retrieve content history',
+        errorCode: 'CONTENT_HISTORY_FAILED'
       });
     }
   }

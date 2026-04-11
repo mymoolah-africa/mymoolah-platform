@@ -37,6 +37,7 @@ export function CashoutEasyPayOverlay() {
   // Success state
   const [easyPayPIN, setEasyPayPIN] = useState<string>('');
   const [copiedPIN, setCopiedPIN] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   // Quick amount options (R50 - R3000)
   const quickAmounts = [50, 100, 200, 300, 500, 1000, 2000, 3000];
@@ -190,6 +191,7 @@ export function CashoutEasyPayOverlay() {
       
     } catch (error: any) {
       console.error('Cash-out request error:', error);
+      setErrorMessage(error?.message || 'We couldn\'t create your cash-out voucher. Please try again.');
       setCurrentStep('error');
     } finally {
       setIsSubmitting(false);
@@ -628,7 +630,7 @@ export function CashoutEasyPayOverlay() {
               color: '#6b7280',
               textAlign: 'center'
             }}>
-              We couldn't create your cash-out voucher. Please try again.
+              {errorMessage || 'We couldn\'t create your cash-out voucher. Please try again.'}
             </p>
           </div>
 

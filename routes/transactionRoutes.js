@@ -32,8 +32,8 @@ router.get("/", async (req, res) => {
     
     res.json(transactions || []);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Database error" });
+    console.error('Transaction list error:', err.message);
+    res.status(500).json({ success: false, error: 'Failed to list transactions', errorCode: 'TRANSACTION_HISTORY_FAILED', message: 'Could not load transactions. Please try again.' });
   }
 });
 
@@ -112,11 +112,12 @@ router.post("/", [
       message: "Transaction created successfully" 
     });
   } catch (error) {
-    console.error('❌ Error creating transaction:', error);
+    console.error('Transaction creation error:', error.message);
     res.status(500).json({ 
       success: false,
-      error: "Database error",
-      details: error.message
+      error: 'Failed to create transaction',
+      errorCode: 'TRANSACTION_CREATE_FAILED',
+      message: 'Could not create the transaction. Please try again.'
     });
   }
 });
@@ -132,8 +133,8 @@ router.get("/:id", async (req, res) => {
     }
     res.json(transaction);
   } catch (error) {
-    console.error('❌ Error getting transaction:', error);
-    res.status(500).json({ error: "Database error" });
+    console.error('Transaction fetch error:', error.message);
+    res.status(500).json({ success: false, error: 'Failed to get transaction', errorCode: 'TRANSACTION_FETCH_FAILED', message: 'Could not load the transaction. Please try again.' });
   }
 });
 
@@ -154,8 +155,8 @@ router.get("/wallet/:walletId", async (req, res) => {
     
     res.json(transactions || []);
   } catch (error) {
-    console.error('❌ Error getting wallet transactions:', error);
-    res.status(500).json({ error: "Database error" });
+    console.error('Wallet transaction history error:', error.message);
+    res.status(500).json({ success: false, error: 'Failed to get wallet transactions', errorCode: 'TRANSACTION_HISTORY_FAILED', message: 'Could not load wallet transactions. Please try again.' });
   }
 });
 
@@ -198,8 +199,8 @@ router.put("/:id", [
       message: "Transaction updated successfully" 
     });
   } catch (error) {
-    console.error('❌ Error updating transaction:', error);
-    res.status(500).json({ error: "Database error" });
+    console.error('Transaction update error:', error.message);
+    res.status(500).json({ success: false, error: 'Failed to update transaction', errorCode: 'TRANSACTION_UPDATE_FAILED', message: 'Could not update the transaction. Please try again.' });
   }
 });
 

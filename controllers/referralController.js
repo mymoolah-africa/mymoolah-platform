@@ -177,10 +177,15 @@ class ReferralController {
         ...result
       });
     } catch (error) {
-      console.error('Error sending referral invite:', error);
+      console.error('[ReferralController] Error sending referral invite', {
+        errorType: error.constructor?.name,
+        errorCode: error.code,
+        userId: req.user?.id
+      });
       res.status(400).json({
         success: false,
-        error: error.message || 'Failed to send referral invite'
+        error: 'Referral invite could not be sent. Please try again.',
+        errorCode: 'REFERRAL_INVITE_FAILED'
       });
     }
   }

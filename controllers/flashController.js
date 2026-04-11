@@ -206,8 +206,8 @@ class FlashController {
             res.status(500).json({
                 success: false,
                 error: 'Flash service health check failed',
-                message: error.message,
-                ...(error.flashError && { flash: error.flashError })
+                errorCode: 'FLASH_HEALTH_CHECK_FAILED',
+                message: 'Flash service health check unavailable. Please try again in a moment.'
             });
         }
     }
@@ -253,8 +253,8 @@ class FlashController {
             res.status(500).json({
                 success: false,
                 error: 'Failed to list Flash products',
-                message: error.message,
-                ...(error.flashError && { flash: error.flashError })
+                errorCode: 'FLASH_LIST_PRODUCTS_FAILED',
+                message: 'Product catalog could not be loaded right now. Please try again.'
             });
         }
     }
@@ -300,8 +300,8 @@ class FlashController {
             res.status(500).json({
                 success: false,
                 error: 'Failed to lookup Flash product',
-                message: error.message,
-                ...(error.flashError && { flash: error.flashError })
+                errorCode: 'FLASH_PRODUCT_LOOKUP_FAILED',
+                message: 'Product information temporarily unavailable. Please try again.'
             });
         }
     }
@@ -384,8 +384,8 @@ class FlashController {
             res.status(500).json({
                 success: false,
                 error: 'Failed to purchase 1Voucher',
-                message: error.message,
-                ...(error.flashError && { flash: error.flashError })
+                errorCode: 'FLASH_1VOUCHER_PURCHASE_FAILED',
+                message: 'Your purchase could not be completed. Your wallet has not been charged. Please try again.'
             });
         }
     }
@@ -460,8 +460,8 @@ class FlashController {
             res.status(500).json({
                 success: false,
                 error: 'Failed to disburse 1Voucher',
-                message: error.message,
-                ...(error.flashError && { flash: error.flashError })
+                errorCode: 'FLASH_1VOUCHER_DISBURSE_FAILED',
+                message: 'Your purchase could not be completed. Your wallet has not been charged. Please try again.'
             });
         }
     }
@@ -552,8 +552,8 @@ class FlashController {
             res.status(500).json({
                 success: false,
                 error: 'Failed to redeem 1Voucher',
-                message: error.message,
-                ...(error.flashError && { flash: error.flashError })
+                errorCode: 'FLASH_1VOUCHER_REDEEM_FAILED',
+                message: 'Your voucher could not be redeemed. Please try again.'
             });
         }
     }
@@ -952,8 +952,8 @@ class FlashController {
             res.status(500).json({
                 success: false,
                 error: 'Failed to refund 1Voucher',
-                message: error.message,
-                ...(error.flashError && { flash: error.flashError })
+                errorCode: 'FLASH_1VOUCHER_REFUND_FAILED',
+                message: 'Your refund could not be processed. Please try again or contact support.'
             });
         }
     }
@@ -1060,8 +1060,8 @@ class FlashController {
             res.status(500).json({
                 success: false,
                 error: 'Failed to purchase gift voucher',
-                message: error.message,
-                ...(error.flashError && { flash: error.flashError })
+                errorCode: 'FLASH_GIFT_VOUCHER_PURCHASE_FAILED',
+                message: 'Your purchase could not be completed. Your wallet has not been charged. Please try again.'
             });
         }
     }
@@ -1359,8 +1359,8 @@ class FlashController {
             res.status(500).json({
                 success: false,
                 error: 'Failed to purchase cash out PIN',
-                message: error.message,
-                ...(error.flashError && { flash: error.flashError })
+                errorCode: 'FLASH_CASHOUT_PIN_FAILED',
+                message: 'Your purchase could not be completed. Your wallet has not been charged. Please try again.'
             });
         }
     }
@@ -1443,8 +1443,8 @@ class FlashController {
             res.status(500).json({
                 success: false,
                 error: 'Failed to cancel cash out PIN',
-                message: error.message,
-                ...(error.flashError && { flash: error.flashError })
+                errorCode: 'FLASH_CASHOUT_CANCEL_FAILED',
+                message: 'The cancellation could not be processed. Please try again or contact support.'
             });
         }
     }
@@ -1535,8 +1535,8 @@ class FlashController {
             res.status(500).json({
                 success: false,
                 error: 'Failed to purchase cellular recharge',
-                message: error.message,
-                ...(error.flashError && { flash: error.flashError })
+                errorCode: 'FLASH_CELLULAR_RECHARGE_FAILED',
+                message: 'Your purchase could not be completed. Your wallet has not been charged. Please try again.'
             });
         }
     }
@@ -1579,7 +1579,7 @@ class FlashController {
             } catch (err) {
                 const label = isEeziPower ? 'eeziPower' : 'eezi-voucher';
                 console.error(`❌ Failed to resolve ${label} product code:`, err.message);
-                return res.status(500).json({ success: false, error: `Flash ${label} product code not available`, details: err.message });
+                return res.status(500).json({ success: false, error: `Flash ${label} product code not available`, errorCode: 'FLASH_PRODUCT_CODE_UNAVAILABLE', message: 'This service is temporarily unavailable. Please try again in a moment.' });
             }
 
             if (!this.authService.validateReference(reference)) {
@@ -1873,8 +1873,8 @@ class FlashController {
             res.status(500).json({
                 success: false,
                 error: 'Failed to purchase Eezi voucher',
-                message: error.message,
-                ...(error.flashError && { flash: error.flashError })
+                errorCode: 'FLASH_EEZI_VOUCHER_FAILED',
+                message: 'Your purchase could not be completed. Your wallet has not been charged. Please try again.'
             });
         }
     }
@@ -1965,8 +1965,8 @@ class FlashController {
             res.status(500).json({
                 success: false,
                 error: 'Failed to lookup meter',
-                message: error.message,
-                ...(error.flashError && { flash: error.flashError })
+                errorCode: 'FLASH_METER_LOOKUP_FAILED',
+                message: 'Meter information temporarily unavailable. Please try again.'
             });
         }
     }
@@ -2057,8 +2057,8 @@ class FlashController {
             res.status(500).json({
                 success: false,
                 error: 'Failed to purchase prepaid utility',
-                message: error.message,
-                ...(error.flashError && { flash: error.flashError })
+                errorCode: 'FLASH_PREPAID_UTILITY_FAILED',
+                message: 'Your purchase could not be completed. Your wallet has not been charged. Please try again.'
             });
         }
     }
@@ -2132,11 +2132,11 @@ class FlashController {
 
         } catch (error) {
             console.error('❌ Flash Controller: International lookup failed:', error.message);
-            res.status(error.statusCode || 500).json({
+            res.status(500).json({
                 success: false,
                 error: 'Failed to lookup international airtime products',
-                message: error.message,
-                ...(error.flashError && { flash: error.flashError })
+                errorCode: 'FLASH_INTL_LOOKUP_FAILED',
+                message: 'Product information temporarily unavailable. Please try again.'
             });
         }
     }
@@ -2219,11 +2219,11 @@ class FlashController {
 
         } catch (error) {
             console.error('❌ Flash Controller: International airtime purchase failed:', error.message);
-            res.status(error.statusCode || 500).json({
+            res.status(500).json({
                 success: false,
                 error: 'Failed to purchase international airtime',
-                message: error.message,
-                ...(error.flashError && { flash: error.flashError })
+                errorCode: 'FLASH_INTL_PURCHASE_FAILED',
+                message: 'Your purchase could not be completed. Your wallet has not been charged. Please try again.'
             });
         }
     }

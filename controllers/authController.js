@@ -139,7 +139,11 @@ class AuthController {
       });
     } catch (error) {
       console.error('❌ Registration error:', error);
-      return res.status(500).json({ success: false, message: error.message });
+      return res.status(500).json({
+        success: false,
+        errorCode: 'REGISTRATION_ERROR',
+        message: 'Registration could not be completed. Please try again.'
+      });
     }
   }
 
@@ -187,7 +191,11 @@ class AuthController {
       return res.json({ success: true, message: 'Password changed successfully' });
     } catch (error) {
       console.error('❌ Change password error:', error);
-      return res.status(500).json({ success: false, message: 'Internal server error' });
+      return res.status(500).json({
+        success: false,
+        errorCode: 'PASSWORD_CHANGE_ERROR',
+        message: 'Password change could not be completed. Please try again.'
+      });
     }
   }
   // Login user with phone number only
@@ -288,7 +296,11 @@ class AuthController {
       });
     } catch (error) {
       console.error('❌ Login error:', error);
-      return res.status(500).json({ success: false, message: error.message });
+      return res.status(500).json({
+        success: false,
+        errorCode: 'LOGIN_ERROR',
+        message: 'Login failed. Please check your credentials and try again.'
+      });
     }
   }
 
@@ -325,7 +337,11 @@ class AuthController {
       });
     } catch (error) {
       console.error('❌ Get profile error:', error);
-      return res.status(500).json({ success: false, message: error.message });
+      return res.status(500).json({
+        success: false,
+        errorCode: 'PROFILE_ERROR',
+        message: 'Profile could not be retrieved. Please try again.'
+      });
     }
   }
 
@@ -394,7 +410,11 @@ class AuthController {
       });
     } catch (error) {
       console.error('❌ Token refresh error:', error);
-      return res.status(500).json({ success: false, message: error.message });
+      return res.status(500).json({
+        success: false,
+        errorCode: 'TOKEN_REFRESH_ERROR',
+        message: 'Session could not be refreshed. Please log in again.'
+      });
     }
   }
 
@@ -479,7 +499,8 @@ class AuthController {
       console.error('❌ Forgot password error:', error);
       return res.status(500).json({
         success: false,
-        message: 'Internal server error'
+        errorCode: 'OTP_SEND_ERROR',
+        message: 'Verification code could not be sent. Please try again.'
       });
     }
   }
@@ -574,7 +595,8 @@ class AuthController {
       console.error('❌ Reset password error:', error);
       return res.status(500).json({
         success: false,
-        message: 'Internal server error'
+        errorCode: 'PASSWORD_RESET_ERROR',
+        message: 'Password reset could not be processed. Please try again.'
       });
     }
   }
@@ -662,7 +684,8 @@ class AuthController {
       console.error('❌ Request phone change error:', error);
       return res.status(500).json({
         success: false,
-        message: 'Internal server error'
+        errorCode: 'PHONE_CHANGE_ERROR',
+        message: 'Phone number change could not be processed. Please try again.'
       });
     }
   }
@@ -743,7 +766,8 @@ class AuthController {
       console.error('❌ Verify phone change error:', error);
       return res.status(500).json({
         success: false,
-        message: 'Internal server error'
+        errorCode: 'PHONE_VERIFY_ERROR',
+        message: 'Phone number verification could not be completed. Please try again.'
       });
     }
   }

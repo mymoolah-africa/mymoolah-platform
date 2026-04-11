@@ -73,7 +73,9 @@ class UserFavoritesController {
       if (error.message === 'Maximum of 12 favorites allowed per user') {
         return res.status(400).json({
           success: false,
-          error: error.message,
+          error: 'Maximum favorites limit reached',
+          errorCode: 'FAVORITES_LIMIT_REACHED',
+          message: 'You can save a maximum of 12 favorites.',
           timestamp: new Date().toISOString()
         });
       }
@@ -81,6 +83,8 @@ class UserFavoritesController {
       res.status(500).json({
         success: false,
         error: 'Failed to add to favorites',
+        errorCode: 'FAVORITES_ADD_FAILED',
+        message: 'Could not update your favorites. Please try again.',
         timestamp: new Date().toISOString()
       });
     }
@@ -162,7 +166,9 @@ class UserFavoritesController {
       if (error.message === 'Maximum of 12 favorites allowed per user') {
         return res.status(400).json({
           success: false,
-          error: error.message,
+          error: 'Maximum favorites limit reached',
+          errorCode: 'FAVORITES_LIMIT_REACHED',
+          message: 'You can save a maximum of 12 favorites.',
           timestamp: new Date().toISOString()
         });
       }
@@ -170,6 +176,8 @@ class UserFavoritesController {
       res.status(500).json({
         success: false,
         error: 'Failed to toggle favorite',
+        errorCode: 'FAVORITES_TOGGLE_FAILED',
+        message: 'Could not update your favorites. Please try again.',
         timestamp: new Date().toISOString()
       });
     }

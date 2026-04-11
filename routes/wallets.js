@@ -27,10 +27,12 @@ router.get('/', async (req, res) => {
     const walletController = require('../controllers/walletController');
     await walletController.getAllWallets(req, res);
   } catch (error) {
-    console.error('Error getting all wallets:', error);
+    console.error('Wallet list error:', error.message);
     return res.status(500).json({ 
       success: false, 
-      message: 'Failed to get wallets' 
+      error: 'Failed to get wallets',
+      errorCode: 'WALLET_LIST_FAILED',
+      message: 'Could not load your wallets. Please try again.'
     });
   }
 });
@@ -41,8 +43,8 @@ router.get('/balance', authMiddleware, async (req, res) => {
     const walletController = require('../controllers/walletController');
     await walletController.getBalance(req, res);
   } catch (error) {
-    console.error('Error getting wallet balance:', error);
-    return res.status(500).json({ success: false, message: 'Failed to get wallet balance' });
+    console.error('Balance fetch error:', error.message);
+    return res.status(500).json({ success: false, error: 'Failed to get wallet balance', errorCode: 'BALANCE_FETCH_FAILED', message: 'Could not load your balance. Please try again.' });
   }
 });
 
@@ -52,8 +54,8 @@ router.get('/transactions', authMiddleware, async (req, res) => {
     const walletController = require('../controllers/walletController');
     await walletController.getTransactionHistory(req, res);
   } catch (error) {
-    console.error('Error getting wallet transactions:', error);
-    return res.status(500).json({ success: false, message: 'Failed to get wallet transactions' });
+    console.error('Transaction history error:', error.message);
+    return res.status(500).json({ success: false, error: 'Failed to get wallet transactions', errorCode: 'TRANSACTION_HISTORY_FAILED', message: 'Could not load your transactions. Please try again.' });
   }
 });
 
@@ -72,8 +74,8 @@ router.post('/deposit', [
     const walletController = require('../controllers/walletController');
     await walletController.creditWallet(req, res);
   } catch (error) {
-    console.error('Error processing deposit:', error);
-    return res.status(500).json({ success: false, message: 'Failed to process deposit' });
+    console.error('Deposit error:', error.message);
+    return res.status(500).json({ success: false, error: 'Failed to process deposit', errorCode: 'DEPOSIT_FAILED', message: 'Could not process your deposit. Please try again.' });
   }
 });
 
@@ -93,8 +95,8 @@ router.post('/withdraw', [
     const walletController = require('../controllers/walletController');
     await walletController.debitWallet(req, res);
   } catch (error) {
-    console.error('Error processing withdrawal:', error);
-    return res.status(500).json({ success: false, message: 'Failed to process withdrawal' });
+    console.error('Withdrawal error:', error.message);
+    return res.status(500).json({ success: false, error: 'Failed to process withdrawal', errorCode: 'WITHDRAWAL_FAILED', message: 'Could not process your withdrawal. Please try again.' });
   }
 });
 
@@ -114,8 +116,8 @@ router.post('/send', [
     const walletController = require('../controllers/walletController');
     await walletController.sendMoney(req, res);
   } catch (error) {
-    console.error('Error sending money:', error);
-    return res.status(500).json({ success: false, message: 'Failed to send money' });
+    console.error('Send money error:', error.message);
+    return res.status(500).json({ success: false, error: 'Failed to send money', errorCode: 'SEND_MONEY_FAILED', message: 'Could not send money. Please try again.' });
   }
 });
 
@@ -125,8 +127,8 @@ router.get('/summary', authMiddleware, async (req, res) => {
     const walletController = require('../controllers/walletController');
     await walletController.getTransactionSummary(req, res);
   } catch (error) {
-    console.error('Error getting wallet summary:', error);
-    return res.status(500).json({ success: false, message: 'Failed to get wallet summary' });
+    console.error('Wallet summary error:', error.message);
+    return res.status(500).json({ success: false, error: 'Failed to get wallet summary', errorCode: 'WALLET_SUMMARY_FAILED', message: 'Could not load your wallet summary. Please try again.' });
   }
 });
 
@@ -136,8 +138,8 @@ router.get('/details', authMiddleware, async (req, res) => {
     const walletController = require('../controllers/walletController');
     await walletController.getWalletDetails(req, res);
   } catch (error) {
-    console.error('Error getting wallet details:', error);
-    return res.status(500).json({ success: false, message: 'Failed to get wallet details' });
+    console.error('Wallet details error:', error.message);
+    return res.status(500).json({ success: false, error: 'Failed to get wallet details', errorCode: 'WALLET_DETAILS_FAILED', message: 'Could not load wallet details. Please try again.' });
   }
 });
 
@@ -148,8 +150,8 @@ router.get('/:walletId', authMiddleware, async (req, res) => {
     const walletController = require('../controllers/walletController');
     await walletController.getWalletById(req, res);
   } catch (error) {
-    console.error('Error getting wallet by ID:', error);
-    return res.status(500).json({ success: false, message: 'Failed to get wallet' });
+    console.error('Wallet fetch error:', error.message);
+    return res.status(500).json({ success: false, error: 'Failed to get wallet', errorCode: 'WALLET_DETAILS_FAILED', message: 'Could not load wallet details. Please try again.' });
   }
 });
 
@@ -159,8 +161,8 @@ router.get('/:walletId/balance', authMiddleware, async (req, res) => {
     const walletController = require('../controllers/walletController');
     await walletController.getWalletBalance(req, res);
   } catch (error) {
-    console.error('Error getting wallet balance by ID:', error);
-    return res.status(500).json({ success: false, message: 'Failed to get wallet balance' });
+    console.error('Wallet balance fetch error:', error.message);
+    return res.status(500).json({ success: false, error: 'Failed to get wallet balance', errorCode: 'BALANCE_FETCH_FAILED', message: 'Could not load wallet balance. Please try again.' });
   }
 });
 
@@ -176,8 +178,8 @@ router.post('/:walletId/credit', [
     const walletController = require('../controllers/walletController');
     await walletController.creditWalletById(req, res);
   } catch (error) {
-    console.error('Error crediting wallet:', error);
-    return res.status(500).json({ success: false, message: 'Failed to credit wallet' });
+    console.error('Wallet credit error:', error.message);
+    return res.status(500).json({ success: false, error: 'Failed to credit wallet', errorCode: 'DEPOSIT_FAILED', message: 'Could not credit wallet. Please try again.' });
   }
 });
 
@@ -193,8 +195,8 @@ router.post('/:walletId/debit', [
     const walletController = require('../controllers/walletController');
     await walletController.debitWalletById(req, res);
   } catch (error) {
-    console.error('Error debiting wallet:', error);
-    return res.status(500).json({ success: false, message: 'Failed to debit wallet' });
+    console.error('Wallet debit error:', error.message);
+    return res.status(500).json({ success: false, error: 'Failed to debit wallet', errorCode: 'WITHDRAWAL_FAILED', message: 'Could not debit wallet. Please try again.' });
   }
 });
 
@@ -204,8 +206,8 @@ router.get('/:walletId/transactions', authMiddleware, async (req, res) => {
     const walletController = require('../controllers/walletController');
     await walletController.getWalletTransactions(req, res);
   } catch (error) {
-    console.error('Error getting wallet transactions:', error);
-    return res.status(500).json({ success: false, message: 'Failed to get wallet transactions' });
+    console.error('Wallet transactions error:', error.message);
+    return res.status(500).json({ success: false, error: 'Failed to get wallet transactions', errorCode: 'TRANSACTION_HISTORY_FAILED', message: 'Could not load wallet transactions. Please try again.' });
   }
 });
 

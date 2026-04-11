@@ -38,12 +38,13 @@ class SupportController {
       });
 
     } catch (error) {
-      console.error('❌ Banking-grade support error:', error);
+      console.error('Error in processChatMessage:', error);
       
       res.status(500).json({
         success: false,
-        message: 'An error occurred while processing your request',
-        error: error.message,
+        error: 'Request could not be completed',
+        errorCode: 'SUPPORT_CHAT_FAILED',
+        message: 'Support request could not be processed. Please try again.',
         compliance: {
           iso20022: true,
           mojaloop: true,
@@ -69,12 +70,13 @@ class SupportController {
       });
 
     } catch (error) {
-      console.error('❌ Health check error:', error);
+      console.error('Error in getHealthStatus:', error);
       
       res.status(500).json({
         success: false,
-        message: 'Health check failed',
-        error: error.message
+        error: 'Request could not be completed',
+        errorCode: 'SUPPORT_HEALTH_CHECK_FAILED',
+        message: 'Health check could not be completed. Please try again.'
       });
     }
   }
@@ -93,12 +95,13 @@ class SupportController {
       });
 
     } catch (error) {
-      console.error('❌ Metrics error:', error);
+      console.error('Error in getPerformanceMetrics:', error);
       
       res.status(500).json({
         success: false,
-        message: 'Failed to retrieve metrics',
-        error: error.message
+        error: 'Request could not be completed',
+        errorCode: 'SUPPORT_METRICS_FAILED',
+        message: 'Could not retrieve performance metrics. Please try again.'
       });
     }
   }

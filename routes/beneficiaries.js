@@ -30,8 +30,8 @@ router.get('/', auth, async (req, res) => {
     
     res.json({ success: true, data: { beneficiaries: list } });
   } catch (e) {
-    console.error('Beneficiaries GET error', e);
-    res.status(500).json({ success: false, message: 'Failed to load beneficiaries' });
+    console.error('Beneficiary list error:', e.message);
+    res.status(500).json({ success: false, error: 'Failed to load beneficiaries', errorCode: 'BENEFICIARY_LIST_FAILED', message: 'Could not load your beneficiaries. Please try again.' });
   }
 });
 
@@ -65,8 +65,8 @@ router.get('/search', auth, async (req, res) => {
     
     res.json({ success: true, data: { beneficiaries: results } });
   } catch (e) {
-    console.error('Beneficiaries search error', e);
-    res.status(500).json({ success: false, message: 'Failed to search beneficiaries' });
+    console.error('Beneficiary search error:', e.message);
+    res.status(500).json({ success: false, error: 'Failed to search beneficiaries', errorCode: 'BENEFICIARY_LIST_FAILED', message: 'Could not search beneficiaries. Please try again.' });
   }
 });
 
@@ -136,8 +136,8 @@ router.post('/', auth, async (req, res) => {
     
     res.json({ success: true, data: row });
   } catch (e) {
-    console.error('Beneficiaries POST error', e);
-    res.status(500).json({ success: false, message: 'Failed to save beneficiary' });
+    console.error('Beneficiary save error:', e.message);
+    res.status(500).json({ success: false, error: 'Failed to save beneficiary', errorCode: 'BENEFICIARY_SAVE_FAILED', message: 'Could not save beneficiary. Please try again.' });
   }
 });
 
@@ -170,8 +170,8 @@ router.put('/:id', auth, async (req, res) => {
     
     res.json({ success: true, data: beneficiary });
   } catch (e) {
-    console.error('Beneficiaries PUT error', e);
-    res.status(500).json({ success: false, message: 'Failed to update beneficiary' });
+    console.error('Beneficiary update error:', e.message);
+    res.status(500).json({ success: false, error: 'Failed to update beneficiary', errorCode: 'BENEFICIARY_UPDATE_FAILED', message: 'Could not update beneficiary. Please try again.' });
   }
 });
 
@@ -196,8 +196,8 @@ router.delete('/:id', auth, async (req, res) => {
     
     res.json({ success: true, message: 'Beneficiary deleted successfully' });
   } catch (e) {
-    console.error('Beneficiaries DELETE error', e);
-    res.status(500).json({ success: false, message: 'Failed to delete beneficiary' });
+    console.error('Beneficiary delete error:', e.message);
+    res.status(500).json({ success: false, error: 'Failed to delete beneficiary', errorCode: 'BENEFICIARY_DELETE_FAILED', message: 'Could not delete beneficiary. Please try again.' });
   }
 });
 

@@ -8,7 +8,8 @@ const authenticateToken = (req, res, next) => {
   if (!token) {
     return res.status(401).json({
       success: false,
-      message: 'Access token required'
+      message: 'Access token required',
+      errorCode: 'TOKEN_MISSING'
     });
   }
 
@@ -31,7 +32,8 @@ const authenticateToken = (req, res, next) => {
 
   return res.status(403).json({
     success: false,
-    message: 'Invalid or expired token'
+    message: 'Invalid or expired token',
+    errorCode: 'TOKEN_INVALID'
   });
 };
 

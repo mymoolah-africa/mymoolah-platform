@@ -304,7 +304,8 @@ router.use((error, req, res, next) => {
     res.status(500).json({
         success: false,
         error: 'Internal server error',
-        message: error.message,
+        errorCode: 'DYNAMIC_API_ERROR',
+        message: 'Request could not be processed. Please try again.',
         timestamp: new Date().toISOString()
     });
 });

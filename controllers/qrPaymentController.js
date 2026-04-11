@@ -1132,7 +1132,8 @@ class QRPaymentController {
       res.status(500).json({
         success: false,
         error: 'Payment initiation failed',
-        message: error.message || 'Failed to process payment'
+        errorCode: 'QR_PAYMENT_INITIATION_FAILED',
+        message: 'QR payment could not be processed. Please try again.'
       });
     }
   }
@@ -1319,7 +1320,7 @@ class QRPaymentController {
           version: '1.0.0',
           zapper: {
             status: 'unavailable',
-            error: error.message
+            error: 'Zapper service temporarily unavailable'
           }
         }
       });

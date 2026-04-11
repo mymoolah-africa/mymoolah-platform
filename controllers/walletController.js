@@ -21,11 +21,12 @@ class WalletController {
         data: { wallets }
       });
     } catch (error) {
-      console.error('❌ Error in getAllWallets:', error);
+      console.error('Error in getAllWallets:', error);
       res.status(500).json({
         success: false,
-        error: 'Internal server error',
-        details: error.message
+        error: 'Request could not be completed',
+        errorCode: 'WALLETS_FETCH_FAILED',
+        message: 'Could not load wallets. Please try again.'
       });
     }
   }
@@ -82,13 +83,12 @@ class WalletController {
 
     } catch (error) {
       const totalTime = Date.now() - startTime;
-      console.error(`❌ Error getting balance (${totalTime}ms):`, error);
-      console.error('Error stack:', error.stack);
-      console.error('Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+      console.error(`Error getting balance (${totalTime}ms):`, error);
       res.status(500).json({
         success: false,
-        message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'staging' ? error.message : 'Something went wrong'
+        error: 'Request could not be completed',
+        errorCode: 'BALANCE_FETCH_FAILED',
+        message: 'Could not load your balance. Please try again.'
       });
     }
   }
@@ -126,11 +126,12 @@ class WalletController {
       });
 
     } catch (error) {
-      console.error('❌ Error getting wallet details:', error);
+      console.error('Error getting wallet details:', error);
       res.status(500).json({
         success: false,
-        message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
+        error: 'Request could not be completed',
+        errorCode: 'WALLET_DETAILS_FETCH_FAILED',
+        message: 'Could not load wallet details. Please try again.'
       });
     }
   }
@@ -199,11 +200,12 @@ class WalletController {
       });
 
     } catch (error) {
-      console.error('❌ Error crediting wallet:', error);
+      console.error('Error crediting wallet:', error);
       res.status(500).json({
         success: false,
-        message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
+        error: 'Request could not be completed',
+        errorCode: 'WALLET_CREDIT_FAILED',
+        message: 'Wallet operation could not be completed. Please try again.'
       });
     }
   }
@@ -270,11 +272,12 @@ class WalletController {
       });
 
     } catch (error) {
-      console.error('❌ Error debiting wallet:', error);
+      console.error('Error debiting wallet:', error);
       res.status(500).json({
         success: false,
-        message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
+        error: 'Request could not be completed',
+        errorCode: 'WALLET_DEBIT_FAILED',
+        message: 'Wallet operation could not be completed. Please try again.'
       });
     }
   }
@@ -467,11 +470,12 @@ class WalletController {
       });
 
     } catch (error) {
-      console.error('❌ Error sending money:', error);
+      console.error('Error sending money:', error);
       res.status(500).json({
         success: false,
-        message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
+        error: 'Request could not be completed',
+        errorCode: 'SEND_MONEY_FAILED',
+        message: 'Could not send money. Please try again.'
       });
     }
   }
@@ -949,13 +953,12 @@ class WalletController {
 
     } catch (error) {
       const totalTime = Date.now() - startTime;
-      console.error(`❌ Error getting transaction history (${totalTime}ms):`, error);
-      console.error('Error stack:', error.stack);
-      console.error('Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+      console.error(`Error getting transaction history (${totalTime}ms):`, error);
       res.status(500).json({
         success: false,
-        message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'staging' ? error.message : 'Something went wrong'
+        error: 'Request could not be completed',
+        errorCode: 'TRANSACTION_HISTORY_FAILED',
+        message: 'Could not load transaction history. Please try again.'
       });
     }
   }
@@ -998,11 +1001,12 @@ class WalletController {
       });
 
     } catch (error) {
-      console.error('❌ Error getting transaction summary:', error);
+      console.error('Error getting transaction summary:', error);
       res.status(500).json({
         success: false,
-        message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
+        error: 'Request could not be completed',
+        errorCode: 'TRANSACTION_SUMMARY_FAILED',
+        message: 'Could not load transaction summary. Please try again.'
       });
     }
   }
@@ -1052,11 +1056,12 @@ class WalletController {
       });
 
     } catch (error) {
-      console.error('❌ Error creating wallet:', error);
+      console.error('Error creating wallet:', error);
       res.status(500).json({
         success: false,
-        message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
+        error: 'Request could not be completed',
+        errorCode: 'WALLET_CREATE_FAILED',
+        message: 'Wallet could not be created. Please try again.'
       });
     }
   }
@@ -1085,11 +1090,12 @@ class WalletController {
       });
  
     } catch (error) {
-      console.error('❌ Error getting wallet by ID:', error);
+      console.error('Error getting wallet by ID:', error);
       res.status(500).json({
         success: false,
-        message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
+        error: 'Request could not be completed',
+        errorCode: 'WALLET_LOOKUP_FAILED',
+        message: 'Could not load wallet. Please try again.'
       });
     }
   }
@@ -1120,11 +1126,12 @@ class WalletController {
       });
  
     } catch (error) {
-      console.error('❌ Error getting wallet balance:', error);
+      console.error('Error getting wallet balance:', error);
       res.status(500).json({
         success: false,
-        message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
+        error: 'Request could not be completed',
+        errorCode: 'WALLET_BALANCE_FETCH_FAILED',
+        message: 'Could not load wallet balance. Please try again.'
       });
     }
   }
@@ -1180,11 +1187,12 @@ class WalletController {
       });
 
     } catch (error) {
-      console.error('❌ Error crediting wallet by ID:', error);
+      console.error('Error crediting wallet by ID:', error);
       res.status(500).json({
         success: false,
-        message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
+        error: 'Request could not be completed',
+        errorCode: 'WALLET_CREDIT_BY_ID_FAILED',
+        message: 'Wallet operation could not be completed. Please try again.'
       });
     }
   }
@@ -1248,11 +1256,12 @@ class WalletController {
       });
 
     } catch (error) {
-      console.error('❌ Error debiting wallet by ID:', error);
+      console.error('Error debiting wallet by ID:', error);
       res.status(500).json({
         success: false,
-        message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
+        error: 'Request could not be completed',
+        errorCode: 'WALLET_DEBIT_BY_ID_FAILED',
+        message: 'Wallet operation could not be completed. Please try again.'
       });
     }
   }
@@ -1287,11 +1296,12 @@ class WalletController {
       });
 
     } catch (error) {
-      console.error('❌ Error getting wallet transactions:', error);
+      console.error('Error getting wallet transactions:', error);
       res.status(500).json({
         success: false,
-        message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
+        error: 'Request could not be completed',
+        errorCode: 'WALLET_TRANSACTIONS_FETCH_FAILED',
+        message: 'Could not load wallet transactions. Please try again.'
       });
     }
   }

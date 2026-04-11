@@ -469,10 +469,12 @@ exports.triggerExpirationHandler = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Error in manual expiration trigger:', error);
-    res.status(500).json({ 
-      error: 'Failed to execute expiration handler',
-      details: error.message 
+    console.error('Error in manual expiration trigger:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Request could not be completed',
+      errorCode: 'VOUCHER_EXPIRATION_HANDLER_FAILED',
+      message: 'Voucher expiration handler could not be executed. Please try again.'
     });
   }
 };
@@ -643,13 +645,23 @@ exports.issueVoucher = async (req, res) => {
       });
 
     } catch (error) {
-      console.error('❌ Error in voucher issuance:', error);
-      res.status(500).json({ error: 'Database error during issuance. Please try again.' });
+      console.error('Error in voucher issuance:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Request could not be completed',
+        errorCode: 'VOUCHER_ISSUE_DB_FAILED',
+        message: 'Voucher could not be issued. Please try again.'
+      });
     }
     
   } catch (err) {
-    console.error('❌ Issue voucher error:', err);
-    res.status(500).json({ error: err.message || 'Failed to issue voucher' });
+    console.error('Error in issueVoucher:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Request could not be completed',
+      errorCode: 'VOUCHER_ISSUE_FAILED',
+      message: 'Voucher operation could not be completed. Please try again.'
+    });
   }
 };
 
@@ -743,12 +755,22 @@ exports.issueEasyPayVoucher = async (req, res) => {
         }
       });
     } catch (error) {
-      console.error('❌ Error in EasyPay top-up request creation:', error);
-      res.status(500).json({ error: 'Database error during EasyPay top-up request creation. Please try again.' });
+      console.error('Error in EasyPay top-up request creation:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Request could not be completed',
+        errorCode: 'EASYPAY_TOPUP_DB_FAILED',
+        message: 'EasyPay top-up request could not be created. Please try again.'
+      });
     }
   } catch (err) {
-    console.error('❌ Issue EasyPay top-up request error:', err);
-    res.status(500).json({ error: err.message || 'Failed to create EasyPay top-up request' });
+    console.error('Error in issueEasyPayVoucher:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Request could not be completed',
+      errorCode: 'EASYPAY_TOPUP_FAILED',
+      message: 'EasyPay top-up operation could not be completed. Please try again.'
+    });
   }
 };
 
@@ -1014,12 +1036,22 @@ exports.issueEasyPayCashout = async (req, res) => {
         }
       });
     } catch (error) {
-      console.error('❌ Error in EasyPay cash-out voucher creation:', error);
-      res.status(500).json({ error: 'Database error during EasyPay cash-out voucher creation. Please try again.' });
+      console.error('Error in EasyPay cash-out voucher creation:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Request could not be completed',
+        errorCode: 'EASYPAY_CASHOUT_DB_FAILED',
+        message: 'Cash-out voucher could not be created. Please try again.'
+      });
     }
   } catch (err) {
-    console.error('❌ Issue EasyPay cash-out voucher error:', err);
-    res.status(500).json({ error: err.message || 'Failed to create EasyPay cash-out voucher' });
+    console.error('Error in issueEasyPayCashout:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Request could not be completed',
+      errorCode: 'EASYPAY_CASHOUT_FAILED',
+      message: 'Cash-out operation could not be completed. Please try again.'
+    });
   }
 };
 
@@ -1177,12 +1209,22 @@ exports.issueEasyPayStandaloneVoucher = async (req, res) => {
         }
       });
     } catch (error) {
-      console.error('❌ Error in EasyPay voucher creation:', error);
-      res.status(500).json({ error: 'Database error during EasyPay voucher creation. Please try again.' });
+      console.error('Error in EasyPay standalone voucher creation:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Request could not be completed',
+        errorCode: 'EASYPAY_VOUCHER_DB_FAILED',
+        message: 'EasyPay voucher could not be created. Please try again.'
+      });
     }
   } catch (err) {
-    console.error('❌ Issue EasyPay voucher error:', err);
-    res.status(500).json({ error: err.message || 'Failed to create EasyPay voucher' });
+    console.error('Error in issueEasyPayStandaloneVoucher:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Request could not be completed',
+      errorCode: 'EASYPAY_VOUCHER_FAILED',
+      message: 'Voucher operation could not be completed. Please try again.'
+    });
   }
 };
 
@@ -1390,12 +1432,11 @@ exports.processEasyPaySettlement = async (req, res) => {
       }
     });
   } catch (err) {
-    console.error('❌ Process EasyPay top-up settlement error:', err);
+    console.error('Error in processEasyPaySettlement:', err);
     const requestId = req.requestId || req.headers['x-request-id'];
-    sendErrorResponse(res, ERROR_CODES.INTERNAL_ERROR, 
-      err.message || 'Failed to process top-up settlement', 
-      requestId,
-      { error_type: err.name || 'UnknownError' });
+    sendErrorResponse(res, ERROR_CODES.INTERNAL_ERROR,
+      'Top-up settlement could not be processed',
+      requestId);
   }
 };
 
@@ -1541,12 +1582,11 @@ exports.processEasyPayStandaloneVoucherSettlement = async (req, res) => {
       }
     });
   } catch (err) {
-    console.error('❌ Process EasyPay standalone voucher settlement error:', err);
+    console.error('Error in processEasyPayStandaloneVoucherSettlement:', err);
     const requestId = req.requestId || req.headers['x-request-id'];
-    sendErrorResponse(res, ERROR_CODES.INTERNAL_ERROR, 
-      err.message || 'Failed to process standalone voucher settlement', 
-      requestId,
-      { error_type: err.name || 'UnknownError' });
+    sendErrorResponse(res, ERROR_CODES.INTERNAL_ERROR,
+      'Standalone voucher settlement could not be processed',
+      requestId);
   }
 };
 
@@ -1706,12 +1746,11 @@ exports.processEasyPayCashoutSettlement = async (req, res) => {
       }
     });
   } catch (err) {
-    console.error('❌ Process EasyPay cash-out settlement error:', err);
+    console.error('Error in processEasyPayCashoutSettlement:', err);
     const requestId = req.requestId || req.headers['x-request-id'];
-    sendErrorResponse(res, ERROR_CODES.INTERNAL_ERROR, 
-      err.message || 'Failed to process cash-out settlement', 
-      requestId,
-      { error_type: err.name || 'UnknownError' });
+    sendErrorResponse(res, ERROR_CODES.INTERNAL_ERROR,
+      'Cash-out settlement could not be processed',
+      requestId);
   }
 };
 
@@ -1935,13 +1974,23 @@ exports.redeemVoucher = async (req, res) => {
       });
       
     } catch (error) {
-      console.error('❌ Error in voucher redemption:', error);
-      res.status(500).json({ error: 'Database error during redemption. Please try again.' });
+      console.error('Error in voucher redemption:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Request could not be completed',
+        errorCode: 'VOUCHER_REDEEM_DB_FAILED',
+        message: 'Voucher could not be redeemed. Please try again.'
+      });
     }
     
   } catch (err) {
-    console.error('❌ Redeem voucher error:', err);
-    res.status(500).json({ error: err.message || 'Failed to redeem voucher' });
+    console.error('Error in redeemVoucher:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Request could not be completed',
+      errorCode: 'VOUCHER_REDEEM_FAILED',
+      message: 'Voucher operation could not be completed. Please try again.'
+    });
   }
 };
 
@@ -1963,8 +2012,13 @@ exports.listActiveVouchers = async (req, res) => {
       data: vouchers
     });
   } catch (err) {
-    console.error('❌ List vouchers error:', err);
-    res.status(500).json({ error: 'Failed to list vouchers' });
+    console.error('Error in listActiveVouchers:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Request could not be completed',
+      errorCode: 'VOUCHER_LIST_FAILED',
+      message: 'Could not load vouchers. Please try again.'
+    });
   }
 };
 
@@ -1986,8 +2040,13 @@ exports.listActiveVouchersForMe = async (req, res) => {
       data: { vouchers: vouchers } 
     });
   } catch (err) {
-    console.error('❌ List my vouchers error:', err);
-    res.status(500).json({ error: 'Failed to list vouchers' });
+    console.error('Error in listActiveVouchersForMe:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Request could not be completed',
+      errorCode: 'VOUCHER_LIST_MINE_FAILED',
+      message: 'Could not load your vouchers. Please try again.'
+    });
   }
 };
 
@@ -2009,8 +2068,13 @@ exports.listRedeemedVouchersForMe = async (req, res) => {
       data: { vouchers: vouchers } 
     });
   } catch (err) {
-    console.error('❌ List my redeemed vouchers error:', err);
-    res.status(500).json({ error: 'Failed to list redeemed vouchers' });
+    console.error('Error in listRedeemedVouchersForMe:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Request could not be completed',
+      errorCode: 'VOUCHER_LIST_REDEEMED_FAILED',
+      message: 'Could not load redeemed vouchers. Please try again.'
+    });
   }
 };
 
@@ -2034,8 +2098,13 @@ exports.getVoucherByCode = async (req, res) => {
       data: voucher
     });
   } catch (err) {
-    console.error('❌ Get voucher error:', err);
-    res.status(500).json({ error: 'Failed to get voucher' });
+    console.error('Error in getVoucherByCode:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Request could not be completed',
+      errorCode: 'VOUCHER_LOOKUP_FAILED',
+      message: 'Could not load voucher details. Please try again.'
+    });
   }
 };
 
@@ -2061,8 +2130,13 @@ exports.getVoucherRedemptions = async (req, res) => {
       }
     });
   } catch (err) {
-    console.error('❌ Get voucher redemptions error:', err);
-    res.status(500).json({ error: 'Failed to get voucher redemptions' });
+    console.error('Error in getVoucherRedemptions:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Request could not be completed',
+      errorCode: 'VOUCHER_REDEMPTIONS_FETCH_FAILED',
+      message: 'Could not load voucher redemption history. Please try again.'
+    });
   }
 };
 
@@ -2097,8 +2171,13 @@ exports.getVoucherBalance = async (req, res) => {
       }
     });
   } catch (err) {
-    console.error('❌ Get voucher balance error:', err);
-    res.status(500).json({ error: 'Failed to get voucher balance' });
+    console.error('Error in getVoucherBalance:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Request could not be completed',
+      errorCode: 'VOUCHER_BALANCE_FETCH_FAILED',
+      message: 'Could not load voucher balance. Please try again.'
+    });
   }
 };
 
@@ -2193,8 +2272,13 @@ exports.getVoucherBalanceSummary = async (req, res) => {
       }
     });
   } catch (err) {
-    console.error('❌ Get voucher balance summary error:', err);
-    res.status(500).json({ error: 'Failed to get voucher balance summary' });
+    console.error('Error in getVoucherBalanceSummary:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Request could not be completed',
+      errorCode: 'VOUCHER_BALANCE_SUMMARY_FAILED',
+      message: 'Could not load voucher balance summary. Please try again.'
+    });
   }
 };
 
@@ -2251,11 +2335,12 @@ exports.listAllVouchersForMe = async (req, res) => {
       data: { vouchers: vouchersData }
     });
   } catch (error) {
-    console.error('❌ Error in listAllVouchersForMe:', error);
-    res.status(500).json({ 
+    console.error('Error in listAllVouchersForMe:', error);
+    res.status(500).json({
       success: false,
-      error: 'Internal server error', 
-      details: error.message 
+      error: 'Request could not be completed',
+      errorCode: 'VOUCHER_LIST_ALL_FAILED',
+      message: 'Could not load your vouchers. Please try again.'
     });
   }
 };
@@ -2469,9 +2554,12 @@ exports.cancelEasyPayVoucher = async (req, res) => {
         });
 
       } catch (error) {
-        console.error('❌ Error cancelling EasyPay voucher:', error);
-        res.status(500).json({ 
-          error: 'Failed to cancel voucher. Please try again.' 
+        console.error('Error cancelling EasyPay standalone voucher:', error);
+        res.status(500).json({
+          success: false,
+          error: 'Request could not be completed',
+          errorCode: 'VOUCHER_CANCEL_STANDALONE_FAILED',
+          message: 'Voucher cancellation could not be completed. Please try again.'
         });
       }
       return; // Exit early for standalone voucher
@@ -2571,16 +2659,22 @@ exports.cancelEasyPayVoucher = async (req, res) => {
       });
 
     } catch (error) {
-      console.error('❌ Error cancelling EasyPay voucher:', error);
-      res.status(500).json({ 
-        error: 'Failed to cancel voucher. Please try again.' 
+      console.error('Error cancelling EasyPay voucher:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Request could not be completed',
+        errorCode: 'VOUCHER_CANCEL_DB_FAILED',
+        message: 'Voucher cancellation could not be completed. Please try again.'
       });
     }
 
   } catch (error) {
-    console.error('❌ Error in cancelEasyPayVoucher:', error);
-    res.status(500).json({ 
-      error: 'Server error during voucher cancellation' 
+    console.error('Error in cancelEasyPayVoucher:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Request could not be completed',
+      errorCode: 'VOUCHER_CANCEL_FAILED',
+      message: 'Voucher operation could not be completed. Please try again.'
     });
   }
 };
@@ -2820,16 +2914,22 @@ exports.cancelEasyPayCashout = async (req, res) => {
       });
 
     } catch (error) {
-      console.error('❌ Error cancelling EasyPay cash-out voucher:', error);
-      res.status(500).json({ 
-        error: 'Failed to cancel cash-out voucher. Please try again.' 
+      console.error('Error cancelling EasyPay cash-out voucher:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Request could not be completed',
+        errorCode: 'CASHOUT_CANCEL_DB_FAILED',
+        message: 'Cash-out voucher cancellation could not be completed. Please try again.'
       });
     }
 
   } catch (error) {
-    console.error('❌ Error in cancelEasyPayCashout:', error);
-    res.status(500).json({ 
-      error: 'Server error during cash-out voucher cancellation' 
+    console.error('Error in cancelEasyPayCashout:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Request could not be completed',
+      errorCode: 'CASHOUT_CANCEL_FAILED',
+      message: 'Cash-out operation could not be completed. Please try again.'
     });
   }
 };

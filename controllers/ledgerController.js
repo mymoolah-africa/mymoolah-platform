@@ -8,7 +8,8 @@ function ok(res, message, data) {
 
 function fail(res, error) {
   const status = error.statusCode || 400;
-  return res.status(status).json({ success: false, message: error.message || "Request failed" });
+  console.error('[LedgerController] Request failed:', error.message);
+  return res.status(status).json({ success: false, errorCode: 'LEDGER_REQUEST_FAILED', message: 'Account information could not be retrieved. Please try again.' });
 }
 
 module.exports = {

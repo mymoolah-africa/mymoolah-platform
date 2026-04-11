@@ -39,8 +39,8 @@ router.get('/by-service/:serviceType', authenticateToken, async (req, res) => {
     console.error('Error getting beneficiaries by service:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to get beneficiaries',
-      error: error.message
+      errorCode: 'BENEFICIARY_LIST_FAILED',
+      message: 'Recipient information could not be loaded. Please try again.'
     });
   }
 });
@@ -94,8 +94,10 @@ router.post('/', authenticateToken, async (req, res) => {
     const isValidationError = /invalid|required/i.test(error.message || '');
     res.status(isValidationError ? 400 : 500).json({
       success: false,
-      message: error.message || 'Failed to create/update beneficiary',
-      error: error.message
+      errorCode: isValidationError ? 'BENEFICIARY_VALIDATION_FAILED' : 'BENEFICIARY_CREATE_FAILED',
+      message: isValidationError
+        ? 'Please check the information provided and try again.'
+        : 'Recipient information could not be saved. Please try again.'
     });
   }
 });
@@ -153,8 +155,8 @@ router.post('/:beneficiaryId/services', authenticateToken, async (req, res) => {
     console.error('Error adding service to beneficiary:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to add service',
-      error: error.message
+      errorCode: 'BENEFICIARY_SERVICE_ADD_FAILED',
+      message: 'Recipient information could not be saved. Please try again.'
     });
   }
 });
@@ -188,8 +190,8 @@ router.delete('/:beneficiaryId/services/:serviceType/:serviceId', authenticateTo
     console.error('Error removing service from beneficiary:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to remove service',
-      error: error.message
+      errorCode: 'BENEFICIARY_SERVICE_REMOVE_FAILED',
+      message: 'Recipient information could not be saved. Please try again.'
     });
   }
 });
@@ -229,11 +231,13 @@ router.delete('/:beneficiaryId/services/:serviceType', authenticateToken, async 
     });
   } catch (error) {
     console.error('Error removing services from beneficiary:', error);
-    const statusCode = error.message.includes('not found') || error.message.includes('access denied') ? 404 : 500;
-    res.status(statusCode).json({
+    const isNotFound = /not found|access denied/i.test(error.message || '');
+    res.status(isNotFound ? 404 : 500).json({
       success: false,
-      message: error.message || 'Failed to remove services',
-      error: error.message
+      errorCode: isNotFound ? 'BENEFICIARY_NOT_FOUND' : 'BENEFICIARY_SERVICES_REMOVE_FAILED',
+      message: isNotFound
+        ? 'Recipient not found.'
+        : 'Recipient information could not be saved. Please try again.'
     });
   }
 });
@@ -260,8 +264,8 @@ router.get('/:beneficiaryId/services', authenticateToken, async (req, res) => {
     console.error('Error getting beneficiary services:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to get beneficiary services',
-      error: error.message
+      errorCode: 'BENEFICIARY_SERVICES_LOAD_FAILED',
+      message: 'Recipient information could not be loaded. Please try again.'
     });
   }
 });
@@ -340,8 +344,8 @@ router.patch('/:beneficiaryId', authenticateToken, async (req, res) => {
     console.error('Error updating beneficiary:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to update beneficiary',
-      error: error.message
+      errorCode: 'BENEFICIARY_UPDATE_FAILED',
+      message: 'Recipient information could not be saved. Please try again.'
     });
   }
 });
@@ -407,8 +411,8 @@ router.get('/search', authenticateToken, async (req, res) => {
     console.error('Error searching beneficiaries:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to search beneficiaries',
-      error: error.message
+      errorCode: 'BENEFICIARY_SEARCH_FAILED',
+      message: 'Recipient information could not be loaded. Please try again.'
     });
   }
 });

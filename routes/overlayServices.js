@@ -497,7 +497,8 @@ router.get('/airtime-data/catalog', auth, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to load airtime/data catalog',
-      message: error.message
+      errorCode: 'CATALOG_LOAD_FAILED',
+      message: 'We could not load airtime and data products right now. Please try again in a moment.'
     });
   }
 });
@@ -1982,17 +1983,14 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
       }).catch(() => {});
       // #endregion agent log
       
-      // Include actual error message in response for debugging (always in development/staging)
-      const isDevelopment = process.env.NODE_ENV === 'development' || process.env.NODE_ENV !== 'production';
-      // Always include error message in error field for frontend to display
+      const errorId = `DB_TXN_ERR_${Date.now()}`;
+      console.error(`[${errorId}] DB transaction error:`, dbError.message, dbError.stack);
       return res.status(500).json({
         success: false,
-        error: isDevelopment ? dbError.message : 'Transaction processing failed',
-        message: isDevelopment ? dbError.message : 'Please try again',
-        errorCode: dbError.code || null,
-        errorId: `DB_TXN_ERR_${Date.now()}`,
-        // Include stack trace in development for debugging
-        ...(isDevelopment && { stack: dbError.stack })
+        error: 'Transaction processing failed',
+        errorCode: 'TRANSACTION_FAILED',
+        message: 'Your purchase could not be completed. Your wallet has not been charged. Please try again.',
+        errorId
       });
     }
     
@@ -2200,14 +2198,13 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
     }).catch(() => {});
     // #endregion agent log
     
-    // Include actual error message for debugging (in development/staging)
-    const isDevelopment = process.env.NODE_ENV === 'development' || process.env.NODE_ENV !== 'production';
+    console.error(`[${errorId}] Purchase error:`, error?.message, error?.stack);
     res.status(500).json({
       success: false,
-      error: isDevelopment ? (error?.message || 'Transaction processing failed') : 'Transaction processing failed',
-      errorId, // For support reference
-      message: isDevelopment ? (error?.message || 'Please try again') : 'Please try again or contact support if the issue persists',
-      ...(isDevelopment && { stack: error?.stack })
+      error: 'Transaction processing failed',
+      errorCode: 'PURCHASE_FAILED',
+      errorId,
+      message: 'Your purchase could not be completed. Your wallet has not been charged. Please try again or contact support if the issue persists.'
     });
   }
 });
@@ -2348,7 +2345,8 @@ router.get('/electricity/catalog', auth, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to load electricity catalog',
-      message: error.message
+      errorCode: 'CATALOG_LOAD_FAILED',
+      message: 'We could not load electricity products right now. Please try again in a moment.'
     });
   }
 });
@@ -2865,7 +2863,8 @@ router.post('/electricity/purchase', auth, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to process electricity purchase',
-      message: error.message
+      errorCode: error.code || 'ELECTRICITY_PURCHASE_FAILED',
+      message: 'Your electricity purchase could not be completed. Your wallet has not been charged. Please try again.'
     });
   }
 });
@@ -2997,7 +2996,8 @@ router.get('/bills/search', auth, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to search billers',
-      message: error.message
+      errorCode: 'BILLER_SEARCH_FAILED',
+      message: 'We could not search for billers right now. Please try again in a moment.'
     });
   }
 });
@@ -3087,7 +3087,8 @@ router.get('/bills/categories', auth, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to load bill categories',
-      message: error.message
+      errorCode: 'BILLER_CATEGORIES_FAILED',
+      message: 'We could not load bill categories right now. Please try again in a moment.'
     });
   }
 });
@@ -3548,7 +3549,8 @@ router.post('/bills/pay', auth, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to process bill payment',
-      message: error.message
+      errorCode: error.code || 'BILL_PAYMENT_FAILED',
+      message: 'Your bill payment could not be completed. Your wallet has not been charged. Please try again.'
     });
   }
 });
@@ -3859,7 +3861,8 @@ router.get('/vouchers/catalog', auth, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to load voucher catalog',
-      message: error.message
+      errorCode: 'CATALOG_LOAD_FAILED',
+      message: 'We could not load vouchers right now. Please try again in a moment.'
     });
   }
 });

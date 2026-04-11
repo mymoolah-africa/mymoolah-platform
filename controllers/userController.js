@@ -26,8 +26,9 @@ class UserController {
       console.error('❌ Error in getAllUsers:', error);
       res.status(500).json({ 
         success: false,
-        error: 'Internal server error', 
-        details: error.message 
+        error: 'Internal server error',
+        errorCode: 'USER_LIST_FAILED',
+        message: 'Could not load users. Please try again.'
       });
     }
   }
@@ -60,8 +61,9 @@ class UserController {
       console.error('❌ Error in getUserById:', error);
       res.status(500).json({ 
         success: false,
-        error: 'Internal server error', 
-        details: error.message 
+        error: 'Internal server error',
+        errorCode: 'USER_FETCH_FAILED',
+        message: 'Could not load your profile. Please try again.'
       });
     }
   }
@@ -96,8 +98,9 @@ class UserController {
       console.error('❌ Error in updateUser:', error);
       res.status(500).json({ 
         success: false,
-        error: 'Internal server error', 
-        details: error.message 
+        error: 'Internal server error',
+        errorCode: 'USER_UPDATE_FAILED',
+        message: 'Could not update your profile. Please try again.'
       });
     }
   }
@@ -136,7 +139,7 @@ class UserController {
       });
     } catch (error) {
       console.error('❌ Error in updateMe:', error);
-      return res.status(500).json({ success: false, error: 'Internal server error', details: error.message });
+      return res.status(500).json({ success: false, error: 'Internal server error', errorCode: 'PROFILE_UPDATE_FAILED', message: 'Could not update your profile. Please try again.' });
     }
   }
 
@@ -163,8 +166,9 @@ class UserController {
       console.error('❌ Error in getUserStats:', error);
       res.status(500).json({ 
         success: false,
-        error: 'Internal server error', 
-        details: error.message 
+        error: 'Internal server error',
+        errorCode: 'USER_STATS_FAILED',
+        message: 'Could not load user statistics. Please try again.'
       });
     }
   }
@@ -195,8 +199,9 @@ class UserController {
       console.error('❌ Error in updateUserStatus:', error);
       res.status(500).json({ 
         success: false,
-        error: 'Internal server error', 
-        details: error.message 
+        error: 'Internal server error',
+        errorCode: 'STATUS_UPDATE_FAILED',
+        message: 'Could not update settings. Please try again.'
       });
     }
   }
@@ -254,7 +259,7 @@ class UserController {
       });
     } catch (error) {
       console.error('❌ Error in getMe:', error);
-      res.status(500).json({ success: false, error: 'Internal server error', details: error.message });
+      res.status(500).json({ success: false, error: 'Internal server error', errorCode: 'PROFILE_FETCH_FAILED', message: 'Could not load your profile. Please try again.' });
     }
   }
 }

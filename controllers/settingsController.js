@@ -180,11 +180,12 @@ class SettingsController {
         }
       });
     } catch (error) {
-      console.error('❌ Error in getUserSettings:', error);
+      console.error('Error in getUserSettings:', error);
       res.status(500).json({
         success: false,
-        error: 'Internal server error',
-        details: error.message
+        error: 'Request could not be completed',
+        errorCode: 'SETTINGS_FETCH_FAILED',
+        message: 'Could not load your settings. Please try again.'
       });
     }
   }
@@ -264,11 +265,12 @@ class SettingsController {
         }
       });
     } catch (error) {
-      console.error('❌ Error in updateUserSettings:', error);
+      console.error('Error in updateUserSettings:', error);
       res.status(500).json({
         success: false,
-        error: 'Internal server error',
-        details: error.message
+        error: 'Request could not be completed',
+        errorCode: 'SETTINGS_UPDATE_FAILED',
+        message: 'Could not update your settings. Please try again.'
       });
     }
   }
@@ -314,11 +316,12 @@ class SettingsController {
         }
       });
     } catch (error) {
-      console.error('❌ Error in updateQuickAccessServices:', error);
+      console.error('Error in updateQuickAccessServices:', error);
       res.status(500).json({
         success: false,
-        error: 'Internal server error',
-        details: error.message
+        error: 'Request could not be completed',
+        errorCode: 'QUICK_ACCESS_UPDATE_FAILED',
+        message: 'Could not update quick access services. Please try again.'
       });
     }
   }
@@ -368,11 +371,12 @@ class SettingsController {
         }
       });
     } catch (error) {
-      console.error('❌ Error in resetUserSettings:', error);
+      console.error('Error in resetUserSettings:', error);
       res.status(500).json({
         success: false,
-        error: 'Internal server error',
-        details: error.message
+        error: 'Request could not be completed',
+        errorCode: 'SETTINGS_RESET_FAILED',
+        message: 'Could not reset your settings. Please try again.'
       });
     }
   }

@@ -56,7 +56,8 @@ class MobileMartController {
             res.status(500).json({
                 success: false,
                 error: 'MobileMart service health check failed',
-                message: error.message
+                errorCode: 'MOBILEMART_HEALTH_CHECK_FAILED',
+                message: 'Service temporarily unavailable. Please try again.'
             });
         }
     }
@@ -92,7 +93,8 @@ class MobileMartController {
             res.status(500).json({
                 success: false,
                 error: 'Failed to list MobileMart products',
-                message: error.message
+                errorCode: 'MOBILEMART_LIST_FAILED',
+                message: 'Service temporarily unavailable. Please try again.'
             });
         }
     }
@@ -189,7 +191,8 @@ class MobileMartController {
             res.status(500).json({
                 success: false,
                 error: 'Failed to prevend MobileMart transaction',
-                message: error.message
+                errorCode: 'MOBILEMART_PREVEND_FAILED',
+                message: 'Service temporarily unavailable. Please try again.'
             });
         }
     }
@@ -352,7 +355,8 @@ class MobileMartController {
             res.status(500).json({
                 success: false,
                 error: 'Failed to purchase MobileMart product',
-                message: error.message
+                errorCode: 'MOBILEMART_PURCHASE_FAILED',
+                message: 'Service temporarily unavailable. Please try again.'
             });
         }
     }

@@ -9,8 +9,8 @@ router.get('/', auth, async (req, res) => {
     const data = await notificationService.list(req.user.id, { status, limit, page });
     res.json({ success: true, data });
   } catch (e) {
-    console.error('notifications GET error', e);
-    res.status(500).json({ success: false, message: 'Failed to load notifications' });
+    console.error('Notifications list error:', e.message);
+    res.status(500).json({ success: false, error: 'Failed to load notifications', errorCode: 'NOTIFICATIONS_LOAD_FAILED', message: 'Could not load your notifications. Please try again.' });
   }
 });
 
@@ -20,7 +20,8 @@ router.post('/:id/read', auth, async (req, res) => {
     if (!row) return res.status(404).json({ success: false, message: 'Not found' });
     res.json({ success: true, data: row });
   } catch (e) {
-    res.status(500).json({ success: false, message: 'Failed to mark read' });
+    console.error('Notification mark-read error:', e.message);
+    res.status(500).json({ success: false, error: 'Failed to mark notification as read', errorCode: 'NOTIFICATION_UPDATE_FAILED', message: 'Could not mark notification as read. Please try again.' });
   }
 });
 
@@ -29,7 +30,8 @@ router.post('/mark-all-read', auth, async (req, res) => {
     await notificationService.markAllRead(req.user.id);
     res.json({ success: true });
   } catch (e) {
-    res.status(500).json({ success: false, message: 'Failed to mark all read' });
+    console.error('Notification mark-all-read error:', e.message);
+    res.status(500).json({ success: false, error: 'Failed to mark all notifications as read', errorCode: 'NOTIFICATION_UPDATE_FAILED', message: 'Could not mark all notifications as read. Please try again.' });
   }
 });
 
@@ -38,7 +40,8 @@ router.get('/settings', auth, async (req, res) => {
     const s = await notificationService.getSettings(req.user.id);
     res.json({ success: true, data: s });
   } catch (e) {
-    res.status(500).json({ success: false, message: 'Failed to load settings' });
+    console.error('Notification settings load error:', e.message);
+    res.status(500).json({ success: false, error: 'Failed to load notification settings', errorCode: 'NOTIFICATIONS_LOAD_FAILED', message: 'Could not load notification settings. Please try again.' });
   }
 });
 
@@ -47,7 +50,8 @@ router.put('/settings', auth, async (req, res) => {
     const s = await notificationService.updateSettings(req.user.id, req.body || {});
     res.json({ success: true, data: s });
   } catch (e) {
-    res.status(500).json({ success: false, message: 'Failed to update settings' });
+    console.error('Notification settings update error:', e.message);
+    res.status(500).json({ success: false, error: 'Failed to update notification settings', errorCode: 'NOTIFICATION_UPDATE_FAILED', message: 'Could not update notification settings. Please try again.' });
   }
 });
 

@@ -18,11 +18,12 @@ class TransactionController {
         data: { transactions }
       });
     } catch (error) {
-      console.error('❌ Error in getAllTransactions:', error);
-      res.status(500).json({ 
+      console.error('Error in getAllTransactions:', error);
+      res.status(500).json({
         success: false,
-        error: 'Internal server error', 
-        details: error.message 
+        error: 'Request could not be completed',
+        errorCode: 'TRANSACTIONS_FETCH_FAILED',
+        message: 'Could not load transactions. Please try again.'
       });
     }
   }
@@ -46,11 +47,12 @@ class TransactionController {
         data: { transaction }
       });
     } catch (error) {
-      console.error('❌ Error in getTransactionById:', error);
-      res.status(500).json({ 
+      console.error('Error in getTransactionById:', error);
+      res.status(500).json({
         success: false,
-        error: 'Internal server error', 
-        details: error.message 
+        error: 'Request could not be completed',
+        errorCode: 'TRANSACTION_LOOKUP_FAILED',
+        message: 'Could not load transaction details. Please try again.'
       });
     }
   }
@@ -75,11 +77,12 @@ class TransactionController {
         }
       });
     } catch (error) {
-      console.error('❌ Error in getTransactionsByWallet:', error);
-      res.status(500).json({ 
+      console.error('Error in getTransactionsByWallet:', error);
+      res.status(500).json({
         success: false,
-        error: 'Internal server error', 
-        details: error.message 
+        error: 'Request could not be completed',
+        errorCode: 'WALLET_TRANSACTIONS_FETCH_FAILED',
+        message: 'Could not load wallet transactions. Please try again.'
       });
     }
   }
@@ -103,11 +106,12 @@ class TransactionController {
         }
       });
     } catch (error) {
-      console.error('❌ Error in getRecentTransactions:', error);
-      res.status(500).json({ 
+      console.error('Error in getRecentTransactions:', error);
+      res.status(500).json({
         success: false,
-        error: 'Internal server error', 
-        details: error.message 
+        error: 'Request could not be completed',
+        errorCode: 'RECENT_TRANSACTIONS_FETCH_FAILED',
+        message: 'Could not load recent transactions. Please try again.'
       });
     }
   }
@@ -128,11 +132,12 @@ class TransactionController {
         }
       });
     } catch (error) {
-      console.error('❌ Error in getWalletStats:', error);
-      res.status(500).json({ 
+      console.error('Error in getWalletStats:', error);
+      res.status(500).json({
         success: false,
-        error: 'Internal server error', 
-        details: error.message 
+        error: 'Request could not be completed',
+        errorCode: 'WALLET_STATS_FETCH_FAILED',
+        message: 'Could not load wallet statistics. Please try again.'
       });
     }
   }
@@ -171,11 +176,12 @@ class TransactionController {
         }
       });
     } catch (error) {
-      console.error('❌ Error in updateTransactionStatus:', error);
-      res.status(500).json({ 
+      console.error('Error in updateTransactionStatus:', error);
+      res.status(500).json({
         success: false,
-        error: 'Internal server error', 
-        details: error.message 
+        error: 'Request could not be completed',
+        errorCode: 'TRANSACTION_STATUS_UPDATE_FAILED',
+        message: 'Could not update transaction status. Please try again.'
       });
     }
   }

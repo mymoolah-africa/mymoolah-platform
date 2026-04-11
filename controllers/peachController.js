@@ -59,8 +59,8 @@ exports.healthCheck = async (req, res) => {
     console.error('Peach health check error:', error);
     res.status(500).json({
       success: false,
-      error: 'Health check failed',
-      message: error.message
+      message: 'Health check failed',
+      errorCode: 'HEALTH_CHECK_FAILED'
     });
   }
 };
@@ -190,20 +190,15 @@ exports.initiatePayShapRpp = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('❌ PayShap RPP initiation error:', error.response?.data || error.message);
-    console.error('❌ Full error details:', {
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      data: error.response?.data,
-      message: error.message,
-      stack: error.stack
+    console.error('[PeachController] PayShap RPP initiation error', {
+      errorType: error.constructor?.name,
+      errorCode: error.code,
+      responseStatus: error.response?.status
     });
-    return res.status(error.response?.status || 500).json({ 
+    return res.status(500).json({ 
       success: false, 
-      message: 'Failed to initiate PayShap payment', 
-      details: error.response?.data || error.message,
-      errorCode: error.response?.data?.result?.code || error.response?.data?.error?.code,
-      errorDescription: error.response?.data?.result?.description || error.response?.data?.error?.description
+      message: 'Payment could not be processed. Please try again.',
+      errorCode: 'PAYSHAP_RPP_FAILED'
     });
   }
 };
@@ -373,20 +368,15 @@ exports.initiatePayShapRtp = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('❌ PayShap RTP initiation error:', error.response?.data || error.message);
-    console.error('❌ Full error details:', {
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      data: error.response?.data,
-      message: error.message,
-      stack: error.stack
+    console.error('[PeachController] PayShap RTP initiation error', {
+      errorType: error.constructor?.name,
+      errorCode: error.code,
+      responseStatus: error.response?.status
     });
-    return res.status(error.response?.status || 500).json({ 
+    return res.status(500).json({ 
       success: false, 
-      message: 'Failed to initiate PayShap RTP request', 
-      details: error.response?.data || error.message,
-      errorCode: error.response?.data?.result?.code || error.response?.data?.error?.code,
-      errorDescription: error.response?.data?.result?.description || error.response?.data?.error?.description
+      message: 'Payment could not be processed. Please try again.',
+      errorCode: 'PAYSHAP_RTP_FAILED'
     });
   }
 };
@@ -431,8 +421,8 @@ exports.getPaymentStatus = async (req, res) => {
     console.error('Get payment status error:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to get payment status',
-      message: error.message
+      message: 'Failed to get payment status',
+      errorCode: 'PAYMENT_STATUS_FAILED'
     });
   }
 };
@@ -479,8 +469,8 @@ exports.getUserPayments = async (req, res) => {
     console.error('Get user payments error:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to get user payments',
-      message: error.message
+      message: 'Failed to retrieve payment history',
+      errorCode: 'PAYMENT_HISTORY_FAILED'
     });
   }
 };
@@ -530,8 +520,8 @@ exports.cancelPayment = async (req, res) => {
     console.error('Cancel payment error:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to cancel payment',
-      message: error.message
+      message: 'Failed to cancel payment',
+      errorCode: 'PAYMENT_CANCEL_FAILED'
     });
   }
 };
@@ -591,8 +581,8 @@ exports.getPaymentMethods = async (req, res) => {
     console.error('Get payment methods error:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to get payment methods',
-      message: error.message
+      message: 'Failed to retrieve payment methods',
+      errorCode: 'PAYMENT_METHODS_FAILED'
     });
   }
 };
@@ -762,20 +752,15 @@ exports.requestMoneyViaPayShap = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Request Money via PayShap error:', error.response?.data || error.message);
-    console.error('❌ Full error details:', {
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      data: error.response?.data,
-      message: error.message,
-      stack: error.stack
+    console.error('[PeachController] Request Money via PayShap error', {
+      errorType: error.constructor?.name,
+      errorCode: error.code,
+      responseStatus: error.response?.status
     });
-    return res.status(error.response?.status || 500).json({ 
+    return res.status(500).json({ 
       success: false, 
-      message: 'Failed to create money request', 
-      details: error.response?.data || error.message,
-      errorCode: error.response?.data?.result?.code || error.response?.data?.error?.code,
-      errorDescription: error.response?.data?.result?.description || error.response?.data?.error?.description
+      message: 'Payment could not be processed. Please try again.',
+      errorCode: 'REQUEST_MONEY_FAILED'
     });
   }
 };
@@ -854,8 +839,8 @@ exports.getPayShapTestScenarios = async (req, res) => {
     console.error('Get PayShap test scenarios error:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to get test scenarios',
-      message: error.message
+      message: 'Failed to retrieve test scenarios',
+      errorCode: 'TEST_SCENARIOS_FAILED'
     });
   }
 };
@@ -1044,7 +1029,7 @@ exports.handleWebhook = async (req, res) => {
     res.status(200).json({
       success: false,
       message: 'Webhook received but processing failed',
-      error: error.message
+      errorCode: 'WEBHOOK_PROCESSING_FAILED'
     });
   }
 };
@@ -1152,8 +1137,7 @@ exports.pollPaymentStatus = async (req, res) => {
           status: payment.status,
           resultCode: payment.resultCode,
           resultDescription: payment.resultDescription,
-          note: 'Status from database (API check failed - endpoint may need confirmation)',
-          apiError: apiError.response?.data || apiError.message
+          note: 'Status from database (live status check unavailable)'
         }
       });
     }
@@ -1162,8 +1146,8 @@ exports.pollPaymentStatus = async (req, res) => {
     console.error('Poll payment status error:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to poll payment status',
-      message: error.message
+      message: 'Failed to poll payment status',
+      errorCode: 'PAYMENT_POLL_FAILED'
     });
   }
 };

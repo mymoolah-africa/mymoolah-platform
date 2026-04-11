@@ -92,7 +92,7 @@ export function BillPaymentOverlay() {
     } catch (err: any) {
       console.error('Failed to load initial data:', err);
       setErrorModalTitle('Failed to load');
-      setErrorModalMessage(err?.response?.message || err?.response?.error || err?.message || 'Failed to load bill payment data. Please try again.');
+      setErrorModalMessage(err?.response?.data?.message || err?.response?.data?.error || err?.message || 'Failed to load bill payment data. Please try again.');
       setShowErrorModal(true);
       setLoadingState('error');
     }
@@ -181,7 +181,7 @@ export function BillPaymentOverlay() {
     } catch (err: any) {
       console.error('Bill payment failed:', err);
       setErrorModalTitle('Payment Failed');
-      const msg = err?.response?.message || err?.response?.error || err?.message || 'Bill payment failed. Please try again.';
+      const msg = err?.response?.data?.message || err?.response?.data?.error || err?.message || 'Bill payment failed. Please try again.';
       setErrorModalMessage(msg);
       setCurrentStep('amount');
       setShowErrorModal(true);

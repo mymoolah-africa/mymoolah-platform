@@ -108,7 +108,7 @@ export function TopupVoucherOverlay() {
       setResult(data.data);
       setCurrentStep('success');
     } catch (err: any) {
-      setErrorMessage(err.message || 'Something went wrong. Please try again.');
+      setErrorMessage(err.message || 'Voucher redemption failed. Please check your voucher PIN and try again.');
       setCurrentStep('error');
     } finally {
       setIsSubmitting(false);

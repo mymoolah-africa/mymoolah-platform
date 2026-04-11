@@ -115,10 +115,12 @@ router.post('/batch/generate',
             status: (code) => ({ json: (data) => results.push({ feedbackId, success: false, status: code, data }) })
           });
         } catch (error) {
+          console.error(`Error generating review for feedbackId ${feedbackId}:`, error);
           results.push({ 
             feedbackId, 
             success: false, 
-            error: error.message 
+            errorCode: 'REVIEW_GENERATION_FAILED',
+            error: 'Review submission could not be processed. Please try again.'
           });
         }
       }
@@ -246,8 +248,8 @@ router.use((error, req, res, next) => {
   console.error('Google Reviews API Error:', error);
   res.status(500).json({
     success: false,
-    message: 'Internal server error',
-    error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
+    errorCode: 'GOOGLE_REVIEW_ERROR',
+    message: 'Review submission could not be processed. Please try again.'
   });
 });
 

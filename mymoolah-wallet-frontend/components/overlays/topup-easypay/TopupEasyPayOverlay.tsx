@@ -38,6 +38,7 @@ export function TopupEasyPayOverlay() {
   // Success state
   const [easyPayPIN, setEasyPayPIN] = useState<string>('');
   const [copiedPIN, setCopiedPIN] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   // Quick amount options
   const quickAmounts = [50, 100, 200, 300, 500, 1000, 2000];
@@ -149,6 +150,7 @@ export function TopupEasyPayOverlay() {
       
     } catch (error: any) {
       console.error('Top-up request error:', error);
+      setErrorMessage(error?.message || 'We couldn\'t create your top-up request. Please try again.');
       setCurrentStep('error');
     } finally {
       setIsSubmitting(false);
@@ -493,7 +495,7 @@ export function TopupEasyPayOverlay() {
               color: '#6b7280',
               textAlign: 'center'
             }}>
-              We couldn't create your top-up request. Please try again.
+              {errorMessage || 'We couldn\'t create your top-up request. Please try again.'}
             </p>
           </div>
 

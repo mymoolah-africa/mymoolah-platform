@@ -429,9 +429,10 @@ class KYCController {
       console.error('❌ Error uploading KYC documents:', error);
       console.error('❌ Error stack:', error.stack);
       res.status(500).json({
+        success: false,
         error: 'UPLOAD_ERROR',
-        message: 'Error uploading documents',
-        details: error.message
+        errorCode: 'KYC_UPLOAD_FAILED',
+        message: 'KYC verification could not be completed. Please try again.'
       });
     }
     

@@ -83,7 +83,7 @@ export function DigitalVouchersOverlay() {
         localStorage.setItem(favoritesKey, JSON.stringify(pruned));
       }
     } catch {
-      setError('Failed to load vouchers. Please try again.');
+      setError('We could not load vouchers right now. Please check your connection and try again.');
     } finally {
       setIsLoading(false);
     }
