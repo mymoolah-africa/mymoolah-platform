@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
 **Last Updated**: 2026-04-11  
-**Latest Feature**: **Electricity METER_MIN_AMOUNT failover + apiClient error fix (v2.97.2)** — Fixed 3 issues: (1) apiClient.ts `err.response` not wrapping body in `{data}` — error messages swallowed across ALL overlays; (2) no Flash failover for electricity when MobileMart rejects with METER_MIN_AMOUNT (only 1 MobileMart ProductVariant in DB); (3) ElectricityOverlay now shows "Minimum Amount Required" with actual minimum. Root cause for user 0720213994: meter 04285639987 has R339.26 municipality minimum (City of Cape Town debt). Previous: v2.97.1 airtime failover bugfix.  
-**Document Version**: 2.97.2  
-**Session logs**: `docs/session_logs/2026-04-11_1330_electricity-failover-meter-min-fix.md`, `docs/session_logs/2026-04-11_1200_airtime-failover-bugfix-pii-redaction.md`, `docs/session_logs/2026-04-10_2100_universal-vas-supplier-failover.md`  
+**Latest Feature**: **Comprehensive error message sanitization (v2.97.3)** — Codebase-wide audit and fix of ALL generic/leaking error messages across 40 files (22 controllers, 9 routes, 2 middleware, 6 frontend overlays). Every user-facing API endpoint now returns safe, specific error messages with machine-readable `errorCode` fields. Removed all `error.message`, `details: error.message`, and `stack` exposure from client responses. Fixed frontend overlays to correctly read `err.response.data.message`. Previous: v2.97.2 electricity METER_MIN_AMOUNT failover + apiClient error fix.  
+**Document Version**: 2.97.3  
+**Session logs**: `docs/session_logs/2026-04-11_1800_comprehensive-error-message-sanitization.md`, `docs/session_logs/2026-04-11_1330_electricity-failover-meter-min-fix.md`, `docs/session_logs/2026-04-11_1200_airtime-failover-bugfix-pii-redaction.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
