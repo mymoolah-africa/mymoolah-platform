@@ -94,12 +94,25 @@ executor.register('MOBILEMART', 'electricity', async (variant, opts) => {
     meterNumber,
     amount: amount.toString()
   });
-  console.log(`📞 MobileMart Prevend: ${prevendParams.toString()}`);
+  console.log(`📞 MobileMart Prevend: merchantProductId=${merchantProductId}, meter=***${meterNumber.slice(-4)}, amount=${amount}`);
   const prevendResponse = await mobileMartService.makeAuthenticatedRequest('GET', `/utility/prevend?${prevendParams.toString()}`);
-  console.log('✅ MobileMart Prevend Response:', JSON.stringify(prevendResponse, null, 2));
+
+  const redactedPrevend = { ...prevendResponse };
+  if (redactedPrevend.consumerDetails) {
+    redactedPrevend.consumerDetails = { name: '[REDACTED]', address: '[REDACTED]' };
+  }
+  console.log('✅ MobileMart Prevend Response:', JSON.stringify(redactedPrevend, null, 2));
 
   const prevendTransactionId = prevendResponse.transactionId || prevendResponse.prevendTransactionId;
   if (!prevendTransactionId) throw new Error('MobileMart prevend did not return transactionId');
+
+  const minPurchase = prevendResponse.minimumPurchaseAmount;
+  if (minPurchase && Number(amount) < Number(minPurchase)) {
+    throw Object.assign(
+      new Error(`Amount R${amount} is below this meter's minimum of R${minPurchase}`),
+      { code: 'METER_MIN_AMOUNT', isBusinessError: true, minimumAmount: minPurchase }
+    );
+  }
 
   const purchasePayload = {
     requestId: `ELEC_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
@@ -108,7 +121,12 @@ executor.register('MOBILEMART', 'electricity', async (variant, opts) => {
   };
   console.log('📞 MobileMart Purchase Request:', JSON.stringify(purchasePayload, null, 2));
   const purchaseResponse = await mobileMartService.makeAuthenticatedRequest('POST', '/utility/purchase', purchasePayload);
-  console.log('✅ MobileMart Purchase Response:', JSON.stringify(purchaseResponse, null, 2));
+
+  const redactedPurchase = { ...purchaseResponse };
+  if (redactedPurchase.consumerDetails) {
+    redactedPurchase.consumerDetails = { name: '[REDACTED]', address: '[REDACTED]' };
+  }
+  console.log('✅ MobileMart Purchase Response:', JSON.stringify(redactedPurchase, null, 2));
 
   let electricityToken = 'TOKEN_PENDING';
   if (purchaseResponse.additionalDetails && Array.isArray(purchaseResponse.additionalDetails.tokens)) {
@@ -140,12 +158,20 @@ executor.register('FLASH', 'electricity', async (variant, opts) => {
   const flashService = new FlashAuthService();
   const flashServiceProvider = ((beneficiary?.metadata?.meterType) || 'ESKOM').toUpperCase().replace(/\s+/g, '_');
 
-  console.log(`📞 Flash: Looking up meter (provider=${flashServiceProvider})...`);
+  console.log(`📞 Flash: Looking up meter ***${meterNumber.slice(-4)} (provider=${flashServiceProvider})...`);
   const lookupResponse = await flashService.makeAuthenticatedRequest('POST', '/prepaid-utilities/lookup', {
     meterNumber,
     serviceProvider: flashServiceProvider
   });
-  console.log('✅ Flash Meter Lookup Response:', JSON.stringify(lookupResponse, null, 2));
+
+  const redactedLookup = { ...lookupResponse };
+  if (redactedLookup.meterInfo?.customerInfo) {
+    redactedLookup.meterInfo = { ...redactedLookup.meterInfo, customerInfo: { name: '[REDACTED]', address: '[REDACTED]' } };
+  }
+  if (redactedLookup.customerInfo) {
+    redactedLookup.customerInfo = { name: '[REDACTED]', address: '[REDACTED]' };
+  }
+  console.log('✅ Flash Meter Lookup Response:', JSON.stringify(redactedLookup, null, 2));
 
   if (!lookupResponse.isValid) {
     throw Object.assign(new Error('Meter number not found or invalid'), { code: 'METER_INVALID', isBusinessError: true });

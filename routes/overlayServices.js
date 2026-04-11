@@ -2535,12 +2535,15 @@ router.post('/electricity/purchase', auth, async (req, res) => {
       });
 
       if (!failoverResult.success) {
-        const isTimeout = (failoverResult.error || '').toLowerCase().includes('timeout');
-        return res.status(isTimeout ? 504 : 500).json({
+        const errMsg = failoverResult.error || 'All electricity suppliers failed';
+        const isTimeout = errMsg.toLowerCase().includes('timeout');
+        const isMeterMin = errMsg.includes('meter\'s minimum');
+        const statusCode = isMeterMin ? 400 : (isTimeout ? 504 : 500);
+        return res.status(statusCode).json({
           success: false,
-          error: 'Failed to purchase electricity',
-          errorCode: failoverResult.errorCode || 'ALL_SUPPLIERS_FAILED',
-          message: failoverResult.error || 'All electricity suppliers failed',
+          error: isMeterMin ? errMsg : 'Failed to purchase electricity',
+          errorCode: isMeterMin ? 'METER_MIN_AMOUNT' : (failoverResult.errorCode || 'ALL_SUPPLIERS_FAILED'),
+          message: errMsg,
           isTimeout,
           details: {
             triedSuppliers: failoverResult.triedSuppliers || [],

@@ -36,23 +36,33 @@ class SupplierFailoverService {
     const failedSupplierCode = failedVariant.supplier?.code;
     const priceType = failedVariant.priceType || 'variable';
 
-    if (!vasType || !provider || !failedSupplierCode) {
+    if (!vasType || !failedSupplierCode) {
       console.warn('[SupplierFailover] Missing fields for alternative lookup', {
         vasType, provider, failedSupplierCode
       });
       return [];
     }
 
+    // Electricity is not network-specific — any supplier with an electricity
+    // product is a valid failover candidate regardless of provider name.
+    const isElectricity = vasType === 'electricity';
+
+    if (!isElectricity && !provider) {
+      console.warn('[SupplierFailover] Missing provider for non-electricity lookup', { vasType });
+      return [];
+    }
+
     const where = {
       status: 'active',
-      provider: { [Op.iLike]: provider },
     };
 
+    if (!isElectricity) {
+      where.provider = { [Op.iLike]: provider };
+    }
+
     if (vasType === 'airtime' && priceType === 'variable') {
-      // Variable airtime: match any variable airtime for the same network
       where.priceType = 'variable';
-    } else if (amountCents > 0) {
-      // Fixed products (data, vouchers): amount must be in range
+    } else if (amountCents > 0 && !isElectricity) {
       where.minAmount = { [Op.lte]: amountCents };
       where.maxAmount = { [Op.gte]: amountCents };
     }
