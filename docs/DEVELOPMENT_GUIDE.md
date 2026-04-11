@@ -202,10 +202,37 @@ normalizeVasType(vasType) {
 
 MobileMart Fulcrum API returns standard error codes:
 - `1000` - ProductDoesNotExist
-- `1001` - AmountInvalid
-- `1002` - CannotSourceProduct
+- `1001` - AmountInvalid (upstream utility provider rejection — failover to Flash may succeed)
+- `1002` - CannotSourceProduct (upstream supply issue — failover to Flash may succeed)
 - `1006` - UserNotAuthenticated
 - `1008` - MerchantCreditLimitReached
+- `1013` - MobileNumberInvalid (terminal — failover will NOT help)
+- `1016` - ConsumerAccountError (subscriber/network restriction)
+
+#### **Supplier Failover (v2.97.0+)**
+
+All VAS purchase handlers use automatic post-failure failover via `supplierFailoverService.executeWithFailover()`. If the primary supplier fails, alternatives are tried in commission-descending order.
+
+**Adding a new supplier:**
+```javascript
+// In services/vasSupplierExecutor.js
+const executor = require('./vasSupplierExecutor');
+executor.register('NEW_SUPPLIER', 'electricity', async (variant, opts) => {
+  // Call NEW_SUPPLIER API
+  return { token, supplierTransactionId, supplierResponse, supplier: 'NEW_SUPPLIER' };
+});
+// Set NEW_SUPPLIER_LIVE_INTEGRATION=true in env
+```
+
+**Key services:**
+- `services/vasSupplierExecutor.js` — Registry of supplier API handlers per VAS type
+- `services/supplierFailoverService.js` — Failover engine (candidate list, circuit breaker, logging)
+- `services/supplierCircuitBreaker.js` — Per-supplier circuit breaker (CLOSED/OPEN/HALF_OPEN)
+
+**Error classification:**
+- Transient errors (5xx, timeout, ECONNRESET) → trip circuit breaker + trigger failover
+- Business errors (4xx, 1001, 1002) → do NOT trip circuit breaker BUT DO trigger failover
+- Terminal errors (1013 invalid mobile) → no failover (same error would occur with any supplier)
 
 #### **Environment Variables**
 

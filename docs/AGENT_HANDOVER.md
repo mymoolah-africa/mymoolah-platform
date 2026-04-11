@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
 **Last Updated**: 2026-04-10  
-**Latest Feature**: **EasyPay V5 finalisation implemented (v2.96.0)** — Executed all 6 tasks: fee model fixed to flat R6.33 (R5.50 + VAT), legacy settlement routes removed (security fix), new CoA `5000-10-02` (EasyPay Cash Handling Fee), `postCashHandlingCost()` added for batch recon, test PIN generator created, SFTP credentials email drafted, full doc sweep. **NEXT:** Andre runs migrations (UAT/staging/production), generates test PINs, sends credentials to EasyPay, requests sample SFTP recon file + egress IPs. Next agent builds SFTP recon parser + batch recon job + T+2 settlement JE. Previous: v2.95.1 agent handover, v2.95.0 finalisation plan, v2.94.3 partner Q&A.  
-**Document Version**: 2.96.0  
-**Session logs**: `docs/session_logs/2026-04-10_1700_easypay-v5-finalisation-implementation.md`, `docs/session_logs/2026-04-10_1500_easypay-v5-handover-gmail-sftp.md`, `docs/session_logs/2026-04-10_1400_easypay-v5-finalisation-plan.md`  
+**Latest Feature**: **Universal VAS supplier failover (v2.97.0)** — Implemented automatic post-failure failover across ALL VAS types (electricity, bills, airtime/data) and ALL suppliers (MobileMart, Flash, future). Created `services/vasSupplierExecutor.js` (registry-based dispatcher — new suppliers need one `register()` call). Electricity and bills handlers now use `executeWithFailover()`. Airtime handler enhanced: failover triggers on all non-terminal errors (not just 1002). Circuit breaker `recordSuccess`/`recordFailure` added to overlay routes (was never recording before). Removed supplier-specific min-amount early return that blocked failover. Previous: v2.96.0 EasyPay V5 finalisation.  
+**Document Version**: 2.97.0  
+**Session logs**: `docs/session_logs/2026-04-10_2100_universal-vas-supplier-failover.md`, `docs/session_logs/2026-04-10_1700_easypay-v5-finalisation-implementation.md`, `docs/session_logs/2026-04-10_1500_easypay-v5-handover-gmail-sftp.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -55,6 +55,7 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 | Flash local API reference & testing | `integrations/flash/FLASH_TESTING_REFERENCE.md` |
 | **MobileMart API docs, legal, product lists** | **Google Drive: https://drive.google.com/drive/folders/1_qpaRxUBTCr40wlFl54qqSjNZ6HX8xs3?usp=sharing** |
 | MobileMart local integration docs | `integrations/mobilemart/MOBILEMART_REFERENCE.md` |
+| VAS supplier failover architecture | `services/vasSupplierExecutor.js`, `services/supplierFailoverService.js`, `services/supplierCircuitBreaker.js` |
 | **Zapper API docs, SLA, QR test codes** | **Google Drive: https://drive.google.com/drive/folders/1cvXKEACgwbvZsp8A-8KPy8-q0QvWcVgh?usp=sharing** |
 | Zapper local integration docs | `integrations/zapper/ZAPPER_REFERENCE.md` |
 

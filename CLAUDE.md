@@ -126,6 +126,9 @@ Never `pm2 restart all`, never `node server.js`, never `npm start` for the main 
 | Portal backend | `portal/backend/` |
 | Portal brand logos | `portal/admin/frontend/src/assets/logo-*.png` |
 | Portal builder skill | `.agents/skills/admin-portal-builder/SKILL.md` |
+| VAS supplier executor | `services/vasSupplierExecutor.js` |
+| Supplier failover engine | `services/supplierFailoverService.js` |
+| Supplier circuit breaker | `services/supplierCircuitBreaker.js` |
 
 ---
 
@@ -141,7 +144,7 @@ Never `pm2 restart all`, never `node server.js`, never `npm start` for the main 
 | RTP balance auto-refresh can miss a polling cycle | Low — cosmetic delay, `MoolahContext.tsx` dedup logic |
 | `tax_transactions` FK constraint on electricity commission | Low — commission JEs posted; audit record fails |
 | USSD sessions use in-memory fallback on Cloud Run (no Redis) | Medium — sessions lost on cold-start |
-| Airtime/Electricity/Biller inline in overlayServices.js (~1,200 lines) | Medium — violates separation of concerns |
+| Airtime/Electricity/Biller inline in overlayServices.js (~1,200 lines) | Medium — partially addressed: electricity+bills use `vasSupplierExecutor`; airtime still inline |
 
 ---
 

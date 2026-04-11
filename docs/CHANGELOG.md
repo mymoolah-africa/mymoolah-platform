@@ -1,5 +1,32 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-10 - Universal VAS supplier failover (v2.97.0)
+
+### Summary
+Implemented automatic post-failure supplier failover across ALL VAS purchase types (electricity, bills, airtime/data) and ALL suppliers (MobileMart, Flash, and any future supplier). Previously, if MobileMart returned an error for electricity (e.g., `fulcrumErrorCode: 1001` AmountInvalid), the request failed immediately — Flash was never tried. Now all VAS handlers use `executeWithFailover()` which tries the primary supplier, then iterates through all alternatives in commission-descending order.
+
+### Root cause
+Production R50 electricity purchase for user `0720213994` failed with MobileMart `1001` (AmountInvalid — upstream utility provider rejection). Flash was never attempted because the electricity handler used a mutually exclusive `if (MOBILEMART) {} else if (FLASH) {}` pattern. Same issue existed in bills (single-supplier only) and airtime (failover only on Error 1002).
+
+### New files
+- `services/vasSupplierExecutor.js` — Registry-based VAS purchase dispatcher. Maps `(supplierCode, vasType)` to supplier-specific API handlers. Adding a new supplier = one `executor.register()` call, zero route changes. Registered handlers: MOBILEMART/electricity, FLASH/electricity, MOBILEMART/bill_payment, MOBILEMART/airtime, MOBILEMART/data.
+
+### Code changes
+- `routes/overlayServices.js` — **MAJOR**: Electricity handler rewritten to use `executeWithFailover()` via `vasSupplierExecutor`; Bills handler rewritten similarly; Airtime handler enhanced: failover now triggers on ALL non-terminal errors (not just 1002); `recordSuccess`/`recordFailure` calls added (circuit breaker was never recording from overlay routes); removed supplier-specific min-amount early return that blocked failover for R20 amounts
+- `services/supplierFailoverService.js` — Enhanced to check `_LIVE_INTEGRATION` env vars before including suppliers as failover candidates
+
+### Architecture: Before vs After
+| VAS Type | Before | After |
+|----------|--------|-------|
+| Electricity | Mutually exclusive MM/Flash — zero failover | `executeWithFailover()` — all suppliers |
+| Bills | MobileMart only — immediate error return | `executeWithFailover()` — all suppliers |
+| Airtime/data | Failover only on Error 1002 | Failover on ALL non-terminal errors |
+| Circuit breaker | Never recorded from routes | Records every API outcome |
+
+### No migrations needed — pure code logic.
+
+---
+
 ## 2026-04-10 - EasyPay V5 finalisation implementation (v2.96.0)
 
 ### Summary

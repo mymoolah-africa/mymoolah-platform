@@ -509,10 +509,14 @@ POST /api/v1/mobilemart/purchase/:vasType
 #### **Error Codes**
 MobileMart Fulcrum API returns standard error codes:
 - `1000` - ProductDoesNotExist
-- `1001` - AmountInvalid
-- `1002` - CannotSourceProduct
+- `1001` - AmountInvalid (upstream provider rejection — automatic failover to next supplier)
+- `1002` - CannotSourceProduct (upstream supply issue — automatic failover to next supplier)
 - `1006` - UserNotAuthenticated
 - `1008` - MerchantCreditLimitReached
+- `1013` - MobileNumberInvalid (terminal — no failover)
+- `1016` - ConsumerAccountError
+
+**Failover behaviour (v2.97.0+):** All non-terminal errors trigger automatic failover to alternative suppliers. The response includes `triedSuppliers` and `failoverUsed` fields when failover was attempted. Only if ALL suppliers fail does the error reach the client.
 
 ---
 
