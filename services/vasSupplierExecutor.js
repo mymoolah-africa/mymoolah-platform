@@ -122,9 +122,12 @@ executor.register('MOBILEMART', 'electricity', async (variant, opts) => {
   console.log('📞 MobileMart Purchase Request:', JSON.stringify(purchasePayload, null, 2));
   const purchaseResponse = await mobileMartService.makeAuthenticatedRequest('POST', '/utility/purchase', purchasePayload);
 
-  const redactedPurchase = { ...purchaseResponse };
+  const redactedPurchase = JSON.parse(JSON.stringify(purchaseResponse));
   if (redactedPurchase.consumerDetails) {
     redactedPurchase.consumerDetails = { name: '[REDACTED]', address: '[REDACTED]' };
+  }
+  if (redactedPurchase.additionalDetails?.consumerDetails) {
+    redactedPurchase.additionalDetails.consumerDetails = { name: '[REDACTED]', message: '[REDACTED]', address: '[REDACTED]' };
   }
   console.log('✅ MobileMart Purchase Response:', JSON.stringify(redactedPurchase, null, 2));
 

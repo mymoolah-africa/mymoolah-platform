@@ -156,26 +156,29 @@ class SupplierFailoverService {
       console.log(`[SupplierFailover] Skipping primary ${primarySupplierCode} — circuit OPEN`);
     }
 
-    // Pre-fetch alternatives
+    // Pre-fetch alternatives (deduplicate skip logs per supplier)
     const alternatives = await this.findAlternativeVariants(primaryVariant, amountCents);
+    const skippedReasons = {};
     for (const alt of alternatives) {
       const altCode = alt.supplier?.code;
       if (!altCode) continue;
 
-      // Skip if that supplier's circuit is open
       if (circuitBreaker.isOpen(altCode)) {
-        console.log(`[SupplierFailover] Skipping alternative ${altCode} — circuit OPEN`);
+        skippedReasons[altCode] = 'circuit OPEN';
         continue;
       }
 
-      // Skip if that supplier is not enabled in env vars
       const envKey = `${altCode.toUpperCase()}_LIVE_INTEGRATION`;
       if (process.env[envKey] !== 'true') {
-        console.log(`[SupplierFailover] Skipping alternative ${altCode} — ${envKey} not enabled`);
+        skippedReasons[altCode] = `${envKey} not enabled`;
         continue;
       }
 
       candidates.push(alt);
+    }
+
+    for (const [code, reason] of Object.entries(skippedReasons)) {
+      console.log(`[SupplierFailover] Skipping all ${code} alternatives — ${reason}`);
     }
 
     if (candidates.length === 0) {
