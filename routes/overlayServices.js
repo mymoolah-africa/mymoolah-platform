@@ -1240,6 +1240,7 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
 
             try {
               const SupplierComparisonService = require('../services/supplierComparisonService');
+              const { ProductVariant: PVModel } = require('../models');
               const comparisonService = new SupplierComparisonService();
               const alternatives = await comparisonService.compareProducts(
                 type,
@@ -1255,7 +1256,7 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
               for (const alt of candidates) {
                 if (attempts >= MAX_FAILOVER_ATTEMPTS) break;
 
-                const altVariant = await ProductVariant.findOne({
+                const altVariant = await PVModel.findOne({
                   where: { id: alt.variantId, status: 'active' },
                   include: [
                     { model: require('../models').Supplier, as: 'supplier', attributes: ['id', 'code', 'name'] },
