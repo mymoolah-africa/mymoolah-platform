@@ -144,9 +144,12 @@ export function ElectricityOverlay() {
           'The electricity provider is taking too long to respond. Your wallet has not been charged. Please try again in a few minutes.'
         );
       } else if (isMeterMin) {
+        const minAmount = responseData?.minimumAmount;
         setErrorModalTitle('Minimum Amount Required');
         setErrorModalMessage(
-          responseData?.message || 'The amount is below the minimum purchase amount for this meter. Please try a higher amount.'
+          minAmount
+            ? `This meter requires a minimum purchase of R${parseFloat(minAmount).toFixed(2)}, likely due to outstanding utility charges. Your wallet has not been charged. You can use your bank app to make partial debt payments to reduce this minimum.`
+            : (responseData?.message || 'The amount is below the minimum purchase amount for this meter. Please try a higher amount.')
         );
       } else {
         setErrorModalTitle('Purchase Failed');

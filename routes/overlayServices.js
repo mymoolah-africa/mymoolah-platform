@@ -2571,14 +2571,20 @@ router.post('/electricity/purchase', auth, async (req, res) => {
       if (!failoverResult.success) {
         const errMsg = failoverResult.error || 'All electricity suppliers failed';
         const isTimeout = errMsg.toLowerCase().includes('timeout');
-        const isMeterMin = errMsg.includes('meter\'s minimum');
+        const isMeterMin = failoverResult.errorCode === 'METER_MIN_AMOUNT';
         const statusCode = isMeterMin ? 400 : (isTimeout ? 504 : 500);
+
+        const userMessage = isMeterMin
+          ? `This meter has a minimum purchase amount of R${failoverResult.minimumAmount || 'unknown'} (likely due to outstanding utility charges). Please purchase at least that amount, or use your bank app to make partial debt payments.`
+          : errMsg;
+
         return res.status(statusCode).json({
           success: false,
-          error: isMeterMin ? errMsg : 'Failed to purchase electricity',
+          error: isMeterMin ? 'Minimum amount required' : 'Failed to purchase electricity',
           errorCode: isMeterMin ? 'METER_MIN_AMOUNT' : (failoverResult.errorCode || 'ALL_SUPPLIERS_FAILED'),
-          message: errMsg,
+          message: userMessage,
           isTimeout,
+          minimumAmount: failoverResult.minimumAmount || null,
           details: {
             triedSuppliers: failoverResult.triedSuppliers || [],
             attempts: failoverResult.attempts || 0,

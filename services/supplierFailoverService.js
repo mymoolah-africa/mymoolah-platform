@@ -144,6 +144,7 @@ class SupplierFailoverService {
     const triedVariantIds = new Set();
     let attempts = 0;
     let lastError = null;
+    let meterMinError = null;
 
     // Build ordered list: primary first, then alternatives
     const candidates = [];
@@ -261,6 +262,9 @@ class SupplierFailoverService {
 
       } catch (err) {
         lastError = err;
+        if (err.code === 'METER_MIN_AMOUNT') {
+          meterMinError = err;
+        }
 
         const isTransient = circuitBreaker.constructor.isTransientError(err);
 
@@ -295,14 +299,16 @@ class SupplierFailoverService {
       }
     }
 
-    // All candidates exhausted
+    // All candidates exhausted — prefer METER_MIN_AMOUNT over generic last-error
+    const primaryError = meterMinError || lastError;
     return {
       success: false,
-      error: lastError?.message || 'All supplier attempts failed',
-      errorCode: 'ALL_SUPPLIERS_FAILED',
+      error: primaryError?.message || 'All supplier attempts failed',
+      errorCode: meterMinError ? 'METER_MIN_AMOUNT' : 'ALL_SUPPLIERS_FAILED',
       failoverUsed: attempts > 1,
       attempts,
       triedSuppliers: [...triedSupplierCodes],
+      minimumAmount: meterMinError?.minimumAmount || null,
     };
   }
 }
