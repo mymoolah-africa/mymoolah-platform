@@ -1,5 +1,34 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-11 - Airtime failover bugfix + PII redaction + electricity min validation (v2.97.1)
+
+### Summary
+Fixed three critical bugs in the airtime/data failover path that prevented failover from ever executing. Added PII redaction for electricity consumer details and meter minimum amount validation to prevent the production R50 `1001 AmountInvalid` error. Deployed to staging and production.
+
+### Bug fixes
+1. **`ProductVariant is not defined` crash**: MobileMart airtime failover block referenced `ProductVariant` but it wasn't in scope — added `require('../models')` at the failover block.
+2. **Zero failover candidates found**: Failover used `SupplierComparisonService.compareProducts()` which queries `v_best_offers` materialized view. This view uses `ROW_NUMBER() = 1` per provider — only returns the winning supplier. When MobileMart wins and fails, no Flash alternative was ever found. Fixed: failover now queries `product_variants` table directly.
+3. **Silent failover skip**: Flash failover candidate was silently skipped when `FLASH_LIVE_INTEGRATION` wasn't `true` — no log, no error. Added explicit warning log.
+
+### Improvements
+- **PII redaction**: Consumer names, addresses, and meter numbers (last 4 digits only) redacted in all MobileMart electricity prevend/purchase and Flash meter lookup logs.
+- **Meter minimum validation**: `vasSupplierExecutor.js` checks `prevendResponse.minimumPurchaseAmount` before calling `/utility/purchase`. Returns clear `400 METER_MIN_AMOUNT` error instead of upstream `1001 AmountInvalid`.
+- **Electricity failover**: No longer requires provider match (electricity is not network-specific like airtime). Any electricity supplier is a valid failover candidate.
+- **Failover skip logs deduplicated**: Single summary line per skipped supplier instead of per-variant.
+
+### Files changed
+- `routes/overlayServices.js` — airtime failover fix (3 commits), electricity error response improvement
+- `services/vasSupplierExecutor.js` — PII redaction, meter minimum validation
+- `services/supplierFailoverService.js` — electricity provider filter removed, log deduplication
+- `scripts/seed-mobilemart-variable-airtime.js` (new) — UAT-only seeding script
+
+### Production safety
+All changes only execute inside `catch` blocks (when primary supplier already failed). Happy path is completely untouched. Verified via diff analysis.
+
+### No migrations needed — pure code logic + UAT seeding script.
+
+---
+
 ## 2026-04-10 - Universal VAS supplier failover (v2.97.0)
 
 ### Summary

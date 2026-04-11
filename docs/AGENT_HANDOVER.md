@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-10  
-**Latest Feature**: **Universal VAS supplier failover (v2.97.0)** — Implemented automatic post-failure failover across ALL VAS types (electricity, bills, airtime/data) and ALL suppliers (MobileMart, Flash, future). Created `services/vasSupplierExecutor.js` (registry-based dispatcher — new suppliers need one `register()` call). Electricity and bills handlers now use `executeWithFailover()`. Airtime handler enhanced: failover triggers on all non-terminal errors (not just 1002). Circuit breaker `recordSuccess`/`recordFailure` added to overlay routes (was never recording before). Removed supplier-specific min-amount early return that blocked failover. Previous: v2.96.0 EasyPay V5 finalisation.  
-**Document Version**: 2.97.0  
-**Session logs**: `docs/session_logs/2026-04-10_2100_universal-vas-supplier-failover.md`, `docs/session_logs/2026-04-10_1700_easypay-v5-finalisation-implementation.md`, `docs/session_logs/2026-04-10_1500_easypay-v5-handover-gmail-sftp.md`  
+**Last Updated**: 2026-04-11  
+**Latest Feature**: **Airtime failover bugfix + PII redaction + electricity min validation (v2.97.1)** — Fixed 3 critical bugs preventing airtime failover from executing: `ProductVariant is not defined` crash, `v_best_offers` view only returns winners (no alternatives found), silent skip when Flash integration not enabled. Failover now queries `product_variants` directly. Added PII redaction for electricity logs (consumer names/addresses/meter numbers). Added `minimumPurchaseAmount` validation before electricity purchase. Deployed to staging + production. Previous: v2.97.0 universal VAS failover.  
+**Document Version**: 2.97.1  
+**Session logs**: `docs/session_logs/2026-04-11_1200_airtime-failover-bugfix-pii-redaction.md`, `docs/session_logs/2026-04-10_2100_universal-vas-supplier-failover.md`, `docs/session_logs/2026-04-10_1700_easypay-v5-finalisation-implementation.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -734,10 +734,23 @@ You're part of a **banking-grade software system** where:
 
 ## 🎯 **CURRENT SESSION SUMMARY**
 
-**Session Status**: ✅ **COMPLETE** — Proxy Auth Token Fix (v2.86.3)  
-**Last Session**: 2026-04-07 02:15 — Fixed ECONNRESET root cause (expired OAuth2 tokens), all services running in Codespaces
+**Session Status**: ✅ **COMPLETE** — Airtime failover bugfix + PII redaction (v2.97.1)  
+**Last Session**: 2026-04-11 12:00 — Fixed 3 failover bugs, added PII redaction and meter minimum validation. Deployed to staging + production.
 
-### **Most Recent Work (2026-04-07 02:15)**
+### **Most Recent Work (2026-04-11 12:00)**
+- **Airtime failover fixed (3 bugs)**: (1) `ProductVariant is not defined` crash — missing `require` in failover scope. (2) `v_best_offers` view only returns winning supplier — failover now queries `product_variants` directly. (3) Silent skip when Flash integration not enabled — added warning log.
+- **PII redaction**: Consumer names, addresses, meter numbers (last 4 digits only) redacted in all MobileMart electricity prevend/purchase and Flash meter lookup logs.
+- **Electricity minimum validation**: `vasSupplierExecutor.js` checks `prevendResponse.minimumPurchaseAmount` before purchase. Returns `400 METER_MIN_AMOUNT` instead of upstream `1001 AmountInvalid`.
+- **Staging confirmed**: MTN airtime R5 purchase successful (MobileMart primary, variantId 2652).
+- **Deployed**: Both staging and production backend + wallet deployed as `20260411_v1`.
+
+### **Previous Work (2026-04-10 21:00)**
+- **Universal VAS supplier failover (v2.97.0)**: Automatic post-failure failover across ALL VAS types and suppliers. `vasSupplierExecutor.js` registry pattern. Circuit breaker recording from overlay routes.
+
+### **Previous Work (2026-04-10 17:00)**
+- **EasyPay V5 finalisation (v2.96.0)**: Flat R6.33 fee, legacy routes removed, CoA `5000-10-02`, test PIN generation.
+
+### **Previous Work (2026-04-07 02:15)**
 - **Proxy auth token fix**: Diagnosed real root cause of `read ECONNRESET` — expired OAuth2 tokens in stale Cloud SQL Auth Proxies (not cold-proxy timing). Proxy log showed `Error 401: Invalid authentication credentials` and `tls: bad certificate`.
 - **start-all-services.sh rewritten**: Step 2 now kills all stale proxies on 6543/6544/6545, refreshes gcloud token via `gcloud auth print-access-token`, then starts fresh proxies with valid credentials.
 - **Codespaces verified**: Andre ran `./scripts/start-all-services.sh` after pulling — all 6 services started cleanly, no ECONNRESET.
@@ -857,6 +870,10 @@ You're part of a **banking-grade software system** where:
 
 | Date | Update |
 |------|--------|
+| Apr 11 (12:00) | **Airtime Failover Bugfix + PII Redaction (v2.97.1)**: Fixed 3 critical bugs preventing airtime failover (`ProductVariant is not defined`, `v_best_offers` only returns winners, silent Flash skip). Failover now queries `product_variants` directly. PII redaction for electricity consumer details. Meter minimum validation (`METER_MIN_AMOUNT`). Staging MTN R5 confirmed. Deployed staging + production. Session log: `docs/session_logs/2026-04-11_1200_airtime-failover-bugfix-pii-redaction.md` |
+| Apr 10 (21:00) | **Universal VAS Supplier Failover (v2.97.0)**: Automatic post-failure failover across ALL VAS types (electricity, bills, airtime/data) and ALL suppliers. Created `vasSupplierExecutor.js` registry pattern. Circuit breaker recording from overlay routes. Session log: `docs/session_logs/2026-04-10_2100_universal-vas-supplier-failover.md` |
+| Apr 10 (17:00) | **EasyPay V5 Finalisation (v2.96.0)**: Flat R6.33 fee, legacy routes removed, CoA `5000-10-02`, test PIN generation. Session log: `docs/session_logs/2026-04-10_1700_easypay-v5-finalisation-implementation.md` |
+| Apr 10 (15:00) | **EasyPay V5 Agent Handover + Gmail MCP + SBSA SFTP Test (v2.95.1)**: 15-section agent handover, Gmail MCP, SFTP test. Session log: `docs/session_logs/2026-04-10_1500_easypay-v5-handover-gmail-sftp.md` |
 | Apr 7 (18:30) | **Portal Deploy Fix + Disbursement Session Wrap (v2.88.1)**: Fixed Cloud Run deployment failure — previous fix removed PORT entirely, but Cloud Run requires PORT=8080. Added K_SERVICE environment detection: Cloud Run uses PORT, Codespaces defaults to 3002. Portal staging live and verified. Comprehensive disbursement Phase 2 handover written. Session log: `docs/session_logs/2026-04-07_1830_portal-deploy-fix-and-session-wrap.md` |
 | Apr 7 (16:30) | **Disbursement Phase 1 Backend Services (v2.88.0)**: 2 migrations (5 tables + 5 ledger accounts), 7 new services (feeEngine, clientFloatService, fileParserService, kybComplianceService, notificationEngine, sbsaSftpClientService, pain002PollerService), modified disbursementService.js for multi-rail routing (EFT/PayShap/wallet). Wallet payments use same EFT banking path with MM treasury account + MSISDN reference. Migrations run on UAT + staging. Session log: `docs/session_logs/2026-04-07_1630_disbursement-phase1-services.md` |
 | Apr 7 (15:00) | **Portal Cloud Run Staging Deployment (v2.87.0)**: Single-service architecture deployed to Cloud Run. Dockerfile (multi-stage), deploy-portal.sh (--no-cache), start.sh (DATABASE_URL), .dockerignore. CORS fix for Vite crossorigin. seed-portal-admin.js updated for multi-env. Portal live and verified. Session log: `docs/session_logs/2026-04-07_1500_portal-cloud-run-staging-deployment.md` |
