@@ -37,7 +37,7 @@ The SessionToken for UAT will be shared via secure channel (Signal / encrypted e
 | Setting | Value |
 |---------|-------|
 | Host | `34.35.137.166` |
-| Port | `22` |
+| Port | `5022` |
 | Username | `easypay` |
 | Auth method | SSH public key |
 | Upload directory | `/home/easypay/` |

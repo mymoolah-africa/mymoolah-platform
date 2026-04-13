@@ -1062,7 +1062,7 @@ MyMoolah operates a **secure SFTP server** for automated daily reconciliation fi
 **Production SFTP Server**:
 ```
 Host: 34.35.137.166
-Port: 22
+Port: 5022
 Username: easypay
 Authentication: SSH public key only (no password authentication)
 Home Directory: /home/easypay (mapped to gs://mymoolah-sftp-inbound/easypay/)
@@ -1102,7 +1102,7 @@ Body:
 **Step 3: Test Connection** (after MyMoolah confirms setup)
 
 ```bash
-sftp -P 22 easypay@34.35.137.166
+sftp -P 5022 easypay@34.35.137.166
 
 # You should see:
 # Connected to 34.35.137.166

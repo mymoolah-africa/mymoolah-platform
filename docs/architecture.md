@@ -266,7 +266,7 @@ recon_audit_trail (id, recon_run_id, event_type, event_data, event_hash, previou
 10. **AlertService** - Real-time email notifications
 
 #### **3. Supplier Adapters**
-- **MobileMartAdapter**: CSV parser for MobileMart recon files
+- **MobileMartAdapter**: Pipe-delimited H/D/T parser for MobileMart Fulcrum recon files
 - **FlashAdapter**: (Future) Flash recon file parser
 - **ZapperAdapter**: (Future) Zapper recon file parser
 - **Extensible**: Easy to add new suppliers

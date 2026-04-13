@@ -1,5 +1,45 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-13 - SFTP port 5022 standardisation + MobileMart Fulcrum recon rebuild (v2.97.4)
+
+### Summary
+Fixed all SFTP port 22 references across the codebase to the correct port 5022 (standardised since Mar 17 per SBSA confirmation). Rebuilt the MobileMart reconciliation adapter from scratch to match Jarod Ramos's actual Fulcrum Recon Spec v1.1 — pipe-delimited plain text with H/D/T record structure, 24 body fields, and cents-based amounts. Previously the adapter incorrectly assumed comma-delimited CSV with 8 generic fields. Created Zapper recon adapter and config. Drafted EasyPay endpoint clarification reply and MobileMart SFTP activation email.
+
+### SFTP Port 22 -> 5022 (18+ files)
+- **3 migrations**: `20260413_01` (Zapper recon config), `20260413_02` (port 22->5022 in DB), `20260413_03` (MobileMart format fix)
+- **Active docs fixed**: `DEPLOYMENT_GUIDE.md`, `SETUP_GUIDE.md`, `EASYPAY_V5_FINALISATION_PLAN.md`, `SECURITY.md`, `EasyPay_API_Integration_Guide.md`, `Flash_Reconciliation.md`, `RECONCILIATION_QUICK_START.md`, `EASYPAY_UAT_CREDENTIALS_EMAIL_DRAFT.md`, `DEVELOPMENT_GUIDE.md`, `DEPLOYMENT_CHECKLIST.md`, `agent_handover_history.md`, `EASYPAY_INTEGRATION_STATUS_SUMMARY.md`, `EASYPAY_INTEGRATION_STATUS_BRIEF.md`
+- All 5 partners now standardised: SBSA, Zapper, MobileMart, Flash, EasyPay = port 5022
+
+### MobileMart Recon Adapter Rebuild
+- **`services/reconciliation/adapters/MobileMartAdapter.js`**: Complete rewrite — pipe-delimited parser, H/D/T record identifiers, 24 body fields at correct positions per Fulcrum spec, amount in cents with implied decimal, POPIA-compliant MSISDN/meter redaction, Successful/Binned status normalisation
+- **`services/reconciliation/FileParserService.js`**: Validation now handles MobileMart's footer shape (record count only, no total_amount). Fixed body sum to check `supplier_amount`
+- **`services/reconciliation/SFTPWatcherService.js`**: Pattern matcher now supports SQL `%` wildcards for `FULCRUM.MERCHANT.%.RECON.%.txt` filenames
+- **`migrations/20260413_03_fix_mobilemart_recon_config.js`**: Updates DB config — `file_format=pipe_delimited`, `delimiter=|`, full 24-field schema_definition, matching on `fulcrum_txn_id` + `merchant_txn_id`
+
+### Zapper Recon Adapter (new)
+- **`services/reconciliation/adapters/ZapperAdapter.js`**: CSV parser for Zapper daily mark-off files
+- **`migrations/20260413_01_add_zapper_reconciliation_config.js`**: DB seed with port 5022
+
+### Documentation Updated
+- `RECONCILIATION_FRAMEWORK.md` — MobileMart config updated to Fulcrum spec
+- `API_DOCUMENTATION.md` — file path examples updated
+- `TESTING_GUIDE.md` — test examples updated to pipe-delimited format
+- `architecture.md` — adapter description corrected
+- `.gitignore` — added `FULCRUM.MERCHANT.*.txt` pattern
+
+### Email Drafts
+- `docs/integrations/MOBILEMART_SFTP_RECON_EMAIL_DRAFT.md` (new) — reply to Jarod's Jan 13 recon spec email
+- `docs/integrations/EASYPAY_UAT_CREDENTIALS_EMAIL_DRAFT.md` — port updated to 5022
+
+### Migrations required
+```bash
+./scripts/run-migrations-master.sh uat
+./scripts/run-migrations-master.sh staging
+./scripts/run-migrations-master.sh production
+```
+
+---
+
 ## 2026-04-11 - Airtime failover bugfix + PII redaction + electricity min validation (v2.97.1)
 
 ### Summary

@@ -113,7 +113,7 @@ const { getUATDatabaseURL } = require('./scripts/db-connection-helper');
 echo "
 # Reconciliation System
 RECON_SFTP_HOST=34.35.137.166
-RECON_SFTP_PORT=22
+RECON_SFTP_PORT=5022
 RECON_GCS_BUCKET=mymoolah-sftp-inbound
 
 # Email Alerts (Optional)

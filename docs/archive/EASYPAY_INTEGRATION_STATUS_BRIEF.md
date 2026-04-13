@@ -122,7 +122,7 @@ All three services use 14-digit PINs starting with '9'.
 **MyMoolah SFTP Server Details:**
 ```
 Host: 34.35.137.166
-Port: 22
+Port: 5022
 Username: easypay
 Authentication: SSH key-based (no password)
 ```

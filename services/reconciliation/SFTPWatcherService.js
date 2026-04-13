@@ -240,14 +240,18 @@ class SFTPWatcherService {
     const basename = path.basename(filename);
     
     // Convert pattern to regex
+    // Supports: YYYY/MM/DD date placeholders, SQL % wildcards, literal dots
     // Example: recon_YYYYMMDD.csv -> recon_\d{8}\.csv
+    // Example: FULCRUM.MERCHANT.%.RECON.%.txt -> FULCRUM\.MERCHANT\..+\.RECON\..+\.txt
     const regexPattern = pattern
+      .replace(/%/g, '__WILDCARD__')
       .replace(/YYYY/g, '\\d{4}')
       .replace(/MM/g, '\\d{2}')
       .replace(/DD/g, '\\d{2}')
-      .replace(/\./g, '\\.');
+      .replace(/\./g, '\\.')
+      .replace(/__WILDCARD__/g, '.+');
     
-    const regex = new RegExp(`^${regexPattern}$`);
+    const regex = new RegExp(`^${regexPattern}$`, 'i');
     return regex.test(basename);
   }
   

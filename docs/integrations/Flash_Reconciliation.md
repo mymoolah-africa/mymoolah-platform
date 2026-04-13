@@ -17,7 +17,7 @@ Flash reconciliation integration enables automated reconciliation of Flash suppl
 ### Connection Details
 
 - **SFTP Host**: `34.35.137.166` (Static IP)
-- **SFTP Port**: `22`
+- **SFTP Port**: `5022`
 - **SFTP Username**: `flash` (to be confirmed with Flash)
 - **SFTP Path**: `/home/flash` (maps to `gs://mymoolah-sftp-inbound/flash/`)
 - **Authentication**: SSH public key (Flash will provide their public key)
@@ -251,7 +251,7 @@ console.log('Parsed:', result);
 ### Information to Provide to Flash
 
 - [x] **SFTP Host**: `34.35.137.166` ✅
-- [x] **SFTP Port**: `22` ✅
+- [x] **SFTP Port**: `5022` ✅
 - [ ] **SFTP Username**: Confirm with Flash (likely `flash`)
 - [ ] **SFTP Path**: Confirm with Flash (likely `/home/flash`)
 - [ ] **IP Whitelisting**: `34.35.137.166` ✅

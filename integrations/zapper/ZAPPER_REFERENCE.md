@@ -62,8 +62,25 @@ Zapper is a QR-code-based payment acceptance integration. Customers scan a Zappe
 
 ---
 
+## 🔄 **SFTP Reconciliation Setup**
+
+| Component | Value |
+|-----------|-------|
+| SFTP Host | `34.35.137.166` |
+| SFTP Port | `5022` |
+| SFTP User | `zapper` |
+| GCS Prefix | `gs://mymoolah-sftp-inbound/zapper/` |
+| Adapter | `ZapperAdapter` (`services/reconciliation/adapters/ZapperAdapter.js`) |
+| ReconSupplierConfig | `supplier_code: 'ZAPPER'` |
+| Setup Guide | `docs/integrations/ZAPPER_SFTP_SETUP_GUIDE.md` |
+
+**Status**: Infrastructure code ready. Pending: SFTP user creation on gateway VM (requires Zapper's SSH public key and source IP from Dillon Poultney).
+
+---
+
 ## 📚 **Related Documentation**
 
 - `docs/AGENT_HANDOVER.md` — current project status
+- `docs/integrations/ZAPPER_SFTP_SETUP_GUIDE.md` — SFTP setup guide for Zapper recon files
 - `docs/archive/ZAPPER_INTEGRATION_AUDIT_REPORT.md` — full integration audit history
 - Google Drive (above) — official API docs, SLA, and QR test codes

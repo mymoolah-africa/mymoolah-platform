@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-11  
-**Latest Feature**: **Comprehensive error message sanitization (v2.97.3)** — Codebase-wide audit and fix of ALL generic/leaking error messages across 40 files (22 controllers, 9 routes, 2 middleware, 6 frontend overlays). Every user-facing API endpoint now returns safe, specific error messages with machine-readable `errorCode` fields. Removed all `error.message`, `details: error.message`, and `stack` exposure from client responses. Fixed frontend overlays to correctly read `err.response.data.message`. Previous: v2.97.2 electricity METER_MIN_AMOUNT failover + apiClient error fix.  
-**Document Version**: 2.97.3  
-**Session logs**: `docs/session_logs/2026-04-11_1800_comprehensive-error-message-sanitization.md`, `docs/session_logs/2026-04-11_1330_electricity-failover-meter-min-fix.md`, `docs/session_logs/2026-04-11_1200_airtime-failover-bugfix-pii-redaction.md`  
+**Last Updated**: 2026-04-13  
+**Latest Feature**: **SFTP port 5022 standardisation + MobileMart Fulcrum recon adapter rebuild (v2.97.4)** — Fixed all SFTP port 22 references to 5022 across 18+ files (docs, migrations, archive). Rebuilt `MobileMartAdapter.js` from scratch to match Jarod's actual Fulcrum Recon Spec v1.1 (pipe-delimited H/D/T format, 24 body fields, cents amounts). Updated `FileParserService` validation, `SFTPWatcherService` pattern matcher (SQL % wildcards), DB config migration. Drafted EasyPay reply (Razeen endpoint clarification) and MobileMart SFTP activation email. Created Zapper recon adapter and config.  
+**Document Version**: 2.97.4  
+**Session logs**: `docs/session_logs/2026-04-13_1400_sftp-port-fix-mobilemart-recon-rebuild.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -887,6 +887,7 @@ You're part of a **banking-grade software system** where:
 | Apr 6 (10:00) | **Auditing Skill v2.1.0 + Admin Portal Builder v1.0.0 (v2.82.0)**: 8 auditing enhancements + new 680-line portal builder skill. Session log: `docs/session_logs/2026-04-06_1000_auditing-skill-portal-skill-knowledge-base.md` |
 | Apr 5 (18:00) | **Electricity Commission-Based Supplier Selection**: Route electricity via `v_best_offers`, `productId` in payload, circuit breaker + failover. Session log: `docs/session_logs/2026-04-05_1800_electricity-supplier-comparison.md` |
 | Apr 4-5 | **Chart of Accounts (v2.80.0), Ledger Audit, KYC Fixes, Staging/Production Parity**: CoA doc, 4 missing account migrations, ledger backfill, KYC raw SQL fix, rate limit parity, referral Cloud Scheduler. Multiple session logs. |
+| Apr 13 (14:00) | **SFTP port 5022 standardisation + MobileMart Fulcrum recon rebuild (v2.97.4)**: Fixed all SFTP port 22 references to 5022 across 18+ files. Rebuilt `MobileMartAdapter.js` to match Fulcrum Recon Spec v1.1 (pipe-delimited, 24 fields, cents amounts). Updated `FileParserService`, `SFTPWatcherService`, DB config. New migrations: `20260413_01` (Zapper config), `20260413_02` (port fix), `20260413_03` (MobileMart format fix). Drafted EasyPay reply + MobileMart SFTP email. Session log: `docs/session_logs/2026-04-13_1400_sftp-port-fix-mobilemart-recon-rebuild.md` |
 | Apr 3 (15:00) | **VAS Catalog Production + Biller Telecoms + eeziPower Fix**: Applied VAS catalog simplification migrations to production (product_selection_rules + v_best_offers view, 197 rows). Fixed empty Telecoms biller category (added `'telcos'` to keyword map, 35 billers unlocked). Fixed eeziPower mislabelled as eeziAirtime in backend records and frontend transaction modal. Session log: `docs/session_logs/2026-04-03_1500_vas-catalog-production-biller-eezipower-fix.md` |
 | Apr 3 (14:00) | **VAS Catalog Simplification (Staging)**: Replaced 6 services, 2 scripts, 3 cron schedules with single `v_best_offers` materialized view + `product_selection_rules` table + `config/supplier-commissions.json`. Unified `productCatalogService.getCatalog()` entry point. 34/34 regression tests passed. Session log: `docs/session_logs/2026-04-03_1400_vas-catalog-simplification.md` |
 | Apr 3 (09:00) | **Referral System Banking-Grade Fix**: Stable persistent referral codes, dual-path signup matching, USSD fix, dead frontend code removed. Session log: `docs/session_logs/2026-04-03_0900_referral-system-banking-grade-fix.md` |

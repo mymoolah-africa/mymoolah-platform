@@ -518,7 +518,7 @@ GET /api/v1/reconciliation/suppliers
 
 **Configuration**:
 ```bash
-SFTP Host: 34.35.137.166:22
+SFTP Host: 34.35.137.166:5022
 Username: mobilemart (per supplier)
 Auth: SSH public key only
 Storage: gs://mymoolah-sftp-inbound/mobilemart/

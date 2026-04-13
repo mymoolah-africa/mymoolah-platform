@@ -1024,7 +1024,7 @@ await ReconSupplierConfig.create({
   is_active: true,
   sftp_config: {
     host: 'sftp.newsupplier.com',
-    port: 22,
+    port: 5022,
     username: 'mymoolah',
     path: '/reconciliation/'
   },
@@ -1049,16 +1049,17 @@ await ReconSupplierConfig.create({
 // tests/reconciliation.test.js
 describe('Reconciliation System', () => {
   describe('File Parsing', () => {
-    it('should parse valid MobileMart CSV file', async () => {
-      const fileContent = `transaction_ref,amount,timestamp,status
-MM20260113-001,50.00,2026-01-13T08:15:00Z,SUCCESS`;
+    it('should parse valid MobileMart Fulcrum pipe-delimited file', async () => {
+      const fileContent = `H|1|20260113
+D|Airtime|Pinless|Vodacom|abc-123-guid|MM20260113-001|Payment|Successful|20260113|081500|Wallet|5000|12345|Vodacom R50||0821234567||||||||
+T|3`;
       
       const parser = new FileParserService();
-      const result = await parser.parse(fileContent, 'MMART', 'recon_20260113.csv');
+      const result = await parser.parse(fileContent, 'MMART', 'FULCRUM.MERCHANT.MYMOOLAH.RECON.20260113120000.txt');
       
       expect(result.transactions).toHaveLength(1);
       expect(result.transactions[0].externalRef).toBe('MM20260113-001');
-      expect(result.transactions[0].amount).toBe(5000); // In cents
+      expect(result.transactions[0].amount).toBe(5000); // 5000 cents = R50.00
     });
   });
   
@@ -1095,7 +1096,7 @@ curl -X POST http://localhost:3001/api/v1/reconciliation/trigger \
   -H "Content-Type: application/json" \
   -d '{
     "supplierCode": "MMART",
-    "filePath": "gs://mymoolah-sftp-inbound/mobilemart/recon_20260113.csv",
+    "filePath": "gs://mymoolah-sftp-inbound/mobilemart/FULCRUM.MERCHANT.MYMOOLAH.RECON.20260113120000.txt",
     "runType": "manual"
   }'
 ```
@@ -1109,7 +1110,7 @@ const ReconciliationOrchestrator = require('../services/reconciliation/Reconcili
   const orchestrator = new ReconciliationOrchestrator();
   const result = await orchestrator.runReconciliation({
     supplierCode: 'MMART',
-    filePath: 'gs://mymoolah-sftp-inbound/mobilemart/recon_20260113.csv'
+    filePath: 'gs://mymoolah-sftp-inbound/mobilemart/FULCRUM.MERCHANT.MYMOOLAH.RECON.20260113120000.txt'
   });
   
   console.log('Reconciliation complete:', result);

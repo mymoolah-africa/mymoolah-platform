@@ -220,7 +220,7 @@ POST /api/v1/vouchers/easypay/voucher/settlement
 **MyMoolah SFTP Server:**
 ```
 Host: 34.35.137.166
-Port: 22
+Port: 5022
 Username: easypay
 Authentication: SSH public key only
 Home Directory: /home/easypay
@@ -478,7 +478,7 @@ Home Directory: /home/easypay
 
 **MyMoolah Provides:**
 - SFTP Host: 34.35.137.166
-- Port: 22
+- Port: 5022
 - Username: easypay
 - Authentication: SSH key-based (no password)
 

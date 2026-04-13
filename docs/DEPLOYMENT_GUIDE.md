@@ -296,7 +296,7 @@ npm audit fix
 
 # Reconciliation System
 RECON_SFTP_HOST=34.35.137.166
-RECON_SFTP_PORT=22
+RECON_SFTP_PORT=5022
 RECON_GCS_BUCKET=mymoolah-sftp-inbound
 
 # Email Alerts (Optional)
@@ -318,9 +318,9 @@ GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account-key.json
 
 # Configure firewall rules for MobileMart IP range
 gcloud compute firewall-rules create allow-mobilemart-sftp \
-  --allow=tcp:22 \
+  --allow=tcp:5022 \
   --source-ranges=MOBILEMART_IP_RANGE \
-  --target-tags=sftp-server \
+  --target-tags=sftp-1-deployment \
   --description="Allow SFTP access from MobileMart"
 ```
 

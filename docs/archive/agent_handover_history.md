@@ -339,12 +339,12 @@ Fixed 9 critical bugs in the banking-grade support system (RAG) through comprehe
 - **MobileMart Configuration**:
   - Folder/prefix: `/home/mobilemart` → `gs://mymoolah-sftp-inbound/mobilemart/`
   - Username: `mobilemart` (to be finalized once SSH public key is received)
-  - Connection: host `34.35.137.166`, port 22, key auth only
+  - Connection: host `34.35.137.166`, port 5022, key auth only
 - **Flash Configuration** (2026-01-14):
   - Folder/prefix: `/home/flash` → `gs://mymoolah-sftp-inbound/flash/`
   - Username: `flash` (to be finalized once SSH public key is received)
-  - Connection: host `34.35.137.166`, port 22, key auth only
-- **Firewall**: SSH 22 and HTTPS 443 restricted to admin IP and tag `sftp-1-deployment`; update allowlist with supplier IP/CIDR ranges when provided.
+  - Connection: host `34.35.137.166`, port 5022, key auth only
+- **Firewall**: SFTP 5022 and HTTPS 443 restricted to admin IP and tag `sftp-1-deployment`; update allowlist with supplier IP/CIDR ranges when provided.
 - **TODO**: 
   - Add MobileMart SSH public key and IP/CIDR to firewall
   - Add Flash SSH public key and IP/CIDR to firewall
@@ -1911,7 +1911,7 @@ LOG_LEVEL=warn
   - `docs/session_logs/2026-01-14_flash_reconciliation_and_ip_updates.md` - Flash integration log
   - All major docs updated (README, CHANGELOG, API_DOCUMENTATION, BANKING_GRADE_ARCHITECTURE, SECURITY, PROJECT_STATUS, DEVELOPMENT_GUIDE, PERFORMANCE, TESTING_GUIDE, DEPLOYMENT_CHECKLIST, INTEGRATIONS_COMPLETE)
 - **SFTP Integration**: ✅ **CONFIGURED** (Standardized to static IP on 2026-01-14)
-  - **Static IP**: `34.35.137.166:22` (was ephemeral, now static for whitelisting stability)
+  - **Static IP**: `34.35.137.166:5022` (was ephemeral, now static for whitelisting stability; port changed from 22 to 5022 on 2026-03-17)
   - **MobileMart**: Username `mobilemart`, Path `/home/mobilemart` → `gs://mymoolah-sftp-inbound/mobilemart/`
   - **Flash**: Username `flash`, Path `/home/flash` → `gs://mymoolah-sftp-inbound/flash/`
   - **VM**: `sftp-1-vm` (africa-south1-a) with static IP attached

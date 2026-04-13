@@ -156,13 +156,13 @@ const { getStagingDatabaseURL } = require('./scripts/db-connection-helper');
 # Add supplier SSH public keys (when received)
 # MobileMart SFTP configuration
 gcloud compute firewall-rules create allow-mobilemart-sftp \
-  --allow=tcp:22 \
+  --allow=tcp:5022 \
   --source-ranges=MOBILEMART_IP_RANGE \
   --target-tags=sftp-1-deployment
 
 # Flash SFTP configuration
 gcloud compute firewall-rules create allow-flash-sftp \
-  --allow=tcp:22 \
+  --allow=tcp:5022 \
   --source-ranges=FLASH_IP_RANGE \
   --target-tags=sftp-1-deployment
 

@@ -22,6 +22,7 @@ const logger = {
 const MobileMartAdapter = require('./adapters/MobileMartAdapter');
 const FlashAdapter = require('./adapters/FlashAdapter');
 const EasyPayAdapter = require('./adapters/EasyPayAdapter');
+const ZapperAdapter = require('./adapters/ZapperAdapter');
 
 class FileParserService {
   constructor() {
@@ -29,7 +30,7 @@ class FileParserService {
       MobileMartAdapter: new MobileMartAdapter(),
       FlashAdapter: new FlashAdapter(),
       EasyPayAdapter: new EasyPayAdapter(),
-      // Add more adapters as needed
+      ZapperAdapter: new ZapperAdapter(),
     };
   }
   
@@ -89,15 +90,17 @@ class FileParserService {
   }
   
   /**
-   * Validate parsed data against schema
+   * Validate parsed data against schema.
+   * 
+   * Adapts to different footer shapes:
+   * - MobileMart Fulcrum: footer has total_count (body rows) only; no total_amount
+   * - Other suppliers: footer has total_count + total_amount + total_commission
    */
   validateParsedData(parsedData, supplierConfig) {
-    // Validate header
     if (!parsedData.header) {
       throw new Error('Missing header in parsed data');
     }
     
-    // Validate body
     if (!Array.isArray(parsedData.body)) {
       throw new Error('Body must be an array');
     }
@@ -106,26 +109,27 @@ class FileParserService {
       throw new Error('Empty body in parsed data');
     }
     
-    // Validate footer
     if (!parsedData.footer) {
       throw new Error('Missing footer in parsed data');
     }
     
-    // Validate footer totals match body
     const bodyCount = parsedData.body.length;
     const footerCount = parsedData.footer.total_count;
     
-    if (bodyCount !== footerCount) {
+    if (footerCount !== undefined && footerCount !== null && bodyCount !== footerCount) {
       throw new Error(`Transaction count mismatch: body=${bodyCount}, footer=${footerCount}`);
     }
     
-    // Validate footer amount matches body sum
-    const bodyAmount = parsedData.body.reduce((sum, txn) => sum + parseFloat(txn.amount || 0), 0);
-    const footerAmount = parseFloat(parsedData.footer.total_amount || 0);
-    const diff = Math.abs(bodyAmount - footerAmount);
-    
-    if (diff > 0.01) {
-      throw new Error(`Amount mismatch: body=${bodyAmount.toFixed(2)}, footer=${footerAmount.toFixed(2)}`);
+    if (parsedData.footer.total_amount !== undefined && parsedData.footer.total_amount !== null) {
+      const bodyAmount = parsedData.body.reduce(
+        (sum, txn) => sum + parseFloat(txn.supplier_amount || txn.amount || 0), 0
+      );
+      const footerAmount = parseFloat(parsedData.footer.total_amount);
+      const diff = Math.abs(bodyAmount - footerAmount);
+      
+      if (diff > 0.01) {
+        throw new Error(`Amount mismatch: body=${bodyAmount.toFixed(2)}, footer=${footerAmount.toFixed(2)}`);
+      }
     }
     
     return true;

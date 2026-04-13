@@ -112,7 +112,7 @@ await watcher.start({ pollIntervalSeconds: 60 }); // Check every 60 seconds
 
 ```
 Host: 34.35.137.166
-Port: 22
+Port: 5022
 Username: mobilemart
 Authentication: SSH public key
 Path: /home/mobilemart (maps to gs://mymoolah-sftp-inbound/mobilemart/)
@@ -128,7 +128,7 @@ curl -X POST http://localhost:3001/api/v1/reconciliation/runs \
   -H "Content-Type: application/json" \
   -d '{
     "supplier_id": 1,
-    "file_path": "/path/to/recon_20260113.csv"
+    "file_path": "/path/to/FULCRUM.MERCHANT.MYMOOLAH.RECON.20260113120000.txt"
   }'
 ```
 
@@ -142,7 +142,7 @@ const { ReconciliationOrchestrator } = require('./services/reconciliation/Reconc
 const orchestrator = new ReconciliationOrchestrator();
 
 const result = await orchestrator.reconcile(
-  '/path/to/recon_20260113.csv',
+  '/path/to/FULCRUM.MERCHANT.MYMOOLAH.RECON.20260113120000.txt',
   1, // supplier_id
   { userId: 'system' }
 );
@@ -175,7 +175,7 @@ GET /api/v1/reconciliation/runs
     {
       "run_id": "123e4567-e89b-12d3-a456-426614174000",
       "supplier": "MobileMart",
-      "file_name": "recon_20260113.csv",
+      "file_name": "FULCRUM.MERCHANT.MYMOOLAH.RECON.20260113120000.txt",
       "status": "completed",
       "match_rate": 99.5,
       "passed": true,
@@ -265,7 +265,7 @@ Monitor these metrics in your observability platform:
 Reconciliation events are logged to:
 
 ```
-[Recon] Starting reconciliation for MobileMart
+[Recon] Starting reconciliation for MobileMart (Fulcrum pipe-delimited)
 [MatchingEngine] Phase 1: Exact matching
 [MatchingEngine] Phase 2: Fuzzy matching
 [DiscrepancyDetector] Detection complete
@@ -292,7 +292,7 @@ Alerts are sent automatically for:
 **Symptom:**
 
 ```
-File already processed: recon_20260113.csv
+File already processed: FULCRUM.MERCHANT.MYMOOLAH.RECON.20260113120000.txt
 ```
 
 **Solution:**
@@ -371,7 +371,7 @@ await ReconSupplierConfig.create({
   delimiter: ',',
   has_header: true,
   sftp_host: '34.35.137.166',
-  sftp_port: 22,
+  sftp_port: 5022,
   sftp_username: 'flash',
   sftp_path: '/home/flash',
   schema_definition: {

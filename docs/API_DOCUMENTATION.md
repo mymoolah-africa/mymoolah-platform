@@ -1659,7 +1659,7 @@ POST /api/v1/reconciliation/trigger
 ```json
 {
   "supplierCode": "MMART",
-  "filePath": "gs://mymoolah-sftp-inbound/mobilemart/recon_20260113.csv",
+  "filePath": "gs://mymoolah-sftp-inbound/mobilemart/FULCRUM.MERCHANT.MYMOOLAH.RECON.20260113120000.txt",
   "runType": "manual"
 }
 ```
@@ -1702,7 +1702,7 @@ GET /api/v1/reconciliation/runs?supplier=MMART&status=completed&limit=20
       {
         "id": "550e8400-e29b-41d4-a716-446655440000",
         "supplierCode": "MMART",
-        "fileName": "recon_20260113.csv",
+        "fileName": "FULCRUM.MERCHANT.MYMOOLAH.RECON.20260113120000.txt",
         "status": "completed",
         "summary": {
           "totalExternal": 1250,

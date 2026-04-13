@@ -214,7 +214,7 @@ Draft an email (save as `docs/integrations/EASYPAY_UAT_CREDENTIALS_EMAIL_DRAFT.m
 2. **Authentication**: `Authorization: SessionToken {token}` — token value to be shared via secure channel (Signal / encrypted email)
 
 3. **SFTP for daily recon files**:
-   - Host: `34.35.137.166`, Port: 22, User: `easypay`
+   - Host: `34.35.137.166`, Port: 5022, User: `easypay`
    - Auth: SSH public key (ask EP for their public key)
    - Upload directory: `/home/easypay/` (mapped to GCS bucket)
 
