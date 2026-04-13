@@ -1109,72 +1109,95 @@ sftp -P 5022 easypay@34.35.137.166
 # sftp>
 ```
 
-#### 10.1.3 File Upload Requirements
+#### 10.1.3 File Format — SOF (Statement of Funds)
+
+EasyPay delivers daily settlement files in their proprietary **SOF** format (not CSV). This was confirmed by Razeen (EasyPay) in April 2026 with a sample file.
 
 **File Naming Convention**:
 ```
-easypay_recon_YYYYMMDD.csv
+easy[RECEIVER_ID].[SEQUENCE]
 ```
 
 **Examples**:
-- `easypay_recon_20260116.csv` (daily file for January 16, 2026)
-- `easypay_recon_20260117.csv` (daily file for January 17, 2026)
+- `easy2138.148` — receiver 2138, sequence 148
+- `easy2138.149` — next day's file
 
-**Upload Schedule**:
-- **Frequency**: Daily
-- **Cutoff Time**: 23:59:59 SAST
-- **Upload Window**: 00:00 - 06:00 SAST (next day)
-- **Example**: Transactions from Jan 16 (00:00 - 23:59) should be uploaded as `easypay_recon_20260116.csv` between Jan 17 00:00 - 06:00
+**File Encoding**: UTF-8 / ASCII plain text
+**Delimiter**: Comma (`,`)
+**Record Types**: SOF (header), X (transaction header), P (payment), T (tender), footer (digit-prefixed)
+
+**SOF File Structure**:
+
+```
+SOF,<version>,<receiverId>,<date CCYYMMDD>,<time HHMMSS>,<sequence>
+X,<terminalId>,<date CCYYMMDD>,<time HHMMSS>,<sequence>,<epTxnRef>
+P,<grossAmount>,<fee>,<easypayCode>
+T,<tenderAmount>,<vatOnFee>,<tenderType>
+... (more X+P+T groups) ...
+<count>,<totalGross>,<totalFees>,<tenderCount>,<totalTender>,<totalVAT>
+```
+
+**Record Details**:
+
+| Record | Field | Position | Description |
+|--------|-------|----------|-------------|
+| **SOF** | identifier | 0 | Always `SOF` |
+| | version | 1 | File version (e.g., `1`) |
+| | receiver_id | 2 | MMTP receiver ID (e.g., `2138`) |
+| | date | 3 | Settlement date (CCYYMMDD) |
+| | time | 4 | Generation time (HHMMSS) |
+| | sequence | 5 | File sequence number |
+| **X** | identifier | 0 | Always `X` — starts a new transaction |
+| | terminal_id | 1 | Merchant terminal (e.g., `006001007001234`) |
+| | date | 2 | Transaction date (CCYYMMDD) |
+| | time | 3 | Transaction time (HHMMSS) |
+| | sequence | 4 | Transaction sequence |
+| | ep_txn_ref | 5 | EasyPay transaction reference (e.g., `00014208557`) |
+| **P** | identifier | 0 | Always `P` — payment detail |
+| | gross_amount | 1 | Gross amount in Rands (e.g., `439.00`) |
+| | fee | 2 | Fee amount (e.g., `5.21`) |
+| | easypay_code | 3 | EasyPay PIN / bill number (e.g., `921381000007156909`) |
+| **T** | identifier | 0 | Always `T` — tender detail |
+| | tender_amount | 1 | Amount tendered (e.g., `439.00`) |
+| | vat_on_fee | 2 | VAT on fee (e.g., `0.88`) |
+| | tender_type | 3 | Payment method (e.g., `Cash`) |
+| **Footer** | txn_count | 0 | Total transaction count |
+| | total_gross | 1 | Total gross amount |
+| | total_fees | 2 | Total fees |
+| | tender_count | 3 | Total tender count |
+| | total_tender | 4 | Total tender amount |
+| | total_vat | 5 | Total VAT |
+
+**Example SOF File** (`easy2138.148`):
+
+```
+SOF,1,2138,20260211,093806,148
+X,006001007001234,20260212,084953,00000001,00014208557
+P,    439.00,      5.21,921381000007156909
+T,    439.00,      0.88,Cash
+X,006001007001234,20260212,084800,00000001,00014208540
+P,    559.00,      5.21,921381000007162402
+T,    559.00,      1.12,Cash
+2,998.00,10.42,2,998.00,2.00
+```
+
+**Key reconciliation fields**:
+- `ep_txn_ref` (X record, position 5) — matches against MMTP's `paymentNotification` records
+- `easypay_code` (P record, position 3) — the 14+ digit PIN, matches MMTP's generated bill number
+- `gross_amount` (P record, position 1) — customer-paid amount in Rands
+- `fee` (P record, position 2) — EasyPay fee deducted before settlement
+
+**EasyPay Network Details**:
+- **Public IP**: `20.164.206.68` (for SFTP source IP whitelisting)
 
 **Upload Command**:
 ```bash
-# Upload reconciliation file
-sftp easypay@34.35.137.166 << EOF
+sftp -P 5022 easypay@34.35.137.166 << EOF
 cd /home/easypay
-put easypay_recon_20260116.csv
+put easy2138.148
 bye
 EOF
 ```
-
-#### 10.1.4 CSV File Format Specification
-
-**File Encoding**: UTF-8  
-**Delimiter**: Comma (`,`)  
-**Line Ending**: LF (`\n`) or CRLF (`\r\n`)  
-**Quote Character**: Double quote (`"`) for fields containing commas  
-**Header Row**: Required (first line)
-
-**CSV Schema**:
-
-| Column | Type | Required | Description | Format/Rules |
-|--------|------|----------|-------------|--------------|
-| `transaction_id` | String | Yes | EasyPay transaction ID | Max 100 chars, alphanumeric + `-_` |
-| `easypay_code` | String | Yes | 14-digit PIN | `/^9\d{13}$/` |
-| `transaction_type` | String | Yes | Transaction type | `topup` or `cashout` |
-| `merchant_id` | String | Yes | Merchant identifier | Max 50 chars |
-| `terminal_id` | String | Yes | Terminal identifier | Max 50 chars |
-| `cashier_id` | String | No | Cashier identifier | Max 50 chars, empty if N/A |
-| `transaction_timestamp` | String | Yes | Transaction date/time | ISO 8601: `YYYY-MM-DDTHH:MM:SS+02:00` |
-| `gross_amount` | Decimal | Yes | Amount in ZAR | Format: `0.00`, 2 decimal places |
-| `settlement_status` | String | Yes | EasyPay settlement status | `settled`, `pending`, `failed` |
-| `merchant_name` | String | No | Merchant location name | Max 100 chars |
-| `receipt_number` | String | No | Receipt number | Max 50 chars |
-
-**Example CSV**:
-
-```csv
-transaction_id,easypay_code,transaction_type,merchant_id,terminal_id,cashier_id,transaction_timestamp,gross_amount,settlement_status,merchant_name,receipt_number
-EP_TXN_20260116_001,9123412345678,topup,EP_MERCHANT_12345,EP_TERMINAL_001,CASHIER_789,2026-01-16T13:40:33+02:00,100.00,settled,Pick n Pay - Sandton City,RCP-001234
-EP_TXN_20260116_002,9123498765432,cashout,EP_MERCHANT_12345,EP_TERMINAL_002,CASHIER_456,2026-01-16T14:00:00+02:00,500.00,settled,Checkers - Rosebank,RCP-567890
-EP_TXN_20260116_003,9123400000003,topup,EP_MERCHANT_67890,EP_TERMINAL_005,,2026-01-16T15:30:00+02:00,250.00,settled,Woolworths - Mall of Africa,RCP-123123
-```
-
-**CSV Validation Rules**:
-- File size: Max 100MB (contact support if larger)
-- Row limit: Max 100,000 transactions per file
-- All required fields must be non-empty
-- `gross_amount` must match the amount in MyMoolah's records (±R0.01 tolerance)
-- `transaction_timestamp` must be within the date range of the filename
 
 #### 10.1.5 Automated Reconciliation Process
 
@@ -1182,12 +1205,12 @@ MyMoolah's **automated reconciliation service** monitors the SFTP server and pro
 
 ```mermaid
 flowchart TD
-    A[EasyPay uploads CSV] --> B[SFTP Server: easypay_recon_20260116.csv]
+    A[EasyPay uploads SOF] --> B[SFTP Server: easy2138.148]
     B --> C{File detected<br/>within 5 minutes}
-    C -->|Yes| D[Download & Parse CSV]
+    C -->|Yes| D[Download & Parse SOF]
     C -->|No| E[Alert: File not received]
     D --> F{CSV Valid?}
-    F -->|No| G[Alert: CSV validation failed]
+    F -->|No| G[Alert: SOF validation failed]
     F -->|Yes| H[Match against MyMoolah transactions]
     H --> I{All transactions match?}
     I -->|Yes| J[Reconciliation: SUCCESS]
@@ -1211,7 +1234,7 @@ flowchart TD
 |--------|--------|-------------|
 | **100% Match** | File moved to `/processed/` | Email: "Reconciliation successful" |
 | **Discrepancies Found** | File moved to `/discrepancies/` | Email with discrepancy report |
-| **CSV Invalid** | File moved to `/error/` | Email with validation errors |
+| **SOF Invalid** | File moved to `/error/` | Email with validation errors |
 | **File Missing** | No file detected by 07:00 | Email: "Reconciliation file not received" |
 
 **Discrepancy Handling**:

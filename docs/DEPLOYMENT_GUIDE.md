@@ -322,6 +322,13 @@ gcloud compute firewall-rules create allow-mobilemart-sftp \
   --source-ranges=MOBILEMART_IP_RANGE \
   --target-tags=sftp-1-deployment \
   --description="Allow SFTP access from MobileMart"
+
+# Configure firewall rule for EasyPay IP (confirmed by Razeen, April 2026)
+gcloud compute firewall-rules create allow-easypay-sftp \
+  --allow=tcp:5022 \
+  --source-ranges=20.164.206.68/32 \
+  --target-tags=sftp-1-deployment \
+  --description="Allow SFTP access from EasyPay"
 ```
 
 #### **5. Verify Deployment**

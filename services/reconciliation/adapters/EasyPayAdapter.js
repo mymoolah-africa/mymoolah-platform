@@ -1,260 +1,316 @@
 /**
  * EasyPay Reconciliation File Adapter
- * 
- * Parses EasyPay-specific CSV reconciliation files.
- * Format: Comma-delimited CSV with header row
- * 
- * Sample file structure:
- * transaction_id,easypay_code,transaction_type,merchant_id,terminal_id,cashier_id,transaction_timestamp,gross_amount,settlement_status,merchant_name,receipt_number
- * EP_TXN_20260116_001,9123412345678,topup,EP_MERCHANT_12345,EP_TERMINAL_001,CASHIER_789,2026-01-16T13:40:33+02:00,100.00,settled,Pick n Pay - Sandton City,RCP-001234
- * 
+ *
+ * Parses EasyPay SOF (Statement of Funds) files.
+ * Format: Comma-delimited plain text with record-type identifiers.
+ *
+ * File naming: easy[RECEIVER_ID].[SEQUENCE] (e.g., easy2138.148)
+ *
+ * Record types:
+ *   SOF  — File header: SOF,version,receiverId,date(CCYYMMDD),time(HHMMSS),sequence
+ *   X    — Transaction header: X,terminalId,date(CCYYMMDD),time(HHMMSS),sequence,epTxnRef
+ *   P    — Payment detail: P,grossAmount,fee,easypayCode
+ *   T    — Tender detail: T,tenderAmount,vat,tenderType
+ *   (footer line) — count,totalGross,totalFees,tenderCount,totalTender,totalVAT
+ *
+ * Each transaction is a group of X + P + T records.
+ * The footer is the last line (no record-type prefix, starts with a digit).
+ *
+ * Source: Sample file `easy2138.148` provided by Razeen (EasyPay), April 2026.
+ *
  * @module services/reconciliation/adapters/EasyPayAdapter
  */
 
 'use strict';
 
-// Simple logger using console (matches other services in the project)
 const logger = {
   info: (...args) => console.log('[EasyPayAdapter]', ...args),
   error: (...args) => console.error('[EasyPayAdapter]', ...args),
   warn: (...args) => console.warn('[EasyPayAdapter]', ...args),
   debug: (...args) => console.log('[EasyPayAdapter]', ...args)
 };
-const { parse } = require('csv-parse/sync');
 const moment = require('moment-timezone');
 
 class EasyPayAdapter {
   /**
-   * Parse EasyPay CSV file
-   * 
-   * @param {string} content - File content
-   * @param {Object} supplierConfig - Supplier configuration
-   * @returns {Promise<Object>} Parsed data { header, body, footer }
+   * Parse EasyPay SOF file
+   *
+   * @param {string|Buffer} content - Raw file content
+   * @param {Object} supplierConfig - Supplier configuration from DB
+   * @returns {Promise<Object>} { header, body, footer }
    */
   async parse(content, supplierConfig) {
     try {
-      // Parse CSV with comma delimiter
-      const records = parse(content, {
-        delimiter: supplierConfig.delimiter || ',',
-        relax_column_count: false,
-        skip_empty_lines: true,
-        trim: true
-      });
-      
-      if (records.length < 2) {
-        throw new Error('File must contain at least header and 1 transaction');
+      const text = typeof content === 'string' ? content : content.toString('utf-8');
+      const lines = text
+        .split(/\r?\n/)
+        .map(l => l.trim())
+        .filter(l => l.length > 0);
+
+      if (lines.length < 2) {
+        throw new Error('SOF file must contain at least header and 1 transaction');
       }
-      
-      // Extract sections
-      const headerRow = records[0];
-      const bodyRows = records.slice(1);
-      
-      // Parse header (first row contains column names)
-      const header = this.parseHeader(headerRow, supplierConfig, bodyRows);
-      
-      // Parse body transactions
-      const body = bodyRows.map((row, index) => {
-        try {
-          return this.parseTransaction(row, headerRow, supplierConfig, index + 1);
-        } catch (error) {
-          logger.error('[EasyPayAdapter] Failed to parse transaction row', {
-            row: index + 1,
-            error: error.message
-          });
-          throw new Error(`Row ${index + 1}: ${error.message}`);
-        }
-      });
-      
-      // EasyPay files don't have footer - calculate totals from body
-      const footer = this.calculateFooter(body);
-      
-      logger.info('[EasyPayAdapter] Parsed successfully', {
+
+      const sofLine = lines[0];
+      if (!sofLine.startsWith('SOF')) {
+        throw new Error(`Invalid SOF header: expected line starting with 'SOF', got '${sofLine.substring(0, 20)}'`);
+      }
+
+      const header = this.parseSOFHeader(sofLine, supplierConfig);
+
+      const bodyLines = lines.slice(1);
+      const lastLine = bodyLines[bodyLines.length - 1];
+      const hasFooter = lastLine && /^\d/.test(lastLine);
+
+      const transactionLines = hasFooter ? bodyLines.slice(0, -1) : bodyLines;
+      const body = this.parseTransactions(transactionLines, supplierConfig);
+      const footer = hasFooter
+        ? this.parseFooter(lastLine, body.length)
+        : this.calculateFooter(body);
+
+      logger.info('Parsed successfully', {
         settlement_date: header.settlement_date,
+        receiver_id: header.receiver_id,
         transactions: body.length,
         total_amount: footer.total_amount
       });
-      
+
       return { header, body, footer };
     } catch (error) {
-      logger.error('[EasyPayAdapter] Parse failed', {
-        error: error.message
-      });
+      logger.error('Parse failed', { error: error.message });
       throw error;
     }
   }
-  
+
   /**
-   * Parse header row (column names)
-   * Extract settlement date from first transaction
+   * Parse SOF header: SOF,version,receiverId,date,time,sequence
    */
-  parseHeader(headerRow, config, bodyRows) {
-    // EasyPay header is just column names, no summary data
-    // Settlement date will be extracted from first transaction
-    let settlementDate = null;
-    
-    if (bodyRows.length > 0) {
-      // Extract date from first transaction (transaction_timestamp column)
-      const firstRow = bodyRows[0];
-      const timestampIndex = headerRow.findIndex(col => col.toLowerCase() === 'transaction_timestamp');
-      if (timestampIndex >= 0 && firstRow[timestampIndex]) {
-        const timestampStr = firstRow[timestampIndex];
-        try {
-          // Parse ISO 8601 timestamp
-          const parsed = moment.tz(timestampStr, 'Africa/Johannesburg');
-          if (parsed.isValid()) {
-            settlementDate = parsed.format('YYYY-MM-DD');
-          }
-        } catch (error) {
-          logger.warn('[EasyPayAdapter] Failed to parse settlement date from first transaction');
+  parseSOFHeader(line, config) {
+    const fields = line.split(',');
+
+    if (fields[0] !== 'SOF') {
+      throw new Error(`Invalid SOF identifier: '${fields[0]}'`);
+    }
+
+    const version = (fields[1] || '').trim();
+    const receiverId = (fields[2] || '').trim();
+    const dateStr = (fields[3] || '').trim();
+    const timeStr = (fields[4] || '').trim();
+    const sequence = (fields[5] || '').trim();
+
+    if (!dateStr || dateStr.length !== 8) {
+      throw new Error(`Invalid SOF date: '${dateStr}' (expected CCYYMMDD)`);
+    }
+
+    const tz = config.timezone || 'Africa/Johannesburg';
+    const settlementDate = moment.tz(dateStr, 'YYYYMMDD', tz);
+
+    if (!settlementDate.isValid()) {
+      throw new Error(`Cannot parse SOF date: '${dateStr}'`);
+    }
+
+    return {
+      file_type: 'easypay_sof',
+      version,
+      receiver_id: receiverId,
+      settlement_date: settlementDate.format('YYYY-MM-DD'),
+      generation_time: timeStr,
+      sequence
+    };
+  }
+
+  /**
+   * Parse transaction groups (X + P + T records).
+   * Each transaction starts with an X record, followed by P and T records.
+   */
+  parseTransactions(lines, config) {
+    const transactions = [];
+    let currentTxn = null;
+    const tz = config.timezone || 'Africa/Johannesburg';
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const fields = line.split(',').map(f => f.trim());
+      const recordType = fields[0];
+
+      if (recordType === 'X') {
+        if (currentTxn) {
+          transactions.push(this.finaliseTransaction(currentTxn, transactions.length + 1));
         }
+        currentTxn = this.parseXRecord(fields, tz);
+      } else if (recordType === 'P') {
+        if (!currentTxn) {
+          throw new Error(`P record at line ${i + 2} without preceding X record`);
+        }
+        this.applyPRecord(currentTxn, fields);
+      } else if (recordType === 'T') {
+        if (!currentTxn) {
+          throw new Error(`T record at line ${i + 2} without preceding X record`);
+        }
+        this.applyTRecord(currentTxn, fields);
+      } else {
+        logger.warn('Unknown record type', { line: i + 2, type: recordType });
       }
     }
-    
-    return {
-      settlement_date: settlementDate || moment.tz('Africa/Johannesburg').format('YYYY-MM-DD'),
-      file_type: 'easypay_reconciliation',
-      supplier: 'EasyPay'
-    };
+
+    if (currentTxn) {
+      transactions.push(this.finaliseTransaction(currentTxn, transactions.length + 1));
+    }
+
+    return transactions;
   }
-  
+
   /**
-   * Parse transaction row
+   * Parse X record: X,terminalId,date,time,sequence,epTxnRef
    */
-  parseTransaction(row, headerRow, config, rowNumber) {
-    // Map column names to indices
-    const columnMap = {};
-    headerRow.forEach((col, index) => {
-      columnMap[col.toLowerCase()] = index;
-    });
-    
-    // Extract fields
-    const getValue = (fieldName) => {
-      const index = columnMap[fieldName.toLowerCase()];
-      return index >= 0 ? row[index] : null;
-    };
-    
-    const transactionId = getValue('transaction_id');
-    const easypayCode = getValue('easypay_code');
-    const transactionType = getValue('transaction_type');
-    const merchantId = getValue('merchant_id');
-    const terminalId = getValue('terminal_id');
-    const cashierId = getValue('cashier_id');
-    const timestampStr = getValue('transaction_timestamp');
-    const grossAmountStr = getValue('gross_amount');
-    const settlementStatus = getValue('settlement_status');
-    const merchantName = getValue('merchant_name');
-    const receiptNumber = getValue('receipt_number');
-    
-    // Validate required fields
-    if (!transactionId) {
-      throw new Error('Missing transaction_id');
-    }
-    if (!easypayCode) {
-      throw new Error('Missing easypay_code');
-    }
-    if (!transactionType) {
-      throw new Error('Missing transaction_type');
-    }
-    if (!merchantId) {
-      throw new Error('Missing merchant_id');
-    }
-    if (!terminalId) {
-      throw new Error('Missing terminal_id');
-    }
-    if (!timestampStr) {
-      throw new Error('Missing transaction_timestamp');
-    }
-    if (!grossAmountStr) {
-      throw new Error('Missing gross_amount');
-    }
-    if (!settlementStatus) {
-      throw new Error('Missing settlement_status');
-    }
-    
-    // Parse timestamp
-    let timestamp;
-    try {
-      timestamp = moment.tz(timestampStr, 'Africa/Johannesburg').toDate();
-      if (!moment(timestamp).isValid()) {
-        throw new Error('Invalid timestamp format');
+  parseXRecord(fields, tz) {
+    const terminalId = fields[1] || '';
+    const dateStr = fields[2] || '';
+    const timeStr = fields[3] || '';
+    const sequence = fields[4] || '';
+    const epTxnRef = fields[5] || '';
+
+    let timestamp = null;
+    if (dateStr && timeStr) {
+      timestamp = moment.tz(`${dateStr}${timeStr}`, 'YYYYMMDDHHMMSS', tz);
+      if (!timestamp.isValid()) {
+        logger.warn('Invalid X record date/time', { date: dateStr, time: timeStr });
+        timestamp = null;
       }
-    } catch (error) {
-      throw new Error(`Invalid transaction_timestamp format: ${timestampStr}`);
     }
-    
-    // Parse amount
-    const grossAmount = this.parseDecimal(grossAmountStr, 'gross_amount');
-    
-    // Validate transaction type
-    if (!['topup', 'cashout'].includes(transactionType.toLowerCase())) {
-      throw new Error(`Invalid transaction_type: ${transactionType}. Must be 'topup' or 'cashout'`);
-    }
-    
-    // Validate settlement status
-    if (!['settled', 'pending', 'failed'].includes(settlementStatus.toLowerCase())) {
-      logger.warn(`[EasyPayAdapter] Unknown settlement_status: ${settlementStatus}`);
-    }
-    
+
     return {
-      supplier_transaction_id: transactionId,
-      supplier_reference: easypayCode,
-      supplier_product_code: transactionType,
-      supplier_product_name: `EasyPay ${transactionType}`,
-      supplier_amount: grossAmount,
-      supplier_timestamp: timestamp,
-      supplier_status: settlementStatus.toLowerCase(),
-      metadata: {
-        easypay_code: easypayCode,
-        transaction_type: transactionType.toLowerCase(),
-        merchant_id: merchantId,
-        terminal_id: terminalId,
-        cashier_id: cashierId || null,
-        merchant_name: merchantName || null,
-        receipt_number: receiptNumber || null
-      }
+      terminal_id: terminalId,
+      ep_txn_ref: epTxnRef,
+      sequence,
+      timestamp,
+      gross_amount: null,
+      fee: null,
+      easypay_code: null,
+      tender_amount: null,
+      vat: null,
+      tender_type: null
     };
   }
-  
+
   /**
-   * Calculate footer totals from body
+   * Apply P record data: P,grossAmount,fee,easypayCode
+   */
+  applyPRecord(txn, fields) {
+    txn.gross_amount = this.parseAmount(fields[1], 'P.gross_amount');
+    txn.fee = this.parseAmount(fields[2], 'P.fee');
+    txn.easypay_code = (fields[3] || '').trim();
+  }
+
+  /**
+   * Apply T record data: T,tenderAmount,vat,tenderType
+   */
+  applyTRecord(txn, fields) {
+    txn.tender_amount = this.parseAmount(fields[1], 'T.tender_amount');
+    txn.vat = this.parseAmount(fields[2], 'T.vat');
+    txn.tender_type = (fields[3] || '').trim();
+  }
+
+  /**
+   * Finalise a transaction group into normalised output shape
+   */
+  finaliseTransaction(txn, rowNumber) {
+    if (!txn.ep_txn_ref) {
+      throw new Error(`Transaction at row ${rowNumber}: missing EasyPay transaction reference`);
+    }
+
+    return {
+      supplier_transaction_id: txn.ep_txn_ref,
+      supplier_reference: txn.easypay_code || txn.ep_txn_ref,
+      supplier_timestamp: txn.timestamp ? txn.timestamp.toDate() : null,
+      supplier_product_code: 'topup',
+      supplier_product_name: 'EasyPay Cash-In',
+      supplier_amount: txn.gross_amount !== null ? txn.gross_amount.toFixed(2) : '0.00',
+      supplier_commission: txn.fee !== null ? txn.fee.toFixed(2) : '0.00',
+      supplier_fee: txn.fee !== null ? txn.fee.toFixed(2) : '0.00',
+      supplier_net_amount: (txn.gross_amount !== null && txn.fee !== null)
+        ? (txn.gross_amount - txn.fee).toFixed(2)
+        : '0.00',
+      supplier_status: 'success',
+      supplier_account_number: null,
+      supplier_account_name: null,
+      supplier_transaction_type: txn.tender_type || 'Cash',
+      supplier_metadata: {
+        terminal_id: txn.terminal_id,
+        sequence: txn.sequence,
+        easypay_code: txn.easypay_code,
+        tender_type: txn.tender_type,
+        tender_amount: txn.tender_amount !== null ? txn.tender_amount.toFixed(2) : null,
+        vat_on_fee: txn.vat !== null ? txn.vat.toFixed(2) : null
+      },
+      row_number: rowNumber
+    };
+  }
+
+  /**
+   * Parse footer line: count,totalGross,totalFees,tenderCount,totalTender,totalVAT
+   */
+  parseFooter(line, bodyCount) {
+    const fields = line.split(',').map(f => f.trim());
+
+    const txnCount = parseInt(fields[0], 10);
+    const totalGross = this.parseAmount(fields[1], 'footer.total_gross');
+    const totalFees = this.parseAmount(fields[2], 'footer.total_fees');
+    const tenderCount = parseInt(fields[3], 10);
+    const totalTender = this.parseAmount(fields[4], 'footer.total_tender');
+    const totalVAT = this.parseAmount(fields[5], 'footer.total_vat');
+
+    if (!isNaN(txnCount) && txnCount !== bodyCount) {
+      logger.warn('Footer transaction count mismatch', {
+        footer_count: txnCount,
+        parsed_count: bodyCount
+      });
+    }
+
+    return {
+      total_count: isNaN(txnCount) ? bodyCount : txnCount,
+      total_amount: totalGross.toFixed(2),
+      total_fees: totalFees.toFixed(2),
+      tender_count: isNaN(tenderCount) ? bodyCount : tenderCount,
+      total_tender: totalTender.toFixed(2),
+      total_vat: totalVAT.toFixed(2)
+    };
+  }
+
+  /**
+   * Calculate footer from body when no explicit footer line
    */
   calculateFooter(body) {
-    const totalCount = body.length;
-    const totalAmount = body.reduce((sum, txn) => sum + parseFloat(txn.supplier_amount || 0), 0);
-    
-    // Count by transaction type
-    const topupCount = body.filter(txn => txn.metadata?.transaction_type === 'topup').length;
-    const cashoutCount = body.filter(txn => txn.metadata?.transaction_type === 'cashout').length;
-    
-    // Count by status
-    const settledCount = body.filter(txn => txn.supplier_status === 'settled').length;
-    const pendingCount = body.filter(txn => txn.supplier_status === 'pending').length;
-    const failedCount = body.filter(txn => txn.supplier_status === 'failed').length;
-    
+    const totals = body.reduce((acc, txn) => {
+      acc.count++;
+      acc.gross += parseFloat(txn.supplier_amount || 0);
+      acc.fees += parseFloat(txn.supplier_fee || 0);
+      acc.vat += parseFloat(txn.supplier_metadata?.vat_on_fee || 0);
+      return acc;
+    }, { count: 0, gross: 0, fees: 0, vat: 0 });
+
     return {
-      total_count: totalCount,
-      total_amount: totalAmount.toFixed(2),
-      topup_count: topupCount,
-      cashout_count: cashoutCount,
-      settled_count: settledCount,
-      pending_count: pendingCount,
-      failed_count: failedCount
+      total_count: totals.count,
+      total_amount: totals.gross.toFixed(2),
+      total_fees: totals.fees.toFixed(2),
+      tender_count: totals.count,
+      total_tender: totals.gross.toFixed(2),
+      total_vat: totals.vat.toFixed(2)
     };
   }
-  
+
   /**
-   * Parse decimal value
+   * Parse amount string (handles leading/trailing spaces)
    */
-  parseDecimal(value, fieldName) {
-    if (!value) {
-      throw new Error(`Missing ${fieldName}`);
+  parseAmount(value, fieldName) {
+    if (value === undefined || value === null || value === '') {
+      return 0;
     }
-    
-    const parsed = parseFloat(value);
+    const cleaned = value.replace(/\s/g, '');
+    const parsed = parseFloat(cleaned);
     if (isNaN(parsed)) {
-      throw new Error(`Invalid ${fieldName}: ${value}`);
+      throw new Error(`Invalid amount for ${fieldName}: '${value}'`);
     }
-    
     return parsed;
   }
 }

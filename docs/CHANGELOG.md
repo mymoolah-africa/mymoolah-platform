@@ -1,6 +1,6 @@
 # MyMoolah Treasury Platform - Changelog
 
-## 2026-04-13 - SFTP port 5022 standardisation + MobileMart Fulcrum recon rebuild (v2.97.4)
+## 2026-04-13 - EasyPay SOF adapter + SFTP port 5022 + MobileMart Fulcrum recon rebuild (v2.97.5)
 
 ### Summary
 Fixed all SFTP port 22 references across the codebase to the correct port 5022 (standardised since Mar 17 per SBSA confirmation). Rebuilt the MobileMart reconciliation adapter from scratch to match Jarod Ramos's actual Fulcrum Recon Spec v1.1 — pipe-delimited plain text with H/D/T record structure, 24 body fields, and cents-based amounts. Previously the adapter incorrectly assumed comma-delimited CSV with 8 generic fields. Created Zapper recon adapter and config. Drafted EasyPay endpoint clarification reply and MobileMart SFTP activation email.
@@ -27,7 +27,15 @@ Fixed all SFTP port 22 references across the codebase to the correct port 5022 (
 - `architecture.md` — adapter description corrected
 - `.gitignore` — added `FULCRUM.MERCHANT.*.txt` pattern
 
+### EasyPay SOF Adapter (new)
+- **`services/reconciliation/adapters/EasyPayAdapter.js`**: Complete rewrite — old CSV parser replaced with SOF (Statement of Funds) parser. Handles SOF header, X (transaction header), P (payment detail with gross/fee/code), T (tender detail with amount/VAT/type) records, and footer totals. Based on sample file `easy2138.148` provided by Razeen (EasyPay)
+- **`migrations/20260413_04_fix_easypay_recon_config.js`**: Updates DB config — `file_format=sof`, `file_name_pattern=easy%.%`, `has_header=FALSE`, full SOF/X/P/T schema_definition, matching on `ep_txn_ref` + `easypay_code`
+- **`docs/integrations/EasyPay_API_Integration_Guide.md`**: Reconciliation section rewritten from assumed CSV to actual SOF format with full record-type documentation and sample file
+- **`docs/integrations/EasyPay_V5_PARTNER_QA_CHECKLIST.md`**: C2 (recon file format) and D2 (IP allowlisting) marked as answered
+- **EasyPay public IP confirmed**: `20.164.206.68` — firewall rule `allow-easypay-sftp` documented in `DEPLOYMENT_GUIDE.md`
+
 ### Email Drafts
+- `docs/integrations/EASYPAY_REPLY_SOF_CONFIRMATION.md` (new) — reply to Razeen confirming SOF parser built, IP whitelisted, requesting SSH public key
 - `docs/integrations/MOBILEMART_SFTP_RECON_EMAIL_DRAFT.md` (new) — reply to Jarod's Jan 13 recon spec email
 - `docs/integrations/EASYPAY_UAT_CREDENTIALS_EMAIL_DRAFT.md` — port updated to 5022
 
