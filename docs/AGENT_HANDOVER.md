@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
 **Last Updated**: 2026-04-13  
-**Latest Feature**: **SFTP port 5022 standardisation + MobileMart Fulcrum recon adapter rebuild (v2.97.4)** — Fixed all SFTP port 22 references to 5022 across 18+ files (docs, migrations, archive). Rebuilt `MobileMartAdapter.js` from scratch to match Jarod's actual Fulcrum Recon Spec v1.1 (pipe-delimited H/D/T format, 24 body fields, cents amounts). Updated `FileParserService` validation, `SFTPWatcherService` pattern matcher (SQL % wildcards), DB config migration. Drafted EasyPay reply (Razeen endpoint clarification) and MobileMart SFTP activation email. Created Zapper recon adapter and config.  
-**Document Version**: 2.97.4  
-**Session logs**: `docs/session_logs/2026-04-13_1400_sftp-port-fix-mobilemart-recon-rebuild.md`  
+**Latest Feature**: **EasyPay SOF adapter + SFTP port 5022 + MobileMart Fulcrum recon rebuild (v2.97.5)** — Rewrote `EasyPayAdapter.js` from CSV to SOF (Statement of Funds) format based on sample file `easy2138.148` from Razeen. SOF/X/P/T record parsing with footer totals. EasyPay public IP `20.164.206.68` documented; firewall rule `allow-easypay-sftp` added. Q&A checklist C2+D2 answered. Fixed all SFTP port 22 references to 5022 (18+ files). Rebuilt `MobileMartAdapter.js` for Fulcrum spec. Created Zapper adapter.  
+**Document Version**: 2.97.5  
+**Session logs**: `docs/session_logs/2026-04-13_1400_sftp-port-fix-mobilemart-recon-rebuild.md`, `docs/session_logs/2026-04-13_1600_easypay-sof-adapter-build.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
