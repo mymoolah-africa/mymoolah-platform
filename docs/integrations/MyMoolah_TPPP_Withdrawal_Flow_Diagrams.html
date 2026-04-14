@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MyMoolah TPPP — Withdrawal Functionality Flow Diagrams</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 20mm 18mm 20mm 18mm;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 11pt;
+      line-height: 1.55;
+      color: #1a1a1a;
+      background: white;
+    }
+    .container { max-width: 720px; margin: 0 auto; }
+
+    /* ---- COVER / HEADER ---- */
+    .cover {
+      border: 2px solid #1a5632;
+      padding: 28px 32px;
+      margin-bottom: 28px;
+      page-break-after: avoid;
+    }
+    .cover-badge {
+      display: inline-block;
+      border: 1px solid #1a5632;
+      color: #1a5632;
+      padding: 2px 10px;
+      font-size: 8pt;
+      font-family: Arial, Helvetica, sans-serif;
+      font-weight: bold;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .cover h1 {
+      font-size: 22pt;
+      color: #1a5632;
+      line-height: 1.25;
+      margin-bottom: 8px;
+    }
+    .cover .subtitle {
+      font-size: 11pt;
+      color: #555;
+      font-style: italic;
+      margin-bottom: 16px;
+    }
+    .cover-meta {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 9pt;
+      color: #666;
+      border-top: 1px solid #ccc;
+      padding-top: 10px;
+    }
+    .cover-meta table { width: 100%; }
+    .cover-meta td { padding: 2px 0; }
+
+    /* ---- HEADINGS ---- */
+    h2 {
+      font-size: 15pt;
+      color: #1a5632;
+      border-bottom: 2px solid #1a5632;
+      padding-bottom: 4px;
+      margin: 28px 0 8px;
+    }
+    h2 .num { color: #86BE41; }
+    h3 {
+      font-size: 12pt;
+      color: #333;
+      margin: 18px 0 6px;
+    }
+    .section-intro {
+      font-size: 10pt;
+      color: #666;
+      margin-bottom: 14px;
+      font-style: italic;
+    }
+    p { margin-bottom: 8px; }
+
+    /* ---- COMPARISON ---- */
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0;
+      page-break-inside: avoid;
+    }
+    .comparison-table td {
+      width: 50%;
+      vertical-align: top;
+      padding: 14px 16px;
+      font-size: 10pt;
+      line-height: 1.5;
+    }
+    .comparison-table .wrong-cell {
+      border: 1px solid #d9534f;
+    }
+    .comparison-table .right-cell {
+      border: 1px solid #1a5632;
+    }
+    .comparison-table .cell-title {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 9pt;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .comparison-table .wrong-cell .cell-title { color: #d9534f; }
+    .comparison-table .right-cell .cell-title { color: #1a5632; }
+
+    /* ---- CALLOUT ---- */
+    .callout {
+      border-left: 4px solid #1a5632;
+      padding: 10px 16px;
+      margin: 14px 0;
+      font-size: 10pt;
+      page-break-inside: avoid;
+    }
+    .callout.warning { border-left-color: #d4760a; }
+    .callout.info { border-left-color: #2D8CCA; }
+    .callout-title {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 9pt;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+      color: #1a5632;
+    }
+    .callout.warning .callout-title { color: #d4760a; }
+    .callout.info .callout-title { color: #2D8CCA; }
+
+    /* ---- NUMBERED LIST (assumptions) ---- */
+    .assumptions {
+      margin: 10px 0 14px 0;
+      padding: 0;
+    }
+    .assumptions li {
+      font-size: 10pt;
+      margin-bottom: 4px;
+      margin-left: 24px;
+    }
+
+    /* ---- ROLES TABLE ---- */
+    .roles-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0;
+      font-size: 9.5pt;
+      page-break-inside: avoid;
+    }
+    .roles-table th {
+      background: #f5f5f5;
+      border: 1px solid #ccc;
+      padding: 8px 10px;
+      text-align: left;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 9pt;
+      font-weight: bold;
+      color: #1a5632;
+    }
+    .roles-table td {
+      border: 1px solid #ccc;
+      padding: 6px 10px;
+      vertical-align: top;
+    }
+    .roles-table td ul {
+      margin: 0;
+      padding-left: 16px;
+    }
+    .roles-table td ul li { margin-bottom: 2px; }
+
+    /* ---- FLOW DIAGRAM ---- */
+    .flow-box {
+      padding: 0;
+      margin: 14px 0;
+    }
+    .flow-box-title {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 10pt;
+      font-weight: bold;
+      color: #1a5632;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .flow-step-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .flow-step-table td {
+      padding: 6px 4px;
+      vertical-align: top;
+      font-size: 10pt;
+    }
+    .step-num {
+      width: 28px;
+      text-align: center;
+      font-family: Arial, Helvetica, sans-serif;
+      font-weight: bold;
+      font-size: 10pt;
+      color: #1a5632;
+    }
+    .step-actor {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 8pt;
+      font-weight: bold;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+      color: #888;
+    }
+    .step-label {
+      font-weight: bold;
+      font-size: 10pt;
+      color: #333;
+    }
+    .step-desc {
+      font-size: 9.5pt;
+      color: #555;
+      margin-top: 2px;
+    }
+    .flow-step-table tr { border-bottom: 1px solid #f0f0f0; }
+    .flow-step-table tr:last-child { border-bottom: none; }
+
+    /* Arrow between steps */
+    .step-arrow {
+      width: 28px;
+      text-align: center;
+      color: #ccc;
+      font-size: 14pt;
+      line-height: 1;
+      padding: 0 4px;
+    }
+
+    /* ---- LEDGER ---- */
+    .ledger-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0;
+      font-size: 9.5pt;
+      page-break-inside: avoid;
+    }
+    .ledger-table caption {
+      text-align: left;
+      font-weight: bold;
+      font-size: 10pt;
+      color: #1a5632;
+      margin-bottom: 4px;
+      caption-side: top;
+    }
+    .ledger-table th {
+      border-bottom: 2px solid #999;
+      padding: 4px 8px;
+      text-align: left;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 8pt;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      color: #888;
+    }
+    .ledger-table th.amt { text-align: right; width: 90px; }
+    .ledger-table td {
+      border-bottom: 1px solid #e0e0e0;
+      padding: 5px 8px;
+    }
+    .ledger-table td.amt { text-align: right; font-family: 'Courier New', monospace; }
+    .ledger-table td.dr { color: #b91c1c; }
+    .ledger-table td.cr { color: #1a5632; }
+
+    /* ---- SERVICE OVERVIEW ---- */
+    .service-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0;
+      font-size: 9.5pt;
+      page-break-inside: avoid;
+    }
+    .service-table th {
+      background: #f5f5f5;
+      border: 1px solid #ccc;
+      padding: 6px 10px;
+      text-align: left;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 8pt;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .service-table td {
+      border: 1px solid #ccc;
+      padding: 6px 10px;
+      vertical-align: top;
+    }
+    .service-table .cat {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 8pt;
+      font-weight: bold;
+      letter-spacing: 0.3px;
+    }
+    .service-table .cat-withdrawal { color: #1a5632; }
+    .service-table .cat-vas { color: #d4760a; }
+    .service-table .cat-deposit { color: #2D8CCA; }
+
+    /* ---- CROSS-REFS ---- */
+    .crossref-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0;
+      font-size: 10pt;
+    }
+    .crossref-table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid #e0e0e0;
+      vertical-align: top;
+    }
+    .crossref-table td:first-child {
+      font-weight: bold;
+      width: 200px;
+      color: #1a5632;
+    }
+
+    /* ---- FOOTER ---- */
+    .doc-footer {
+      border-top: 2px solid #1a5632;
+      margin-top: 24px;
+      padding-top: 12px;
+      font-size: 8.5pt;
+      color: #888;
+    }
+    .doc-footer table { width: 100%; }
+    .doc-footer td { vertical-align: top; padding: 2px 0; }
+    .doc-footer strong { color: #555; }
+
+    /* ---- PRINT ---- */
+    @media print {
+      body { font-size: 10.5pt; }
+      .cover { page-break-after: avoid; }
+      .callout { page-break-inside: avoid; }
+      .ledger-table { page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <!-- ============ COVER ============ -->
+  <div class="cover">
+    <div class="cover-badge">Confidential &mdash; PASA Submission</div>
+    <h1>MyMoolah TPPP<br>Withdrawal Functionality Flow Diagrams</h1>
+    <p class="subtitle">Corrected characterisation &mdash; wallet cash-withdrawal service within the Standard&nbsp;Bank-sponsored TPPP framework</p>
+    <div class="cover-meta">
+      <table>
+        <tr>
+          <td><strong>Prepared by:</strong> MyMoolah (Pty) Ltd</td>
+          <td><strong>Date:</strong> April 2026</td>
+        </tr>
+        <tr>
+          <td><strong>Version:</strong> 2.0 (Revised)</td>
+          <td><strong>TPPP Sponsor:</strong> Standard Bank of South Africa</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- ============ 1. LEGAL CHARACTERISATION ============ -->
+  <h2><span class="num">1.</span> Legal Characterisation</h2>
+  <p class="section-intro">The correct legal characterisation of MyMoolah's Flash eeziCash cash-out functionality, distinguishing it from VAS product distribution.</p>
+
+  <table class="comparison-table">
+    <tr>
+      <td class="wrong-cell">
+        <div class="cell-title">&#10007; Incorrect Characterisation</div>
+        MyMoolah <em>purchases</em> and <em>resells</em> Flash eeziCash voucher PINs as a <em>Value-Added Service (VAS) product</em>. The service is functionally identical to airtime and data distribution.
+      </td>
+      <td class="right-cell">
+        <div class="cell-title">&#10003; Correct Characterisation</div>
+        MyMoolah facilitates a <strong>wallet cash withdrawal</strong> within its TPPP/sponsor-bank framework. A one-time eeziCash PIN is generated solely as the <strong>operational credential</strong> for collecting existing wallet value as cash.
+      </td>
+    </tr>
+  </table>
+
+  <div class="callout">
+    <div class="callout-title">Legal Basis</div>
+    The eeziCash PIN is the <strong>mechanism</strong> for executing a wallet cash withdrawal &mdash; not a standalone product. The customer's value already exists in the wallet before the PIN is generated. MyMoolah does not purchase, warehouse, or hold standalone eeziCash voucher inventory for resale to the public.
+  </div>
+
+  <h3>Key Assumptions</h3>
+  <ol class="assumptions">
+    <li>The customer holds value in an existing MyMoolah wallet before the PIN is generated.</li>
+    <li>The wallet forms part of MyMoolah's sponsor-bank-backed payment structure (Standard Bank).</li>
+    <li>MyMoolah does not purchase, warehouse, or hold standalone eeziCash voucher inventory for resale.</li>
+    <li>The eeziCash PIN is generated only after the customer gives a withdrawal instruction against existing wallet value.</li>
+    <li>The PIN is single-use, time-limited, auditable, and subject to reversal if not redeemed.</li>
+    <li>MyMoolah does not assume an independent repayment obligation to the public outside the wallet structure.</li>
+  </ol>
+
+  <!-- ============ 2. PARTY ROLES ============ -->
+  <h2><span class="num">2.</span> Party Roles and Responsibilities</h2>
+  <p class="section-intro">Clear allocation of legal and operational roles across the three parties in the wallet cash-withdrawal service.</p>
+
+  <table class="roles-table">
+    <tr>
+      <th>MyMoolah (Pty) Ltd<br><span style="font-weight:normal;font-style:italic;">TPPP / Wallet Operator</span></th>
+      <th>Flash (Pty) Ltd<br><span style="font-weight:normal;font-style:italic;">Cash-Dispensing Network</span></th>
+      <th>Standard Bank<br><span style="font-weight:normal;font-style:italic;">TPPP Sponsor Bank</span></th>
+    </tr>
+    <tr>
+      <td>
+        <ul>
+          <li>Customer onboarding and KYC</li>
+          <li>Wallet management and ledger</li>
+          <li>Customer authentication</li>
+          <li>Withdrawal instruction capture</li>
+          <li>Wallet debit (face value + fee)</li>
+          <li>PIN delivery to customer</li>
+          <li>Reversal if PIN expires</li>
+          <li>First-line customer support</li>
+          <li>AML/CFT compliance</li>
+        </ul>
+      </td>
+      <td>
+        <ul>
+          <li>PIN generation via API</li>
+          <li>PIN validation at trader</li>
+          <li>Trader enablement and rules</li>
+          <li>Cash-dispensing network admin</li>
+          <li>Trader cash availability</li>
+          <li>Settlement and reconciliation</li>
+          <li>Fraud controls at trader level</li>
+        </ul>
+      </td>
+      <td>
+        <ul>
+          <li>Sponsor-bank framework</li>
+          <li>PASA registration anchor</li>
+          <li>Settlement and clearing oversight</li>
+          <li>Regulatory reporting</li>
+          <li>MyMoolah TPPP account</li>
+        </ul>
+      </td>
+    </tr>
+  </table>
+
+  <!-- ============ 3. FLASH EEZICASH FLOW ============ -->
+  <h2><span class="num">3.</span> Flash eeziCash Wallet Cash-Withdrawal Flow</h2>
+  <p class="section-intro">End-to-end flow for a MyMoolah customer withdrawing cash from their wallet through the Flash trader network.</p>
+
+  <div class="flow-box">
+    <div class="flow-box-title">Wallet Cash Withdrawal via Flash eeziCash PIN</div>
+    <table class="flow-step-table">
+      <tr>
+        <td class="step-num">1</td>
+        <td>
+          <div class="step-actor">Customer</div>
+          <div class="step-label">Customer holds value in MyMoolah wallet</div>
+          <div class="step-desc">Funds already exist in the wallet under the Standard Bank-sponsored TPPP structure (e.g. earned wage access disbursement, EasyPay deposit, P2P transfer).</div>
+        </td>
+      </tr>
+      <tr><td class="step-arrow">&darr;</td><td></td></tr>
+      <tr>
+        <td class="step-num">2</td>
+        <td>
+          <div class="step-actor">Customer</div>
+          <div class="step-label">Customer initiates cash withdrawal</div>
+          <div class="step-desc">Selects &ldquo;Withdraw Cash&rdquo; in the MyMoolah app, chooses an amount (e.g.&nbsp;R200). The disclosed transaction fee is shown before confirmation.</div>
+        </td>
+      </tr>
+      <tr><td class="step-arrow">&darr;</td><td></td></tr>
+      <tr>
+        <td class="step-num">3</td>
+        <td>
+          <div class="step-actor">MyMoolah</div>
+          <div class="step-label">Wallet debited &mdash; double-entry ledger journal recorded</div>
+          <div class="step-desc">MyMoolah debits the customer&rsquo;s wallet for the withdrawal amount (R200) plus the applicable transaction fee. A double-entry ledger journal is recorded within the TPPP/sponsor-bank framework.</div>
+        </td>
+      </tr>
+      <tr><td class="step-arrow">&darr;</td><td></td></tr>
+      <tr>
+        <td class="step-num">4</td>
+        <td>
+          <div class="step-actor">MyMoolah &rarr; Flash API</div>
+          <div class="step-label">Withdrawal instruction sent to Flash Partner API</div>
+          <div class="step-desc">MyMoolah calls the Flash Partner API v4 to initiate the generation of a one-time eeziCash redemption PIN against the customer&rsquo;s wallet withdrawal. MyMoolah does not purchase voucher inventory.</div>
+        </td>
+      </tr>
+      <tr><td class="step-arrow">&darr;</td><td></td></tr>
+      <tr>
+        <td class="step-num">5</td>
+        <td>
+          <div class="step-actor">Flash</div>
+          <div class="step-label">Flash generates one-time redemption PIN</div>
+          <div class="step-desc">Flash generates a 15-digit one-time PIN (the operational credential for cash collection) and returns it to MyMoolah. The PIN is single-use, time-limited, and auditable.</div>
+        </td>
+      </tr>
+      <tr><td class="step-arrow">&darr;</td><td></td></tr>
+      <tr>
+        <td class="step-num">6</td>
+        <td>
+          <div class="step-actor">MyMoolah &rarr; Customer</div>
+          <div class="step-label">PIN delivered to customer</div>
+          <div class="step-desc">MyMoolah delivers the redemption PIN to the customer via the app. The customer is shown the PIN, expiry time, withdrawal amount, and instructions.</div>
+        </td>
+      </tr>
+      <tr><td class="step-arrow">&darr;</td><td></td></tr>
+      <tr>
+        <td class="step-num">7</td>
+        <td>
+          <div class="step-actor">Customer &rarr; Flash Trader</div>
+          <div class="step-label">Customer collects cash at Flash trader</div>
+          <div class="step-desc">Customer presents the PIN to any participating Flash trader (~240,000 locations). The trader verifies the PIN with Flash and dispenses cash.</div>
+        </td>
+      </tr>
+      <tr><td class="step-arrow">&darr;</td><td></td></tr>
+      <tr>
+        <td class="step-num">8</td>
+        <td>
+          <div class="step-actor">Flash &rarr; MyMoolah</div>
+          <div class="step-label">Settlement and reconciliation</div>
+          <div class="step-desc">Flash settles against MyMoolah&rsquo;s pre-funded float. Daily reconciliation confirms redeemed and unredeemed PINs. Comparable to cash-funding arrangements between banks and ATM networks.</div>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="callout info">
+    <div class="callout-title">Reversal Process</div>
+    If the eeziCash PIN expires unredeemed, the withdrawal amount is automatically reversed to the customer&rsquo;s wallet. MyMoolah retains responsibility for the withdrawn funds throughout the end-to-end process &mdash; from wallet debit through to cash collection or reversal.
+  </div>
+
+  <h3>Ledger Treatment (Example: R200 Withdrawal, R9.95 Fee)</h3>
+
+  <table class="ledger-table">
+    <caption>Journal Entry 1 &mdash; Wallet Cash Withdrawal</caption>
+    <tr><th>Account</th><th class="amt">Debit</th><th class="amt">Credit</th></tr>
+    <tr><td>2100-01-01 Client Float (Unrestricted)</td><td class="amt dr">R200.00</td><td class="amt"></td></tr>
+    <tr><td>1200-10-04 Flash Float</td><td class="amt"></td><td class="amt cr">R200.00</td></tr>
+  </table>
+
+  <table class="ledger-table">
+    <caption>Journal Entry 2 &mdash; Transaction Fee</caption>
+    <tr><th>Account</th><th class="amt">Debit</th><th class="amt">Credit</th></tr>
+    <tr><td>2100-01-01 Client Float (Unrestricted)</td><td class="amt dr">R9.95</td><td class="amt"></td></tr>
+    <tr><td>4100-01-01 Transaction Fee Revenue</td><td class="amt"></td><td class="amt cr">R9.95</td></tr>
+  </table>
+
+  <div class="callout warning">
+    <div class="callout-title">Critical Distinction</div>
+    The wallet debit occurs <strong>before</strong> the PIN is generated. The customer&rsquo;s value already exists and is debited first. The PIN is then generated as the credential for cash collection. This sequence confirms that the service is a withdrawal mechanism, not a product purchase.
+  </div>
+
+  <!-- ============ 4. EASYPAY FLOW ============ -->
+  <h2><span class="num">4.</span> EasyPay Cash Deposit Flow</h2>
+  <p class="section-intro">How customers deposit cash into their MyMoolah wallet through EasyPay&rsquo;s retail network.</p>
+
+  <div class="flow-box">
+    <div class="flow-box-title">Cash Deposit via EasyPay</div>
+    <table class="flow-step-table">
+      <tr>
+        <td class="step-num">1</td>
+        <td>
+          <div class="step-actor">Customer</div>
+          <div class="step-label">Customer requests deposit PIN</div>
+          <div class="step-desc">In the MyMoolah app, the customer requests a 14-digit EasyPay deposit PIN linked to their wallet.</div>
+        </td>
+      </tr>
+      <tr><td class="step-arrow">&darr;</td><td></td></tr>
+      <tr>
+        <td class="step-num">2</td>
+        <td>
+          <div class="step-actor">Customer &rarr; EasyPay Merchant</div>
+          <div class="step-label">Customer pays cash at retail merchant</div>
+          <div class="step-desc">Customer visits any EasyPay merchant (Pick n Pay, Shoprite, Checkers, Spar, etc.) and pays the deposit amount in cash, referencing the 14-digit PIN.</div>
+        </td>
+      </tr>
+      <tr><td class="step-arrow">&darr;</td><td></td></tr>
+      <tr>
+        <td class="step-num">3</td>
+        <td>
+          <div class="step-actor">EasyPay &rarr; MyMoolah</div>
+          <div class="step-label">Settlement notification</div>
+          <div class="step-desc">EasyPay settles to MyMoolah as the single named creditor (Receiver ID 5063). A SOF (Statement of Funds) file is transmitted via SFTP for reconciliation.</div>
+        </td>
+      </tr>
+      <tr><td class="step-arrow">&darr;</td><td></td></tr>
+      <tr>
+        <td class="step-num">4</td>
+        <td>
+          <div class="step-actor">MyMoolah</div>
+          <div class="step-label">Wallet credited</div>
+          <div class="step-desc">Upon settlement confirmation, MyMoolah credits the customer&rsquo;s wallet with the deposited amount and records the double-entry ledger journal. The customer is notified via the app.</div>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- ============ 5. MOBILEMART FLOW ============ -->
+  <h2><span class="num">5.</span> MobileMart Bill Payment Flow (VAS)</h2>
+  <p class="section-intro">How customers purchase genuine VAS products (electricity, bills, airtime, data) from their wallet. This is a VAS product purchase &mdash; legally distinct from a cash withdrawal.</p>
+
+  <div class="flow-box">
+    <div class="flow-box-title">VAS Product Purchase via MobileMart</div>
+    <table class="flow-step-table">
+      <tr>
+        <td class="step-num">1</td>
+        <td>
+          <div class="step-actor">Customer</div>
+          <div class="step-label">Customer selects product</div>
+          <div class="step-desc">Selects a biller or product (electricity, municipality, insurance, airtime, data) from 150+ available products in the MyMoolah app.</div>
+        </td>
+      </tr>
+      <tr><td class="step-arrow">&darr;</td><td></td></tr>
+      <tr>
+        <td class="step-num">2</td>
+        <td>
+          <div class="step-actor">MyMoolah</div>
+          <div class="step-label">Wallet debited &mdash; product purchased</div>
+          <div class="step-desc">MyMoolah debits the wallet and purchases the product via MobileMart&rsquo;s Fulcrum API. This is a genuine VAS product acquisition by the customer.</div>
+        </td>
+      </tr>
+      <tr><td class="step-arrow">&darr;</td><td></td></tr>
+      <tr>
+        <td class="step-num">3</td>
+        <td>
+          <div class="step-actor">MobileMart &rarr; Biller</div>
+          <div class="step-label">Product fulfilled</div>
+          <div class="step-desc">MobileMart processes the purchase and the biller delivers the product (electricity token, airtime credit, etc.).</div>
+        </td>
+      </tr>
+      <tr><td class="step-arrow">&darr;</td><td></td></tr>
+      <tr>
+        <td class="step-num">4</td>
+        <td>
+          <div class="step-actor">MyMoolah &rarr; Customer</div>
+          <div class="step-label">Token or receipt delivered</div>
+          <div class="step-desc">The customer receives the product token or receipt via the app (e.g. 20-digit electricity token).</div>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="callout">
+    <div class="callout-title">VAS vs Cash-Out Distinction</div>
+    Bill payments and product purchases are genuine VAS product acquisitions &mdash; the customer is buying a new product. Cash-out is fundamentally different: the customer is <strong>retrieving their own existing funds</strong>. These two categories require different legal characterisation and should not be conflated.
+  </div>
+
+  <!-- ============ 6. INTEGRATED OVERVIEW ============ -->
+  <h2><span class="num">6.</span> Integrated Retail Network Overview</h2>
+  <p class="section-intro">Summary of MyMoolah&rsquo;s provider integrations, with cash-out properly distinguished from VAS product distribution.</p>
+
+  <table class="service-table">
+    <tr>
+      <th>Provider</th>
+      <th>Service</th>
+      <th>Function</th>
+      <th>Direction</th>
+      <th>Category</th>
+    </tr>
+    <tr>
+      <td><strong>Flash</strong><br>(Partner API v4)</td>
+      <td>eeziCash withdrawal PINs</td>
+      <td>Wallet cash withdrawal at ~240,000 retail points</td>
+      <td>Wallet &rarr; Cash</td>
+      <td><span class="cat cat-withdrawal">WALLET WITHDRAWAL</span></td>
+    </tr>
+    <tr>
+      <td><strong>Flash</strong><br>(Partner API v4)</td>
+      <td>Airtime, data, 1Voucher, eeziAirtime</td>
+      <td>Prepaid product purchase</td>
+      <td>Wallet &rarr; Product</td>
+      <td><span class="cat cat-vas">VAS PURCHASE</span></td>
+    </tr>
+    <tr>
+      <td><strong>EasyPay</strong><br>(Receiver API)</td>
+      <td>Cash deposits via EasyPay terminals</td>
+      <td>Cash deposit to wallet at retail</td>
+      <td>Cash &rarr; Wallet</td>
+      <td><span class="cat cat-deposit">CASH DEPOSIT</span></td>
+    </tr>
+    <tr>
+      <td><strong>MobileMart</strong><br>(Fulcrum API)</td>
+      <td>Electricity, bills, airtime, data</td>
+      <td>Bill payment from wallet (150+ billers)</td>
+      <td>Wallet &rarr; Biller</td>
+      <td><span class="cat cat-vas">VAS PURCHASE</span></td>
+    </tr>
+  </table>
+
+  <!-- ============ 7. REGULATORY REFERENCES ============ -->
+  <h2><span class="num">7.</span> Regulatory Framework References</h2>
+  <p class="section-intro">Applicable South African regulatory instruments and published positions supporting the characterisation of this service as a wallet cash-withdrawal mechanism within the TPPP/sponsor-bank framework.</p>
+
+  <div class="callout info">
+    <div class="callout-title">PASA TPPP Framework</div>
+    PASA&rsquo;s published framework contemplates non-bank third-party payment providers operating through a sponsoring bank where they accept or disburse payments for clients. MyMoolah is registered with PASA as a TPPP, with Standard Bank as its sponsor bank.
+  </div>
+
+  <div class="callout info">
+    <div class="callout-title">NPS Act, Section 7</div>
+    Section 7 of the National Payment System Act 78 of 1998 regulates the acceptance of money or payment instructions for payment to third persons to whom that payment is due. Section 7(c) permits non-banks to handle such payments in accordance with directives issued by the Reserve Bank &mdash; specifically, Directive 1 of 2007.
+  </div>
+
+  <div class="callout info">
+    <div class="callout-title">SARB Position Paper NPS 01/2009 &mdash; Electronic Money</div>
+    The South African Reserve Bank&rsquo;s published position states that only registered South African banks may issue electronic money. However, non-banks may offer payment-related services in conjunction with a bank, and may operate as third-party payment service providers within Directives 1 and 2 of 2007.
+  </div>
+
+  <div class="callout info">
+    <div class="callout-title">Comparable Market Practice</div>
+    Standard Bank, TymeBank, and FNB each offer cardless cash-out through the Flash retail network using one-time eeziCash PINs. In each case, the service is characterised and marketed as a bank account or wallet withdrawal &mdash; not as the purchase of a standalone voucher product. Flash publicly describes these services as providing &ldquo;quick and easy access to cash withdrawals&rdquo; and as &ldquo;bringing the power of ATMs closer to customers.&rdquo;
+  </div>
+
+  <!-- ============ 8. CROSS-REFERENCES ============ -->
+  <h2><span class="num">8.</span> Cross-References</h2>
+  <p class="section-intro">This document should be read in conjunction with the following:</p>
+
+  <table class="crossref-table">
+    <tr>
+      <td>MyMoolah TPPP Application</td>
+      <td>Annexure A, Section 2.3 (Wallet services and cash-out mechanisms)</td>
+    </tr>
+    <tr>
+      <td>PASA Checklist Response</td>
+      <td>Sections 3.1.2, 3.2, and 4.1.1 (Payment services, withdrawal channels, retail network)</td>
+    </tr>
+    <tr>
+      <td>Legal Position Note</td>
+      <td>&ldquo;Flash eeziCash &mdash; MyMoolah Legal Position Note&rdquo; (April 2026, provided to Flash Legal and Standard Bank)</td>
+    </tr>
+    <tr>
+      <td>Standard Bank Correspondence</td>
+      <td>&ldquo;MyMoolah position on wallet cash withdrawals via Flash eeziCash&rdquo; (14 April 2026, to Shree Ramesar)</td>
+    </tr>
+  </table>
+
+  <!-- ============ FOOTER ============ -->
+  <div class="doc-footer">
+    <table>
+      <tr>
+        <td style="width:50%;">
+          <strong>MyMoolah (Pty) Ltd</strong><br>
+          PASA-certified Third Party Payment Provider<br>
+          Sponsor Bank: Standard Bank of South Africa<br>
+          andre@mymoolah.africa &nbsp;|&nbsp; www.mymoolah.africa
+        </td>
+        <td>
+          <strong>Document Control</strong><br>
+          Version 2.0 &mdash; Revised (April 2026)<br>
+          Classification: Confidential<br>
+          Supersedes: Version 1.0 (25 March 2026)<br>
+          Intended for PASA and Standard Bank only.
+        </td>
+      </tr>
+    </table>
+  </div>
+
+</div>
+</body>
+</html>
