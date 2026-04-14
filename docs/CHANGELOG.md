@@ -1,5 +1,24 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-14 - TPPP Withdrawal Flow Diagrams + Legal Correction Email (v2.97.5)
+
+### Summary
+Created comprehensive TPPP withdrawal flow-diagram document and drafted legal correction email to Standard Bank (Shree). The prior email to PASA (25 Mar 2026) incorrectly characterised eeziCash as "resale of Flash eeziCash voucher PINs — a VAS product." This session corrected the legal position: eeziCash is a wallet cash-withdrawal mechanism within the TPPP/sponsor-bank framework. The PIN is a withdrawal credential, not a product.
+
+### New Documentation
+- **`docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html`** (new) — 6 flow diagrams covering: eeziCash cash withdrawal, EFT withdrawal, PayShap withdrawal, EasyPay cash deposit, MobileMart VAS purchase, and integrated services overview. Includes double-entry ledger examples, role matrices (MMTP vs Flash vs SBSA), regulatory cross-references (NPS Act, SARB e-money paper, Banks Act, PASA TPPP Framework), and comparison tables distinguishing cash withdrawals from VAS purchases.
+- Print-optimised: table-based layout, system fonts, `@page` A4 margins, tested across 3 iterations of CSS print fixes.
+
+### Legal Correction
+- Identified 14 problematic statements in 25 Mar 2026 email to PASA
+- Recharacterised eeziCash from "VAS voucher resale" to "wallet cash-withdrawal service"
+- Key distinction: wallet debit occurs **before** PIN generation (withdrawal sequence, not purchase sequence)
+- Regulatory references: NPS Act 78/1998 s7, SARB Position Paper NPS 01/2009, Banks Act 94/1990
+
+### No code changes, no migrations needed — documentation and legal compliance only.
+
+---
+
 ## 2026-04-13 - EasyPay SOF adapter + SFTP port 5022 + MobileMart Fulcrum recon rebuild (v2.97.5)
 
 ### Summary

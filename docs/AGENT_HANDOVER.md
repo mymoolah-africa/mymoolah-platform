@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-13  
-**Latest Feature**: **EasyPay SOF adapter + SFTP port 5022 + MobileMart Fulcrum recon rebuild (v2.97.5)** — Rewrote `EasyPayAdapter.js` from CSV to SOF (Statement of Funds) format based on sample file `easy2138.148` from Razeen. SOF/X/P/T record parsing with footer totals. EasyPay public IP `20.164.206.68` documented; firewall rule `allow-easypay-sftp` added. Q&A checklist C2+D2 answered. Fixed all SFTP port 22 references to 5022 (18+ files). Rebuilt `MobileMartAdapter.js` for Fulcrum spec. Created Zapper adapter.  
+**Last Updated**: 2026-04-14  
+**Latest Feature**: **TPPP Withdrawal Flow Diagrams + Legal Correction (v2.97.5)** — Created comprehensive HTML flow-diagram document (`docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html`) covering all MyMoolah withdrawal/deposit channels (eeziCash, EFT, PayShap, EasyPay, MobileMart VAS) with ledger entries, regulatory cross-references, and role matrices. Drafted legal correction email to Standard Bank (Shree) correcting prior mischaracterisation of eeziCash as VAS voucher resale — reframed as wallet cash-withdrawal mechanism within TPPP/sponsor-bank framework. Print-to-PDF optimised.  
 **Document Version**: 2.97.5  
-**Session logs**: `docs/session_logs/2026-04-13_1400_sftp-port-fix-mobilemart-recon-rebuild.md`, `docs/session_logs/2026-04-13_1600_easypay-sof-adapter-build.md`  
+**Session logs**: `docs/session_logs/2026-04-14_2200_tppp-withdrawal-flow-diagrams-legal.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
