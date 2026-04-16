@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
 **Last Updated**: 2026-04-16  
-**Latest Feature**: **TPPP withdrawals — policies, security, FAQ, KB hub (v2.97.7)** — Corrected **eeziCash** characterisation across MMTP docs: **wallet cash-withdrawal** under TPPP (not VAS voucher resale). Updated AML **POL-001 §9A**, sanctions **POL-003** (scope), transaction monitoring **POL-004 §5.2.6**, fraud **POL-005**, KYC **POL-002**, IS **POL-013**, compliance review **POL-018**, `policies/INDEX.md`, `docs/security.md`, `BANKING_GRADE_ARCHITECTURE.md`, `STANDARD_BANK_TPPP_BRIEF.md`, `README.md`, `PROJECT_STATUS.md`, `index.md`, `SETTLEMENTS.md`, `DEVELOPMENT_GUIDE.md`, `ZERO_SHORTCUTS_POLICY.md`, `FAQ_MASTER.md` §9, `AI_SUPPORT_SYSTEM.md`, `BANKING_GRADE_SUPPORT_SYSTEM.md`. New hub **`docs/WITHDRAWALS_COMPLIANCE_AND_KB.md`**. Builds on `docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html` (Apr 14).  
-**Document Version**: 2.97.7  
-**Session logs**: `docs/session_logs/2026-04-16_1430_tppp-withdrawal-docs-policy-kb-alignment.md` (this batch); prior `docs/session_logs/2026-04-14_2200_tppp-withdrawal-flow-diagrams-legal.md`; `docs/session_logs/2026-04-16_1200_find-skills-cursor-mmtp.md`  
+**Latest Feature**: **SBSA H2H SFTP connectivity confirmed (v2.97.8)** — Full SFTP session working to SBSA TEST (196.8.85.62:5022). Auth, upload, download all PASS. Discovered 11 SBSA response files from Mar 30 testing. Pain.001 builder enhanced with `ChrgBr` and `CdtrAcct/Tp/Cd`. Fresh Pain.001 uploaded to SBSA TEST Outbox. SBSA PROD TCP reachable but key not loaded. SOAP notification endpoint confirmed working. Previous: TPPP withdrawals policies (v2.97.7).  
+**Document Version**: 2.97.8  
+**Session logs**: `docs/session_logs/2026-04-16_1100_sbsa-h2h-sftp-connectivity-confirmed.md` (this session); prior `docs/session_logs/2026-04-16_1430_tppp-withdrawal-docs-policy-kb-alignment.md`; `docs/session_logs/2026-04-16_1200_find-skills-cursor-mmtp.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
