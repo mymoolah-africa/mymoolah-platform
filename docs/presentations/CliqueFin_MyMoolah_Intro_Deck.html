@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CliqueFin x MyMoolah — Partnership Introduction</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #06090f;
+      --surface: #0d1219;
+      --surface-elevated: #131b27;
+      --border: #1c2636;
+      --green: #3ecf8e;
+      --green-dim: rgba(62,207,142,0.10);
+      --green-glow: rgba(62,207,142,0.20);
+      --blue: #38bdf8;
+      --blue-dim: rgba(56,189,248,0.10);
+      --amber: #f59e0b;
+      --amber-dim: rgba(245,158,11,0.10);
+      --coral: #f43f5e;
+      --purple: #a78bfa;
+      --purple-dim: rgba(167,139,250,0.10);
+      --text: #eef2f7;
+      --text-2: #94a3b8;
+      --text-3: #4a5568;
+      --grad: linear-gradient(135deg, #3ecf8e, #38bdf8);
+      --grad-warm: linear-gradient(135deg, #f59e0b, #f43f5e);
+      --font-display: 'Instrument Serif', Georgia, serif;
+      --font-body: 'Inter Tight', -apple-system, sans-serif;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* === PROGRESS === */
+    .progress-bar { position: fixed; top: 0; left: 0; width: 100%; height: 3px; z-index: 1000; background: rgba(255,255,255,0.04); }
+    .progress-fill { height: 100%; background: var(--grad); transition: width 0.4s ease; box-shadow: 0 0 12px var(--green-glow); }
+
+    /* === SLIDES === */
+    .slide {
+      position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+      padding: 60px 80px;
+      opacity: 0; transform: translateX(50px);
+      transition: all 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+      pointer-events: none;
+    }
+    .slide.active { opacity: 1; transform: translateX(0); pointer-events: auto; }
+    .slide.exit-left { opacity: 0; transform: translateX(-50px); }
+
+    .slide-inner { max-width: 1060px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 36px; }
+
+    /* === TYPOGRAPHY === */
+    .slide-title {
+      font-family: var(--font-display); font-size: clamp(40px, 5.5vw, 68px);
+      font-weight: 400; line-height: 1.08; text-align: center; letter-spacing: -0.02em;
+    }
+    .slide-title em { font-style: italic; background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+    .slide-sub { font-size: clamp(17px, 2vw, 22px); font-weight: 300; color: var(--text-2); text-align: center; max-width: 640px; line-height: 1.55; }
+
+    .label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.16em; color: var(--green); margin-bottom: -16px; }
+
+    /* === HERO === */
+    .hero-bg {
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(ellipse 70% 50% at 50% -10%, rgba(62,207,142,0.12), transparent),
+        radial-gradient(ellipse 50% 40% at 80% 110%, rgba(56,189,248,0.08), transparent),
+        var(--bg);
+    }
+    .hero-content { position: relative; z-index: 1; text-align: center; }
+
+    .hero-logos { display: flex; align-items: center; justify-content: center; gap: 28px; margin-bottom: 36px; }
+    .logo-mark { display: flex; align-items: center; gap: 10px; padding: 10px 20px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); }
+    .logo-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; color: #fff; }
+    .logo-text { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
+    .logo-x { font-size: 24px; color: var(--text-3); font-weight: 200; }
+
+    .hero-title { font-family: var(--font-display); font-size: clamp(46px, 6.5vw, 80px); font-weight: 400; line-height: 1.05; margin-bottom: 20px; }
+    .hero-title em { font-style: italic; background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .hero-sub { font-size: 19px; color: var(--text-2); font-weight: 300; max-width: 560px; margin: 0 auto 28px; line-height: 1.55; }
+
+    .badge { display: inline-flex; align-items: center; gap: 8px; padding: 7px 18px; border-radius: 100px; background: var(--green-dim); border: 1px solid rgba(62,207,142,0.18); font-size: 13px; font-weight: 500; color: var(--green); }
+    .badge::before { content: ''; width: 6px; height: 6px; background: var(--green); border-radius: 50%; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+    /* === STAT ROW === */
+    .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; width: 100%; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 24px; text-align: center; position: relative; overflow: hidden; }
+    .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+    .stat-card:nth-child(1)::before { background: var(--grad); }
+    .stat-card:nth-child(2)::before { background: var(--grad-warm); }
+    .stat-card:nth-child(3)::before { background: linear-gradient(135deg, #a78bfa, #38bdf8); }
+    .stat-num { font-family: var(--font-display); font-size: clamp(36px, 4.5vw, 56px); font-weight: 400; line-height: 1; margin-bottom: 6px; }
+    .stat-label { font-size: 13px; color: var(--text-2); }
+
+    /* === FEATURE CARDS (BIG) === */
+    .feature-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; width: 100%; }
+    .feature-big {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 36px;
+      position: relative; overflow: hidden; transition: border-color 0.3s, transform 0.3s;
+    }
+    .feature-big:hover { border-color: var(--green); transform: translateY(-3px); }
+    .feature-big .f-icon { font-size: 36px; margin-bottom: 20px; display: block; }
+    .feature-big h3 { font-family: var(--font-display); font-size: 28px; font-weight: 400; margin-bottom: 12px; }
+    .feature-big h3 em { font-style: italic; }
+    .feature-big p { font-size: 15px; color: var(--text-2); line-height: 1.55; margin-bottom: 16px; }
+    .feature-big .f-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+    .feature-big .f-list li { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--text); }
+    .feature-big .f-list li::before { content: ''; width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .feature-big:first-child .f-list li::before { background: var(--amber); }
+    .feature-big:last-child .f-list li::before { background: var(--purple); }
+    .feature-big .f-tag {
+      display: inline-block; padding: 4px 12px; border-radius: 100px; font-size: 11px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 16px;
+    }
+    .f-tag.amber { background: var(--amber-dim); color: var(--amber); }
+    .f-tag.purple { background: var(--purple-dim); color: var(--purple); }
+
+    .feature-big::after {
+      content: ''; position: absolute; bottom: -60px; right: -60px;
+      width: 180px; height: 180px; border-radius: 50%; opacity: 0.06;
+    }
+    .feature-big:first-child::after { background: var(--amber); }
+    .feature-big:last-child::after { background: var(--purple); }
+
+    /* === CTA === */
+    .cta-card {
+      background: linear-gradient(135deg, rgba(62,207,142,0.06), rgba(56,189,248,0.06));
+      border: 1px solid rgba(62,207,142,0.18); border-radius: 20px;
+      padding: 44px 56px; text-align: center; max-width: 720px;
+    }
+    .cta-title { font-family: var(--font-display); font-size: 38px; margin-bottom: 14px; }
+    .cta-title span { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .cta-text { font-size: 17px; color: var(--text-2); margin-bottom: 28px; line-height: 1.55; }
+    .cta-row { display: flex; justify-content: center; gap: 36px; }
+    .cta-col { text-align: center; }
+    .cta-col .name { font-size: 15px; font-weight: 600; margin-bottom: 2px; }
+    .cta-col .role { font-size: 12px; color: var(--text-3); margin-bottom: 4px; }
+    .cta-col .email { font-size: 13px; color: var(--green); }
+
+    /* === NAV === */
+    .slide-counter { position: fixed; bottom: 22px; right: 28px; font-size: 13px; color: var(--text-3); z-index: 100; font-variant-numeric: tabular-nums; }
+    .nav-hint { position: fixed; bottom: 22px; left: 28px; font-size: 11px; color: var(--text-3); z-index: 100; opacity: 0.5; }
+    .nav-arrows { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 100; }
+    .nav-btn {
+      width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border);
+      background: var(--surface); color: var(--text); display: flex; align-items: center;
+      justify-content: center; cursor: pointer; transition: all 0.2s; font-size: 14px;
+    }
+    .nav-btn:hover { border-color: var(--green); background: var(--green-dim); }
+
+    /* === ANIMATIONS === */
+    .slide.active .el { animation: fadeUp 0.5s ease both; }
+    .slide.active .el:nth-child(1) { animation-delay: 0.08s; }
+    .slide.active .el:nth-child(2) { animation-delay: 0.16s; }
+    .slide.active .el:nth-child(3) { animation-delay: 0.24s; }
+    .slide.active .el:nth-child(4) { animation-delay: 0.32s; }
+    .slide.active .el:nth-child(5) { animation-delay: 0.40s; }
+
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+
+    /* === RESPONSIVE === */
+    @media (max-width: 860px) {
+      .slide { padding: 36px 24px; }
+      .stat-row { grid-template-columns: 1fr; }
+      .feature-row { grid-template-columns: 1fr; }
+      .cta-row { flex-direction: column; gap: 16px; }
+      .nav-arrows { display: none; }
+    }
+
+    /* === PRINT === */
+    @media print {
+      .slide { page-break-after: always; height: 100vh; opacity: 1 !important; transform: none !important; position: relative; pointer-events: auto; }
+      .progress-bar, .slide-counter, .nav-hint, .nav-arrows { display: none; }
+      .el { opacity: 1 !important; transform: none !important; animation: none !important; }
+      body { overflow: visible; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+
+<!-- ========== SLIDE 1: TITLE ========== -->
+<div class="slide active" data-notes="Opening slide. Introduce the partnership concept briefly.">
+  <div class="hero-bg"></div>
+  <div class="hero-content">
+    <div class="hero-logos el">
+      <div class="logo-mark">
+        <div class="logo-icon" style="background: linear-gradient(135deg, #1a9553, #3ecf8e);">CF</div>
+        <div class="logo-text">CliqueFin</div>
+      </div>
+      <div class="logo-x">&times;</div>
+      <div class="logo-mark">
+        <div class="logo-icon" style="background: linear-gradient(135deg, #2D8CCA, #86BE41);">MM</div>
+        <div class="logo-text">MyMoolah</div>
+      </div>
+    </div>
+    <h1 class="hero-title el">Creating a <em>Digital World</em><br>for All</h1>
+    <p class="hero-sub el">Expanding MyMoolah's service range through CliqueFin's 200,000+ retail network &mdash; bringing cash-out at retail and loyalty rewards to the mass market.</p>
+    <div class="badge el">Partnership Introduction &mdash; April 2026</div>
+  </div>
+</div>
+
+<!-- ========== SLIDE 2: CLIQUEFIN AT A GLANCE ========== -->
+<div class="slide" data-notes="Quick overview of CliqueFin — who they are and why they matter. Keep it brief, focus on the numbers.">
+  <div class="slide-inner">
+    <div class="label el">CliqueFin at a Glance</div>
+    <h2 class="slide-title el">South Africa's <em>Cash-to-Digital</em> Bridge</h2>
+    <p class="slide-sub el">CliqueFin builds social impact platforms that connect cash consumers to the digital economy &mdash; via OTT Vouchers, LAYAWAY savings, and 200,000+ retail outlets nationwide.</p>
+    <div class="stat-row el">
+      <div class="stat-card">
+        <div class="stat-num" style="color: var(--green);" data-target="2" data-suffix="M+ users">0</div>
+        <div class="stat-label">Active consumers on the platform</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" style="color: var(--amber);" data-target="200" data-suffix="K+ stores">0</div>
+        <div class="stat-label">Retail outlets across South Africa</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" style="color: var(--blue);" data-target="3" data-suffix="K+/day">0</div>
+        <div class="stat-label">New users joining daily</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== SLIDE 3: WHAT MYMOOLAH GAINS ========== -->
+<div class="slide" data-notes="The core value slide. Two clear opportunities: (1) Cash-out at retail via OTT's 200K+ network, and (2) a comprehensive loyalty programme tapping into CliqueFin's OTT4Me rewards engine and consumer base.">
+  <div class="slide-inner">
+    <div class="label el">The Opportunity for MyMoolah</div>
+    <h2 class="slide-title el">Two <em>Game-Changing</em> Capabilities</h2>
+    <div class="feature-row el">
+
+      <div class="feature-big">
+        <span class="f-tag amber">New Capability</span>
+        <span class="f-icon">&#127978;</span>
+        <h3>Cash-Out <em>at Retail</em></h3>
+        <p>Enable MyMoolah wallet users to withdraw cash at any of CliqueFin's 200,000+ retail locations &mdash; spaza shops, tuck shops, Shoprite, Pick n Pay, Makro, and more.</p>
+        <ul class="f-list">
+          <li>Withdraw wallet balance at neighbourhood stores</li>
+          <li>No ATM queues, no bank card needed</li>
+          <li>Cash within walking distance of home or work</li>
+          <li>Reduces cost of cash access for low-income users</li>
+          <li>Boosts SME foot traffic and local liquidity</li>
+        </ul>
+      </div>
+
+      <div class="feature-big">
+        <span class="f-tag purple">New Capability</span>
+        <span class="f-icon">&#127942;</span>
+        <h3>Loyalty <em>Network Programme</em></h3>
+        <p>Plug MyMoolah into CliqueFin's OTT4Me rewards engine &mdash; turning every transaction into points, entries, and engagement across the platform.</p>
+        <ul class="f-list">
+          <li>Earn rewards on VAS, P2P, and bill payments</li>
+          <li>Points redeemable across partner network</li>
+          <li>Gamified engagement to drive retention</li>
+          <li>Rich consumer data insights for personalisation</li>
+          <li>Tap into 2M+ existing loyalty participants</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ========== SLIDE 4: NEXT STEPS ========== -->
+<div class="slide" data-notes="Clear, simple call to action. Let's talk.">
+  <div class="slide-inner">
+    <div class="label el">Next Steps</div>
+    <div class="cta-card el">
+      <h2 class="cta-title">Let's <span>Build Together</span></h2>
+      <p class="cta-text">200,000+ retail cash-out points and a proven loyalty network &mdash; ready to integrate with MyMoolah's banking-grade treasury platform. One API, millions of consumers.</p>
+      <div class="cta-row">
+        <div class="cta-col">
+          <div class="name">CliqueFin</div>
+          <div class="role">Strategic Partnerships</div>
+          <div class="email">info@cliquefin.com</div>
+        </div>
+        <div class="cta-col">
+          <div class="name">MyMoolah</div>
+          <div class="role">API &amp; Integration</div>
+          <div class="email">api-mm.mymoolah.africa</div>
+        </div>
+      </div>
+    </div>
+    <p style="font-size: 12px; color: var(--text-3); margin-top: 4px;" class="el">&copy; 2026 CliqueFin &times; MyMoolah Treasury Platform &mdash; Confidential</p>
+  </div>
+</div>
+
+<!-- Nav -->
+<div class="slide-counter" id="slideCounter">1 / 4</div>
+<div class="nav-hint">Arrow keys or click &bull; F for fullscreen</div>
+<div class="nav-arrows">
+  <button class="nav-btn" onclick="prevSlide()" aria-label="Previous">&#8592;</button>
+  <button class="nav-btn" onclick="nextSlide()" aria-label="Next">&#8594;</button>
+</div>
+
+<script>
+(function() {
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  let cur = 0;
+
+  const bar = document.getElementById('progressFill');
+  const counter = document.getElementById('slideCounter');
+
+  function update() {
+    bar.style.width = ((cur + 1) / total * 100) + '%';
+    counter.textContent = (cur + 1) + ' / ' + total;
+  }
+
+  function go(i) {
+    if (i < 0 || i >= total || i === cur) return;
+    slides[cur].classList.remove('active');
+    slides[cur].classList.add('exit-left');
+    setTimeout(() => slides[cur === 0 ? 0 : cur].classList.remove('exit-left'), 550);
+    const prev = cur;
+    cur = i;
+    slides[cur].classList.add('active');
+    update();
+    counters(slides[cur]);
+  }
+
+  window.nextSlide = () => go(cur + 1);
+  window.prevSlide = () => go(cur - 1);
+
+  function counters(slide) {
+    slide.querySelectorAll('[data-target]').forEach(el => {
+      if (el.dataset.done) return;
+      el.dataset.done = '1';
+      const t = parseInt(el.dataset.target), s = el.dataset.suffix || '', p = el.dataset.prefix || '';
+      let st;
+      function step(ts) {
+        if (!st) st = ts;
+        const pr = Math.min((ts - st) / 1200, 1);
+        const e = 1 - Math.pow(1 - pr, 3);
+        el.textContent = p + Math.floor(e * t).toLocaleString() + s;
+        if (pr < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    });
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); go(cur + 1); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') { e.preventDefault(); go(0); }
+    if (e.key === 'End') { e.preventDefault(); go(total - 1); }
+    if (e.key === 'f' || e.key === 'F') {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
+      else document.exitFullscreen();
+    }
+  });
+
+  let tx = 0;
+  document.addEventListener('touchstart', e => { tx = e.changedTouches[0].screenX; });
+  document.addEventListener('touchend', e => {
+    const d = tx - e.changedTouches[0].screenX;
+    if (Math.abs(d) > 50) d > 0 ? go(cur + 1) : go(cur - 1);
+  });
+
+  document.querySelectorAll('.slide').forEach(s => {
+    s.addEventListener('click', e => {
+      if (e.target.closest('button, a')) return;
+      const r = s.getBoundingClientRect();
+      (e.clientX - r.left) > r.width * 0.5 ? go(cur + 1) : go(cur - 1);
+    });
+  });
+
+  update();
+  counters(slides[0]);
+})();
+</script>
+</body>
+</html>
