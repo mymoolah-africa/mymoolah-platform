@@ -42,8 +42,8 @@ function parseCSV(text: string): BeneficiaryRow[] {
   const nameIdx    = idx(['name', 'beneficiary_name', 'employee_name']);
   const accIdx     = idx(['account_number', 'account', 'acc_no', 'acc_number']);
   const branchIdx  = idx(['branch_code', 'branch', 'branch_no']);
-  const amountIdx  = idx(['amount', 'salary', 'wage', 'net_pay']);
-  const refIdx     = idx(['reference', 'ref', 'narrative']);
+  const amountIdx  = idx(['amount', 'salary', 'wage', 'net_pay', 'amount_(zar)', 'amount_zar']);
+  const refIdx     = idx(['reference', 'ref', 'narrative', 'payment_ref', 'payment_reference']);
   const empIdx     = idx(['employee_ref', 'employee_id', 'emp_id', 'emp_ref']);
   const bankIdx    = idx(['bank_name', 'bank']);
 

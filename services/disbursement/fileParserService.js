@@ -74,9 +74,9 @@ const COLUMN_MAP = {
   beneficiaryName: ['name', 'beneficiary_name', 'beneficiaryname', 'full_name', 'fullname'],
   accountNumber:   ['account_number', 'accountnumber', 'account', 'acc_no', 'accno'],
   branchCode:      ['branch_code', 'branchcode', 'branch', 'sort_code', 'sortcode'],
-  amount:          ['amount', 'payment_amount', 'paymentamount', 'salary'],
+  amount:          ['amount', 'payment_amount', 'paymentamount', 'salary', 'amount_(zar)', 'amount_zar', 'amount(zar)'],
   bankName:        ['bank_name', 'bankname', 'bank'],
-  reference:       ['reference', 'ref', 'payment_ref', 'paymentref'],
+  reference:       ['reference', 'ref', 'payment_ref', 'paymentref', 'payment_reference', 'paymentreference'],
   employeeRef:     ['employee_ref', 'employeeref', 'emp_ref', 'empref', 'emp_id', 'empid'],
 };
 
