@@ -3,7 +3,7 @@
 | Field | Detail |
 |---|---|
 | **Policy Title** | Information Security Policy |
-| **Version** | 1.0 |
+| **Version** | 1.1 |
 | **Effective Date** | March 2026 |
 | **Next Review** | March 2027 |
 | **Classification** | Confidential |
@@ -174,6 +174,8 @@ All application logs shall use structured JSON format. Logs must include: timest
 
 All authentication events, authorisation decisions, data access, and administrative actions shall be logged with immutable timestamps. Audit logs shall be retained for a minimum of five years in compliance with financial record-keeping requirements.
 
+**Withdrawal and cash-out flows:** Wallet debits for **cash withdrawal** (including eeziCash and EasyPay cash-out) are high-impact events. Logs shall record **non-PII** correlation identifiers (transaction IDs, idempotency keys, internal user IDs) sufficient for fraud and AML investigation. Full narrative flows for engineering and compliance review: `docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html` and `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md`.
+
 ### 10.3 Monitoring and Alerting
 
 GCP Cloud Monitoring dashboards shall track: API response times, error rates, database performance, and security events. Automated alerts shall be configured for: authentication failures exceeding threshold, rate limit breaches, WAF rule triggers, and system availability degradation.
@@ -252,6 +254,7 @@ Non-compliance with this policy may result in disciplinary action, including ter
 | Version | Date | Author | Changes |
 |---|---|---|---|
 | 1.0 | March 2026 | CISO / CTO | Initial policy creation. |
+| 1.1 | April 2026 | CISO / CTO | §10.2 withdrawal/cash-out audit logging expectations; hub reference for TPPP flows |
 
 ---
 

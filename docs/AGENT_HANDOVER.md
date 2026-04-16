@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-14  
-**Latest Feature**: **TPPP Withdrawal Flow Diagrams + Legal Correction (v2.97.5)** — Created comprehensive HTML flow-diagram document (`docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html`) covering all MyMoolah withdrawal/deposit channels (eeziCash, EFT, PayShap, EasyPay, MobileMart VAS) with ledger entries, regulatory cross-references, and role matrices. Drafted legal correction email to Standard Bank (Shree) correcting prior mischaracterisation of eeziCash as VAS voucher resale — reframed as wallet cash-withdrawal mechanism within TPPP/sponsor-bank framework. Print-to-PDF optimised.  
-**Document Version**: 2.97.5  
-**Session logs**: `docs/session_logs/2026-04-14_2200_tppp-withdrawal-flow-diagrams-legal.md`  
+**Last Updated**: 2026-04-16  
+**Latest Feature**: **TPPP withdrawals — policies, security, FAQ, KB hub (v2.97.7)** — Corrected **eeziCash** characterisation across MMTP docs: **wallet cash-withdrawal** under TPPP (not VAS voucher resale). Updated AML **POL-001 §9A**, sanctions **POL-003** (scope), transaction monitoring **POL-004 §5.2.6**, fraud **POL-005**, KYC **POL-002**, IS **POL-013**, compliance review **POL-018**, `policies/INDEX.md`, `docs/security.md`, `BANKING_GRADE_ARCHITECTURE.md`, `STANDARD_BANK_TPPP_BRIEF.md`, `README.md`, `PROJECT_STATUS.md`, `index.md`, `SETTLEMENTS.md`, `DEVELOPMENT_GUIDE.md`, `ZERO_SHORTCUTS_POLICY.md`, `FAQ_MASTER.md` §9, `AI_SUPPORT_SYSTEM.md`, `BANKING_GRADE_SUPPORT_SYSTEM.md`. New hub **`docs/WITHDRAWALS_COMPLIANCE_AND_KB.md`**. Builds on `docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html` (Apr 14).  
+**Document Version**: 2.97.7  
+**Session logs**: `docs/session_logs/2026-04-16_1430_tppp-withdrawal-docs-policy-kb-alignment.md` (this batch); prior `docs/session_logs/2026-04-14_2200_tppp-withdrawal-flow-diagrams-legal.md`; `docs/session_logs/2026-04-16_1200_find-skills-cursor-mmtp.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -47,7 +47,7 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 | Deploy | `docs/DEPLOYMENT_GUIDE.md`, `docs/archive/deployment/GCP_PRODUCTION_DEPLOYMENT.md` |
 | API contracts | `docs/API_DOCUMENTATION.md` |
 | Recent chat context | `docs/session_logs/` (2-3 most recent) |
-| Cursor skills inventory (20 skills) | `docs/CURSOR_SKILLS.md` |
+| Cursor skills inventory (21 skills) | `docs/CURSOR_SKILLS.md` |
 | Historical updates & integrations | `docs/archive/agent_handover_history.md` |
 | Extended rules (model selection, examples) | `docs/archive/CURSOR_RULES_EXTENDED.md` |
 | Docs archive map | `docs/DOCS_CONSOLIDATION_2026.md` |
@@ -58,6 +58,9 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 | VAS supplier failover architecture | `services/vasSupplierExecutor.js`, `services/supplierFailoverService.js`, `services/supplierCircuitBreaker.js` |
 | **Zapper API docs, SLA, QR test codes** | **Google Drive: https://drive.google.com/drive/folders/1cvXKEACgwbvZsp8A-8KPy8-q0QvWcVgh?usp=sharing** |
 | Zapper local integration docs | `integrations/zapper/ZAPPER_REFERENCE.md` |
+| **Withdrawals / eeziCash / TPPP (AML, monitoring, KB)** | `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md` + `docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html` + `docs/policies/INDEX.md` |
+| Security overview (incl. cash-out logging) | `docs/security.md` |
+| Sponsor TPPP brief (withdrawals section) | `docs/STANDARD_BANK_TPPP_BRIEF.md` |
 
 ---
 

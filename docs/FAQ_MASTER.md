@@ -1,6 +1,6 @@
 # MyMoolah Treasury Platform – Comprehensive FAQ Library
 
-_Last updated: 3 April 2026_
+_Last updated: 16 April 2026_
 
 This FAQ is the single source of truth for customer support, covering all live and developed features of the MyMoolah digital wallet. Sections are ordered by the most common customer enquiries. Update this document and regenerate the knowledge base whenever a new feature goes live.
 
@@ -218,7 +218,20 @@ A: Some voucher types allow in-wallet redemption which credits your balance. Che
 
 ---
 
-## 9. EasyPay Cash-Out
+## 9. EasyPay Cash-Out and other wallet withdrawals
+
+### 9a. eeziCash (Flash) — wallet cash withdrawal (not the same as eeziPay airtime)
+
+**Q: What is eeziCash?**
+A: **eeziCash** is a way to **withdraw cash from your MyMoolah wallet** at participating Flash retailers. You start the withdrawal in the app; your **wallet balance is debited first**, then you receive a **PIN or voucher code** that you use at the shop to **collect physical cash**. This is a **cash-out / withdrawal** service, not the same as buying **eeziPay / eeziAirtime** airtime or **eeziPower** electricity (those are VAS products with different redemption steps).
+
+**Q: Is eeziCash the same as buying a VAS voucher?**
+A: **No.** For regulatory and support purposes, eeziCash is treated as a **wallet cash withdrawal** under MyMoolah’s payment platform rules, not as “reselling” a VAS voucher. If you need technical or legal detail, MyMoolah’s internal documentation pack is `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md` and the printable flow diagrams are in `docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html`.
+
+**Q: How do I get help if eeziCash fails?**
+A: Note the date, time, amount, and any error message in the app. Do not share your full PIN in public channels. Contact support from your registered number so agents can trace the **wallet debit** and partner status.
+
+### 9b. EasyPay retail cash-out
 
 **Q: How do I cash out from my wallet?**
 A: EasyPay cash-out lets you withdraw cash at participating retail stores. In the app, go to "Cash Out" or "EasyPay," enter the amount, and receive a unique reference code. Take this code to a participating store (Shoprite, Checkers, Pick n Pay, Boxer, etc.) and ask the cashier to process an EasyPay payment.

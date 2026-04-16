@@ -1,14 +1,24 @@
 # MyMoolah Treasury Platform
 
-**Last Updated**: April 5, 2026  
-**Version**: 2.81.1 - Chart of Accounts + Electricity Supplier Comparison + Ledger Audit  
+**Last Updated**: April 16, 2026  
+**Version**: 2.97.7 - TPPP withdrawals + compliance/KB alignment (eeziCash)  
 **Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **CHART OF ACCOUNTS** ✅ **ELECTRICITY SUPPLIER COMPARISON** ✅ **LEDGER AUDIT** ✅ **CLOUD SCHEDULER** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **POPIA ID ENCRYPTION** ✅ **LANGCHAIN RAG AI** ✅ **PASA T-PPP BADGE**
 
-**Work in the last 7 days (Mar 30–Apr 5, 2026)**: **Apr 5** — Visual Chart of Accounts HTML/PDF; production audit analysis (R50 discrepancy found). **Apr 4** — Electricity commission-based supplier comparison live (ProductVariant routing, circuit breaker + failover, supplier-specific min amounts, dynamic frontend min/max). Deployed staging + production. **Apr 3** — Chart of Accounts documentation — canonical `docs/CHART_OF_ACCOUNTS.md` (28 accounts, 15 journal templates, 10 sections). Migration for 4 missing ledger accounts. **Apr 2** — Ledger audit complete build: new accounts (A Botes Loan, Voucher Clearing), backfill-v2 script, forward JE posting for VAS/deposits/referrals, solvency checks, scheduled recon via Cloud Scheduler, production full audit script. **Apr 1** — KYC verification fixes (raw SQL for user updates); rate limiters unified; referral payout migrated to Cloud Scheduler; commission config externalized to JSON. **Mar 30** — `v_best_offers` materialized view replaces 6 deprecated files + 3 tables; eeziPower distinguished from eeziAirtime; telecoms biller keyword fix. See `docs/CHANGELOG.md` for full entries.
+**Work in the last 7 days (Apr 10–Apr 16, 2026)**: **Apr 16** — Corporate policies, security architecture doc, FAQ, sponsor TPPP brief, and KB operator guides updated for **wallet cash withdrawals**: corrected **eeziCash** characterisation (wallet cash-out under TPPP, not VAS voucher resale), transaction monitoring typology **§5.2.6**, AML **§9A**, fraud scope, IS policy logging, compliance review scope. New hub `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md`. **Apr 14** — `docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html` + legal correction narrative (session log). Earlier: Chart of Accounts, electricity supplier comparison, ledger audit — see `docs/CHANGELOG.md`.
 
 ---
 
-## 🚀 **LATEST UPDATE: Chart of Accounts + Electricity Supplier Comparison + Ledger Audit (April 5, 2026)**
+## 🚀 **LATEST UPDATE: TPPP withdrawals — policies, security, FAQ, KB hub (April 16, 2026)**
+
+### **Withdrawals and eeziCash (regulatory + operational)**
+
+- **Hub:** `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md` — links AML (POL-001), transaction monitoring (POL-004), fraud (POL-005), KYC scope (POL-002), information security (POL-013), compliance review (POL-018), RAG/KB seeding guidance, and `FAQ_MASTER.md`.
+- **Flow diagrams (print/PDF):** `docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html`
+- **Sponsor brief:** `docs/STANDARD_BANK_TPPP_BRIEF.md` — wallet withdrawal section for Standard Bank / TPPP context
+
+---
+
+## 🚀 **PREVIOUS UPDATE: Chart of Accounts + Electricity Supplier Comparison + Ledger Audit (April 5, 2026)**
 
 ### **📋 Chart of Accounts (v2.80.0–v2.81.1)**
 - **Canonical CoA**: `docs/CHART_OF_ACCOUNTS.md` — 28 ledger accounts, 15 journal entry templates, 10 sections covering all product verticals

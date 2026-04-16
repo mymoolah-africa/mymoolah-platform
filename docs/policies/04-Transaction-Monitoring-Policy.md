@@ -3,7 +3,7 @@
 | Field              | Value                                         |
 |--------------------|-----------------------------------------------|
 | **Policy Title**   | Transaction Monitoring & Suspicious Activity Reporting Policy |
-| **Version**        | 1.0                                           |
+| **Version**        | 1.1                                           |
 | **Effective Date** | March 2026                                    |
 | **Next Review**    | March 2027                                    |
 | **Classification** | Confidential                                  |
@@ -100,6 +100,9 @@ Funds moving through a circular path — deposited to wallet A, transferred to w
 **5.2.5 VAS Abuse — Airtime as Value Transfer**
 Abnormal volumes of airtime or data purchases that exceed reasonable personal consumption, particularly when purchased for multiple distinct mobile numbers. This typology exploits airtime as a de facto value transfer mechanism. Detection rules flag users exceeding configurable daily/weekly VAS purchase thresholds.
 
+**5.2.6 Wallet cash-out — eeziCash / partner-facilitated cash collection (distinct from VAS)**
+Outbound wallet debits that result in **cash collection** at retail (including **eeziCash** via Flash) shall **not** be modelled as VAS voucher resale for monitoring purposes. Rules shall treat these events as **cash-out / withdrawal** activity: velocity of withdrawals, rapid deposit-to-cash-out sequences, structuring around statutory cash thresholds, and correlation with PayShap or NFC deposit typologies. Misclassification as “VAS only” obscures layering and money-mule behaviour. Regulatory characterisation and flow references: `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md`, `docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html`.
+
 ### 5.3 PayShap RTP-Specific Monitoring
 
 - **High-frequency RTP initiation**: Users initiating an unusual number of PayShap RTP requests within a short window, potentially indicative of testing or automated abuse.
@@ -159,7 +162,7 @@ Reports must be filed within the prescribed period. Where a transaction is in pr
 
 ### 7.2 Cash Threshold Reporting Under FICA S28A
 
-All cash transactions at or above R24,999.99 (or the equivalent in foreign currency) are reported to the FIC via an automated CTR process. This includes NFC-initiated cash deposits processed through the MyMoolah platform.
+All cash transactions at or above R24,999.99 (or the equivalent in foreign currency) are reported to the FIC via an automated CTR process. This includes NFC-initiated cash deposits processed through the MyMoolah platform and **qualifying cash events** arising from **authorised retail cash-out / cash collection** arrangements (including partner-facilitated withdrawals), where statutory thresholds and partner reporting obligations apply. Operational implementation shall remain aligned with POL-001 (AML/CFT) and sponsor-bank requirements.
 
 ### 7.3 goAML Filing Procedure
 
@@ -232,6 +235,7 @@ All compliance staff receive training on:
 | Version | Date | Author | Change Description |
 |---------|------|--------|--------------------|
 | 1.0 | March 2026 | Chief Compliance Officer | Initial policy creation |
+| 1.1 | April 2026 | Chief Compliance Officer | §5.2.6 wallet cash-out (eeziCash) typology; CTR text extended for partner cash-out |
 
 ---
 

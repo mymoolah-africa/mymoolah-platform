@@ -3,7 +3,7 @@
 | Field | Detail |
 |---|---|
 | **Policy Title** | Know Your Customer & Customer Due Diligence (KYC/CDD) Policy |
-| **Version** | 2.0 |
+| **Version** | 2.1 |
 | **Effective Date** | March 2026 |
 | **Next Review Date** | March 2027 |
 | **Classification** | Confidential |
@@ -26,7 +26,7 @@ This policy applies to:
 
 - All prospective and existing customers of the MyMoolah platform, including individual consumers, business entities, and agent accounts.
 - All channels through which customer onboarding occurs (mobile application at wallet.mymoolah.africa, API integrations).
-- All MyMoolah products requiring identity verification, including digital wallet, VAS, PayShap, USDC cross-border transfers, and NFC deposits.
+- All MyMoolah products requiring identity verification, including digital wallet, **wallet-initiated cash withdrawals** (eeziCash / Flash, EasyPay retail cash-out), VAS, PayShap, USDC cross-border transfers, and NFC deposits.
 - All employees, contractors, and third-party service providers involved in the customer identification and verification process.
 - The entire customer lifecycle — from onboarding through ongoing monitoring to relationship termination.
 
@@ -347,6 +347,7 @@ In accordance with FICA Sections 22–25:
 |---|---|---|---|
 | 1.0 | March 2026 | Chief Compliance Officer | Initial policy creation. |
 | 2.0 | March 2026 | Chief Compliance Officer | Replaced Bronze/Silver/Gold/Platinum tiers with Tier 0/1/2 model. Added USSD channel (Tier 0). Defined explicit transaction limits per tier. Added FIC Exemption 17 regulatory basis. Added tier upgrade paths. Limits enforced in code via `config/kycTierLimits.js`. |
+| 2.1 | April 2026 | Chief Compliance Officer | Scope extended to wallet cash-out channels (eeziCash/Flash, EasyPay); cross-ref `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md`. |
 
 ---
 

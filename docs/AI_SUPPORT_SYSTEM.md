@@ -1,12 +1,17 @@
 # MyMoolah AI Support System
 
-**Last Updated**: 2026-03-14  
-**Version**: 3.0.0 - LangChain RAG (Simplified)  
+**Last Updated**: 2026-04-16  
+**Version**: 3.1.0 - Withdrawal KB alignment (eeziCash / TPPP)  
 **Status**: ✅ **LIVE** — Clean ~250-line RAG service replaces legacy 4,000+ line pattern-matching stack
 
 ## 🚀 Overview
 
 The MyMoolah AI Support System uses **LangChain RAG** (Retrieval-Augmented Generation) for semantic search over the knowledge base, powered by GPT-4o. Multi-language (11 SA languages), conversational memory, and no pattern matching — answers come from your knowledge base via semantic similarity.
+
+### **2026-04-16 — Withdrawals knowledge alignment**
+- Canonical customer wording: **`docs/FAQ_MASTER.md`** §9 (eeziCash vs EasyPay vs eeziPay / eeziPower).
+- Compliance hub for agents and seed scripts: **`docs/WITHDRAWALS_COMPLIANCE_AND_KB.md`** (AML, monitoring, security logging, suggested KB categories).
+- **eeziCash** must be described in KB entries as **wallet cash withdrawal** (TPPP / sponsor-bank context); **not** “VAS voucher resale.” After adding or editing `ai_knowledge_base` rows for withdrawals, run **`npm run embed:kb`** (Codespaces, UAT proxy) so RAG embeddings match the new text.
 
 ### **2026-03-14 — LangChain RAG Rebuild**
 - Replaced `bankingGradeSupportService.js` (2,276 lines) + `aiSupportService.js` (2,100 lines) with `ragService.js` (~250 lines)

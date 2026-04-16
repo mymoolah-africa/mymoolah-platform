@@ -1,12 +1,17 @@
 # 🏦 Banking-Grade Support System
 
-**Last Updated**: March 5, 2026  
-**Version**: 2.4.41 - eeziPay Redemption Knowledge Base  
+**Last Updated**: April 16, 2026  
+**Version**: 2.4.42 - Withdrawals / eeziCash TPPP KB alignment  
 **Status**: ✅ **SMS WORKING** ✅ **KB UPDATED** ✅ **OTP SUPPORT** ✅ **REFERRAL SUPPORT** ✅ **EEZIPAY HOW TO** ✅ **MOJALOOP COMPLIANT**
 
 ## Overview
 
 The MyMoolah Banking-Grade Support System is a **production-ready, enterprise-level AI support platform** designed for **millions of users** with **Mojaloop & ISO20022 compliance**. This system replaces the previous demo implementation with a **banking-grade architecture** that meets global financial standards.
+
+### **April 16, 2026 - Withdrawals and eeziCash (TPPP) knowledge base alignment**
+- **FAQ:** `docs/FAQ_MASTER.md` §9 — distinguishes **eeziCash** (wallet **cash withdrawal** via Flash; wallet debited before cash collection) from **eeziPay / eeziAirtime / eeziPower** (VAS redemption products).
+- **Compliance hub:** `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md` — AML, transaction monitoring, fraud, IS logging, KB seeding guidance; links `docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html`.
+- **KB / RAG:** New or updated rows in `ai_knowledge_base` for withdrawals must follow the above characterisation; regenerate embeddings via `npm run embed:kb` after seeding.
 
 ### **March 5, 2026 - eeziPay Redemption Knowledge Base**
 Added 5 How To / troubleshooting entries for eeziPay (eeziAirtime/eeziData) voucher redemption:

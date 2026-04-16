@@ -1,7 +1,7 @@
 # MyMoolah Treasury Platform - Development Guide
 
-**Last Updated**: April 5, 2026  
-**Version**: 2.81.1 - Chart of Accounts + Electricity Supplier Comparison + Ledger Audit  
+**Last Updated**: April 16, 2026  
+**Version**: 2.97.7 - TPPP withdrawal docs + policy alignment  
 **Status**: ✅ **CLOUD BUILD DEPLOYS** ✅ **EEZIAIRTIME REDEMPTION UI** ✅ **EEZIPAY KB** ✅ **INTERNATIONAL AIRTIME PINLESS (AWAITING FLASH)** ✅ **EASYPAY STANDALONE VOUCHER** ✅ **RECONCILIATION LIVE** ✅ **REFERRAL SYSTEM LIVE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY** ✅ **CHART OF ACCOUNTS** ✅ **LEDGER AUDIT** ✅ **ELECTRICITY SUPPLIER COMPARISON** ✅ **CLOUD SCHEDULER**
 
 ---
@@ -14,6 +14,7 @@ Welcome to the MyMoolah Treasury Platform development guide! This platform is bu
 - **Workspace rules**: `.cursor/rules/*.mdc` — always applied; non‑negotiables (workflow, git, DB helper, security).
 - **Skills**: `.agents/skills/**/SKILL.md` — read when the task matches (migrations, recon, Redis, UI patterns). See `docs/CURSOR_SKILLS.md`.
 - **Continuity**: `docs/CURSOR_2.0_RULES_FINAL.md`, `docs/AGENT_HANDOVER.md`, `docs/session_logs/`.
+- **Withdrawals / TPPP / eeziCash:** Engineering and support wording must match `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md` (wallet cash-out vs VAS). Flow diagrams: `docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html`.
 
 ### **Platform Architecture**
 - **Multi-Supplier Integration**: Unified product catalog across Flash, MobileMart, dtMercury, and Peach

@@ -1,6 +1,6 @@
 # MyMoolah Agent Rules - Cursor 2.0
 
-**Last Updated**: 2026-03-19  
+**Last Updated**: 2026-04-16  
 **Keep in sync**: Any rules added to Cursor Settings must also be added here.
 
 ---
@@ -174,6 +174,7 @@ Migrations: ALWAYS use `./scripts/run-migrations-master.sh [uat|staging]` — ne
 - Personal responses NEVER cached (POPIA compliance)
 - Self-learning: unknown questions auto-saved to KB as `isActive=false` for admin review
 - Embed KB: `npm run embed:kb` (run after adding new KB entries)
+- **Withdrawals / eeziCash wording:** KB and FAQ must follow `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md` and `docs/FAQ_MASTER.md` §9 — eeziCash = **wallet cash withdrawal** (TPPP), not VAS voucher resale.
 
 ---
 
@@ -198,6 +199,7 @@ This section must be maintained by every agent. Flag issues here so future agent
 | Figma restriction removed | Feb 2026 | Code is source of truth; agents edit `.tsx` freely |
 | Agent commits AND pushes to main | Feb 2026 | Streamlined workflow |
 | Cloud Build for deployments (not local Docker) | Mar 2026 | No Docker Desktop needed; faster build times |
+| TPPP withdrawal documentation pack (eeziCash legal fix) | Apr 2026 | Sponsor/PASA/regulator comms use wallet cash-out characterisation; hub `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md` + HTML flows |
 
 ### **Rule: Flag Tech Debt**
 When you identify complexity, duplication, or architectural risk — add it to the table above. Do NOT leave it undocumented for the next agent.

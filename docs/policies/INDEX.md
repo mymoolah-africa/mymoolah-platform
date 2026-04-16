@@ -1,6 +1,6 @@
 # MyMoolah Treasury Platform — Corporate Policy Framework
 
-**Version**: 1.0  
+**Version**: 1.1  
 **Effective Date**: March 2026  
 **Classification**: Confidential  
 **Approved By**: Board of Directors, MyMoolah (Pty) Ltd  
@@ -20,6 +20,14 @@ These policies are designed to satisfy — and where possible exceed — the req
 - **Industry Frameworks**: Mojaloop FSPIOP, PCI DSS Awareness, SOC 2 Type II Readiness, NIST Cybersecurity Framework
 
 All employees, contractors, directors, and third-party service providers acting on behalf of MyMoolah are bound by these policies.
+
+### Withdrawals, TPPP, and sponsor-bank alignment (April 2026)
+
+Wallet **cash withdrawals** (including **eeziCash** via Flash and **EasyPay** retail cash-out) are governed by the same FICA, POPIA, and NPS/TPPP obligations as the rest of the platform. The **regulatory characterisation** of eeziCash is a **wallet cash-withdrawal mechanism** (PIN = withdrawal credential), **not** VAS voucher resale. Operational and KB alignment:
+
+- **Hub:** [`WITHDRAWALS_COMPLIANCE_AND_KB.md`](../WITHDRAWALS_COMPLIANCE_AND_KB.md)  
+- **Flow diagrams (print/PDF):** [`integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html`](../integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html)  
+- **Policies updated in lockstep:** POL-001 (§9A), POL-002 (scope), POL-003 (scope), POL-004 (§5.2.6), POL-005 (scope + fraud table), POL-013 (§10.2), POL-018 (scope)
 
 ---
 

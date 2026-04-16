@@ -1,12 +1,16 @@
 # 🏦 Banking-Grade Architecture for MyMoolah
 
-**Last Updated**: April 5, 2026
-**Version**: 2.81.1 - Chart of Accounts + Ledger Audit + Electricity Supplier Comparison
+**Last Updated**: April 16, 2026
+**Version**: 2.97.7 - TPPP withdrawal documentation (eeziCash legal characterisation)
 **Status**: ✅ **PRODUCTION DB MIGRATED** ✅ **USDC DB-AGGREGATION ONLY (NO JS SUM)** ✅ **FLOAT MONITORING LIVE** ✅ **LEDGER INTEGRATION COMPLETE** ✅ **RECONCILIATION LIVE** ✅ **FLASH + MOBILEMART** ✅ **PEACH PAYMENTS INTEGRATED** ✅ **ZAPPER REVIEWED** ✅ **PRODUCTION READY** ✅ **CHART OF ACCOUNTS (28 ACCOUNTS)** ✅ **AUTOMATED LEDGER AUDIT** ✅ **CLOUD SCHEDULER** ✅ **ELECTRICITY SUPPLIER COMPARISON**
 
 ## Overview
 
 This document outlines the banking-grade architecture implemented for MyMoolah to handle **millions of customers and transactions** with enterprise-level performance, security, and scalability. The platform now includes **USDC Send with full API validation and DB-only aggregation for limits** (February 2026), **complete Peach Payments integration**, **comprehensive Zapper integration review**, and a **world-class automated reconciliation system** for multi-supplier transaction reconciliation (MobileMart + Flash configured, January 14, 2026).
+
+### TPPP wallet withdrawals (April 2026)
+
+Outbound wallet flows include **cash withdrawal** rails (**eeziCash** / Flash retail cash collection, **EasyPay** retail cash-out), **electronic transfers** (EFT, PayShap), and **VAS** purchases. Architecture and compliance documentation distinguish **eeziCash** as a **wallet cash-withdrawal mechanism** under the TPPP/sponsor-bank framework (wallet debit precedes withdrawal credential; PIN is not VAS product resale). See `docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html`, `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md`, and `docs/STANDARD_BANK_TPPP_BRIEF.md`.
 
 ### Double-Entry Ledger & Chart of Accounts
 - **28 live ledger accounts** across 6 categories: Assets, Liabilities, Revenue, Expenses, Clearing/Suspense

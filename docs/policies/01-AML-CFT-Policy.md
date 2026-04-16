@@ -3,7 +3,7 @@
 | Field | Detail |
 |---|---|
 | **Policy Title** | Anti-Money Laundering & Counter-Terrorism Financing (AML/CFT) Policy |
-| **Version** | 1.0 |
+| **Version** | 1.1 |
 | **Effective Date** | March 2026 |
 | **Next Review Date** | March 2027 |
 | **Classification** | Confidential |
@@ -16,7 +16,7 @@
 
 This policy establishes the framework through which MyMoolah (Pty) Ltd ("MyMoolah") prevents, detects, and reports money laundering (ML) and terrorism financing (TF) activities across all products, services, and channels. It ensures compliance with the Financial Intelligence Centre Act 38 of 2001 (FICA), as amended, the Prevention and Combating of Corrupt Activities Act 12 of 2004 (PRECCA), and aligns with the Financial Action Task Force (FATF) 40 Recommendations.
 
-MyMoolah operates as a Mojaloop-compliant digital wallet and payment platform under sponsorship of Standard Bank of South Africa. All AML/CFT obligations apply to every transaction processed through the MyMoolah platform, including digital wallet operations, value-added services (VAS), PayShap real-time payments, USDC cross-border transfers via VALR, and NFC deposit services.
+MyMoolah operates as a Mojaloop-compliant digital wallet and payment platform under sponsorship of Standard Bank of South Africa. All AML/CFT obligations apply to every transaction processed through the MyMoolah platform, including digital wallet operations, **wallet-initiated cash withdrawals** (including partner-facilitated cash collection such as eeziCash / Flash and EasyPay retail cash-out), value-added services (VAS), PayShap real-time payments, USDC cross-border transfers via VALR, and NFC deposit services.
 
 ---
 
@@ -28,7 +28,7 @@ This policy applies to:
 - All products and services offered through the MyMoolah platform (api-mm.mymoolah.africa, wallet.mymoolah.africa).
 - All customer segments, including individual consumers, business accounts, and agent networks.
 - All jurisdictions in which MyMoolah operates or facilitates transactions, with particular attention to South African domestic operations and cross-border USDC/stablecoin corridors.
-- All third-party service providers, including VALR (USDC exchange), Standard Bank (sponsor bank), and VAS suppliers.
+- All third-party service providers, including VALR (USDC exchange), Standard Bank (sponsor bank), VAS suppliers, and **cash-out / cash collection partners** (e.g. Flash for eeziCash, EasyPay for retail cash-out).
 
 ---
 
@@ -140,7 +140,7 @@ There is no monetary threshold for STRs. The obligation arises upon reasonable s
 
 ### 6.2 Cash Threshold Reports (CTRs) — FICA S28
 
-Any single cash transaction or aggregated cash transactions by the same person within a 24-hour period reaching or exceeding R24,999.99 shall be reported to the FIC via goAML within the prescribed period. For MyMoolah, this applies primarily to NFC cash deposit transactions.
+Any single cash transaction or aggregated cash transactions by the same person within a 24-hour period reaching or exceeding R24,999.99 shall be reported to the FIC via goAML within the prescribed period. For MyMoolah, this applies to **NFC cash deposit** transactions and to **qualifying cash or cash-equivalent events** processed through authorised retail cash-out channels (including partner-facilitated cash collection), in line with FICA thresholds and operational procedures agreed with the sponsor bank and partners. Operational routing of CTRs must remain consistent with `docs/policies/04-Transaction-Monitoring-Policy.md`.
 
 ### 6.3 Terrorist Property Reports (TPRs) — FICA S28A
 
@@ -179,9 +179,25 @@ In accordance with FICA Sections 22–25:
 ## 9. Staff Training & Awareness
 
 - All employees shall receive AML/CFT training within 30 days of onboarding and annually thereafter.
-- Training shall cover: ML/TF typologies relevant to digital wallets and crypto-assets, suspicious activity indicators, reporting obligations under FICA, tipping-off prohibitions, and sanctions compliance.
+- Training shall cover: ML/TF typologies relevant to digital wallets and crypto-assets, **wallet cash withdrawals vs VAS purchases** (including the regulatory characterisation of eeziCash as a wallet cash-withdrawal mechanism under the TPPP framework — not VAS voucher resale), suspicious activity indicators, reporting obligations under FICA, tipping-off prohibitions, and sanctions compliance.
 - Targeted training shall be provided to customer-facing, compliance, and technology staff based on their role-specific exposure.
 - Training completion records shall be maintained and available for regulatory inspection.
+
+---
+
+## 9A. Wallet cash withdrawals — eeziCash (Flash) and TPPP context
+
+### 9A.1 Regulatory characterisation
+
+The **eeziCash** service, delivered with Flash as retail cash collection partner, is a **wallet cash-withdrawal** capability: the customer’s **wallet is debited before** a withdrawal credential (e.g. PIN) is issued for use at authorised retail to **collect cash**. The credential is a **withdrawal instrument**, not a VAS airtime/data/electricity product sold as retail VAS by MyMoolah.
+
+All **external communications** to the sponsor bank, PASA, regulators, and partners shall use this characterisation. The prior mischaracterisation of eeziCash as “VAS voucher resale” is **withdrawn** for compliance and legal purposes. Cross-reference: `docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html`, `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md`, session log `docs/session_logs/2026-04-14_2200_tppp-withdrawal-flow-diagrams-legal.md`.
+
+### 9A.2 AML/CFT implications
+
+- **Risk assessment**: Wallet cash-out channels attract typologies common to cash (structuring, rapid in-out, money mules). They must be scored distinctly from **VAS purchase** abuse (e.g. airtime-as-value-transfer) in the enterprise ML/TF risk assessment.
+- **Monitoring**: Outbound wallet debits for cash collection must be included in transaction monitoring and alert rules per POL-004.
+- **Record keeping**: Double-entry ledger records, partner references, and audit trails for withdrawal flows shall be retained per FICA S22–25 and retrievable for FIC / sponsor-bank examination.
 
 ---
 
@@ -219,7 +235,10 @@ Any employee who knowingly or negligently fails to comply with this policy shall
 | Prevention and Combating of Corrupt Activities Act 12 of 2004 (PRECCA) | Corruption and money laundering offences. |
 | Prevention of Organised Crime Act 121 of 1998 (POCA) | ML offences — S4 (ML), S5 (assisting), S6 (acquisition/possession). |
 | Protection of Constitutional Democracy against Terrorist and Related Activities Act 33 of 2004 (POCDATARA) | TF offences and designated persons. |
-| National Payment System Act 78 of 1998 (NPS Act) | Payment system regulation. |
+| National Payment System Act 78 of 1998 (NPS Act) | Payment system regulation; e-money / payment instruction context for wallet operations and TPPP. |
+| SARB — Electronic Money in South Africa (Position Paper NPS 01/2009) | E-money customer funds safeguarding and wallet/electronic-store-of-value context. |
+| Banks Act 94 of 1990 | Sponsor bank relationship and prudential context for TPPP arrangements. |
+| PASA TPPP Framework | Third-Party Payment Provider registration and conduct (where applicable). |
 | FATF 40 Recommendations | International AML/CFT standards. |
 | Basel Committee — Sound Management of Risks related to ML/TF | Banking-grade risk management. |
 | FIC Guidance Note 7 | Guidance on suspicious transaction reporting. |
@@ -232,6 +251,7 @@ Any employee who knowingly or negligently fails to comply with this policy shall
 | Version | Date | Author | Changes |
 |---|---|---|---|
 | 1.0 | March 2026 | Chief Compliance Officer | Initial policy creation. |
+| 1.1 | April 2026 | Chief Compliance Officer | Wallet cash withdrawals in scope; eeziCash TPPP characterisation (§9A); CTR text extended; training + regulatory references; hub `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md`. |
 
 ---
 

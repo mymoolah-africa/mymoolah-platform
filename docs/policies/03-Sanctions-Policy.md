@@ -3,7 +3,7 @@
 | Field | Detail |
 |---|---|
 | **Policy Title** | Sanctions Screening & Compliance Policy |
-| **Version** | 1.0 |
+| **Version** | 1.1 |
 | **Effective Date** | March 2026 |
 | **Next Review Date** | March 2027 |
 | **Classification** | Confidential |
@@ -25,7 +25,7 @@ Given MyMoolah's USDC cross-border capability (via VALR) and MoolahMove internat
 This policy applies to:
 
 - All customers, counterparties, and beneficial owners of MyMoolah accounts.
-- All transactions processed through the MyMoolah platform, including domestic wallet transfers, PayShap real-time payments, VAS purchases, NFC deposits, USDC cross-border transfers, and MoolahMove international payments.
+- All transactions processed through the MyMoolah platform, including domestic wallet transfers, **wallet-initiated cash withdrawals** (eeziCash / Flash, EasyPay retail cash-out), PayShap real-time payments, VAS purchases, NFC deposits, USDC cross-border transfers, and MoolahMove international payments.
 - All employees, contractors, and third-party service providers.
 - All jurisdictions in which MyMoolah operates or to which it facilitates fund flows.
 - Both the originator and beneficiary of every transaction, where identifiable.
@@ -353,6 +353,7 @@ The following indicators, individually or in combination, may suggest attempted 
 | Version | Date | Author | Changes |
 |---|---|---|---|
 | 1.0 | March 2026 | Chief Compliance Officer | Initial policy creation. |
+| 1.1 | April 2026 | Chief Compliance Officer | Scope clarifies cash-out channels; screening applies to all outbound wallet legs including partner-facilitated cash |
 
 ---
 

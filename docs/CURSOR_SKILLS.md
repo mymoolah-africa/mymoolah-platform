@@ -32,11 +32,12 @@ Skills extend Cursor Agent with specialized knowledge for banking-grade, Mojaloo
 | **robust-financial-forms** | .agents/skills/ (project) | Type-safe financial data entry, KYC forms |
 | **background-jobs-and-cron** | .agents/skills/ (project) | Idempotent Node.js cron jobs for reconciliation |
 | **local-ai-and-ocr-pipelines** | .agents/skills/ (project) | ML/OCR pipelines for KYC document processing |
+| **find-skills** | vercel-labs/skills | Discover/install skills from the open registry; **MMTP-tuned** copy prefers `docs/CURSOR_SKILLS.md` + `.agents/skills/` before external search; use `npx skills add ... --agent cursor -y` |
 
 ## Installation Location
 
 - **All skills**: `.agents/skills/` (single parent directory)
-- **CLI-managed**: 7 skills via `npx skills add` (api-design-principles, postgresql-optimization, etc.)
+- **CLI-managed**: 8 skills via `npx skills add` (api-design-principles, postgresql-optimization, find-skills, etc.)
 - **Project skill**: `frontend-design` in `.agents/skills/` (custom, not in registry)
 - **Lock file**: `skills-lock.json` (tracks CLI-installed skills)
 
@@ -50,7 +51,7 @@ npx skills update
 
 ```bash
 npx skills find <keyword>      # Search
-npx skills add <owner/repo> --skill <name> --agent cursor -y
+npx skills add <owner/repo> --skill <name> --agent cursor -y   # Always pass --agent cursor -y to avoid interactive agent selection
 ```
 
 ## Alignment with MMTP Rules
@@ -80,4 +81,4 @@ Before creating a new skill, sweep `.agents/skills/` to avoid duplicates:
 ```bash
 ls .agents/skills/
 ```
-Total installed: 20 skills (7 CLI-managed + 13 project-specific).
+Total installed: 21 skills (8 CLI-managed + 13 project-specific).

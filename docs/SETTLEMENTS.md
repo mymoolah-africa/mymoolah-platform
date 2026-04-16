@@ -1,9 +1,11 @@
 # Settlements & Float Model (Mojaloop/Banking Grade)
 
-Last Updated: 2026-04-05
+Last Updated: 2026-04-16
 
 ## Scope
 Closed‑loop settlement for MMTP using Mojaloop switch APIs. All product/service payments to Suppliers are settled from pre‑funded floats. Each Client also maintains a pre‑funded float with MMTP. MM earns configurable commissions/fees. This document defines accounts, flows, and journal patterns.
+
+**Wallet cash withdrawals (Apr 2026):** Outbound consumer flows include **partner-facilitated cash** (e.g. **eeziCash** via Flash float `1200-10-04`, **EasyPay** cash-out float `1200-10-03`) as well as electronic rails (EFT, PayShap). **eeziCash** is economically and regulatorily a **wallet debit → cash collection** path under the TPPP framework — not VAS voucher resale; see `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md` and `docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html` for narrative and ledger excerpts.
 
 ## Core Principles
 - Closed‑loop: All movements are recorded in MMTP’s immutable ledger (journal entries + lines).

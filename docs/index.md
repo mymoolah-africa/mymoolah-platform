@@ -1,10 +1,10 @@
 # MyMoolah Treasury Platform - Documentation Index
 
-**Last Updated**: April 5, 2026  
+**Last Updated**: April 16, 2026  
 **Project Status**: 🚀 **PRODUCTION LIVE - api-mm.mymoolah.africa, wallet.mymoolah.africa**  
-**Version**: 2.81.1 - Visual Chart of Accounts + Electricity Supplier Comparison  
+**Version**: 2.97.7 - TPPP withdrawals + policies + KB hub  
 
-For recent work, see [CHANGELOG.md](./CHANGELOG.md) and [AGENT_HANDOVER.md](./AGENT_HANDOVER.md). **Apr 5, 2026**: Canonical Chart of Accounts (28 accounts, 15 journal templates, solvency rules), print-ready visual HTML/PDF, electricity supplier comparison via `v_best_offers`, full production ledger audit, Cloud Scheduler for catalog sync and referral payouts. See [CHART_OF_ACCOUNTS.md](./CHART_OF_ACCOUNTS.md) and [CHART_OF_ACCOUNTS_VISUAL.html](./CHART_OF_ACCOUNTS_VISUAL.html).
+For recent work, see [CHANGELOG.md](./CHANGELOG.md) and [AGENT_HANDOVER.md](./AGENT_HANDOVER.md). **Apr 16, 2026:** [WITHDRAWALS_COMPLIANCE_AND_KB.md](./WITHDRAWALS_COMPLIANCE_AND_KB.md) — hub for **eeziCash** / wallet cash-out **regulatory characterisation** (TPPP; not VAS voucher resale), AML/monitoring/fraud/IS policy updates, [FAQ_MASTER.md](./FAQ_MASTER.md) §9, and AI KB embedding notes. **Apr 14:** [MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html](./integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html) (print/PDF flows). **Apr 5:** Chart of Accounts visual, electricity supplier comparison, ledger audit — [CHART_OF_ACCOUNTS.md](./CHART_OF_ACCOUNTS.md).
 
 ---
 
@@ -42,6 +42,8 @@ MyMoolah is a **full Treasury Platform** (wallet + general ledger + integrations
 - [**SETTLEMENTS.md**](./SETTLEMENTS.md) - Float model and settlement architecture
 
 ### **💳 Cash-Out Services**
+- [**Withdrawals — compliance & KB hub**](./WITHDRAWALS_COMPLIANCE_AND_KB.md) — TPPP / eeziCash legal characterisation, AML/monitoring, security logging, FAQ + RAG seeding (Apr 2026)
+- [**TPPP withdrawal flow diagrams (HTML/PDF)**](./integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html) — eeziCash, EasyPay, EFT, PayShap, VAS (Apr 2026)
 - [**Cash-Out Overlay Services**](./CHANGELOG.md#-version-210---cash-out-services-integration-august-28-2025) - New cash-out overlay services integration
 - [**TransactPage Integration**](./CHANGELOG.md#-frontend-integration) - Frontend integration details
 - [**Navigation & Quick Access**](./CHANGELOG.md#-navigation-fixes) - Navigation and Quick Access Services updates

@@ -51,7 +51,10 @@ MyMoolah Treasury Platform is a **global award-winning banking platform** operat
 
 ### 3. Examples of FORBIDDEN Shortcuts
 
-**Example 1: Database Enum Values**
+**Example 1: Database Enum Values and product substance**
+
+**April 2026 — TPPP / eeziCash:** Regulatory and AML substance must match **economic reality**. **eeziCash** is a **wallet cash-withdrawal** (TPPP); do not model or document it as “VAS voucher resale” in code comments, enums, partner payloads, or support KB entries. Misclassification breaks transaction monitoring, fraud correlation, and sponsor-bank narratives. See `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md` and `docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html`.
+
 ```javascript
 // ❌ FORBIDDEN: Using wrong enum as workaround
 vasType: 'voucher' // When it's actually a cash-out service

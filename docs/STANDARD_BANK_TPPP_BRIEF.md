@@ -1,6 +1,6 @@
 # MyMoolah Treasury Platform (MMTP) — T-PPP Sponsor Brief (Standard Bank)
 
-Last updated: 2026-02-12
+Last updated: 2026-04-16
 
 ## Executive Summary
 
@@ -86,6 +86,14 @@ Commission VAT allocation (internal; hidden from user history, visible in ledger
 ```520:740:routes/overlayServices.js
 // After VAS commit, commission and VAT are computed and posted via ledgerService
 ```
+
+## Wallet withdrawals and inbound cash (TPPP) — April 2026 clarification
+
+MMTP supports multiple **outbound** wallet paths: **eeziCash** (Flash — retail **cash** collection after wallet debit), **EasyPay** retail cash-out, **EFT**, **PayShap RTP/RPP**, and **VAS purchases** (airtime, data, electricity, bill pay — not cash withdrawal).
+
+**eeziCash — correct legal and product characterisation for sponsor-bank and PASA communications:** a **wallet cash-withdrawal service** within the TPPP framework. The customer’s wallet is **debited before** a withdrawal credential (PIN) is issued; the PIN is used to **collect cash** at authorised retail. It is **not** correctly described as “VAS voucher resale” or as selling Flash airtime/data VAS to the end user.
+
+**Documentation pack for Standard Bank / compliance:** `docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html` (print-ready diagrams, ledger examples, regulatory cross-references) and `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md` (AML, monitoring, security, KB). Session log: `docs/session_logs/2026-04-14_2200_tppp-withdrawal-flow-diagrams-legal.md`.
 
 ## Compliance Posture
 

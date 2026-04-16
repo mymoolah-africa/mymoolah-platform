@@ -1,5 +1,45 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-16 - TPPP withdrawals: policies, security, FAQ, KB hub (v2.97.7)
+
+### Summary
+Aligned major `docs/` artefacts with the **Apr 2026** legal and operational position on **eeziCash**: **wallet cash-withdrawal** under the TPPP/sponsor-bank framework (wallet debited before withdrawal credential; PIN is **not** VAS voucher resale). Updates span AML, transaction monitoring, fraud, KYC scope, information security logging, compliance review scope, sponsor brief, architecture, settlements, FAQ, AI support guides, README/index, `ZERO_SHORTCUTS_POLICY.md`, and `docs/security.md`.
+
+### New
+- **`docs/WITHDRAWALS_COMPLIANCE_AND_KB.md`** — Single hub: regulatory characterisation, policy index, security/KB procedures, links to HTML flow pack.
+
+### Policies (`docs/policies/`)
+- **`INDEX.md`** v1.1 — Withdrawals / TPPP cross-reference block.
+- **`01-AML-CFT-Policy.md`** v1.1 — Scope, CTR text, training typologies, **§9A** eeziCash/TPPP, regulatory table (NPS, SARB e-money paper, Banks Act, PASA TPPP).
+- **`02-KYC-CDD-Policy.md`** v2.1 — Cash-out channels in scope; document control.
+- **`04-Transaction-Monitoring-Policy.md`** v1.1 — **§5.2.6** wallet cash-out typology; CTR §7.2 alignment.
+- **`05-Fraud-Prevention-Policy.md`** v1.1 — Cash-out scope, risk table row, cross-channel note.
+- **`03-Sanctions-Policy.md`** v1.1 — Cash-out channels explicitly in screening scope.
+- **`13-Information-Security-Policy.md`** v1.1 — §10.2 withdrawal audit logging expectations.
+- **`18-Compliance-Review-Policy.md`** v1.1 — TPPP withdrawal docs in review scope.
+
+### Other documentation
+- **`docs/security.md`**, **`docs/BANKING_GRADE_ARCHITECTURE.md`**, **`docs/STANDARD_BANK_TPPP_BRIEF.md`**, **`docs/SETTLEMENTS.md`**, **`docs/README.md`**, **`docs/index.md`**, **`docs/PROJECT_STATUS.md`**, **`docs/DEVELOPMENT_GUIDE.md`**, **`docs/FAQ_MASTER.md`** §9, **`docs/AI_SUPPORT_SYSTEM.md`**, **`docs/BANKING_GRADE_SUPPORT_SYSTEM.md`**, **`docs/ZERO_SHORTCUTS_POLICY.md`**, **`docs/CURSOR_2.0_RULES_FINAL.md`**, **`docs/AGENT_HANDOVER.md`**.
+
+### No application code or migrations in this entry.
+
+---
+
+## 2026-04-16 - find-skills for Cursor + MMTP inventory (v2.97.6)
+
+### Summary
+Installed Vercel Labs `find-skills` via Skills CLI into `.agents/skills/find-skills/`. Customised `SKILL.md` for MyMoolah/Cursor: project inventory first, `--agent cursor -y` install pattern, domain→existing-skill map, explicit alignment with rules (db-connection-helper, migrations script, no shortcuts).
+
+### Changed
+- **`.agents/skills/find-skills/SKILL.md`** — MMTP-tuned content (replaces upstream copy)
+- **`docs/CURSOR_SKILLS.md`** — New skill row; 21 total / 8 CLI-managed; install command note
+- **`skills-lock.json`** — `find-skills` from `vercel-labs/skills`
+- **`docs/AGENT_HANDOVER.md`** — Header, version 2.97.6, session log pointer, skills count in map
+
+### No runtime code, no migrations.
+
+---
+
 ## 2026-04-14 - TPPP Withdrawal Flow Diagrams + Legal Correction Email (v2.97.5)
 
 ### Summary
