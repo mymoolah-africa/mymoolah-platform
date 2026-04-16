@@ -84,6 +84,7 @@ function generatePain001Filename() {
  * @param {string} params.payments[].branchCode
  * @param {number} params.payments[].amount
  * @param {string} [params.payments[].reference]  - Narrative on employee statement
+ * @param {string} [params.payments[].accountType] - Account type code: CACC (current), SVGS (savings). Default: CACC
  * @returns {{ xml: string, msgId: string, totalAmount: number, paymentCount: number }}
  */
 function buildPain001Bulk(params) {
@@ -120,6 +121,7 @@ function buildPain001Bulk(params) {
         <Amt>
           <InstdAmt Ccy="ZAR">${Number(p.amount).toFixed(2)}</InstdAmt>
         </Amt>
+        <ChrgBr>CRED</ChrgBr>
         <CdtrAgt>
           <FinInstnId>
             <ClrSysMmbId>
@@ -142,6 +144,9 @@ function buildPain001Bulk(params) {
               <Id>${p.accountNumber}</Id>
             </Othr>
           </Id>
+          <Tp>
+            <Cd>${p.accountType || 'CACC'}</Cd>
+          </Tp>
         </CdtrAcct>
         <RmtInf>
           <Ustrd>${narrative}</Ustrd>

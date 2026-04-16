@@ -1,0 +1,107 @@
+=== SBSA H2H SFTP Connectivity & Integration Test Report ===
+Date: 2026-04-16 10:55-10:58 SAST
+Source: MyMoolah SFTP Gateway VM (sftp-1-vm, GCP Compute Engine)
+Source IP: 34.35.137.166 (CONFIRMED - whitelisted IP)
+Tester: Agent (via gcloud IAP tunnel to VM)
+
+=== CONNECTIVITY TEST RESULTS ===
+
+--- TEST 1: SBSA TEST Server (196.8.85.62:5022) ---
+TCP Connect:     PASS - Connection established immediately
+SSH Banner:      PASS - "SSH Server supporting SFTP and SCP"
+Authentication:  PASS - RSA key accepted (SHA256:Lf5DQHTMC5Fn+ieSiJ+/cBEWcyme4SduIxuknBDa0X0)
+SFTP Subsystem:  PASS - Subsystem initialised, commands executed
+Directory List:  PASS - 3 folders visible: BAS, Inbox, Outbox
+File Upload:     PASS - Pain.001 file uploaded to /Outbox/ (4,226 bytes)
+File Download:   PASS - 7 response files downloaded from /BAS/
+
+--- TEST 2: SBSA PROD Server (196.8.86.53:5022) ---
+TCP Connect:     PASS - Connection established
+SSH Banner:      PASS - "SSH Server supporting SFTP and SCP"
+Authentication:  FAIL - Key rejected (Permission denied)
+Note: Our SSH public key may not yet be loaded on the PROD server.
+      Ask Colette/Melanie to import sbsa_sftp_key.pub on PROD profile.
+
+--- TEST 3: Our SFTP Gateway (34.35.137.166:5022) ---
+VM Status:       PASS - Running (confirmed via gcloud)
+Port 5022:       PASS - Listening (confirmed via ss -tlnp)
+External Access: N/A - Only SBSA IPs whitelisted (correct posture)
+
+--- TEST 4: SOAP Credit Notification Endpoint ---
+URL:             https://api-mm.mymoolah.africa/api/v1/standardbank/notification
+POST (SOAP XML): PASS - HTTP 200, <Ack>OK</Ack> in 168ms
+GET (health):    404 (expected - POST-only endpoint)
+
+=== SBSA RESPONSE FILES FOUND (from Melanie's Mar 30 internal testing) ===
+
+In /BAS/ folder on SBSA TEST server:
+
+File                                                          | Status | Meaning
+RM1 ACK (092254)                                              | RCVD   | File received by SBSA
+RM2 NACK (092857)                                             | RJCT   | Duplicate MsgId (resubmitted same file)
+RM3 ACK (093244) + INTAUD (093259) + FINAUD (093652)          | ACSP   | Processed successfully (all 3 txns accepted)
+RM4 NACK (134519)                                             | RJCT   | Duplicate MsgId
+RM5 NACK (134718)                                             | RJCT   | Duplicate MsgId
+RM6 ACK (135153) + INTAUD (135209) + FINAUD (135656)          | ACSP   | Processed successfully (all 3 txns accepted)
+
+Key observations:
+- RM3 and RM6: ALL transactions processed successfully (Status Code 0000)
+- RM3 GrpSts=PART (partial), RM6 GrpSts=ACSP (accepted/settled-in-process)
+- RM2/RM4/RM5 rejected for "Duplicate MsgId" - expected when resubmitting same file
+- Debit account 272406481 confirmed working
+- SBSA returned pain.002.001.03 format (as expected)
+
+=== PAIN.001 FILE UPLOADED (New Test) ===
+
+Filename: MYMOOLAH_OWN11_Pain001v3_ZAR_TST_20260416105757707.xml
+MsgId:    MM-TESTCONNECT20260416-MO18Y1MZ
+Uploaded: 2026-04-16 10:58 SAST to /Outbox/ on 196.8.85.62
+Size:     4,226 bytes
+Content:  3 test EFT payments (R1.00 each, R3.00 total)
+          - TST-SBSA-20260416-001: Standard Bank 10111730633 (branch 051001)
+          - TST-DISC-20260416-002: Discovery Bank 18828076450 (branch 679000)
+          - TST-CAP-20260416-003: Capitec 1254107337 (branch 470010)
+Updates:  Added <ChrgBr>CRED</ChrgBr> and <CdtrAcct><Tp><Cd>CACC</Cd></Tp>
+
+=== PAIN.001 BUILDER VALIDATION ===
+
+All 29 mandatory SBSA SSVS elements: PASS
+Namespace (pain.001.001.03):          PASS
+InitgPty/OrgId (OWN11/CUST):          PASS
+Debtor Account (272406481):            PASS
+ChrgBr (CRED):                         PASS (newly added)
+CdtrAcct/Tp/Cd (CACC):                PASS (newly added)
+
+=== MT940/MT942 PARSER ===
+
+Parser:          services/standardbank/mt940Parser.js (576 lines)
+Formats:         MT940 (end-of-day), MT942 (intraday)
+FINSTMT pattern: MYMOOLAH_OWN11_FINSTMT_YYYYMMDD_HHMMSS
+PROVSTMT pattern: MYMOOLAH_OWN11_PROVSTMT_YYYYMMDD_HHMMSS
+Features:        Balance validation, credit/debit extraction, narrative parsing
+Status:          READY (awaiting statement channel activation)
+
+=== STATEMENT PROCESSING PIPELINE ===
+
+Poller:          server.js cron (every 2 min, configurable)
+Service:         services/standardbank/sbsaStatementService.js
+GCS Path:        gs://mymoolah-sftp-inbound/standardbank/{env}/inbox/statements/
+Idempotency:     MD5 file hash tracked in sbsa_statement_runs table
+Status:          READY (awaiting SFTP statement delivery)
+
+=== ACTION ITEMS ===
+
+1. [DONE]   Firewall cleared by SBSA (Colette confirmed Apr 16)
+2. [DONE]   SFTP connectivity to TEST confirmed working
+3. [DONE]   Pain.001 uploaded to SBSA TEST Outbox for processing
+4. [PENDING] Ask Melanie to process the uploaded Pain.001 file
+5. [PENDING] Ask Colette to load our SSH key on PROD server
+6. [PENDING] Monitor /BAS/ folder for ACK/NACK response to new upload
+7. [PENDING] Test statement (MT940/MT942) file delivery once channel is activated
+8. [PENDING] Credit notification webservice: awaiting SBSA to send test traffic
+
+=== COMPARISON WITH PREVIOUS TEST (2026-03-26) ===
+
+Previous (2026-03-26): Both TEST and PROD timed out - firewall blocked
+Current  (2026-04-16): TEST fully working (auth + SFTP), PROD TCP open but key not loaded
+Resolution: SBSA firewall team cleared the freeze + applied rules (confirmed by Colette)

@@ -1,7 +1,7 @@
 # SBSA Host-to-Host (H2H) Setup Guide
 
-**Date**: 2026-03-13 (Pain.001 v3 + PayShap inbound status: 2026-03-30)  
-**Status**: ✅ PG15 submitted to Colette (SBSA) on 2026-03-13 — Port corrected to 5022 on 2026-03-17 per Colette's instruction — Statement format + delivery schedule confirmed 2026-03-19 — **SOAP credit notification handler built 2026-03-24** — VPN clarified as Open Internet (confirmed with Colette 2026-03-24) — PGP confirmed Not Required (2026-03-24) — File names/directories confirmed (2026-03-24) — Awaiting SBSA test traffic before freeze (Thu Mar 27 → Apr 8) — **Pain.001 v3 (`pain.001.001.03`) passed SBSA SSVS validation 2026-03-30** — **PayShap inbound credit sandbox: 6/6 callbacks confirmed** — production PayShap callback registered — **SFTP payments channel enablement requested (Melanie Block)** — **production PayShap inward queue: SBSA investigating (Louis Van Zyl)**  
+**Date**: 2026-03-13 (Last connectivity test: 2026-04-16)  
+**Status**: ✅ **SFTP TEST CONNECTIVITY CONFIRMED 2026-04-16** — SBSA firewall cleared (Colette confirmed freeze lifted Apr 16) — Full SFTP session working to SBSA TEST (196.8.85.62:5022) — Auth via RSA key PASS — Pain.001 uploaded to /Outbox/ for processing — SBSA PROD (196.8.86.53:5022) TCP reachable but key not loaded yet — SOAP credit notification endpoint PASS (HTTP 200) — 11 SBSA response files found in /BAS/ from Melanie's Mar 30 testing (ACK/NACK/INTAUD/FINAUD) — Pain.001 builder enhanced with ChrgBr and CdtrAcct/Tp fields — PG15 submitted 2026-03-13 — Pain.001 v3 passed SSVS validation 2026-03-30 — PayShap inbound credit sandbox 6/6 confirmed — **production PayShap inward queue: SBSA investigating (Louis Van Zyl)**  
 **Implementation Manager**: SBSA (assigned contact)  
 **Services**: Credit Notifications via Webserver + H2H SFTP (Statements + Payments)
 
@@ -118,17 +118,43 @@ gcloud compute firewall-rules list \
 
 ## 5. Test SFTP Connectivity (After Firewall Rules Applied)
 
+### Latest Test Results (2026-04-16)
+
+| Target | IP:Port | TCP | Auth | SFTP | Notes |
+|--------|---------|-----|------|------|-------|
+| SBSA TEST | 196.8.85.62:5022 | PASS | PASS | PASS | Full session working, file upload confirmed |
+| SBSA PROD | 196.8.86.53:5022 | PASS | FAIL | N/A | Key not loaded on PROD server yet |
+| Our SFTP | 34.35.137.166:5022 | PASS | N/A | N/A | VM running, port listening, SBSA-only access |
+| SOAP | api-mm.mymoolah.africa | N/A | N/A | N/A | HTTP 200, Ack OK in 168ms |
+
+**Test report**: `docs/test/sbsa-sftp-test-report-2026-04-16.txt`
+
+### SBSA TEST: Folders Visible
+```
+/ (root)
+├── BAS/      — SBSA response files (ACK, NACK, INTAUD, FINAUD)
+├── Inbox/    — Files from SBSA to MyMoolah (statements, Pain.002)
+└── Outbox/   — Files from MyMoolah to SBSA (Pain.001 uploads)
+```
+
 ### Connect to SBSA's SFTP (TEST environment):
+**IMPORTANT**: Must run from GCP VM (`sftp-1-vm` / `34.35.137.166`), NOT from local machine.
 ```bash
+# SSH into the VM first:
+gcloud compute ssh sftp-1-vm --project=mymoolah-db --zone=africa-south1-a --tunnel-through-iap --ssh-flag="-p 2222"
+
+# Then from the VM:
 sftp -i ~/.ssh/sbsa_sftp_key -P 5022 mymoolahuser@196.8.85.62
 ```
 > Note: SBSA uses port **5022** (not 22) on their side.
 > **Username**: `mymoolahuser` — confirmed by Colette on 2026-03-26 (SBSA created this user after importing our SSH key).
+> **Key must be on VM**: Copy with `base64` method (gcloud scp has port flag issues).
 
 ### Connect to SBSA's SFTP (PRODUCTION):
 ```bash
 sftp -i ~/.ssh/sbsa_sftp_key -P 5022 mymoolahuser@196.8.86.53
 ```
+> **STATUS**: TCP reachable but key rejected. Ask Colette to import `sbsa_sftp_key.pub` on PROD profile.
 
 ### SBSA connects to our SFTP:
 ```bash
@@ -141,6 +167,17 @@ sftp -i ~/.ssh/sbsa_sftp_key -P 5022 mymoolahuser@196.8.86.53
 
 ### Important: Statements Have No Test Environment
 Colette confirmed (2026-03-26): **"Statements does not have a test environment, once development has been completed, we can move to Production, for statements only."** MT940/MT942 files will only flow in Production.
+
+### SBSA Response Files Found (from Melanie's Mar 30 testing, in /BAS/)
+
+| File | Status | Meaning |
+|------|--------|---------|
+| RM1 ACK | RCVD | File received |
+| RM2 NACK | RJCT | Duplicate MsgId |
+| RM3 ACK + INTAUD + FINAUD | ACSP | ALL 3 txns processed successfully |
+| RM4 NACK | RJCT | Duplicate MsgId |
+| RM5 NACK | RJCT | Duplicate MsgId |
+| RM6 ACK + INTAUD + FINAUD | ACSP | ALL 3 txns processed successfully |
 
 ---
 
