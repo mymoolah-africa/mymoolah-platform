@@ -1,0 +1,128 @@
+================================================================================
+SBSA H2H SFTP CONNECTIVITY & UPLOAD TEST — 2026-04-17
+Status: PASS on TEST and PROD
+================================================================================
+
+Test operator: MyMoolah Treasury Platform (MMTP)
+Source host:   sftp-1-vm (GCP Compute Engine, africa-south1-a)
+Source IP:     34.35.137.166 (reserved: sftp-gateway-static-ip)
+SSH key:       ~/.ssh/sbsa_sftp_key (RSA 2048)
+Fingerprint:   SHA256:Lf5DQHTMC5Fn+ieSiJ+/cBEWcyme4SduIxuknBDa0X0
+SFTP user:     mymoolahuser
+Port:          5022
+
+================================================================================
+TEST 1 — SBSA TEST (196.8.85.62:5022) — PASS
+================================================================================
+Timestamp: 2026-04-17 11:00:20 UTC / 13:00:20 SAST
+
+debug1: Authenticating to 196.8.85.62:5022 as 'mymoolahuser'
+debug1: Authentications that can continue: password,publickey,keyboard-interactive
+debug1: Offering public key: /home/andremacbookpro/.ssh/sbsa_sftp_key RSA
+        SHA256:Lf5DQHTMC5Fn+ieSiJ+/cBEWcyme4SduIxuknBDa0X0 explicit
+Authenticated to 196.8.85.62 ([196.8.85.62]:5022) using "publickey".
+
+================================================================================
+TEST 2 — SBSA PROD (196.8.86.53:5022) — PASS (first-ever successful auth)
+================================================================================
+Timestamp: 2026-04-17 11:00:30 UTC / 13:00:30 SAST
+
+debug1: Authenticating to 196.8.86.53:5022 as 'mymoolahuser'
+debug1: Authentications that can continue: password,publickey,keyboard-interactive
+debug1: Offering public key: /home/andremacbookpro/.ssh/sbsa_sftp_key RSA
+        SHA256:Lf5DQHTMC5Fn+ieSiJ+/cBEWcyme4SduIxuknBDa0X0 explicit
+Authenticated to 196.8.86.53 ([196.8.86.53]:5022) using "publickey".
+
+================================================================================
+TEST 3 — Directory listing on both servers (mymoolahuser)
+================================================================================
+
+SBSA TEST (196.8.85.62) — connected, remote cwd = /
+  drwx------ BAS      (response folder — holds ACK/NACK + INTAUDTST/FINAUDTST)
+  drwx------ Inbox    (empty)
+  drwx------ Outbox   (empty — our drop folder)
+
+  BAS contents (historical, from 2026-03-30 round-trip tests):
+    MYMOOLAH_OWN11_Pain001v3_ZAR_TST_20260330RM1.xml_ACK_20260330092254392.xml
+    MYMOOLAH_OWN11_Pain001v3_ZAR_TST_20260330RM1.xml_INTAUDTST_260330092309376.xml
+    MYMOOLAH_OWN11_Pain001v3_ZAR_TST_20260330RM2.xml_NACK_20260330092857947.xml
+    MYMOOLAH_OWN11_Pain001v3_ZAR_TST_20260330RM3.xml_ACK_20260330093244962.xml
+    MYMOOLAH_OWN11_Pain001v3_ZAR_TST_20260330RM3.xml_FINAUDTST_260330093652235.xml
+    MYMOOLAH_OWN11_Pain001v3_ZAR_TST_20260330RM3.xml_INTAUDTST_260330093259207.xml
+    MYMOOLAH_OWN11_Pain001v3_ZAR_TST_20260330RM4.xml_NACK_20260330134519188.xml
+    MYMOOLAH_OWN11_Pain001v3_ZAR_TST_20260330RM5.xml_NACK_20260330134718569.xml
+    MYMOOLAH_OWN11_Pain001v3_ZAR_TST_20260330RM6.xml_ACK_20260330135153645.xml
+    MYMOOLAH_OWN11_Pain001v3_ZAR_TST_20260330RM6.xml_FINAUDTST_260330135656071.xml
+    MYMOOLAH_OWN11_Pain001v3_ZAR_TST_20260330RM6.xml_INTAUDTST_260330135209972.xml
+
+SBSA PROD (196.8.86.53) — connected, remote cwd = /
+  drwx------ Inbox
+  drwx------ Outbox
+  (no BAS yet — virgin folder, awaiting first production run)
+
+================================================================================
+TEST 4 — Pain.001 upload to SBSA TEST — PASS
+================================================================================
+Timestamp: 2026-04-17 11:01:53 UTC / 13:01:53 SAST
+
+File uploaded:
+  MYMOOLAH_OWN11_Pain001v3_ZAR_TST_20260417110153RM1.xml (4,226 bytes)
+
+Transfer log:
+  Connected to 196.8.85.62.
+  sftp> cd Outbox
+  sftp> put MYMOOLAH_OWN11_Pain001v3_ZAR_TST_20260417110153RM1.xml
+  Uploading ... to /Outbox/MYMOOLAH_OWN11_Pain001v3_ZAR_TST_20260417110153RM1.xml
+  sftp> ls -la
+    -rw------- 1 200  100  4226 Apr 17 13:01
+       MYMOOLAH_OWN11_Pain001v3_ZAR_TST_20260417110153RM1.xml
+
+Post-upload poll at 11:02:38 UTC (45s later):
+  /Outbox/  — EMPTY (file collected by SBSA) ✓
+
+Post-upload poll at 11:04:28 UTC (2m35s later):
+  /Outbox/  — still empty
+  /BAS/     — still only 2026-03-30 files; today's ACK/NACK not yet written
+              (SBSA processing window; no action required on our side)
+
+================================================================================
+SUMMARY
+================================================================================
+
+[PASS] SSH public-key authentication on SBSA TEST   (mymoolahuser)
+[PASS] SSH public-key authentication on SBSA PROD   (mymoolahuser)  — first-ever
+[PASS] Remote folder discovery on TEST              (/Outbox, /Inbox, /BAS)
+[PASS] Remote folder discovery on PROD              (/Outbox, /Inbox)
+[PASS] Pain.001 file upload to TEST /Outbox/        (4,226 bytes accepted)
+[PASS] File pickup by SBSA TEST processor           (/Outbox emptied < 45s)
+[PEND] ACK/NACK response in /BAS/                   (SBSA processing queue)
+
+Key fingerprint accepted on both TEST and PROD:
+  SHA256:Lf5DQHTMC5Fn+ieSiJ+/cBEWcyme4SduIxuknBDa0X0
+
+================================================================================
+ROOT CAUSE OF PRIOR "AUTHENTICATION FAILED" REPORTS
+================================================================================
+
+Earlier test reports filed on 2026-04-16 and 2026-04-17 morning used the wrong
+SFTP login username in the test commands. The commands attempted to connect
+with user "MYMOOLAH@..." — which is the filename prefix and the ISO-20022
+BIC/Party identifier, not the SFTP login user.
+
+The correct SFTP login user is "mymoolahuser" — documented in
+docs/SBSA_H2H_SETUP_GUIDE.md Section 1 and confirmed by Colette on 2026-03-26.
+
+With the correct username, authentication succeeds immediately on both TEST
+(expected) and PROD (new — first successful auth since PROD key was imported).
+
+================================================================================
+RAW LOG FILES (captured on sftp-1-vm, copied locally)
+================================================================================
+  /tmp/sbsa-fixed-logs/sbsa-correct-user-20260417_110020Z.txt
+  /tmp/sbsa-fixed-logs/sbsa-folders-20260417_110045Z.txt
+  /tmp/sbsa-fixed-logs/sbsa-upload-20260417_110153Z.txt
+  /tmp/sbsa-fixed-logs/sbsa-response-20260417_110428Z.txt
+
+================================================================================
+END OF REPORT
+================================================================================

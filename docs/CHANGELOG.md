@@ -1,5 +1,28 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-17 - MobileMart SFTP activation Phase 1: SSH key installed + reply drafted declining 62-IP whitelist (v2.98.1)
+
+### Summary
+Operational milestone for the MobileMart Fulcrum reconciliation integration. Installed Jarod Ramos' RSA 2048 public SSH key into the Thorntech SFTP Gateway (`sftp-1-vm`) `mobilemart` user via IAP tunnel with independent fingerprint verification on both the local Mac and inside the gateway VM. Drafted the banking-grade reply to Jarod declining the 62-range Microsoft AzureConnectors / Power Automate whitelist request (not defensible under ISO 27001 and SARB prudential expectations) and offering three clean single-/32 alternatives. Verified production DB state — all three MobileMart config migrations are applied and `recon_supplier_configs.MMART` row is correct (pipe_delimited Fulcrum v1.1 schema, port 5022, pattern `FULCRUM.MERCHANT.%.RECON.%.txt`). No application-code changes; this is infrastructure + operations work.
+
+### New / Changed (operational, not code)
+- **SFTP Gateway VM (`sftp-1-vm`, `34.35.137.166`)**: inserted `public_key` row `id=2, user_id=4, name=mobilemart-jarod-ramos-2026-04-17, enabled=true, generated=false` linking Jarod's RSA 2048 key to the `mobilemart` user. Key fingerprint `SHA256:jcdpQXZJSz4X2ZNekQtuBd5w2IZj97rmkaZRXdK6aIQ` (MD5 `38:de:34:cb:08:fd:ec:ce:34:47:e4:7f:f5:56:5b:bf`). Fingerprint cross-verified on both local Mac (pre-send) and inside the gateway VM (pre-insert) — no transit tampering.
+- **`docs/integrations/MOBILEMART_SFTP_REPLY_2026-04-17.md`** — NEW: archived copy of the reply to Jarod Ramos (with Cobus Fourie, Mercia Botha, Selwyn on CC) + internal decision log + Microsoft documentation references (Power Automate cloud SFTP connector does not honour on-prem data gateway or VNet NAT for egress).
+
+### Still blocked on
+- Jarod delivering a single static public egress IP for one of the three `/32` variants
+- Firewall rule `allow-mobilemart-sftp` on `tcp:5022` scoped to Jarod's IP
+- Flipping `RECON_SFTP_WATCHER_MODE=off → scheduler` in `scripts/deploy-backend.sh` and redeploying production
+- `./scripts/setup-cloud-scheduler.sh --production` to create `sftp-recon-sweep-production`
+- First end-to-end test upload
+
+### Rollback
+Remove the inserted key with `DELETE FROM public_key WHERE id = 2;` on the gateway VM's `sftpgw` PostgreSQL. No other state was changed.
+
+### No migrations, no code changes, no production deploy.
+
+---
+
 ## 2026-04-17 - SBSA H2H SFTP hardening: disbursement upload fix + poller wiring + Cloud Scheduler endpoints (v2.98.0)
 
 ### Summary

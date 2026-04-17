@@ -1,0 +1,272 @@
+=== SBSA H2H SFTP Re-test AFTER SBSA IT reported key import — STILL FAILING ===
+Run timestamp: Fri Apr 17 09:55:55 UTC 2026 (Fri Apr 17 11:55:55 SAST 2026)
+Source: GCP VM sftp-1-vm, External IP 34.35.137.166
+Our key: /home/andremacbookpro/.ssh/sbsa_sftp_key
+Fingerprint:
+2048 SHA256:Lf5DQHTMC5Fn+ieSiJ+/cBEWcyme4SduIxuknBDa0X0 mymoolah-sbsa-sftp (RSA)
+Public key (for verification):
+ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCnShKXgvzVXZL7EuzGWESMzp3xaim5I+1M682w5cJ3M4N4MBLNAWobX+S750hG569dCpB/vNBW2SXrTYhWHIGS01Crg4ULcZMxqAPmN5RZ/Zbiqc69ztjI2X3McYa79/lTrZ5+7YC9YmppgHLsFdcPzV4IfLrO9ZgRzNQ94QUBH7APYmBGxqqYo5m33/2XS4OFTVOZpxwxyTJfdrQGwcBS4mlLTtBPwHq/Fj2Sceu3vZBA933RjfC0b2OFIbmZfHkFe1aYGEmj3BvKip9Fxp7GOLV4YdiubIAF3oDVUVOEwoHBqvyZ6l3Z6TzUyNGqkVVJVqETOwChLU5jd4vHADgB mymoolah-sbsa-sftp
+
+=====================================================================
+TEST SERVER — 196.8.85.62:5022
+=====================================================================
+--- TCP probe ---
+TCP_OK
+
+--- SSH -vvv auth attempt ---
+OpenSSH_9.6p1 Ubuntu-3ubuntu13.15, OpenSSL 3.0.13 30 Jan 2024
+debug1: Reading configuration data /etc/ssh/ssh_config
+debug3: /etc/ssh/ssh_config line 19: Including file /etc/ssh/ssh_config.d/50-cloudimg-settings.conf depth 0
+debug1: Reading configuration data /etc/ssh/ssh_config.d/50-cloudimg-settings.conf
+debug1: /etc/ssh/ssh_config line 21: Applying options for *
+debug2: resolve_canonicalize: hostname 196.8.85.62 is address
+debug3: channel_clear_timeouts: clearing
+debug3: ssh_connect_direct: entering
+debug1: Connecting to 196.8.85.62 [196.8.85.62] port 5022.
+debug3: set_sock_tos: set socket 3 IP_TOS 0x10
+debug2: fd 3 setting O_NONBLOCK
+debug1: fd 3 clearing O_NONBLOCK
+debug1: Connection established.
+debug3: timeout: 10000 ms remain after connect
+debug1: identity file /home/andremacbookpro/.ssh/sbsa_sftp_key type 0
+debug1: identity file /home/andremacbookpro/.ssh/sbsa_sftp_key-cert type -1
+debug1: Local version string SSH-2.0-OpenSSH_9.6p1 Ubuntu-3ubuntu13.15
+debug1: Remote protocol version 2.0, remote software version ""
+debug1: compat_banner: no match: ""
+debug2: fd 3 setting O_NONBLOCK
+debug1: Authenticating to 196.8.85.62:5022 as 'MYMOOLAH'
+debug3: put_host_port: [196.8.85.62]:5022
+debug1: load_hostkeys: fopen /etc/ssh/ssh_known_hosts: No such file or directory
+debug1: load_hostkeys: fopen /etc/ssh/ssh_known_hosts2: No such file or directory
+debug3: order_hostkeyalgs: no algorithms matched; accept original
+debug3: send packet: type 20
+debug1: SSH2_MSG_KEXINIT sent
+debug3: receive packet: type 20
+debug1: SSH2_MSG_KEXINIT received
+debug2: local client KEXINIT proposal
+debug2: KEX algorithms: sntrup761x25519-sha512@openssh.com,curve25519-sha256,curve25519-sha256@libssh.org,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group-exchange-sha256,diffie-hellman-group16-sha512,diffie-hellman-group18-sha512,diffie-hellman-group14-sha256,ext-info-c,kex-strict-c-v00@openssh.com
+debug2: host key algorithms: ssh-ed25519-cert-v01@openssh.com,ecdsa-sha2-nistp256-cert-v01@openssh.com,ecdsa-sha2-nistp384-cert-v01@openssh.com,ecdsa-sha2-nistp521-cert-v01@openssh.com,sk-ssh-ed25519-cert-v01@openssh.com,sk-ecdsa-sha2-nistp256-cert-v01@openssh.com,rsa-sha2-512-cert-v01@openssh.com,rsa-sha2-256-cert-v01@openssh.com,ssh-ed25519,ecdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521,sk-ssh-ed25519@openssh.com,sk-ecdsa-sha2-nistp256@openssh.com,rsa-sha2-512,rsa-sha2-256
+debug2: ciphers ctos: chacha20-poly1305@openssh.com,aes128-ctr,aes192-ctr,aes256-ctr,aes128-gcm@openssh.com,aes256-gcm@openssh.com
+debug2: ciphers stoc: chacha20-poly1305@openssh.com,aes128-ctr,aes192-ctr,aes256-ctr,aes128-gcm@openssh.com,aes256-gcm@openssh.com
+debug2: MACs ctos: umac-64-etm@openssh.com,umac-128-etm@openssh.com,hmac-sha2-256-etm@openssh.com,hmac-sha2-512-etm@openssh.com,hmac-sha1-etm@openssh.com,umac-64@openssh.com,umac-128@openssh.com,hmac-sha2-256,hmac-sha2-512,hmac-sha1
+debug2: MACs stoc: umac-64-etm@openssh.com,umac-128-etm@openssh.com,hmac-sha2-256-etm@openssh.com,hmac-sha2-512-etm@openssh.com,hmac-sha1-etm@openssh.com,umac-64@openssh.com,umac-128@openssh.com,hmac-sha2-256,hmac-sha2-512,hmac-sha1
+debug2: compression ctos: none,zlib@openssh.com,zlib
+debug2: compression stoc: none,zlib@openssh.com,zlib
+debug2: languages ctos: 
+debug2: languages stoc: 
+debug2: first_kex_follows 0 
+debug2: reserved 0 
+debug2: peer server KEXINIT proposal
+debug2: KEX algorithms: diffie-hellman-group14-sha1,diffie-hellman-group-exchange-sha256,diffie-hellman-group-exchange-sha1,diffie-hellman-group1-sha1,ext-info-s,kex-strict-s-v00@openssh.com
+debug2: host key algorithms: ssh-rsa,rsa-sha2-512,rsa-sha2-256
+debug2: ciphers ctos: aes256-ctr,aes192-ctr,aes128-ctr,aes256-cbc,3des-cbc,aes192-cbc,aes128-cbc,blowfish-cbc
+debug2: ciphers stoc: aes256-ctr,aes192-ctr,aes128-ctr,aes256-cbc,3des-cbc,aes192-cbc,aes128-cbc,blowfish-cbc
+debug2: MACs ctos: hmac-sha2-256,hmac-sha2-512-etm@openssh.com,hmac-sha2-512-96,hmac-sha2-512,hmac-sha2-256-etm@openssh.com,hmac-sha2-256-96,hmac-sha1-etm@openssh.com,hmac-sha1,hmac-sha1-96,hmac-md5,hmac-md5-etm@openssh.com,hmac-md5-96
+debug2: MACs stoc: hmac-sha2-256,hmac-sha2-512-etm@openssh.com,hmac-sha2-512-96,hmac-sha2-512,hmac-sha2-256-etm@openssh.com,hmac-sha2-256-96,hmac-sha1-etm@openssh.com,hmac-sha1,hmac-sha1-96,hmac-md5,hmac-md5-etm@openssh.com,hmac-md5-96
+debug2: compression ctos: zlib,none,zlib@openssh.com
+debug2: compression stoc: none,zlib@openssh.com,zlib
+debug2: languages ctos: 
+debug2: languages stoc: 
+debug2: first_kex_follows 0 
+debug2: reserved 0 
+debug3: kex_choose_conf: will use strict KEX ordering
+debug1: kex: algorithm: diffie-hellman-group-exchange-sha256
+debug1: kex: host key algorithm: rsa-sha2-512
+debug1: kex: server->client cipher: aes128-ctr MAC: hmac-sha2-256-etm@openssh.com compression: none
+debug1: kex: client->server cipher: aes128-ctr MAC: hmac-sha2-256-etm@openssh.com compression: none
+debug3: send packet: type 34
+debug1: SSH2_MSG_KEX_DH_GEX_REQUEST(2048<8192<8192) sent
+debug1: expecting SSH2_MSG_KEX_DH_GEX_GROUP
+debug3: receive packet: type 31
+debug1: SSH2_MSG_KEX_DH_GEX_GROUP received
+debug2: bits set: 4075/8192
+debug3: send packet: type 32
+debug1: SSH2_MSG_KEX_DH_GEX_INIT sent
+debug1: expecting SSH2_MSG_KEX_DH_GEX_REPLY
+debug3: receive packet: type 33
+debug1: SSH2_MSG_KEX_DH_GEX_REPLY received
+debug1: Server host key: ssh-rsa SHA256:x8moEzWPauOv6jQKZS70vDJIWhsG8aV2IaANVcVVfQw
+debug3: put_host_port: [196.8.85.62]:5022
+debug3: put_host_port: [196.8.85.62]:5022
+debug1: load_hostkeys: fopen /etc/ssh/ssh_known_hosts: No such file or directory
+debug1: load_hostkeys: fopen /etc/ssh/ssh_known_hosts2: No such file or directory
+debug1: checking without port identifier
+debug1: load_hostkeys: fopen /etc/ssh/ssh_known_hosts: No such file or directory
+debug1: load_hostkeys: fopen /etc/ssh/ssh_known_hosts2: No such file or directory
+Warning: Permanently added '[196.8.85.62]:5022' (RSA) to the list of known hosts.
+debug2: bits set: 4059/8192
+debug3: send packet: type 21
+debug1: ssh_packet_send2_wrapped: resetting send seqnr 4
+debug2: ssh_set_newkeys: mode 1
+debug1: rekey out after 4294967296 blocks
+debug1: SSH2_MSG_NEWKEYS sent
+debug1: Sending SSH2_MSG_EXT_INFO
+debug3: send packet: type 7
+debug1: expecting SSH2_MSG_NEWKEYS
+debug3: receive packet: type 21
+debug1: ssh_packet_read_poll2: resetting read seqnr 4
+debug1: SSH2_MSG_NEWKEYS received
+debug2: ssh_set_newkeys: mode 0
+debug1: rekey in after 4294967296 blocks
+debug3: send packet: type 5
+debug3: receive packet: type 7
+debug1: SSH2_MSG_EXT_INFO received
+debug3: kex_input_ext_info: extension server-sig-algs
+debug1: kex_ext_info_client_parse: server-sig-algs=<ssh-ed25519,ssh-ed448,rsa-sha2-512-cert-v01@openssh.com,rsa-sha2-512,rsa-sha2-256,x509v3-rsa2048-sha256,ecdsa-sha2-nistp521-cert-v01@openssh.com,ecdsa-sha2-nistp384-cert-v01@openssh.com,ecdsa-sha2-nistp256-cert-v01@openssh.com,x509v3-ecdsa-sha2-nistp521,x509v3-ecdsa-sha2-nistp384,x509v3-ecdsa-sha2-nistp256,ecdsa-sha2-nistp521,ecdsa-sha2-nistp384,ecdsa-sha2-nistp256,rsa-sha2-256-cert-v01@openssh.com,x509v3-ssh-rsa,x509v3-sign-rsa-sha1,x509v3-sign-rsa,ssh-rsa,ssh-rsa-cert-v01@openssh.com,ssh-ed25519-cert-v01@openssh.com,x509v3-ssh-dss,ssh-dss-cert-v01@openssh.com,ssh-dss,x509v3-sign-dss>
+debug3: receive packet: type 6
+debug2: service_accept: ssh-userauth
+debug1: SSH2_MSG_SERVICE_ACCEPT received
+debug3: send packet: type 50
+debug3: receive packet: type 53
+debug3: input_userauth_banner: entering
+SSH Server supporting SFTP and SCP
+debug3: receive packet: type 51
+debug1: Authentications that can continue: password,publickey,keyboard-interactive
+debug3: start over, passed a different list password,publickey,keyboard-interactive
+debug3: preferred gssapi-with-mic,publickey
+debug3: authmethod_lookup publickey
+debug3: remaining preferred: ,publickey
+debug3: authmethod_is_enabled publickey
+debug1: Next authentication method: publickey
+debug1: Will attempt key: /home/andremacbookpro/.ssh/sbsa_sftp_key RSA SHA256:Lf5DQHTMC5Fn+ieSiJ+/cBEWcyme4SduIxuknBDa0X0 explicit
+debug2: pubkey_prepare: done
+debug1: Offering public key: /home/andremacbookpro/.ssh/sbsa_sftp_key RSA SHA256:Lf5DQHTMC5Fn+ieSiJ+/cBEWcyme4SduIxuknBDa0X0 explicit
+debug3: send packet: type 50
+debug2: we sent a publickey packet, wait for reply
+debug3: receive packet: type 51
+debug1: Authentications that can continue: password,publickey,keyboard-interactive
+debug2: we did not send a packet, disable method
+debug1: No more authentication methods to try.
+MYMOOLAH@196.8.85.62: Permission denied (password,publickey,keyboard-interactive).
+
+=====================================================================
+PROD SERVER — 196.8.86.53:5022
+=====================================================================
+--- TCP probe ---
+TCP_OK
+
+--- SSH -vvv auth attempt ---
+OpenSSH_9.6p1 Ubuntu-3ubuntu13.15, OpenSSL 3.0.13 30 Jan 2024
+debug1: Reading configuration data /etc/ssh/ssh_config
+debug3: /etc/ssh/ssh_config line 19: Including file /etc/ssh/ssh_config.d/50-cloudimg-settings.conf depth 0
+debug1: Reading configuration data /etc/ssh/ssh_config.d/50-cloudimg-settings.conf
+debug1: /etc/ssh/ssh_config line 21: Applying options for *
+debug2: resolve_canonicalize: hostname 196.8.86.53 is address
+debug3: channel_clear_timeouts: clearing
+debug3: ssh_connect_direct: entering
+debug1: Connecting to 196.8.86.53 [196.8.86.53] port 5022.
+debug3: set_sock_tos: set socket 3 IP_TOS 0x10
+debug2: fd 3 setting O_NONBLOCK
+debug1: fd 3 clearing O_NONBLOCK
+debug1: Connection established.
+debug3: timeout: 10000 ms remain after connect
+debug1: identity file /home/andremacbookpro/.ssh/sbsa_sftp_key type 0
+debug1: identity file /home/andremacbookpro/.ssh/sbsa_sftp_key-cert type -1
+debug1: Local version string SSH-2.0-OpenSSH_9.6p1 Ubuntu-3ubuntu13.15
+debug1: Remote protocol version 2.0, remote software version ""
+debug1: compat_banner: no match: ""
+debug2: fd 3 setting O_NONBLOCK
+debug1: Authenticating to 196.8.86.53:5022 as 'MYMOOLAH'
+debug3: put_host_port: [196.8.86.53]:5022
+debug1: load_hostkeys: fopen /etc/ssh/ssh_known_hosts: No such file or directory
+debug1: load_hostkeys: fopen /etc/ssh/ssh_known_hosts2: No such file or directory
+debug3: order_hostkeyalgs: no algorithms matched; accept original
+debug3: send packet: type 20
+debug1: SSH2_MSG_KEXINIT sent
+debug3: receive packet: type 20
+debug1: SSH2_MSG_KEXINIT received
+debug2: local client KEXINIT proposal
+debug2: KEX algorithms: sntrup761x25519-sha512@openssh.com,curve25519-sha256,curve25519-sha256@libssh.org,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group-exchange-sha256,diffie-hellman-group16-sha512,diffie-hellman-group18-sha512,diffie-hellman-group14-sha256,ext-info-c,kex-strict-c-v00@openssh.com
+debug2: host key algorithms: ssh-ed25519-cert-v01@openssh.com,ecdsa-sha2-nistp256-cert-v01@openssh.com,ecdsa-sha2-nistp384-cert-v01@openssh.com,ecdsa-sha2-nistp521-cert-v01@openssh.com,sk-ssh-ed25519-cert-v01@openssh.com,sk-ecdsa-sha2-nistp256-cert-v01@openssh.com,rsa-sha2-512-cert-v01@openssh.com,rsa-sha2-256-cert-v01@openssh.com,ssh-ed25519,ecdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521,sk-ssh-ed25519@openssh.com,sk-ecdsa-sha2-nistp256@openssh.com,rsa-sha2-512,rsa-sha2-256
+debug2: ciphers ctos: chacha20-poly1305@openssh.com,aes128-ctr,aes192-ctr,aes256-ctr,aes128-gcm@openssh.com,aes256-gcm@openssh.com
+debug2: ciphers stoc: chacha20-poly1305@openssh.com,aes128-ctr,aes192-ctr,aes256-ctr,aes128-gcm@openssh.com,aes256-gcm@openssh.com
+debug2: MACs ctos: umac-64-etm@openssh.com,umac-128-etm@openssh.com,hmac-sha2-256-etm@openssh.com,hmac-sha2-512-etm@openssh.com,hmac-sha1-etm@openssh.com,umac-64@openssh.com,umac-128@openssh.com,hmac-sha2-256,hmac-sha2-512,hmac-sha1
+debug2: MACs stoc: umac-64-etm@openssh.com,umac-128-etm@openssh.com,hmac-sha2-256-etm@openssh.com,hmac-sha2-512-etm@openssh.com,hmac-sha1-etm@openssh.com,umac-64@openssh.com,umac-128@openssh.com,hmac-sha2-256,hmac-sha2-512,hmac-sha1
+debug2: compression ctos: none,zlib@openssh.com,zlib
+debug2: compression stoc: none,zlib@openssh.com,zlib
+debug2: languages ctos: 
+debug2: languages stoc: 
+debug2: first_kex_follows 0 
+debug2: reserved 0 
+debug2: peer server KEXINIT proposal
+debug2: KEX algorithms: diffie-hellman-group14-sha1,diffie-hellman-group-exchange-sha256,diffie-hellman-group-exchange-sha1,diffie-hellman-group1-sha1,ext-info-s,kex-strict-s-v00@openssh.com
+debug2: host key algorithms: ssh-rsa,rsa-sha2-512,rsa-sha2-256
+debug2: ciphers ctos: aes256-cbc,aes256-ctr,aes192-ctr,aes128-ctr,3des-cbc,aes192-cbc,aes128-cbc,blowfish-cbc
+debug2: ciphers stoc: aes256-cbc,aes256-ctr,aes192-ctr,aes128-ctr,3des-cbc,aes192-cbc,aes128-cbc,blowfish-cbc
+debug2: MACs ctos: hmac-sha2-256,hmac-sha2-512-etm@openssh.com,hmac-sha2-512-96,hmac-sha2-512,hmac-sha2-256-etm@openssh.com,hmac-sha2-256-96,hmac-sha1-etm@openssh.com,hmac-sha1,hmac-sha1-96,hmac-md5,hmac-md5-etm@openssh.com,hmac-md5-96
+debug2: MACs stoc: hmac-sha2-256,hmac-sha2-512-etm@openssh.com,hmac-sha2-512-96,hmac-sha2-512,hmac-sha2-256-etm@openssh.com,hmac-sha2-256-96,hmac-sha1-etm@openssh.com,hmac-sha1,hmac-sha1-96,hmac-md5,hmac-md5-etm@openssh.com,hmac-md5-96
+debug2: compression ctos: zlib,none,zlib@openssh.com
+debug2: compression stoc: none,zlib@openssh.com,zlib
+debug2: languages ctos: 
+debug2: languages stoc: 
+debug2: first_kex_follows 0 
+debug2: reserved 0 
+debug3: kex_choose_conf: will use strict KEX ordering
+debug1: kex: algorithm: diffie-hellman-group-exchange-sha256
+debug1: kex: host key algorithm: rsa-sha2-512
+debug1: kex: server->client cipher: aes128-ctr MAC: hmac-sha2-256-etm@openssh.com compression: none
+debug1: kex: client->server cipher: aes128-ctr MAC: hmac-sha2-256-etm@openssh.com compression: none
+debug3: send packet: type 34
+debug1: SSH2_MSG_KEX_DH_GEX_REQUEST(2048<8192<8192) sent
+debug1: expecting SSH2_MSG_KEX_DH_GEX_GROUP
+debug3: receive packet: type 31
+debug1: SSH2_MSG_KEX_DH_GEX_GROUP received
+debug2: bits set: 4030/8192
+debug3: send packet: type 32
+debug1: SSH2_MSG_KEX_DH_GEX_INIT sent
+debug1: expecting SSH2_MSG_KEX_DH_GEX_REPLY
+debug3: receive packet: type 33
+debug1: SSH2_MSG_KEX_DH_GEX_REPLY received
+debug1: Server host key: ssh-rsa SHA256:Wvqj3tjuQq4vUffdiC+XYcN/9HqNr4pQcNMTphtdvZk
+debug3: put_host_port: [196.8.86.53]:5022
+debug3: put_host_port: [196.8.86.53]:5022
+debug1: load_hostkeys: fopen /etc/ssh/ssh_known_hosts: No such file or directory
+debug1: load_hostkeys: fopen /etc/ssh/ssh_known_hosts2: No such file or directory
+debug1: checking without port identifier
+debug1: load_hostkeys: fopen /etc/ssh/ssh_known_hosts: No such file or directory
+debug1: load_hostkeys: fopen /etc/ssh/ssh_known_hosts2: No such file or directory
+Warning: Permanently added '[196.8.86.53]:5022' (RSA) to the list of known hosts.
+debug2: bits set: 4135/8192
+debug3: send packet: type 21
+debug1: ssh_packet_send2_wrapped: resetting send seqnr 4
+debug2: ssh_set_newkeys: mode 1
+debug1: rekey out after 4294967296 blocks
+debug1: SSH2_MSG_NEWKEYS sent
+debug1: Sending SSH2_MSG_EXT_INFO
+debug3: send packet: type 7
+debug1: expecting SSH2_MSG_NEWKEYS
+debug3: receive packet: type 21
+debug1: ssh_packet_read_poll2: resetting read seqnr 4
+debug1: SSH2_MSG_NEWKEYS received
+debug2: ssh_set_newkeys: mode 0
+debug1: rekey in after 4294967296 blocks
+debug3: send packet: type 5
+debug3: receive packet: type 7
+debug1: SSH2_MSG_EXT_INFO received
+debug3: kex_input_ext_info: extension server-sig-algs
+debug1: kex_ext_info_client_parse: server-sig-algs=<ssh-ed25519,ssh-ed448,rsa-sha2-512-cert-v01@openssh.com,rsa-sha2-512,rsa-sha2-256,x509v3-rsa2048-sha256,ecdsa-sha2-nistp521-cert-v01@openssh.com,ecdsa-sha2-nistp384-cert-v01@openssh.com,ecdsa-sha2-nistp256-cert-v01@openssh.com,x509v3-ecdsa-sha2-nistp521,x509v3-ecdsa-sha2-nistp384,x509v3-ecdsa-sha2-nistp256,ecdsa-sha2-nistp521,ecdsa-sha2-nistp384,ecdsa-sha2-nistp256,rsa-sha2-256-cert-v01@openssh.com,x509v3-ssh-rsa,x509v3-sign-rsa-sha1,x509v3-sign-rsa,ssh-rsa,ssh-rsa-cert-v01@openssh.com,ssh-ed25519-cert-v01@openssh.com,x509v3-ssh-dss,ssh-dss-cert-v01@openssh.com,ssh-dss,x509v3-sign-dss>
+debug3: receive packet: type 6
+debug2: service_accept: ssh-userauth
+debug1: SSH2_MSG_SERVICE_ACCEPT received
+debug3: send packet: type 50
+debug3: receive packet: type 53
+debug3: input_userauth_banner: entering
+SSH Server supporting SFTP and SCP
+debug3: receive packet: type 51
+debug1: Authentications that can continue: password,publickey,keyboard-interactive
+debug3: start over, passed a different list password,publickey,keyboard-interactive
+debug3: preferred gssapi-with-mic,publickey
+debug3: authmethod_lookup publickey
+debug3: remaining preferred: ,publickey
+debug3: authmethod_is_enabled publickey
+debug1: Next authentication method: publickey
+debug1: Will attempt key: /home/andremacbookpro/.ssh/sbsa_sftp_key RSA SHA256:Lf5DQHTMC5Fn+ieSiJ+/cBEWcyme4SduIxuknBDa0X0 explicit
+debug2: pubkey_prepare: done
+debug1: Offering public key: /home/andremacbookpro/.ssh/sbsa_sftp_key RSA SHA256:Lf5DQHTMC5Fn+ieSiJ+/cBEWcyme4SduIxuknBDa0X0 explicit
+debug3: send packet: type 50
+debug2: we sent a publickey packet, wait for reply
+debug3: receive packet: type 51
+debug1: Authentications that can continue: password,publickey,keyboard-interactive
+debug2: we did not send a packet, disable method
+debug1: No more authentication methods to try.
+MYMOOLAH@196.8.86.53: Permission denied (password,publickey,keyboard-interactive).
