@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<Document xmlns='urn:iso:std:iso:20022:tech:xsd:pain.002.001.03' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'>
+  <CstmrPmtStsRpt>
+    <GrpHdr>
+      <MsgId>51883570</MsgId>
+      <CreDtTm>2026-04-17T17:37:05</CreDtTm>
+      <InitgPty>
+        <Nm>Standard Bank SA</Nm>
+        <Id>
+          <OrgId>
+            <BICOrBEI>SBZAZAJJXXX</BICOrBEI>
+          </OrgId>
+        </Id>
+      </InitgPty>
+    </GrpHdr>
+    <OrgnlGrpInfAndSts>
+      <OrgnlMsgId>MM-UATRM121776433979049-MO2YXAQX</OrgnlMsgId>
+      <OrgnlMsgNmId>PAIN.001.001.03</OrgnlMsgNmId>
+      <OrgnlCreDtTm>2026-04-17T13:52:59.049Z</OrgnlCreDtTm>
+      <OrgnlNbOfTxs>10</OrgnlNbOfTxs>
+      <OrgnlCtrlSum>10.00</OrgnlCtrlSum>
+      <GrpSts>PART</GrpSts>
+    </OrgnlGrpInfAndSts>
+    <OrgnlPmtInfAndSts>
+      <OrgnlPmtInfId>PMT-MM-UATRM121776433979049-MO2YXAQ</OrgnlPmtInfId>
+      <TxInfAndSts>
+        <OrgnlInstrId>I3841402A87CD56E5</OrgnlInstrId>
+        <OrgnlEndToEndId>UAT-RM12-1776433979049-03</OrgnlEndToEndId>
+        <TxSts>ACWC</TxSts>
+        <StsRsnInf>
+          <Rsn>
+            <Cd>NARR</Cd>
+          </Rsn>
+          <AddtlInf>Unpaid Reason Code : 14</AddtlInf>
+          <AddtlInf>Unpaid Reason Description : ACNT TRANS(SAME GROUP)</AddtlInf>
+          <AddtlInf>Unpaid Date : 20260416</AddtlInf>
+          <AddtlInf>Redirect Account Number : 1254107337</AddtlInf>
+          <AddtlInf>Redirect AccountType : 1</AddtlInf>
+          <AddtlInf>Redirect BranchCode : 470010</AddtlInf>
+          <AddtlInf>Bank Batch Reference Number : 2026107004</AddtlInf>
+          <AddtlInf>Bank Sub Batch Description  : PMT-MM-UATRM121776433979049-MO</AddtlInf>
+        </StsRsnInf>
+        <OrgnlTxRef>
+          <Amt>
+            <InstdAmt Ccy="ZAR" >1.00</InstdAmt>
+          </Amt>
+          <ReqdExctnDt>2026-04-17</ReqdExctnDt>
+          <RmtInf>
+            <Ustrd>MMTP UAT12 003</Ustrd>
+          </RmtInf>
+          <Dbtr>
+            <Nm>MyMoolah (Pty) Ltd</Nm>
+          </Dbtr>
+          <DbtrAcct>
+            <Id>
+              <Othr>
+                <Id>272406481</Id>
+              </Othr>
+            </Id>
+            <Tp>
+              <Cd>CACC</Cd>
+            </Tp>
+          </DbtrAcct>
+          <DbtrAgt>
+            <FinInstnId>
+              <ClrSysMmbId>
+                <MmbId>033012</MmbId>
+              </ClrSysMmbId>
+            </FinInstnId>
+          </DbtrAgt>
+          <CdtrAgt>
+            <FinInstnId>
+              <ClrSysMmbId>
+                <MmbId>470010</MmbId>
+              </ClrSysMmbId>
+            </FinInstnId>
+          </CdtrAgt>
+          <Cdtr>
+            <Nm>ANDRE BOTES</Nm>
+            <PstlAdr>
+              <Ctry>ZA</Ctry>
+            </PstlAdr>
+          </Cdtr>
+          <CdtrAcct>
+            <Id>
+              <Othr>
+                <Id>1254107337</Id>
+              </Othr>
+            </Id>
+            <Tp>
+              <Cd>CACC</Cd>
+            </Tp>
+            <Ccy>ZAR</Ccy>
+          </CdtrAcct>
+        </OrgnlTxRef>
+      </TxInfAndSts>
+      <TxInfAndSts>
+        <OrgnlInstrId>ICB17394ABC13201C</OrgnlInstrId>
+        <OrgnlEndToEndId>UAT-RM12-1776433979049-04</OrgnlEndToEndId>
+        <TxSts>RJCT</TxSts>
+        <StsRsnInf>
+          <Rsn>
+            <Cd>NARR</Cd>
+          </Rsn>
+          <AddtlInf>Unpaid Reason Code : 03</AddtlInf>
+          <AddtlInf>Unpaid Reason Description : DEBITS NOT ALLOWED ON THI</AddtlInf>
+          <AddtlInf>Unpaid Date : 20260416</AddtlInf>
+          <AddtlInf>Bank Batch Reference Number : 2026107004</AddtlInf>
+          <AddtlInf>Bank Sub Batch Description  : PMT-MM-UATRM121776433979049-MO</AddtlInf>
+        </StsRsnInf>
+        <OrgnlTxRef>
+          <Amt>
+            <InstdAmt Ccy="ZAR" >1.00</InstdAmt>
+          </Amt>
+          <ReqdExctnDt>2026-04-17</ReqdExctnDt>
+          <RmtInf>
+            <Ustrd>MMTP UAT12 004</Ustrd>
+          </RmtInf>
+          <Dbtr>
+            <Nm>MyMoolah (Pty) Ltd</Nm>
+          </Dbtr>
+          <DbtrAcct>
+            <Id>
+              <Othr>
+                <Id>272406481</Id>
+              </Othr>
+            </Id>
+            <Tp>
+              <Cd>CACC</Cd>
+            </Tp>
+          </DbtrAcct>
+          <DbtrAgt>
+            <FinInstnId>
+              <ClrSysMmbId>
+                <MmbId>033012</MmbId>
+              </ClrSysMmbId>
+            </FinInstnId>
+          </DbtrAgt>
+          <CdtrAgt>
+            <FinInstnId>
+              <ClrSysMmbId>
+                <MmbId>632005</MmbId>
+              </ClrSysMmbId>
+            </FinInstnId>
+          </CdtrAgt>
+          <Cdtr>
+            <Nm>MM TEST ABSA</Nm>
+            <PstlAdr>
+              <Ctry>ZA</Ctry>
+            </PstlAdr>
+          </Cdtr>
+          <CdtrAcct>
+            <Id>
+              <Othr>
+                <Id>4012345678</Id>
+              </Othr>
+            </Id>
+            <Tp>
+              <Cd>CACC</Cd>
+            </Tp>
+            <Ccy>ZAR</Ccy>
+          </CdtrAcct>
+        </OrgnlTxRef>
+      </TxInfAndSts>
+    </OrgnlPmtInfAndSts>
+  </CstmrPmtStsRpt>
+</Document>

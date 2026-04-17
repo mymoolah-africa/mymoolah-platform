@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<Document xmlns='urn:iso:std:iso:20022:tech:xsd:pain.002.001.03' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'>
+  <CstmrPmtStsRpt>
+    <GrpHdr>
+      <MsgId>51886531</MsgId>
+      <CreDtTm>2026-04-17T16:35:45</CreDtTm>
+      <InitgPty>
+        <Nm>Standard Bank SA</Nm>
+        <Id>
+          <OrgId>
+            <BICOrBEI>SBZAZAJJXXX</BICOrBEI>
+          </OrgId>
+        </Id>
+      </InitgPty>
+    </GrpHdr>
+    <OrgnlGrpInfAndSts>
+      <OrgnlMsgId>MM-UATRM91776433979048-MO2YXAQW</OrgnlMsgId>
+      <OrgnlMsgNmId>PAIN.001.001.03</OrgnlMsgNmId>
+      <OrgnlCreDtTm>2026-04-17T13:52:59.048Z</OrgnlCreDtTm>
+      <OrgnlNbOfTxs>3</OrgnlNbOfTxs>
+      <OrgnlCtrlSum>3.00</OrgnlCtrlSum>
+      <GrpSts>RJCT</GrpSts>
+      <StsRsnInf>
+        <Rsn>
+          <Cd>NARR</Cd>
+        </Rsn>
+        <AddtlInf>Status Code : 0009</AddtlInf>
+        <AddtlInf>Status Description : RUN EXCEEDS LIMIT</AddtlInf>
+      </StsRsnInf>
+    </OrgnlGrpInfAndSts>
+    <OrgnlPmtInfAndSts>
+      <OrgnlPmtInfId>PMT-MM-UATRM91776433979048-MO2YXAQW</OrgnlPmtInfId>
+      <TxInfAndSts>
+        <OrgnlInstrId>IAAA9BCFE5FE0419C</OrgnlInstrId>
+        <OrgnlEndToEndId>UAT-SBSA-1776433979048-001</OrgnlEndToEndId>
+        <TxSts>RJCT</TxSts>
+        <StsRsnInf>
+          <Rsn>
+            <Cd>NARR</Cd>
+          </Rsn>
+          <AddtlInf>Status Code : 0009</AddtlInf>
+          <AddtlInf>Status Description : RUN EXCEEDS LIMIT</AddtlInf>
+        </StsRsnInf>
+        <OrgnlTxRef>
+          <Amt>
+            <InstdAmt Ccy="ZAR" >1.00</InstdAmt>
+          </Amt>
+          <ReqdExctnDt>2026-04-18</ReqdExctnDt>
+          <PmtTpInf>
+            <InstrPrty>NORM</InstrPrty>
+          </PmtTpInf>
+          <PmtMtd>TRF</PmtMtd>
+          <RmtInf>
+            <Ustrd>MMTP UAT PAYMENT 001</Ustrd>
+          </RmtInf>
+          <Dbtr>
+            <Nm>MyMoolah (Pty) Ltd</Nm>
+          </Dbtr>
+          <DbtrAcct>
+            <Id>
+              <Othr>
+                <Id>123456789</Id>
+              </Othr>
+            </Id>
+            <Ccy>ZAR</Ccy>
+          </DbtrAcct>
+          <DbtrAgt>
+            <FinInstnId>
+              <ClrSysMmbId>
+                <MmbId>051001</MmbId>
+              </ClrSysMmbId>
+            </FinInstnId>
+          </DbtrAgt>
+          <CdtrAgt>
+            <FinInstnId>
+              <ClrSysMmbId>
+                <MmbId>051001</MmbId>
+              </ClrSysMmbId>
+            </FinInstnId>
+          </CdtrAgt>
+          <Cdtr>
+            <Nm>Andre Botes</Nm>
+            <PstlAdr>
+              <Ctry>ZA</Ctry>
+            </PstlAdr>
+          </Cdtr>
+          <CdtrAcct>
+            <Id>
+              <Othr>
+                <Id>10111730633</Id>
+              </Othr>
+            </Id>
+            <Ccy>ZAR</Ccy>
+          </CdtrAcct>
+        </OrgnlTxRef>
+      </TxInfAndSts>
+      <TxInfAndSts>
+        <OrgnlInstrId>IB14543D811C476DF</OrgnlInstrId>
+        <OrgnlEndToEndId>UAT-DISC-1776433979048-002</OrgnlEndToEndId>
+        <TxSts>RJCT</TxSts>
+        <StsRsnInf>
+          <Rsn>
+            <Cd>NARR</Cd>
+          </Rsn>
+          <AddtlInf>Status Code : 0009</AddtlInf>
+          <AddtlInf>Status Description : RUN EXCEEDS LIMIT</AddtlInf>
+        </StsRsnInf>
+        <OrgnlTxRef>
+          <Amt>
+            <InstdAmt Ccy="ZAR" >1.00</InstdAmt>
+          </Amt>
+          <ReqdExctnDt>2026-04-18</ReqdExctnDt>
+          <PmtTpInf>
+            <InstrPrty>NORM</InstrPrty>
+          </PmtTpInf>
+          <PmtMtd>TRF</PmtMtd>
+          <RmtInf>
+            <Ustrd>MMTP UAT PAYMENT 002</Ustrd>
+          </RmtInf>
+          <Dbtr>
+            <Nm>MyMoolah (Pty) Ltd</Nm>
+          </Dbtr>
+          <DbtrAcct>
+            <Id>
+              <Othr>
+                <Id>123456789</Id>
+              </Othr>
+            </Id>
+            <Ccy>ZAR</Ccy>
+          </DbtrAcct>
+          <DbtrAgt>
+            <FinInstnId>
+              <ClrSysMmbId>
+                <MmbId>051001</MmbId>
+              </ClrSysMmbId>
+            </FinInstnId>
+          </DbtrAgt>
+          <CdtrAgt>
+            <FinInstnId>
+              <ClrSysMmbId>
+                <MmbId>679000</MmbId>
+              </ClrSysMmbId>
+            </FinInstnId>
+          </CdtrAgt>
+          <Cdtr>
+            <Nm>Andre Botes</Nm>
+            <PstlAdr>
+              <Ctry>ZA</Ctry>
+            </PstlAdr>
+          </Cdtr>
+          <CdtrAcct>
+            <Id>
+              <Othr>
+                <Id>18828076450</Id>
+              </Othr>
+            </Id>
+            <Ccy>ZAR</Ccy>
+          </CdtrAcct>
+        </OrgnlTxRef>
+      </TxInfAndSts>
+      <TxInfAndSts>
+        <OrgnlInstrId>I0FE799FC965D5C73</OrgnlInstrId>
+        <OrgnlEndToEndId>UAT-CAP-1776433979048-003</OrgnlEndToEndId>
+        <TxSts>RJCT</TxSts>
+        <StsRsnInf>
+          <Rsn>
+            <Cd>NARR</Cd>
+          </Rsn>
+          <AddtlInf>Status Code : 0009</AddtlInf>
+          <AddtlInf>Status Description : RUN EXCEEDS LIMIT</AddtlInf>
+        </StsRsnInf>
+        <OrgnlTxRef>
+          <Amt>
+            <InstdAmt Ccy="ZAR" >1.00</InstdAmt>
+          </Amt>
+          <ReqdExctnDt>2026-04-18</ReqdExctnDt>
+          <PmtTpInf>
+            <InstrPrty>NORM</InstrPrty>
+          </PmtTpInf>
+          <PmtMtd>TRF</PmtMtd>
+          <RmtInf>
+            <Ustrd>MMTP UAT PAYMENT 003</Ustrd>
+          </RmtInf>
+          <Dbtr>
+            <Nm>MyMoolah (Pty) Ltd</Nm>
+          </Dbtr>
+          <DbtrAcct>
+            <Id>
+              <Othr>
+                <Id>123456789</Id>
+              </Othr>
+            </Id>
+            <Ccy>ZAR</Ccy>
+          </DbtrAcct>
+          <DbtrAgt>
+            <FinInstnId>
+              <ClrSysMmbId>
+                <MmbId>051001</MmbId>
+              </ClrSysMmbId>
+            </FinInstnId>
+          </DbtrAgt>
+          <CdtrAgt>
+            <FinInstnId>
+              <ClrSysMmbId>
+                <MmbId>470010</MmbId>
+              </ClrSysMmbId>
+            </FinInstnId>
+          </CdtrAgt>
+          <Cdtr>
+            <Nm>Andre Botes</Nm>
+            <PstlAdr>
+              <Ctry>ZA</Ctry>
+            </PstlAdr>
+          </Cdtr>
+          <CdtrAcct>
+            <Id>
+              <Othr>
+                <Id>1254107337</Id>
+              </Othr>
+            </Id>
+            <Ccy>ZAR</Ccy>
+          </CdtrAcct>
+        </OrgnlTxRef>
+      </TxInfAndSts>
+    </OrgnlPmtInfAndSts>
+  </CstmrPmtStsRpt>
+</Document>

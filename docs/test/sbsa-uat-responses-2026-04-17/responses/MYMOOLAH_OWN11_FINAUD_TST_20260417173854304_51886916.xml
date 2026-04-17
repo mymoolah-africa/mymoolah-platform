@@ -1,0 +1,675 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<Document xmlns='urn:iso:std:iso:20022:tech:xsd:pain.002.001.03' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'>
+  <CstmrPmtStsRpt>
+    <GrpHdr>
+      <MsgId>51886876</MsgId>
+      <CreDtTm>2026-04-17T17:38:53</CreDtTm>
+      <InitgPty>
+        <Nm>Standard Bank SA</Nm>
+        <Id>
+          <OrgId>
+            <BICOrBEI>SBZAZAJJXXX</BICOrBEI>
+          </OrgId>
+        </Id>
+      </InitgPty>
+    </GrpHdr>
+    <OrgnlGrpInfAndSts>
+      <OrgnlMsgId>MM-UATRM121776433979049-MO2YXAQX</OrgnlMsgId>
+      <OrgnlMsgNmId>PAIN.001.001.03</OrgnlMsgNmId>
+      <OrgnlCreDtTm>2026-04-17T13:52:59.049Z</OrgnlCreDtTm>
+      <OrgnlNbOfTxs>10</OrgnlNbOfTxs>
+      <OrgnlCtrlSum>10.00</OrgnlCtrlSum>
+      <GrpSts>PART</GrpSts>
+      <StsRsnInf>
+        <Rsn>
+          <Cd>NARR</Cd>
+        </Rsn>
+        <AddtlInf>Status Code : 0000</AddtlInf>
+        <AddtlInf>Status Description : NO ERROR FOUND-PROCESSED SUCCESSFULLY</AddtlInf>
+      </StsRsnInf>
+    </OrgnlGrpInfAndSts>
+    <OrgnlPmtInfAndSts>
+      <OrgnlPmtInfId>PMT-MM-UATRM121776433979049-MO2YXAQ</OrgnlPmtInfId>
+      <TxInfAndSts>
+        <OrgnlInstrId>I9154383B2955F1D7</OrgnlInstrId>
+        <OrgnlEndToEndId>UAT-RM12-1776433979049-01</OrgnlEndToEndId>
+        <TxSts>ACSP</TxSts>
+        <StsRsnInf>
+          <Rsn>
+            <Cd>NARR</Cd>
+          </Rsn>
+          <AddtlInf>Status Code : 0000</AddtlInf>
+          <AddtlInf>Status Description : NO ERROR FOUND-PROCESSED SUCCESSFULLY</AddtlInf>
+        </StsRsnInf>
+        <OrgnlTxRef>
+          <Amt>
+            <InstdAmt Ccy="ZAR" >1.00</InstdAmt>
+          </Amt>
+          <ReqdExctnDt>2026-04-17</ReqdExctnDt>
+          <PmtTpInf>
+            <InstrPrty>NORM</InstrPrty>
+          </PmtTpInf>
+          <PmtMtd>TRF</PmtMtd>
+          <RmtInf>
+            <Ustrd>MMTP UAT12 001</Ustrd>
+          </RmtInf>
+          <Dbtr>
+            <Nm>MYMOOLAH (PTY) LTD</Nm>
+          </Dbtr>
+          <DbtrAcct>
+            <Id>
+              <Othr>
+                <Id>272406481</Id>
+              </Othr>
+            </Id>
+            <Ccy>ZAR</Ccy>
+          </DbtrAcct>
+          <DbtrAgt>
+            <FinInstnId>
+              <ClrSysMmbId>
+                <MmbId>033012</MmbId>
+              </ClrSysMmbId>
+            </FinInstnId>
+          </DbtrAgt>
+          <CdtrAgt>
+            <FinInstnId>
+              <ClrSysMmbId>
+                <MmbId>051001</MmbId>
+              </ClrSysMmbId>
+            </FinInstnId>
+          </CdtrAgt>
+          <Cdtr>
+            <Nm>ANDRE BOTES</Nm>
+            <PstlAdr>
+              <Ctry>ZA</Ctry>
+            </PstlAdr>
+          </Cdtr>
+          <CdtrAcct>
+            <Id>
+              <Othr>
+                <Id>10111730633</Id>
+              </Othr>
+            </Id>
+            <Ccy>ZAR</Ccy>
+          </CdtrAcct>
+        </OrgnlTxRef>
+      </TxInfAndSts>
+      <TxInfAndSts>
+        <OrgnlInstrId>IB18E73AED7BE0FF1</OrgnlInstrId>
+        <OrgnlEndToEndId>UAT-RM12-1776433979049-02</OrgnlEndToEndId>
+        <TxSts>ACSP</TxSts>
+        <StsRsnInf>
+          <Rsn>
+            <Cd>NARR</Cd>
+          </Rsn>
+          <AddtlInf>Status Code : 0000</AddtlInf>
+          <AddtlInf>Status Description : NO ERROR FOUND-PROCESSED SUCCESSFULLY</AddtlInf>
+        </StsRsnInf>
+        <OrgnlTxRef>
+          <Amt>
+            <InstdAmt Ccy="ZAR" >1.00</InstdAmt>
+          </Amt>
+          <ReqdExctnDt>2026-04-17</ReqdExctnDt>
+          <PmtTpInf>
+            <InstrPrty>NORM</InstrPrty>
+          </PmtTpInf>
+          <PmtMtd>TRF</PmtMtd>
+          <RmtInf>
+            <Ustrd>MMTP UAT12 002</Ustrd>
+          </RmtInf>
+          <Dbtr>
+            <Nm>MYMOOLAH (PTY) LTD</Nm>
+          </Dbtr>
+          <DbtrAcct>
+            <Id>
+              <Othr>
+                <Id>272406481</Id>
+              </Othr>
+            </Id>
+            <Ccy>ZAR</Ccy>
+          </DbtrAcct>
+          <DbtrAgt>
+            <FinInstnId>
+              <ClrSysMmbId>
+                <MmbId>033012</MmbId>
+              </ClrSysMmbId>
+            </FinInstnId>
+          </DbtrAgt>
+          <CdtrAgt>
+            <FinInstnId>
+              <ClrSysMmbId>
+                <MmbId>679000</MmbId>
+              </ClrSysMmbId>
+            </FinInstnId>
+          </CdtrAgt>
+          <Cdtr>
+            <Nm>ANDRE BOTES</Nm>
+            <PstlAdr>
+              <Ctry>ZA</Ctry>
+            </PstlAdr>
+          </Cdtr>
+          <CdtrAcct>
+            <Id>
+              <Othr>
+                <Id>18828076450</Id>
+              </Othr>
+            </Id>
+            <Ccy>ZAR</Ccy>
+          </CdtrAcct>
+        </OrgnlTxRef>
+      </TxInfAndSts>
+      <TxInfAndSts>
+        <OrgnlInstrId>I3841402A87CD56E5</OrgnlInstrId>
+        <OrgnlEndToEndId>UAT-RM12-1776433979049-03</OrgnlEndToEndId>
+        <TxSts>ACSP</TxSts>
+        <StsRsnInf>
+          <Rsn>
+            <Cd>NARR</Cd>
+          </Rsn>
+          <AddtlInf>Status Code : 0000</AddtlInf>
+          <AddtlInf>Status Description : NO ERROR FOUND-PROCESSED SUCCESSFULLY</AddtlInf>
+        </StsRsnInf>
+        <OrgnlTxRef>
+          <Amt>
+            <InstdAmt Ccy="ZAR" >1.00</InstdAmt>
+          </Amt>
+          <ReqdExctnDt>2026-04-17</ReqdExctnDt>
+          <PmtTpInf>
+            <InstrPrty>NORM</InstrPrty>
+          </PmtTpInf>
+          <PmtMtd>TRF</PmtMtd>
+          <RmtInf>
+            <Ustrd>MMTP UAT12 003</Ustrd>
+          </RmtInf>
+          <Dbtr>
+            <Nm>MYMOOLAH (PTY) LTD</Nm>
+          </Dbtr>
+          <DbtrAcct>
+            <Id>
+              <Othr>
+                <Id>272406481</Id>
+              </Othr>
+            </Id>
+            <Ccy>ZAR</Ccy>
+          </DbtrAcct>
+          <DbtrAgt>
+            <FinInstnId>
+              <ClrSysMmbId>
+                <MmbId>033012</MmbId>
+              </ClrSysMmbId>
+            </FinInstnId>
+          </DbtrAgt>
+          <CdtrAgt>
+            <FinInstnId>
+              <ClrSysMmbId>
+                <MmbId>470010</MmbId>
+              </ClrSysMmbId>
+            </FinInstnId>
+          </CdtrAgt>
+          <Cdtr>
+            <Nm>ANDRE BOTES</Nm>
+            <PstlAdr>
+              <Ctry>ZA</Ctry>
+            </PstlAdr>
+          </Cdtr>
+          <CdtrAcct>
+            <Id>
+              <Othr>
+                <Id>1254107337</Id>
+              </Othr>
+            </Id>
+            <Ccy>ZAR</Ccy>
+          </CdtrAcct>
+        </OrgnlTxRef>
+      </TxInfAndSts>
+      <TxInfAndSts>
+        <OrgnlInstrId>ICB17394ABC13201C</OrgnlInstrId>
+        <OrgnlEndToEndId>UAT-RM12-1776433979049-04</OrgnlEndToEndId>
+        <TxSts>ACSP</TxSts>
+        <StsRsnInf>
+          <Rsn>
+            <Cd>NARR</Cd>
+          </Rsn>
+          <AddtlInf>Status Code : 0000</AddtlInf>
+          <AddtlInf>Status Description : NO ERROR FOUND-PROCESSED SUCCESSFULLY</AddtlInf>
+        </StsRsnInf>
+        <OrgnlTxRef>
+          <Amt>
+            <InstdAmt Ccy="ZAR" >1.00</InstdAmt>
+          </Amt>
+          <ReqdExctnDt>2026-04-17</ReqdExctnDt>
+          <PmtTpInf>
+            <InstrPrty>NORM</InstrPrty>
+          </PmtTpInf>
+          <PmtMtd>TRF</PmtMtd>
+          <RmtInf>
+            <Ustrd>MMTP UAT12 004</Ustrd>
+          </RmtInf>
+          <Dbtr>
+            <Nm>MYMOOLAH (PTY) LTD</Nm>
+          </Dbtr>
+          <DbtrAcct>
+            <Id>
+              <Othr>
+                <Id>272406481</Id>
+              </Othr>
+            </Id>
+            <Ccy>ZAR</Ccy>
+          </DbtrAcct>
+          <DbtrAgt>
+            <FinInstnId>
+              <ClrSysMmbId>
+                <MmbId>033012</MmbId>
+              </ClrSysMmbId>
+            </FinInstnId>
+          </DbtrAgt>
+          <CdtrAgt>
+            <FinInstnId>
+              <ClrSysMmbId>
+                <MmbId>632005</MmbId>
+              </ClrSysMmbId>
+            </FinInstnId>
+          </CdtrAgt>
+          <Cdtr>
+            <Nm>MM TEST ABSA</Nm>
+            <PstlAdr>
+              <Ctry>ZA</Ctry>
+            </PstlAdr>
+          </Cdtr>
+          <CdtrAcct>
+            <Id>
+              <Othr>
+                <Id>4012345678</Id>
+              </Othr>
+            </Id>
+            <Ccy>ZAR</Ccy>
+          </CdtrAcct>
+        </OrgnlTxRef>
+      </TxInfAndSts>
+      <TxInfAndSts>
+        <OrgnlInstrId>IC778E873CE934730</OrgnlInstrId>
+        <OrgnlEndToEndId>UAT-RM12-1776433979049-05</OrgnlEndToEndId>
+        <TxSts>RJCT</TxSts>
+        <StsRsnInf>
+          <Rsn>
+            <Cd>NARR</Cd>
+          </Rsn>
+          <AddtlInf>Status Code : 0003</AddtlInf>
+          <AddtlInf>Status Description : ACCOUNT NO INVALID</AddtlInf>
+        </StsRsnInf>
+        <OrgnlTxRef>
+          <Amt>
+            <InstdAmt Ccy="ZAR" >1.00</InstdAmt>
+          </Amt>
+          <ReqdExctnDt>2026-04-17</ReqdExctnDt>
+          <PmtTpInf>
+            <InstrPrty>NORM</InstrPrty>
+          </PmtTpInf>
+          <PmtMtd>TRF</PmtMtd>
+          <RmtInf>
+            <Ustrd>MMTP UAT12 005</Ustrd>
+          </RmtInf>
+          <Dbtr>
+            <Nm>MYMOOLAH (PTY) LTD</Nm>
+          </Dbtr>
+          <DbtrAcct>
+            <Id>
+              <Othr>
+                <Id>272406481</Id>
+              </Othr>
+            </Id>
+            <Ccy>ZAR</Ccy>
+          </DbtrAcct>
+          <DbtrAgt>
+            <FinInstnId>
+              <ClrSysMmbId>
+                <MmbId>033012</MmbId>
+              </ClrSysMmbId>
+            </FinInstnId>
+          </DbtrAgt>
+          <CdtrAgt>
+            <FinInstnId>
+              <ClrSysMmbId>
+                <MmbId>250655</MmbId>
+              </ClrSysMmbId>
+            </FinInstnId>
+          </CdtrAgt>
+          <Cdtr>
+            <Nm>MM TEST FNB</Nm>
+            <PstlAdr>
+              <Ctry>ZA</Ctry>
+            </PstlAdr>
+          </Cdtr>
+          <CdtrAcct>
+            <Id>
+              <Othr>
+                <Id>62012345678</Id>
+              </Othr>
+            </Id>
+            <Ccy>ZAR</Ccy>
+          </CdtrAcct>
+        </OrgnlTxRef>
+      </TxInfAndSts>
+      <TxInfAndSts>
+        <OrgnlInstrId>I09D3EB0D5443B40D</OrgnlInstrId>
+        <OrgnlEndToEndId>UAT-RM12-1776433979049-06</OrgnlEndToEndId>
+        <TxSts>RJCT</TxSts>
+        <StsRsnInf>
+          <Rsn>
+            <Cd>NARR</Cd>
+          </Rsn>
+          <AddtlInf>Status Code : 0003</AddtlInf>
+          <AddtlInf>Status Description : ACCOUNT NO INVALID</AddtlInf>
+        </StsRsnInf>
+        <OrgnlTxRef>
+          <Amt>
+            <InstdAmt Ccy="ZAR" >1.00</InstdAmt>
+          </Amt>
+          <ReqdExctnDt>2026-04-17</ReqdExctnDt>
+          <PmtTpInf>
+            <InstrPrty>NORM</InstrPrty>
+          </PmtTpInf>
+          <PmtMtd>TRF</PmtMtd>
+          <RmtInf>
+            <Ustrd>MMTP UAT12 006</Ustrd>
+          </RmtInf>
+          <Dbtr>
+            <Nm>MYMOOLAH (PTY) LTD</Nm>
+          </Dbtr>
+          <DbtrAcct>
+            <Id>
+              <Othr>
+                <Id>272406481</Id>
+              </Othr>
+            </Id>
+            <Ccy>ZAR</Ccy>
+          </DbtrAcct>
+          <DbtrAgt>
+            <FinInstnId>
+              <ClrSysMmbId>
+                <MmbId>033012</MmbId>
+              </ClrSysMmbId>
+            </FinInstnId>
+          </DbtrAgt>
+          <CdtrAgt>
+            <FinInstnId>
+              <ClrSysMmbId>
+                <MmbId>198765</MmbId>
+              </ClrSysMmbId>
+            </FinInstnId>
+          </CdtrAgt>
+          <Cdtr>
+            <Nm>MM TEST NED</Nm>
+            <PstlAdr>
+              <Ctry>ZA</Ctry>
+            </PstlAdr>
+          </Cdtr>
+          <CdtrAcct>
+            <Id>
+              <Othr>
+                <Id>1012345678</Id>
+              </Othr>
+            </Id>
+            <Ccy>ZAR</Ccy>
+          </CdtrAcct>
+        </OrgnlTxRef>
+      </TxInfAndSts>
+      <TxInfAndSts>
+        <OrgnlInstrId>I2703CD1E1CF05E5A</OrgnlInstrId>
+        <OrgnlEndToEndId>UAT-RM12-1776433979049-07</OrgnlEndToEndId>
+        <TxSts>RJCT</TxSts>
+        <StsRsnInf>
+          <Rsn>
+            <Cd>NARR</Cd>
+          </Rsn>
+          <AddtlInf>Status Code : 0003</AddtlInf>
+          <AddtlInf>Status Description : ACCOUNT NO INVALID</AddtlInf>
+        </StsRsnInf>
+        <OrgnlTxRef>
+          <Amt>
+            <InstdAmt Ccy="ZAR" >1.00</InstdAmt>
+          </Amt>
+          <ReqdExctnDt>2026-04-17</ReqdExctnDt>
+          <PmtTpInf>
+            <InstrPrty>NORM</InstrPrty>
+          </PmtTpInf>
+          <PmtMtd>TRF</PmtMtd>
+          <RmtInf>
+            <Ustrd>MMTP UAT12 007</Ustrd>
+          </RmtInf>
+          <Dbtr>
+            <Nm>MYMOOLAH (PTY) LTD</Nm>
+          </Dbtr>
+          <DbtrAcct>
+            <Id>
+              <Othr>
+                <Id>272406481</Id>
+              </Othr>
+            </Id>
+            <Ccy>ZAR</Ccy>
+          </DbtrAcct>
+          <DbtrAgt>
+            <FinInstnId>
+              <ClrSysMmbId>
+                <MmbId>033012</MmbId>
+              </ClrSysMmbId>
+            </FinInstnId>
+          </DbtrAgt>
+          <CdtrAgt>
+            <FinInstnId>
+              <ClrSysMmbId>
+                <MmbId>051001</MmbId>
+              </ClrSysMmbId>
+            </FinInstnId>
+          </CdtrAgt>
+          <Cdtr>
+            <Nm>MM TEST SBSA</Nm>
+            <PstlAdr>
+              <Ctry>ZA</Ctry>
+            </PstlAdr>
+          </Cdtr>
+          <CdtrAcct>
+            <Id>
+              <Othr>
+                <Id>10111730699</Id>
+              </Othr>
+            </Id>
+            <Ccy>ZAR</Ccy>
+          </CdtrAcct>
+        </OrgnlTxRef>
+      </TxInfAndSts>
+      <TxInfAndSts>
+        <OrgnlInstrId>ID5CF7497C6EE8A4B</OrgnlInstrId>
+        <OrgnlEndToEndId>UAT-RM12-1776433979049-08</OrgnlEndToEndId>
+        <TxSts>RJCT</TxSts>
+        <StsRsnInf>
+          <Rsn>
+            <Cd>NARR</Cd>
+          </Rsn>
+          <AddtlInf>Status Code : 0003</AddtlInf>
+          <AddtlInf>Status Description : ACCOUNT NO INVALID</AddtlInf>
+        </StsRsnInf>
+        <OrgnlTxRef>
+          <Amt>
+            <InstdAmt Ccy="ZAR" >1.00</InstdAmt>
+          </Amt>
+          <ReqdExctnDt>2026-04-17</ReqdExctnDt>
+          <PmtTpInf>
+            <InstrPrty>NORM</InstrPrty>
+          </PmtTpInf>
+          <PmtMtd>TRF</PmtMtd>
+          <RmtInf>
+            <Ustrd>MMTP UAT12 008 BAD</Ustrd>
+          </RmtInf>
+          <Dbtr>
+            <Nm>MYMOOLAH (PTY) LTD</Nm>
+          </Dbtr>
+          <DbtrAcct>
+            <Id>
+              <Othr>
+                <Id>272406481</Id>
+              </Othr>
+            </Id>
+            <Ccy>ZAR</Ccy>
+          </DbtrAcct>
+          <DbtrAgt>
+            <FinInstnId>
+              <ClrSysMmbId>
+                <MmbId>033012</MmbId>
+              </ClrSysMmbId>
+            </FinInstnId>
+          </DbtrAgt>
+          <CdtrAgt>
+            <FinInstnId>
+              <ClrSysMmbId>
+                <MmbId>051001</MmbId>
+              </ClrSysMmbId>
+            </FinInstnId>
+          </CdtrAgt>
+          <Cdtr>
+            <Nm>MM BAD ACCT</Nm>
+            <PstlAdr>
+              <Ctry>ZA</Ctry>
+            </PstlAdr>
+          </Cdtr>
+          <CdtrAcct>
+            <Id>
+              <Othr>
+                <Id>999999999</Id>
+              </Othr>
+            </Id>
+            <Ccy>ZAR</Ccy>
+          </CdtrAcct>
+        </OrgnlTxRef>
+      </TxInfAndSts>
+      <TxInfAndSts>
+        <OrgnlInstrId>I9C9224434348D5F9</OrgnlInstrId>
+        <OrgnlEndToEndId>UAT-RM12-1776433979049-09</OrgnlEndToEndId>
+        <TxSts>RJCT</TxSts>
+        <StsRsnInf>
+          <Rsn>
+            <Cd>NARR</Cd>
+          </Rsn>
+          <AddtlInf>Status Code : 0003</AddtlInf>
+          <AddtlInf>Status Description : ACCOUNT NO INVALID</AddtlInf>
+        </StsRsnInf>
+        <OrgnlTxRef>
+          <Amt>
+            <InstdAmt Ccy="ZAR" >1.00</InstdAmt>
+          </Amt>
+          <ReqdExctnDt>2026-04-17</ReqdExctnDt>
+          <PmtTpInf>
+            <InstrPrty>NORM</InstrPrty>
+          </PmtTpInf>
+          <PmtMtd>TRF</PmtMtd>
+          <RmtInf>
+            <Ustrd>MMTP UAT12 009 BADBRANCH</Ustrd>
+          </RmtInf>
+          <Dbtr>
+            <Nm>MYMOOLAH (PTY) LTD</Nm>
+          </Dbtr>
+          <DbtrAcct>
+            <Id>
+              <Othr>
+                <Id>272406481</Id>
+              </Othr>
+            </Id>
+            <Ccy>ZAR</Ccy>
+          </DbtrAcct>
+          <DbtrAgt>
+            <FinInstnId>
+              <ClrSysMmbId>
+                <MmbId>033012</MmbId>
+              </ClrSysMmbId>
+            </FinInstnId>
+          </DbtrAgt>
+          <CdtrAgt>
+            <FinInstnId>
+              <ClrSysMmbId>
+                <MmbId>198765</MmbId>
+              </ClrSysMmbId>
+            </FinInstnId>
+          </CdtrAgt>
+          <Cdtr>
+            <Nm>MM BAD BRN</Nm>
+            <PstlAdr>
+              <Ctry>ZA</Ctry>
+            </PstlAdr>
+          </Cdtr>
+          <CdtrAcct>
+            <Id>
+              <Othr>
+                <Id>10111730633</Id>
+              </Othr>
+            </Id>
+            <Ccy>ZAR</Ccy>
+          </CdtrAcct>
+        </OrgnlTxRef>
+      </TxInfAndSts>
+      <TxInfAndSts>
+        <OrgnlInstrId>IBD1DC0475FB73A1C</OrgnlInstrId>
+        <OrgnlEndToEndId>UAT-RM12-1776433979049-10</OrgnlEndToEndId>
+        <TxSts>RJCT</TxSts>
+        <StsRsnInf>
+          <Rsn>
+            <Cd>NARR</Cd>
+          </Rsn>
+          <AddtlInf>Status Code : 0003</AddtlInf>
+          <AddtlInf>Status Description : ACCOUNT NO INVALID</AddtlInf>
+        </StsRsnInf>
+        <OrgnlTxRef>
+          <Amt>
+            <InstdAmt Ccy="ZAR" >1.00</InstdAmt>
+          </Amt>
+          <ReqdExctnDt>2026-04-17</ReqdExctnDt>
+          <PmtTpInf>
+            <InstrPrty>NORM</InstrPrty>
+          </PmtTpInf>
+          <PmtMtd>TRF</PmtMtd>
+          <RmtInf>
+            <Ustrd>MMTP UAT12 010 SHORT</Ustrd>
+          </RmtInf>
+          <Dbtr>
+            <Nm>MYMOOLAH (PTY) LTD</Nm>
+          </Dbtr>
+          <DbtrAcct>
+            <Id>
+              <Othr>
+                <Id>272406481</Id>
+              </Othr>
+            </Id>
+            <Ccy>ZAR</Ccy>
+          </DbtrAcct>
+          <DbtrAgt>
+            <FinInstnId>
+              <ClrSysMmbId>
+                <MmbId>033012</MmbId>
+              </ClrSysMmbId>
+            </FinInstnId>
+          </DbtrAgt>
+          <CdtrAgt>
+            <FinInstnId>
+              <ClrSysMmbId>
+                <MmbId>000205</MmbId>
+              </ClrSysMmbId>
+            </FinInstnId>
+          </CdtrAgt>
+          <Cdtr>
+            <Nm>MM BAD SHORT</Nm>
+            <PstlAdr>
+              <Ctry>ZA</Ctry>
+            </PstlAdr>
+          </Cdtr>
+          <CdtrAcct>
+            <Id>
+              <Othr>
+                <Id>12345</Id>
+              </Othr>
+            </Id>
+            <Ccy>ZAR</Ccy>
+          </CdtrAcct>
+        </OrgnlTxRef>
+      </TxInfAndSts>
+    </OrgnlPmtInfAndSts>
+  </CstmrPmtStsRpt>
+</Document>

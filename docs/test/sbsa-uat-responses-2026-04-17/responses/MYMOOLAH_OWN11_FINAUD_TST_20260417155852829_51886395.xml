@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<Document xmlns='urn:iso:std:iso:20022:tech:xsd:pain.002.001.03' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'>
+  <CstmrPmtStsRpt>
+    <GrpHdr>
+      <MsgId>51886366</MsgId>
+      <CreDtTm>2026-04-17T15:58:52</CreDtTm>
+      <InitgPty>
+        <Nm>Standard Bank SA</Nm>
+        <Id>
+          <OrgId>
+            <BICOrBEI>SBZAZAJJXXX</BICOrBEI>
+          </OrgId>
+        </Id>
+      </InitgPty>
+    </GrpHdr>
+    <OrgnlGrpInfAndSts>
+      <OrgnlMsgId>MM-UATRM71776433979043-MO2YXAQS</OrgnlMsgId>
+      <OrgnlMsgNmId>PAIN.001.001.03</OrgnlMsgNmId>
+      <OrgnlCreDtTm>2026-04-17T13:52:59.043Z</OrgnlCreDtTm>
+      <OrgnlNbOfTxs>3</OrgnlNbOfTxs>
+      <OrgnlCtrlSum>3.00</OrgnlCtrlSum>
+      <GrpSts>ACSP</GrpSts>
+      <StsRsnInf>
+        <Rsn>
+          <Cd>NARR</Cd>
+        </Rsn>
+        <AddtlInf>Status Code : 0000</AddtlInf>
+        <AddtlInf>Status Description : NO ERROR FOUND-PROCESSED SUCCESSFULLY</AddtlInf>
+      </StsRsnInf>
+    </OrgnlGrpInfAndSts>
+    <OrgnlPmtInfAndSts>
+      <OrgnlPmtInfId>PMT-MM-UATRM71776433979043-MO2YXAQS</OrgnlPmtInfId>
+      <TxInfAndSts>
+        <OrgnlInstrId>I834F85D26ECDCC20</OrgnlInstrId>
+        <OrgnlEndToEndId>UAT-SBSA-1776433979043-001</OrgnlEndToEndId>
+        <TxSts>ACSP</TxSts>
+        <StsRsnInf>
+          <Rsn>
+            <Cd>NARR</Cd>
+          </Rsn>
+          <AddtlInf>Status Code : 0000</AddtlInf>
+          <AddtlInf>Status Description : NO ERROR FOUND-PROCESSED SUCCESSFULLY</AddtlInf>
+        </StsRsnInf>
+        <OrgnlTxRef>
+          <Amt>
+            <InstdAmt Ccy="ZAR" >1.00</InstdAmt>
+          </Amt>
+          <ReqdExctnDt>2026-04-17</ReqdExctnDt>
+          <PmtTpInf>
+            <InstrPrty>NORM</InstrPrty>
+          </PmtTpInf>
+          <PmtMtd>TRF</PmtMtd>
+          <RmtInf>
+            <Ustrd>MMTP UAT PAYMENT 001</Ustrd>
+          </RmtInf>
+          <Dbtr>
+            <Nm>MYMOOLAH (PTY) LTD</Nm>
+          </Dbtr>
+          <DbtrAcct>
+            <Id>
+              <Othr>
+                <Id>272406481</Id>
+              </Othr>
+            </Id>
+            <Ccy>ZAR</Ccy>
+          </DbtrAcct>
+          <DbtrAgt>
+            <FinInstnId>
+              <ClrSysMmbId>
+                <MmbId>033012</MmbId>
+              </ClrSysMmbId>
+            </FinInstnId>
+          </DbtrAgt>
+          <CdtrAgt>
+            <FinInstnId>
+              <ClrSysMmbId>
+                <MmbId>051001</MmbId>
+              </ClrSysMmbId>
+            </FinInstnId>
+          </CdtrAgt>
+          <Cdtr>
+            <Nm>ANDRE BOTES</Nm>
+            <PstlAdr>
+              <Ctry>ZA</Ctry>
+            </PstlAdr>
+          </Cdtr>
+          <CdtrAcct>
+            <Id>
+              <Othr>
+                <Id>10111730633</Id>
+              </Othr>
+            </Id>
+            <Ccy>ZAR</Ccy>
+          </CdtrAcct>
+        </OrgnlTxRef>
+      </TxInfAndSts>
+      <TxInfAndSts>
+        <OrgnlInstrId>IBA6145F480AB4E1F</OrgnlInstrId>
+        <OrgnlEndToEndId>UAT-DISC-1776433979043-002</OrgnlEndToEndId>
+        <TxSts>ACSP</TxSts>
+        <StsRsnInf>
+          <Rsn>
+            <Cd>NARR</Cd>
+          </Rsn>
+          <AddtlInf>Status Code : 0000</AddtlInf>
+          <AddtlInf>Status Description : NO ERROR FOUND-PROCESSED SUCCESSFULLY</AddtlInf>
+        </StsRsnInf>
+        <OrgnlTxRef>
+          <Amt>
+            <InstdAmt Ccy="ZAR" >1.00</InstdAmt>
+          </Amt>
+          <ReqdExctnDt>2026-04-17</ReqdExctnDt>
+          <PmtTpInf>
+            <InstrPrty>NORM</InstrPrty>
+          </PmtTpInf>
+          <PmtMtd>TRF</PmtMtd>
+          <RmtInf>
+            <Ustrd>MMTP UAT PAYMENT 002</Ustrd>
+          </RmtInf>
+          <Dbtr>
+            <Nm>MYMOOLAH (PTY) LTD</Nm>
+          </Dbtr>
+          <DbtrAcct>
+            <Id>
+              <Othr>
+                <Id>272406481</Id>
+              </Othr>
+            </Id>
+            <Ccy>ZAR</Ccy>
+          </DbtrAcct>
+          <DbtrAgt>
+            <FinInstnId>
+              <ClrSysMmbId>
+                <MmbId>033012</MmbId>
+              </ClrSysMmbId>
+            </FinInstnId>
+          </DbtrAgt>
+          <CdtrAgt>
+            <FinInstnId>
+              <ClrSysMmbId>
+                <MmbId>679000</MmbId>
+              </ClrSysMmbId>
+            </FinInstnId>
+          </CdtrAgt>
+          <Cdtr>
+            <Nm>ANDRE BOTES</Nm>
+            <PstlAdr>
+              <Ctry>ZA</Ctry>
+            </PstlAdr>
+          </Cdtr>
+          <CdtrAcct>
+            <Id>
+              <Othr>
+                <Id>18828076450</Id>
+              </Othr>
+            </Id>
+            <Ccy>ZAR</Ccy>
+          </CdtrAcct>
+        </OrgnlTxRef>
+      </TxInfAndSts>
+      <TxInfAndSts>
+        <OrgnlInstrId>I1367DAEE3EAEFE62</OrgnlInstrId>
+        <OrgnlEndToEndId>UAT-CAP-1776433979043-003</OrgnlEndToEndId>
+        <TxSts>ACSP</TxSts>
+        <StsRsnInf>
+          <Rsn>
+            <Cd>NARR</Cd>
+          </Rsn>
+          <AddtlInf>Status Code : 0000</AddtlInf>
+          <AddtlInf>Status Description : NO ERROR FOUND-PROCESSED SUCCESSFULLY</AddtlInf>
+        </StsRsnInf>
+        <OrgnlTxRef>
+          <Amt>
+            <InstdAmt Ccy="ZAR" >1.00</InstdAmt>
+          </Amt>
+          <ReqdExctnDt>2026-04-17</ReqdExctnDt>
+          <PmtTpInf>
+            <InstrPrty>NORM</InstrPrty>
+          </PmtTpInf>
+          <PmtMtd>TRF</PmtMtd>
+          <RmtInf>
+            <Ustrd>MMTP UAT PAYMENT 003</Ustrd>
+          </RmtInf>
+          <Dbtr>
+            <Nm>MYMOOLAH (PTY) LTD</Nm>
+          </Dbtr>
+          <DbtrAcct>
+            <Id>
+              <Othr>
+                <Id>272406481</Id>
+              </Othr>
+            </Id>
+            <Ccy>ZAR</Ccy>
+          </DbtrAcct>
+          <DbtrAgt>
+            <FinInstnId>
+              <ClrSysMmbId>
+                <MmbId>033012</MmbId>
+              </ClrSysMmbId>
+            </FinInstnId>
+          </DbtrAgt>
+          <CdtrAgt>
+            <FinInstnId>
+              <ClrSysMmbId>
+                <MmbId>470010</MmbId>
+              </ClrSysMmbId>
+            </FinInstnId>
+          </CdtrAgt>
+          <Cdtr>
+            <Nm>ANDRE BOTES</Nm>
+            <PstlAdr>
+              <Ctry>ZA</Ctry>
+            </PstlAdr>
+          </Cdtr>
+          <CdtrAcct>
+            <Id>
+              <Othr>
+                <Id>1254107337</Id>
+              </Othr>
+            </Id>
+            <Ccy>ZAR</Ccy>
+          </CdtrAcct>
+        </OrgnlTxRef>
+      </TxInfAndSts>
+    </OrgnlPmtInfAndSts>
+  </CstmrPmtStsRpt>
+</Document>
