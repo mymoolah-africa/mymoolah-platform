@@ -1,6 +1,6 @@
 ================================================================================
-SBSA H2H SFTP CONNECTIVITY & UPLOAD TEST — 2026-04-17
-Status: PASS on TEST and PROD
+SBSA H2H SFTP END-TO-END TEST — 2026-04-17
+Status: PASS on TEST and PROD — full round-trip closed in 17 minutes
 ================================================================================
 
 Test operator: MyMoolah Treasury Platform (MMTP)
@@ -81,9 +81,51 @@ Post-upload poll at 11:02:38 UTC (45s later):
   /Outbox/  — EMPTY (file collected by SBSA) ✓
 
 Post-upload poll at 11:04:28 UTC (2m35s later):
-  /Outbox/  — still empty
-  /BAS/     — still only 2026-03-30 files; today's ACK/NACK not yet written
-              (SBSA processing window; no action required on our side)
+  /Outbox/  — still empty (SBSA collected file)
+  /BAS/     — responses not yet written
+  /Inbox/   — empty
+
+Poll at 11:20:30 UTC (18m37s later): ALL RESPONSES PRESENT
+
+================================================================================
+TEST 5 — SBSA response files received (round-trip closed)
+================================================================================
+
+Files delivered by SBSA to /BAS/ (response naming convention):
+
+  MYMOOLAH_OWN11_Pain001v3_ZAR_TST_20260417110153RM1.xml              (4,226 B)
+    — archive copy of our uploaded Pain.001
+  MYMOOLAH_OWN11_Pain001v3_ZAR_TST_20260417110153RM1.xml_ACK_20260417131408369.xml     (836 B, 13:14 SAST)
+  MYMOOLAH_OWN11_Pain001v3_ZAR_TST_20260417110153RM1.xml_INTAUDTST_260417131420594.xml (6,467 B, 13:14 SAST)
+  MYMOOLAH_OWN11_Pain001v3_ZAR_TST_20260417110153RM1.xml_FINAUDTST_260417131852109.xml (6,474 B, 13:18 SAST)
+
+Files delivered by SBSA to /Inbox/ (official ISO-style naming):
+
+  MYMOOLAH_OWN11_ACK_TST_20260417131408295_51885347.xml    (836 B, 13:14 SAST)
+  MYMOOLAH_OWN11_INTAUD_TST_20260417131420670_51885352.xml (6,467 B, 13:14 SAST)
+  MYMOOLAH_OWN11_FINAUD_TST_20260417131852229_51885371.xml (6,474 B, 13:18 SAST)
+
+Parsed status fields:
+
+  ACK (pain.002.001.03):
+    MsgId:       51885348
+    CreDtTm:     2026-04-17T13:14:07
+    InitgPty:    Standard Bank SA (BIC: SBZAZAJJXXX)
+    OrgnlMsgId:  MM-TESTCONNECT20260416-MO18Y1MZ
+    OrgnlNbOfTxs: 3
+    OrgnlCtrlSum: 3.00
+    GrpSts:      RCVD
+
+  INTAUDTST (interim audit):
+    GrpSts:      PDNG
+    TxSts x 3:   PDNG PDNG PDNG
+
+  FINAUDTST (final audit):
+    GrpSts:      ACSP  ← Accepted for Settlement
+    TxSts x 3:   ACSP ACSP ACSP
+
+Full round-trip: upload (13:01:53 SAST) → ACK (13:14:08 SAST) → ACSP (13:18:52 SAST)
+Elapsed: 17 minutes, 0 seconds.
 
 ================================================================================
 SUMMARY
@@ -95,7 +137,9 @@ SUMMARY
 [PASS] Remote folder discovery on PROD              (/Outbox, /Inbox)
 [PASS] Pain.001 file upload to TEST /Outbox/        (4,226 bytes accepted)
 [PASS] File pickup by SBSA TEST processor           (/Outbox emptied < 45s)
-[PEND] ACK/NACK response in /BAS/                   (SBSA processing queue)
+[PASS] ACK response in /BAS/ + /Inbox/              (GrpSts RCVD, ~12 min)
+[PASS] INTAUDTST interim audit                      (PDNG x 3)
+[PASS] FINAUDTST final audit                        (ACSP x 3, ~17 min)
 
 Key fingerprint accepted on both TEST and PROD:
   SHA256:Lf5DQHTMC5Fn+ieSiJ+/cBEWcyme4SduIxuknBDa0X0
@@ -122,6 +166,15 @@ RAW LOG FILES (captured on sftp-1-vm, copied locally)
   /tmp/sbsa-fixed-logs/sbsa-folders-20260417_110045Z.txt
   /tmp/sbsa-fixed-logs/sbsa-upload-20260417_110153Z.txt
   /tmp/sbsa-fixed-logs/sbsa-response-20260417_110428Z.txt
+
+Response XMLs captured locally (committed to repo):
+  docs/test/sbsa-responses-2026-04-17/
+    MYMOOLAH_OWN11_ACK_TST_20260417131408295_51885347.xml
+    MYMOOLAH_OWN11_INTAUD_TST_20260417131420670_51885352.xml
+    MYMOOLAH_OWN11_FINAUD_TST_20260417131852229_51885371.xml
+    MYMOOLAH_OWN11_Pain001v3_ZAR_TST_20260417110153RM1.xml_ACK_20260417131408369.xml
+    MYMOOLAH_OWN11_Pain001v3_ZAR_TST_20260417110153RM1.xml_INTAUDTST_260417131420594.xml
+    MYMOOLAH_OWN11_Pain001v3_ZAR_TST_20260417110153RM1.xml_FINAUDTST_260417131852109.xml
 
 ================================================================================
 END OF REPORT

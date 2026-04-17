@@ -12,7 +12,7 @@ Resolved the SBSA H2H SFTP authentication failures that were reported on 2026-04
 
 With the correct username, authentication now **passes on both TEST and PROD**. PROD was a first-ever successful authentication since SBSA imported our public key earlier today.
 
-Outbound Pain.001 upload to TEST `/Outbox/` was confirmed end-to-end: file accepted (4,226 bytes), picked up by SBSA within 45 seconds. The ACK/NACK/INTAUDTST responses in `/BAS/` are still pending — SBSA processing queue, no action required from us.
+Outbound Pain.001 upload to TEST `/Outbox/` was confirmed end-to-end: file accepted (4,226 bytes), picked up by SBSA within 45 seconds. SBSA processor returned the full response cycle within 17 minutes: ACK (GrpSts RCVD) at 13:14 SAST, INTAUDTST (all 3 transactions PDNG) at 13:14, and FINAUDTST (all 3 transactions ACSP — Accepted for Settlement) at 13:18. Responses delivered to both `/BAS/` (with appended `_ACK_*` naming) and `/Inbox/` (with ISO-style `MYMOOLAH_OWN11_ACK_TST_*` naming). Full functional loop closed on TEST.
 
 ---
 
@@ -23,9 +23,15 @@ Outbound Pain.001 upload to TEST `/Outbox/` was confirmed end-to-end: file accep
 - Listed remote folders on both TEST (`/Outbox`, `/Inbox`, `/BAS`) and PROD (`/Outbox`, `/Inbox`)
 - Uploaded `MYMOOLAH_OWN11_Pain001v3_ZAR_TST_20260417110153RM1.xml` (4,226 bytes) to TEST `/Outbox/`
 - Confirmed SBSA collected the file: `/Outbox/` drained within 45 seconds
+- Set up background poll loop on VM (24 polls × 5 min) to wait for response
+- Captured full response cycle 17 minutes after upload: ACK (RCVD), INTAUDTST (PDNG×3), FINAUDTST (ACSP×3)
+- Downloaded all 6 response XMLs to `docs/test/sbsa-responses-2026-04-17/`
+- Confirmed dual-delivery convention: SBSA writes responses to both `/BAS/` (`_ACK_/_INTAUDTST_/_FINAUDTST_` appended naming) and `/Inbox/` (`MYMOOLAH_OWN11_ACK_TST_*` official ISO-style naming)
+- Stopped background poll loop cleanly once all responses captured
 - Captured clean test report: `docs/test/sbsa-sftp-test-report-2026-04-17-SUCCESS.txt`
 - Drafted reply email to Colette: `docs/test/COLETTE_REPLY_2026-04-17_success.md`
 - Added new high-risk entry to `.cursor/rules/tech-debt.mdc`: agents must always cross-reference the relevant setup/integration doc before running partner-facing test commands
+- Added email-formatting rule to `.cursor/rules/communication.mdc`: no markdown tables in email drafts
 
 ---
 
@@ -67,10 +73,10 @@ Raw logs captured on the VM and copied locally:
 ## Next Steps
 
 1. André to send the reply in `docs/test/COLETTE_REPLY_2026-04-17_success.md` to Colette (CC Mark, Charles, Marius, Bronwyn, Liezel, Suzie).
-2. Monitor `/BAS/` on TEST for the ACK/NACK/INTAUDTST response to today's `RM1` upload (expected within SBSA's normal processing window).
-3. Once TEST round-trip closes, schedule a PROD smoke upload (Pain.001 with a small-value test disbursement) in coordination with Colette.
-4. After PROD smoke test passes, flip `SBSA_STATEMENT_POLLER_MODE=scheduler` and `SBSA_PAIN002_POLLER_MODE=scheduler` in staging + production (the Cloud Scheduler endpoints are already live from v2.98.0).
-5. Run `./scripts/setup-cloud-scheduler.sh staging` then `production` to create the three new jobs (statement, pain002, recon sweep).
+2. Schedule a PROD smoke upload (Pain.001 with a small-value test disbursement) in coordination with Colette's team. TEST round-trip has now been fully validated (RCVD → PDNG → ACSP in 17 min).
+3. After PROD smoke test passes, flip `SBSA_STATEMENT_POLLER_MODE=scheduler`, `SBSA_PAIN002_POLLER_MODE=scheduler`, and `RECON_SFTP_WATCHER_MODE=scheduler` in staging + production (the Cloud Scheduler endpoints are already live from v2.98.0).
+4. Run `./scripts/setup-cloud-scheduler.sh staging` then `production` to create the three new jobs (statement, pain002, recon sweep).
+5. Wire the `pain002PollerService` to match SBSA's actual dual-delivery convention: responses land in BOTH `/BAS/` and `/Inbox/`. The poller should read one or the other (not both, to avoid duplicate processing). Recommend `/Inbox/` since it uses the cleaner ISO-style naming (`MYMOOLAH_OWN11_ACK_TST_*`) that matches the existing pain002 parser expectations — verify against actual file structure before flipping.
 
 ---
 

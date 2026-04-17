@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<Document xmlns='urn:iso:std:iso:20022:tech:xsd:pain.002.001.03' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'>
+  <CstmrPmtStsRpt>
+    <GrpHdr>
+      <MsgId>51885348</MsgId>
+      <CreDtTm>2026-04-17T13:14:07</CreDtTm>
+      <InitgPty>
+        <Nm>Standard Bank SA</Nm>
+        <Id>
+          <OrgId>
+            <BICOrBEI>SBZAZAJJXXX</BICOrBEI>
+          </OrgId>
+        </Id>
+      </InitgPty>
+    </GrpHdr>
+    <OrgnlGrpInfAndSts>
+      <OrgnlMsgId>MM-TESTCONNECT20260416-MO18Y1MZ</OrgnlMsgId>
+      <OrgnlMsgNmId>PAIN.001.001.03</OrgnlMsgNmId>
+      <OrgnlCreDtTm>2026-04-16T08:57:57.707Z</OrgnlCreDtTm>
+      <OrgnlNbOfTxs>3</OrgnlNbOfTxs>
+      <OrgnlCtrlSum>3.00</OrgnlCtrlSum>
+      <GrpSts>RCVD</GrpSts>
+    </OrgnlGrpInfAndSts>
+  </CstmrPmtStsRpt>
+</Document>
