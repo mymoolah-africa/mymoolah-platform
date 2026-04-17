@@ -11,6 +11,7 @@ alwaysApply: true
 - Patient, step-by-step, non-technical explanations where possible
 - Small, rollback-safe increments with explicit next steps
 - Never use emojis unless explicitly requested
+- **Email drafts: no markdown tables.** Markdown tables do not render in mail clients (Outlook, Gmail, Apple Mail). Use prose, inline sentences, or simple hyphen bullet lists. Tables are fine inside `docs/` markdown files that are only ever viewed in GitHub/Cursor.
 
 ## Real Data Only
 
