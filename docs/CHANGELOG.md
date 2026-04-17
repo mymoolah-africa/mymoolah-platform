@@ -1,5 +1,40 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-17 - SBSA H2H SFTP hardening: disbursement upload fix + poller wiring + Cloud Scheduler endpoints (v2.98.0)
+
+### Summary
+Banking-grade hardening of the SBSA H2H SFTP integration across four fronts:
+(1) fixed a latent runtime bug in `disbursementService.approveRun` that would have crashed on Pain.001 upload and silently fell back to `/tmp`; (2) wired the previously-unstarted `pain002PollerService` into `server.js` with a safe `SBSA_PAIN002_POLLER_MODE` flag; (3) wired the previously-unstarted `SFTPWatcherService` under `RECON_SFTP_WATCHER_MODE`; (4) extended the existing Cloud Scheduler setup script and routes with three new OIDC-authenticated endpoints so Cloud Run `min-instances=0` no longer kills in-process timers.
+
+All new wiring defaults to `off` in production until UAT validation completes — this release is code-only and changes no runtime behaviour without explicit env-var opt-in.
+
+### Fixed
+- **`services/standardbank/disbursementService.js`** — Replaced `new SbsaSftpClientService()` (the service exports plain functions, not a class) + the `/outbox/payments` path reference + the `/tmp` silent fallback with a direct `uploadPain001File(xml, filename)` call. Upload failures now surface as a structured `SBSA_UPLOAD_FAILED` error and propagate to the portal checker instead of silently succeeding.
+
+### Changed
+- **`server.js`** —
+  - SBSA statement poller now honours `SBSA_STATEMENT_POLLER_MODE` (`cron` | `scheduler` | `off`). `SBSA_STATEMENT_POLLER_ENABLED=false` still maps to `off` for backward compatibility; otherwise defaults to `cron` (historic behaviour).
+  - Pain.002 poller wired with `SBSA_PAIN002_POLLER_MODE` (`cron` | `scheduler` | `off`, default `off`). `SBSA_PAIN002_POLLER_ENABLED=true` legacy flag maps to `cron`. SIGTERM handler calls `stopPolling()`.
+  - SFTP watcher wired with `RECON_SFTP_WATCHER_MODE` (`cron` | `scheduler` | `off`, default `off`). Watcher instance exposed as `global.__sftpWatcher` so SIGTERM handler can stop it.
+- **`routes/standardbank.js`** — Added `POST /api/v1/standardbank/scheduled-statement-poll` and `POST /api/v1/standardbank/scheduled-pain002-poll`. Both gated by `verifyCloudSchedulerToken` OIDC middleware.
+- **`routes/reconciliation.js`** — Added `POST /api/v1/reconciliation/scheduled-sftp-sweep`. Gated by `verifyCloudSchedulerToken`.
+- **`scripts/setup-cloud-scheduler.sh`** — Extended with three new `create_http_job` calls: `sbsa-statement-poll-{env}` (every 2 min), `sbsa-pain002-poll-{env}` (every 5 min), `sftp-recon-sweep-{env}` (every 2 min).
+- **`scripts/deploy-backend.sh`** — Registered new env vars: `SBSA_SFTP_UPLOAD_ENABLED=false`, `SBSA_STATEMENT_POLLER_MODE=off`, `SBSA_PAIN002_POLLER_MODE=off`, `RECON_SFTP_WATCHER_MODE=off`. All safe defaults.
+
+### New Tests
+- **`tests/disbursement/disbursementService.pain001Upload.test.js`** — 4 tests; full disbursement suite 143/143 passing.
+- **`tests/standardbank/sbsaSftpClientService.test.js`** — 9 tests covering validation, /tmp mode, GCS mode, retry/backoff, retry exhaustion, per-env outbox paths.
+- **`tests/standardbank/pain002PollerService.test.js`** — 6 tests covering filter rules, happy path, parse-error path, retry-left-in-inbox path, flag behaviour, interval teardown.
+- **`tests/reconciliation/SFTPWatcherService.test.js`** — 6 tests covering start/stop, dedup (memory + DB), orchestrator-success and orchestrator-failure move rules.
+- **`tests/routes/sbsa-scheduled.test.js`** — 4 Supertest cases for the three new Cloud Scheduler endpoints.
+
+### No migrations. No production runtime behaviour changes (all new gates default to off/safe).
+
+### Rollback
+All new wiring is gated behind env-vars that default to `off`. To roll back after UAT enables a poller, set the relevant `*_MODE` to `off` and redeploy — no code rollback needed. The disbursementService fix has no rollback (it corrects a latent crash).
+
+---
+
 ## 2026-04-16 - TPPP withdrawals: policies, security, FAQ, KB hub (v2.97.7)
 
 ### Summary

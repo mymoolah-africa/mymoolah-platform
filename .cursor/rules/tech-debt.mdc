@@ -11,6 +11,9 @@ alwaysApply: true
 
 | Item | File(s) | Risk | Suggested Action |
 |------|---------|------|-----------------|
+| Test framework inconsistency: Chai + Jest | `tests/reconciliation.test.js` (Chai + DB), new Jest unit tests under `tests/` | Low — only surfaces when running `npm test` wholesale | Standardise on Jest. Either delete `tests/reconciliation.test.js` (superseded by `tests/reconciliation/SFTPWatcherService.test.js`) or port it to Jest. Chai is not in `package.json` `devDependencies` — the old file only runs outside the main suite. |
+| SBSA statement poller currently node-cron only | `server.js` statement poller block | Low — now mode-aware (`SBSA_STATEMENT_POLLER_MODE`); Cloud Scheduler path available after `scripts/setup-cloud-scheduler.sh` runs | Flip staging + production to `MODE=scheduler` once UAT validates `POST /api/v1/standardbank/scheduled-statement-poll` end-to-end. Keep node-cron as local-dev fallback. |
+| `STANDARDBANK_ENVIRONMENT=production` hardcoded in deploy-backend.sh for all envs | `scripts/deploy-backend.sh` line ~167 | Low — `sbsaSftpClientService.js` falls back to `MM_DEPLOYMENT_ENV` which is set correctly per environment, so outbox paths resolve OK | Replace hardcoded `STANDARDBANK_ENVIRONMENT=production` with `STANDARDBANK_ENVIRONMENT=${ENVIRONMENT}` to eliminate the implicit MM_DEPLOYMENT_ENV fallback |
 | Legacy AI services (4,649 lines, unused) | `services/bankingGradeSupportService.js`, `services/aiSupportService.js`, `services/semanticEmbeddingService.js` | Low — not in request path | Archive after confirming ragService stable in production |
 | `aiSupportService.js` references `gpt-5` | `services/aiSupportService.js:1187,1558` | Medium — will crash if called | Archive the file |
 | Conversation history in-memory only | `services/ragService.js` | Medium — lost on restart, not scalable | Migrate to Redis for horizontal scaling (Phase 3) |

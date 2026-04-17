@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
 **Last Updated**: 2026-04-17  
-**Latest Feature**: **SBSA SFTP key rejected by server — IT diagnostic log prepared (v2.97.9)** — Re-test from whitelisted GCP VM (34.35.137.166) to both SBSA TEST (196.8.85.62:5022) and PROD (196.8.86.53:5022): TCP + SSH handshake PASS, but both servers return `USERAUTH_FAILURE` (type 51) at publickey offer stage — definitive proof key removed from `authorized_keys` or MYMOOLAH account locked. Full OpenSSH `-vvv` logs saved in `docs/test/sbsa-sftp-test-report-2026-04-17.txt` (346 lines) for attachment to Colette's IT team. Same key worked on 2026-04-16 — server-side regression. Previous: SBSA H2H SFTP connectivity confirmed + CSV template alignment (v2.97.8).  
-**Document Version**: 2.97.9  
-**Session logs**: `docs/session_logs/2026-04-17_0931_sbsa-sftp-key-rejected-it-log-attached.md` (this session); prior `docs/session_logs/2026-04-16_1100_sbsa-h2h-sftp-connectivity-confirmed.md`; `docs/session_logs/2026-04-16_1430_tppp-withdrawal-docs-policy-kb-alignment.md`  
+**Latest Feature**: **SBSA H2H SFTP hardening — disbursement upload fix + poller wiring + Cloud Scheduler endpoints (v2.98.0)** — Fixed latent runtime crash in `disbursementService.approveRun` (was instantiating `sbsaSftpClientService` as a class; it exports plain functions), removed silent `/tmp` fallback so upload failures surface as `SBSA_UPLOAD_FAILED`. Wired `pain002PollerService` and `SFTPWatcherService` into `server.js` under unified `*_MODE` flags (`cron | scheduler | off`, default `off`). Added three OIDC-authenticated Cloud Scheduler endpoints: `/api/v1/standardbank/scheduled-statement-poll`, `/scheduled-pain002-poll`, `/api/v1/reconciliation/scheduled-sftp-sweep`. Extended existing `scripts/setup-cloud-scheduler.sh` with three new job definitions. Code-only release — all new wiring defaults to off in production. 29 new Jest tests (4+9+6+6+4); full disbursement suite 143/143 passing. Previous: SBSA SFTP key rejected by server (v2.97.9).  
+**Document Version**: 2.98.0  
+**Session logs**: `docs/session_logs/2026-04-17_1054_sbsa-h2h-sftp-hardening.md` (this session); prior `docs/session_logs/2026-04-17_0931_sbsa-sftp-key-rejected-it-log-attached.md`; `docs/session_logs/2026-04-16_1100_sbsa-h2h-sftp-connectivity-confirmed.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---

@@ -1,6 +1,37 @@
 # SBSA Host-to-Host (H2H) Setup Guide
 
-**Date**: 2026-03-13 (Last connectivity test: 2026-04-16)  
+**Date**: 2026-03-13 (Last connectivity test: 2026-04-16)
+
+---
+
+## H2H Background-Service Environment Variables (v2.98.0, Apr 2026)
+
+Every poller and scheduler-driven endpoint added by the Apr 2026 hardening release is gated by a unified `*_MODE` env var so nothing runs in production without explicit opt-in.
+
+| Variable | Values | Default | Purpose |
+|---|---|---|---|
+| `SBSA_SFTP_UPLOAD_ENABLED` | `true` / `false` | `false` | When `false`, `sbsaSftpClientService.uploadPain001File` writes to `/tmp/sbsa-outbox/` instead of GCS. Flip to `true` only after UAT validates the full Pain.001 → GCS → Thorntech → SBSA chain. |
+| `SBSA_STATEMENT_POLLER_MODE` | `cron` / `scheduler` / `off` | `off` (new in v2.98.0; was `cron` implicit) | `cron` = in-process `node-cron` every 2 min (Codespaces/local). `scheduler` = Cloud Scheduler drives `POST /api/v1/standardbank/scheduled-statement-poll`. Legacy `SBSA_STATEMENT_POLLER_ENABLED=false` still maps to `off`. |
+| `SBSA_PAIN002_POLLER_MODE` | `cron` / `scheduler` / `off` | `off` | Legacy `SBSA_PAIN002_POLLER_ENABLED=true` maps to `cron`. `scheduler` = Cloud Scheduler drives `POST /api/v1/standardbank/scheduled-pain002-poll`. |
+| `RECON_SFTP_WATCHER_MODE` | `cron` / `scheduler` / `off` | `off` | `cron` = in-process watcher every `RECON_SFTP_POLL_SECONDS` (default 60s). `scheduler` = Cloud Scheduler drives `POST /api/v1/reconciliation/scheduled-sftp-sweep`. |
+| `RECON_SFTP_POLL_SECONDS` | integer | `60` | Poll cadence for `RECON_SFTP_WATCHER_MODE=cron` only. |
+
+**Cloud Scheduler job creation** — once ready to flip an environment from `off` to `scheduler`:
+
+```bash
+./scripts/setup-cloud-scheduler.sh --staging      # or --production, --both
+```
+
+Creates/updates (idempotent):
+- `sbsa-statement-poll-{env}` every 2 min
+- `sbsa-pain002-poll-{env}` every 5 min
+- `sftp-recon-sweep-{env}` every 2 min
+
+All jobs authenticate to Cloud Run via OIDC (service-account email + service URL audience). No shared secrets.
+
+---
+
+
 **Status**: ✅ **SFTP TEST CONNECTIVITY CONFIRMED 2026-04-16** — SBSA firewall cleared (Colette confirmed freeze lifted Apr 16) — Full SFTP session working to SBSA TEST (196.8.85.62:5022) — Auth via RSA key PASS — Pain.001 uploaded to /Outbox/ for processing — SBSA PROD (196.8.86.53:5022) TCP reachable but key not loaded yet — SOAP credit notification endpoint PASS (HTTP 200) — 11 SBSA response files found in /BAS/ from Melanie's Mar 30 testing (ACK/NACK/INTAUD/FINAUD) — Pain.001 builder enhanced with ChrgBr and CdtrAcct/Tp fields — PG15 submitted 2026-03-13 — Pain.001 v3 passed SSVS validation 2026-03-30 — PayShap inbound credit sandbox 6/6 confirmed — **production PayShap inward queue: SBSA investigating (Louis Van Zyl)**  
 **Implementation Manager**: SBSA (assigned contact)  
 **Services**: Credit Notifications via Webserver + H2H SFTP (Statements + Payments)
