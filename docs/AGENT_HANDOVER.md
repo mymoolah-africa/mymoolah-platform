@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-04-16  
-**Latest Feature**: **SBSA H2H SFTP connectivity confirmed (v2.97.8)** — Full SFTP session working to SBSA TEST (196.8.85.62:5022). Auth, upload, download all PASS. Discovered 11 SBSA response files from Mar 30 testing. Pain.001 builder enhanced with `ChrgBr` and `CdtrAcct/Tp/Cd`. Fresh Pain.001 uploaded to SBSA TEST Outbox. SBSA PROD TCP reachable but key not loaded. SOAP notification endpoint confirmed working. Previous: TPPP withdrawals policies (v2.97.7).  
-**Document Version**: 2.97.8  
-**Session logs**: `docs/session_logs/2026-04-16_1100_sbsa-h2h-sftp-connectivity-confirmed.md` (this session); prior `docs/session_logs/2026-04-16_1430_tppp-withdrawal-docs-policy-kb-alignment.md`; `docs/session_logs/2026-04-16_1200_find-skills-cursor-mmtp.md`  
+**Last Updated**: 2026-04-17  
+**Latest Feature**: **SBSA SFTP key rejected by server — IT diagnostic log prepared (v2.97.9)** — Re-test from whitelisted GCP VM (34.35.137.166) to both SBSA TEST (196.8.85.62:5022) and PROD (196.8.86.53:5022): TCP + SSH handshake PASS, but both servers return `USERAUTH_FAILURE` (type 51) at publickey offer stage — definitive proof key removed from `authorized_keys` or MYMOOLAH account locked. Full OpenSSH `-vvv` logs saved in `docs/test/sbsa-sftp-test-report-2026-04-17.txt` (346 lines) for attachment to Colette's IT team. Same key worked on 2026-04-16 — server-side regression. Previous: SBSA H2H SFTP connectivity confirmed + CSV template alignment (v2.97.8).  
+**Document Version**: 2.97.9  
+**Session logs**: `docs/session_logs/2026-04-17_0931_sbsa-sftp-key-rejected-it-log-attached.md` (this session); prior `docs/session_logs/2026-04-16_1100_sbsa-h2h-sftp-connectivity-confirmed.md`; `docs/session_logs/2026-04-16_1430_tppp-withdrawal-docs-policy-kb-alignment.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
