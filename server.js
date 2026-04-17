@@ -837,12 +837,18 @@ const initializeBackgroundServices = async () => {
     // ── SBSA H2H Statement Poller (MT940/MT942) ────────────────
     // MT942 intraday statements arrive every 15 minutes (SBSA info sheet, 2026-03-23)
     // MT940 end-of-day arrives once daily at ~06:00
-    // Poll every 2 minutes to detect new files quickly → fastest wallet crediting
+    // Modes:
+    //   cron      → in-process node-cron (local dev / Codespaces)
+    //   scheduler → Cloud Scheduler drives /api/v1/standardbank/scheduled-statement-poll
+    //   off       → disabled
+    // Backward-compat: SBSA_STATEMENT_POLLER_ENABLED=false maps to off.
+    //                  No explicit mode and enabled!=false defaults to cron (historic behaviour).
     try {
-      const pollerEnabled = process.env.SBSA_STATEMENT_POLLER_ENABLED !== 'false';
-      if (!pollerEnabled) {
-        console.log('ℹ️  SBSA H2H statement poller DISABLED (SBSA_STATEMENT_POLLER_ENABLED=false)');
-      } else {
+      const explicitMode = (process.env.SBSA_STATEMENT_POLLER_MODE || '').toLowerCase();
+      const legacyEnabled = process.env.SBSA_STATEMENT_POLLER_ENABLED !== 'false';
+      const mode = explicitMode || (legacyEnabled ? 'cron' : 'off');
+
+      if (mode === 'cron') {
         const cron = require('node-cron');
         const sbsaStatementService = require('./services/standardbank/sbsaStatementService');
         const pollSchedule = process.env.SBSA_STATEMENT_POLL_SCHEDULE || '*/2 * * * *';
@@ -856,10 +862,72 @@ const initializeBackgroundServices = async () => {
         });
 
         const sbsaEnv = process.env.STANDARDBANK_ENVIRONMENT || 'production';
-        console.log(`✅ SBSA H2H statement poller started (MT940/MT942, schedule: ${pollSchedule}, env: ${sbsaEnv})`);
+        console.log(`✅ SBSA H2H statement poller started (MODE=cron, schedule: ${pollSchedule}, env: ${sbsaEnv})`);
+      } else if (mode === 'scheduler') {
+        console.log('ℹ️  SBSA H2H statement poller MODE=scheduler (Cloud Scheduler drives /api/v1/standardbank/scheduled-statement-poll)');
+      } else {
+        console.log('ℹ️  SBSA H2H statement poller MODE=off');
       }
     } catch (error) {
       console.error('❌ Failed to start SBSA statement poller:', error.message);
+    }
+
+    // ── SBSA H2H Pain.002 Poller (Disbursement Responses) ──────
+    // Polls GCS inbox for Pain.002 status reports from SBSA.
+    // Modes:
+    //   cron      → in-process setInterval (default for local dev)
+    //   scheduler → Cloud Scheduler drives /api/v1/standardbank/scheduled-pain002-poll
+    //   off       → disabled
+    // Backward-compat: SBSA_PAIN002_POLLER_ENABLED=true maps to cron.
+    try {
+      const explicitMode = (process.env.SBSA_PAIN002_POLLER_MODE || '').toLowerCase();
+      const legacyEnabled = (process.env.SBSA_PAIN002_POLLER_ENABLED || '').toLowerCase() === 'true';
+      const mode = explicitMode || (legacyEnabled ? 'cron' : 'off');
+
+      if (mode === 'cron') {
+        const pain002PollerService = require('./services/standardbank/pain002PollerService');
+        // startPolling() reads SBSA_PAIN002_POLLER_ENABLED internally — honour the
+        // legacy flag so the service's own guard doesn't short-circuit.
+        process.env.SBSA_PAIN002_POLLER_ENABLED = 'true';
+        const started = pain002PollerService.startPolling();
+        if (started) {
+          console.log('✅ SBSA Pain.002 poller started (MODE=cron, in-process setInterval)');
+        } else {
+          console.log('ℹ️  SBSA Pain.002 poller declined to start (feature-flag gate in service)');
+        }
+      } else if (mode === 'scheduler') {
+        console.log('ℹ️  SBSA Pain.002 poller MODE=scheduler (Cloud Scheduler drives /api/v1/standardbank/scheduled-pain002-poll)');
+      } else {
+        console.log('ℹ️  SBSA Pain.002 poller MODE=off');
+      }
+    } catch (error) {
+      console.error('❌ Failed to start SBSA Pain.002 poller:', error.message);
+    }
+
+    // ── Supplier Recon SFTP Watcher ────────────────────────────
+    // Monitors GCS per-supplier prefixes (mobilemart/, flash/, easypay/, etc.)
+    // for new reconciliation files and triggers ReconciliationOrchestrator.
+    // Modes:
+    //   cron      → in-process setInterval (default for local dev)
+    //   scheduler → Cloud Scheduler drives /api/v1/reconciliation/scheduled-sftp-sweep
+    //   off       → disabled (default in production until UAT validates)
+    try {
+      const mode = (process.env.RECON_SFTP_WATCHER_MODE || 'off').toLowerCase();
+
+      if (mode === 'cron') {
+        const SFTPWatcherService = require('./services/reconciliation/SFTPWatcherService');
+        const watcher = new SFTPWatcherService();
+        const pollSeconds = parseInt(process.env.RECON_SFTP_POLL_SECONDS || '60', 10);
+        await watcher.start({ pollIntervalSeconds: pollSeconds });
+        global.__sftpWatcher = watcher;
+        console.log(`✅ SFTP Watcher started (MODE=cron, interval: ${pollSeconds}s)`);
+      } else if (mode === 'scheduler') {
+        console.log('ℹ️  SFTP Watcher MODE=scheduler (Cloud Scheduler drives /api/v1/reconciliation/scheduled-sftp-sweep)');
+      } else {
+        console.log('ℹ️  SFTP Watcher MODE=off');
+      }
+    } catch (error) {
+      console.error('❌ Failed to start SFTP Watcher:', error.message);
     }
 
   } catch (error) {
@@ -915,6 +983,18 @@ process.on('SIGTERM', () => {
       global.floatBalanceMonitoringService.stop();
       console.log('✅ Float Balance Monitoring Service stopped');
     }
+
+    try {
+      const pain002PollerService = require('./services/standardbank/pain002PollerService');
+      pain002PollerService.stopPolling();
+    } catch (_) { /* service may not be loaded if MODE=off */ }
+
+    try {
+      if (global.__sftpWatcher && typeof global.__sftpWatcher.stop === 'function') {
+        global.__sftpWatcher.stop();
+        console.log('✅ SFTP Watcher stopped');
+      }
+    } catch (_) { /* watcher may not be loaded if MODE=off */ }
   } catch (error) {
     console.error('⚠️  Error stopping background services:', error.message);
   }

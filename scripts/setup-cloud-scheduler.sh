@@ -5,8 +5,11 @@ set -euo pipefail
 # Replaces node-cron which gets killed by Cloud Run instance recycling (min-instances=0)
 #
 # Jobs created:
-#   1. catalog-sweep-{env}     — 02:00 SAST daily (Flash + MobileMart catalog sync)
-#   2. referral-payout-{env}   — 02:15 SAST daily (credit pending referral earnings to wallets)
+#   1. catalog-sweep-{env}         — 02:00 SAST daily (Flash + MobileMart catalog sync)
+#   2. referral-payout-{env}       — 02:15 SAST daily (credit pending referral earnings to wallets)
+#   3. sbsa-statement-poll-{env}   — every 2 min (MT940/MT942 bank statements)
+#   4. sbsa-pain002-poll-{env}     — every 5 min (Pain.002 disbursement responses)
+#   5. sftp-recon-sweep-{env}      — every 2 min (supplier recon file sweep)
 #
 # Usage:
 #   ./scripts/setup-cloud-scheduler.sh --staging
@@ -91,6 +94,36 @@ create_all_jobs_for_env() {
     "${service_url}" \
     "Daily referral payout for ${env} — credits pending referral earnings to user wallets" \
     "300s"
+
+  # 3. SBSA H2H statement poller — every 2 min (MT940 end-of-day + MT942 intraday)
+  create_http_job \
+    "sbsa-statement-poll-${env}" \
+    "${service_url}/api/v1/standardbank/scheduled-statement-poll" \
+    "*/2 * * * *" \
+    "${sa}" \
+    "${service_url}" \
+    "SBSA H2H MT940/MT942 statement poll for ${env} — picks up bank statements from GCS inbox and credits wallets" \
+    "300s"
+
+  # 4. SBSA H2H Pain.002 poller — every 5 min (disbursement status responses)
+  create_http_job \
+    "sbsa-pain002-poll-${env}" \
+    "${service_url}/api/v1/standardbank/scheduled-pain002-poll" \
+    "*/5 * * * *" \
+    "${sa}" \
+    "${service_url}" \
+    "SBSA H2H Pain.002 response poll for ${env} — updates DisbursementRun/Payment statuses" \
+    "300s"
+
+  # 5. Supplier recon SFTP sweep — every 2 min (MobileMart, Flash, EasyPay, Zapper files)
+  create_http_job \
+    "sftp-recon-sweep-${env}" \
+    "${service_url}/api/v1/reconciliation/scheduled-sftp-sweep" \
+    "*/2 * * * *" \
+    "${sa}" \
+    "${service_url}" \
+    "Supplier recon file SFTP sweep for ${env} — feeds ReconciliationOrchestrator" \
+    "600s"
 }
 
 ENVIRONMENT=""

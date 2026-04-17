@@ -435,4 +435,39 @@ router.post('/scheduled-recon', verifyCloudSchedulerToken, async (req, res) => {
   }
 });
 
+/**
+ * @route   POST /api/v1/reconciliation/scheduled-sftp-sweep
+ * @desc    Cloud Scheduler-triggered supplier SFTP file sweep. Distinct from
+ *          /scheduled-recon (which is an internal wallet/ledger audit).
+ *          This endpoint drives SFTPWatcherService.checkForNewFiles() which
+ *          picks up new supplier reconciliation files from the GCS bucket and
+ *          feeds them into ReconciliationOrchestrator.
+ * @access  Cloud Scheduler only (OIDC token)
+ */
+router.post('/scheduled-sftp-sweep', verifyCloudSchedulerToken, async (req, res) => {
+  const startTime = Date.now();
+  const triggeredBy = req.schedulerAuth?.email || 'unknown';
+  try {
+    const SFTPWatcherService = require('../services/reconciliation/SFTPWatcherService');
+    const watcher = new SFTPWatcherService();
+    await watcher.checkForNewFiles();
+    const durationMs = Date.now() - startTime;
+    logger.info(`Scheduled SFTP sweep completed in ${durationMs}ms (triggered by ${triggeredBy})`);
+    res.json({
+      success: true,
+      message: 'SFTP sweep completed',
+      data: { durationMs, triggeredBy },
+    });
+  } catch (error) {
+    const durationMs = Date.now() - startTime;
+    logger.error(`Scheduled SFTP sweep failed after ${durationMs}ms:`, error.message);
+    res.status(500).json({
+      success: false,
+      error: 'SFTP sweep failed',
+      message: error.message,
+      data: { durationMs, triggeredBy },
+    });
+  }
+});
+
 module.exports = router;

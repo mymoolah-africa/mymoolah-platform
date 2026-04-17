@@ -368,24 +368,27 @@ async function approveRun(runId, checkerUserId) {
     msgId    = pain001Result.msgId;
     filename = generatePain001Filename();
 
+    // Upload via sbsaSftpClientService (Node → GCS → Thorntech Gateway → SBSA).
+    // The service owns the outbox prefix (env-derived) and the SBSA_SFTP_UPLOAD_ENABLED flag;
+    // when disabled, it safely writes to /tmp/sbsa-outbox/ for local/UAT dry-runs.
+    const { uploadPain001File } = require('./sbsaSftpClientService');
+    let uploadResult;
     try {
-      const SbsaSftpClientService = require('./sbsaSftpClientService');
-      const sftpService = new SbsaSftpClientService();
-      await sftpService.connect();
-      const outboxPath = process.env.SBSA_SFTP_OUTBOX_PATH || '/outbox/payments';
-      await sftpService.uploadFile(Buffer.from(pain001Result.xml, 'utf8'), `${outboxPath}/${filename}`);
-      await sftpService.disconnect();
-      gcsPath = `sbsa-sftp/outbox/${filename}`;
-      logger.info(`Pain.001 uploaded to SBSA SFTP: ${filename}`);
-    } catch (sftpErr) {
-      logger.warn(`SFTP upload skipped (service not available): ${sftpErr.message}`);
-      logger.info(`[MANUAL ACTION REQUIRED] Upload ${filename} to SBSA SFTP outbox manually`);
-      const os = require('os');
-      const fs = require('fs');
-      const tmpPath = `${os.tmpdir()}/${filename}`;
-      fs.writeFileSync(tmpPath, pain001Result.xml, 'utf8');
-      logger.info(`Pain.001 saved to ${tmpPath} for manual upload`);
+      uploadResult = await uploadPain001File(pain001Result.xml, filename);
+    } catch (uploadErr) {
+      logger.error(`Pain.001 upload failed for run ${run.run_reference}: ${uploadErr.message}`);
+      const err = new Error(`SBSA_UPLOAD_FAILED: ${uploadErr.message}`);
+      err.code = 'SBSA_UPLOAD_FAILED';
+      err.cause = uploadErr;
+      throw err;
     }
+
+    gcsPath = uploadResult.gcsPath || uploadResult.localPath || null;
+    logger.info(
+      `Pain.001 uploaded: filename=${uploadResult.filename} ` +
+      `gcsPath=${uploadResult.gcsPath || '(disabled)'} ` +
+      `localPath=${uploadResult.localPath || '(n/a)'}`
+    );
   }
 
   // ── RAIL 2: Process PayShap payments via existing RPP service ─────────────

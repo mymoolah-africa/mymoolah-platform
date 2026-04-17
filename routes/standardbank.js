@@ -234,6 +234,56 @@ router.post(
   rawBodyMiddleware, parseJsonBody, standardbankController.handleRtpRealtimeCallback
 );
 
+// ─── Cloud Scheduler endpoints (OIDC-authenticated) ─────────────────────────
+// These endpoints are invoked by Google Cloud Scheduler (not end users). They
+// replace node-cron for environments where Cloud Run min-instances=0 would
+// otherwise kill in-process timers.
+//
+// Auth: verifyCloudSchedulerToken validates the OIDC token signed by the
+// scheduler service account. Unauthenticated requests return 401.
+
+const { verifyCloudSchedulerToken } = require('../middleware/cloudSchedulerAuth');
+
+router.post('/scheduled-statement-poll', verifyCloudSchedulerToken, async (req, res) => {
+  const startTime = Date.now();
+  const triggeredBy = req.schedulerAuth?.email || 'unknown';
+  try {
+    const sbsaStatementService = require('../services/standardbank/sbsaStatementService');
+    const result = await sbsaStatementService.pollAndProcess();
+    return res.json({
+      success: true,
+      data: { durationMs: Date.now() - startTime, triggeredBy, ...result },
+    });
+  } catch (error) {
+    console.error(`[ScheduledStatementPoll] failed: ${error.message}`);
+    return res.status(500).json({
+      success: false,
+      error: 'Statement poll failed',
+      durationMs: Date.now() - startTime,
+    });
+  }
+});
+
+router.post('/scheduled-pain002-poll', verifyCloudSchedulerToken, async (req, res) => {
+  const startTime = Date.now();
+  const triggeredBy = req.schedulerAuth?.email || 'unknown';
+  try {
+    const pain002PollerService = require('../services/standardbank/pain002PollerService');
+    const result = await pain002PollerService.pollForPain002Files();
+    return res.json({
+      success: true,
+      data: { durationMs: Date.now() - startTime, triggeredBy, ...result },
+    });
+  } catch (error) {
+    console.error(`[ScheduledPain002Poll] failed: ${error.message}`);
+    return res.status(500).json({
+      success: false,
+      error: 'Pain.002 poll failed',
+      durationMs: Date.now() - startTime,
+    });
+  }
+});
+
 module.exports = router;
 module.exports.rtpValidation = rtpValidation;
 module.exports.handleValidation = handleValidation;
