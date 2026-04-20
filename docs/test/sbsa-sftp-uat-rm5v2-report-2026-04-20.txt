@@ -1,0 +1,136 @@
+================================================================================
+SBSA H2H — UAT RM5 Re-run (Over-Limit) — Test Report
+================================================================================
+
+Date:            2026-04-20 (Monday)
+Environment:     SBSA TEST SFTP (196.8.85.62:5022, user mymoolahuser)
+Operator:        Andre Botes / MyMoolah Treasury Platform
+Gateway:         sftp-1-vm @ africa-south1-a (GCP project mymoolah-db)
+Reason for run:  Colette's 2026-04-20 reply indicated that the original RM11
+                 (R96.15) was well below the TEST Cr Transaction Limit (R500,000)
+                 and therefore could not trigger code 0006. She requested a
+                 re-run with a transaction of R500,001.
+
+Input file:
+  Filename:      MYMOOLAH_OWN11_Pain001v3_ZAR_TST_20260420101144335RM5v2.xml
+  MsgId:         MM-UATRM5v21776672704334-MO6X20CU
+  Size:          4,266 bytes
+  Debtor Acct:   272406481
+  ReqdExctnDt:   2026-04-21
+  NbOfTxs:       3
+  CtrlSum:       500003.00
+  Transactions:
+    Tx1  R500,001.00  Andre Botes  SBSA      10111730633 / 051001
+    Tx2  R1.00        Andre Botes  Discovery 18828076450 / 679000
+    Tx3  R1.00        Andre Botes  Capitec    1254107337 / 470010
+
+Expected (per Colette, 2026-04-20):
+  ACK (GrpSts RCVD) + INTAUDTST (GrpSts PART, Tx1 RJCT code 0006
+  TRANSACTION AMOUNT EXCEEDS LIMIT, Tx2+Tx3 PDNG) + FINAUDTST (GrpSts PART,
+  Tx1 RJCT, Tx2+Tx3 ACSP).
+
+================================================================================
+Actual SBSA responses
+================================================================================
+
+Upload landed in /Outbox at  2026-04-20 10:47:04 SAST
+
+1) ACK
+   Filename:  MYMOOLAH_OWN11_Pain001v3_ZAR_TST_20260420101144335RM5v2.xml_ACK_20260420104722000.xml
+   SBSA MsgId: 51908069
+   Arrived:   10:47:22 SAST  (+18s after upload)
+   GrpSts:    RCVD
+   Verdict:   PASS — normal acknowledgement.
+
+2) INTAUDTST
+   Filename:  MYMOOLAH_OWN11_Pain001v3_ZAR_TST_20260420101144335RM5v2.xml_INTAUDTST_260420104730099.xml
+   SBSA MsgId: 51908064
+   Arrived:   10:47:29 SAST  (+25s after upload)
+   GrpSts:    RJCT                       (expected: PART)
+   Status Code:        0009              (expected: 0006)
+   Status Description: RUN EXCEEDS LIMIT (expected: TRANSACTION AMOUNT EXCEEDS LIMIT)
+   Per-transaction status:
+     Tx1 (R500,001.00)  TxSts RJCT  Code 0009  "RUN EXCEEDS LIMIT"
+     Tx2 (R1.00)        TxSts RJCT  Code 0009  "RUN EXCEEDS LIMIT"
+     Tx3 (R1.00)        TxSts RJCT  Code 0009  "RUN EXCEEDS LIMIT"
+   Verdict:   DIFFERENT FROM PREDICTION — see interpretation below.
+
+3) FINAUDTST
+   Not received within the 45-minute poll window.
+   This is consistent with SBSA behaviour observed for RM9 and RM10 in the
+   2026-04-17 UAT (both ended at INTAUD RJCT with no FINAUD). It appears SBSA
+   does not issue FINAUD when the whole batch has already been rejected at
+   INTAUD.
+
+VET / UNPAID:
+   Not applicable — expected only for files that actually reach FINAUD (RM7,
+   RM12 in the prior UAT). Not received here, which is consistent.
+
+================================================================================
+Interpretation
+================================================================================
+
+The batch was rejected on the sub-batch limit (R500,000) before the per-
+transaction limit check fired. Our file's batch total R500,003 exceeds the
+sub-batch limit by R3, so SBSA rejected the file as a whole.
+
+Because both profile limits are set to R500,000 (Cr Transaction Limit == Sub
+Batch Limit), it is arithmetically impossible to build a test file that
+exceeds the per-tx limit without also exceeding the sub-batch limit. In other
+words, the "PART with one RJCT at 0006" path is not reachable with the current
+TEST profile — any file containing a single tx > R500,000 will automatically
+fail the batch-level check first.
+
+Additional observation: Status Code 0009 is used by SBSA for two distinct
+scenarios:
+  • RM9 (2026-04-17): 0009 with no "RUN EXCEEDS LIMIT" description — mapped to
+    invalid ordering account.
+  • RM5v2 (2026-04-20): 0009 with description "RUN EXCEEDS LIMIT" — batch
+    over the sub-batch limit.
+Our pain002PollerService must therefore use the combination of the status
+code AND the AddtlInf description to disambiguate the root cause, not the
+code alone.
+
+================================================================================
+PASS / FAIL summary
+================================================================================
+
+ACK                RCVD               PASS
+INTAUD  expected PART code 0006       DIFFERENT — RJCT code 0009 "RUN EXCEEDS LIMIT"
+                                      (SBSA's sub-batch-limit short-circuits the per-tx check)
+FINAUD  expected ACSP for Tx2+Tx3     NOT RECEIVED — whole batch already RJCT at INTAUD
+
+Overall: the test behaviour is internally consistent and informative, but does
+NOT exercise the per-transaction (0006) rejection path that was the original
+intent of Scenario 5.
+
+================================================================================
+Questions to raise with SBSA
+================================================================================
+
+1. Can the TEST profile be re-configured so that Cr Transaction Limit is lower
+   than the Sub Batch Limit (e.g. per-tx R100,000, batch R500,000)? That is
+   the only way a Pain.001 can trip the per-tx limit (0006) without also
+   tripping the sub-batch limit (0009).
+
+2. Please confirm that Status Code 0009 is used for BOTH "invalid ordering
+   account" (RM9 in 2026-04-17 UAT) and "RUN EXCEEDS LIMIT" (RM5v2 above), and
+   that the AddtlInf Status Description is the authoritative differentiator.
+
+3. Please confirm that SBSA does NOT issue a FINAUDTST when a file is
+   rejected at INTAUDTST (GrpSts RJCT). This matches what we observed for
+   RM9, RM10 and RM5v2 and is informally our assumption — we would like to
+   bake it into our poller.
+
+4. For our production go-live: if the production Cr Transaction Limit and Sub
+   Batch Limit differ (which we expect and hope), we will need to know both
+   values so we can correctly surface the right error to the operator when a
+   customer submits a batch that hits either limit.
+
+================================================================================
+Files stored under
+  docs/test/sbsa-uat-rm5v2-responses-2026-04-20/
+    MYMOOLAH_OWN11_Pain001v3_ZAR_TST_20260420101144335RM5v2.xml                                      (request)
+    MYMOOLAH_OWN11_Pain001v3_ZAR_TST_20260420101144335RM5v2.xml_ACK_20260420104722000.xml           (ACK)
+    MYMOOLAH_OWN11_Pain001v3_ZAR_TST_20260420101144335RM5v2.xml_INTAUDTST_260420104730099.xml       (INTAUD RJCT 0009)
+================================================================================
