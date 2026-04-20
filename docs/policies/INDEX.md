@@ -23,11 +23,21 @@ All employees, contractors, directors, and third-party service providers acting 
 
 ### Withdrawals, TPPP, and sponsor-bank alignment (April 2026)
 
-Wallet **cash withdrawals** (including **eeziCash** via Flash and **EasyPay** retail cash-out) are governed by the same FICA, POPIA, and NPS/TPPP obligations as the rest of the platform. The **regulatory characterisation** of eeziCash is a **wallet cash-withdrawal mechanism** (PIN = withdrawal credential), **not** VAS voucher resale. Operational and KB alignment:
+Wallet **cash withdrawals** through **Cash-Withdrawal Partners** (currently eeziCash via Flash Group, EasyPay retail cash-withdrawal, Cliquefin / OTT cash-withdrawal vouchers, USSD cash-withdrawal, and any future partner) are governed by the same FICA, POPIA, and NPS/TPPP obligations as the rest of the platform. The **regulatory characterisation** across every partner is a **wallet cash-withdrawal mechanism** (PIN / reference / token = withdrawal credential), **not** VAS voucher resale. Operational and KB alignment:
 
 - **Hub:** [`WITHDRAWALS_COMPLIANCE_AND_KB.md`](../WITHDRAWALS_COMPLIANCE_AND_KB.md)  
 - **Flow diagrams (print/PDF):** [`integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html`](../integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html)  
 - **Policies updated in lockstep:** POL-001 (§9A), POL-002 (scope), POL-003 (scope), POL-004 (§5.2.6), POL-005 (scope + fraud table), POL-013 (§10.2), POL-018 (scope)
+
+### Own-Funds ring-fencing against cash withdrawal (20 April 2026)
+
+A new policy, **POL-020 — Cash Withdrawal & Ring-Fencing of Own Funds**, establishes MMTP's position that wallet holders' **own deposits** (self-EFT, self-PayShap, NFC self-load, voucher cash-in) are ring-fenced against **all** cash-withdrawal rails, across every **Cash-Withdrawal Partner** — current (eeziCash via Flash, EasyPay retail cash-withdrawal, Cliquefin / OTT cash-withdrawal vouchers, USSD cash-withdrawal) and any future partner. Only **third-party credits** (salaries, disbursements, P2P transfers) are eligible for cash withdrawal. This is the operational mechanism by which MMTP stays outside the definition of "the business of a bank" (Banks Act 94/1990 s1+s11) and remains consistent with SARB Position Paper NPS 01/2020 on Electronic Money. Related artefacts:
+
+- **Policy:** [`20-Cash-Withdrawal-Policy.md`](20-Cash-Withdrawal-Policy.md)
+- **Standard Bank letter (print-ready HTML):** [`2026-04-20_StandardBank_CashWithdrawal_Policy_Letter.html`](2026-04-20_StandardBank_CashWithdrawal_Policy_Letter.html)
+- **Engineering plan:** [`OWN_FUNDS_RINGFENCE_IMPLEMENTATION_PLAN.md`](../OWN_FUNDS_RINGFENCE_IMPLEMENTATION_PLAN.md)
+- **T&Cs:** `docs/TERMS_AND_CONDITIONS.md` v2.4.0 §4.4
+- **FAQ / AI KB:** `docs/FAQ_MASTER.md` §9c
 
 ---
 
@@ -76,6 +86,12 @@ Wallet **cash withdrawals** (including **eeziCash** via Flash and **EasyPay** re
 | 17 | [Compliance Training & Awareness](17-Compliance-Training-Policy.md) | POL-017 | CCO | Mandatory training program, role-based curricula, 80% pass mark, FICA S42 |
 | 18 | [Independent Compliance Review & Audit](18-Compliance-Review-Policy.md) | POL-018 | Board/CCO | Annual review program, reviewer independence, findings remediation, King IV Principle 15 |
 | 19 | [Enterprise Risk Management Framework](19-Risk-Management-Framework.md) | POL-019 | CRO | Risk appetite, 5x5 matrix, risk register, KRIs, three lines of defence, ISO 31000/King IV Principle 11 |
+
+### F. Product & Sponsor-Bank Compliance
+
+| # | Policy | Ref | Owner | Scope |
+|---|--------|-----|-------|-------|
+| 20 | [Cash Withdrawal & Ring-Fencing of Own Funds](20-Cash-Withdrawal-Policy.md) | POL-020 | CCO | Own-funds vs third-party-funds classification at ingress; absolute cash-withdrawal ban on own funds; wallet- and ledger-level enforcement across every Cash-Withdrawal Partner (eeziCash, EasyPay, Cliquefin / OTT); FICA PIN/token-only redemption assessment; multi-party sponsor-bank + Cash-Withdrawal-Partner FICA protocol |
 
 ---
 
@@ -129,7 +145,8 @@ Board of Directors
 |----------------------|----------|
 | **FICA** (Financial Intelligence Centre Act) | POL-001, POL-002, POL-003, POL-004, POL-007, POL-017 |
 | **POPIA** (Protection of Personal Information Act) | POL-006, POL-007, POL-008, POL-014 |
-| **NPS Act** (National Payment System Act) | POL-001, POL-004, POL-019 |
+| **NPS Act** (National Payment System Act) | POL-001, POL-004, POL-019, POL-020 |
+| **Banks Act 94/1990** + SARB Position Paper NPS 01/2020 | POL-020 |
 | **PRECCA** (Prevention and Combating of Corrupt Activities) | POL-009, POL-010 |
 | **Companies Act 71/2008** | POL-009, POL-011, POL-012 |
 | **Protected Disclosures Act** | POL-010 |
@@ -163,6 +180,8 @@ Board of Directors
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | March 2026 | MyMoolah Compliance | Initial framework — 19 policies established |
+| 1.2 | 20 April 2026 | MyMoolah Compliance | Added POL-020 (Cash Withdrawal & Ring-Fencing of Own Funds); new section F in the register; cross-reference to Standard Bank letter and engineering plan |
+| 1.3 | 20 April 2026 | MyMoolah Compliance | Terminology alignment across policies 01, 02, 03, 04, 05, 13, 18, 20 and the WITHDRAWALS hub: adopted "cash withdrawal" as canonical (replacing "cash-out" in user-facing, legal and policy text) and introduced the generic **Cash-Withdrawal Partner** category covering eeziCash (Flash Group), EasyPay retail cash-withdrawal, Cliquefin / OTT cash-withdrawal vouchers, USSD cash-withdrawal, and any future equivalent partner. Existing backend code identifiers (e.g. `canCashOut()`, `purchaseCashOutPin`, `issueEasyPayCashout`, route paths containing `cashout`) retain their historical spelling and are unaffected. |
 
 ---
 

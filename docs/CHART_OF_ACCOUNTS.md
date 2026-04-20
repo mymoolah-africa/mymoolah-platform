@@ -288,7 +288,7 @@ User redeems a Flash voucher PIN to top up their wallet. Flash charges 4% accept
 fee **exclusive of VAT** (per deal sheet Mar 2026). Total fee = 4% + 15% VAT = 4.6%.
 Flash deducts the full fee (incl VAT) at source before daily net settlement (T+1).
 MMTP passes the full cost through to the user — **MMTP earns zero markup, no output VAT**.
-Deposit is ringfenced — cannot be used for cash-out (AML control).
+Deposit is ring-fenced — cannot be used for cash withdrawal (POL-020 ring-fence; AML control). Applies to every Cash-Withdrawal Partner (eeziCash, EasyPay, Cliquefin / OTT, USSD).
 
 Example on R100 voucher: fee R4.00 + VAT R0.60 = R4.60 → user receives R95.40.
 

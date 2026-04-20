@@ -62,11 +62,11 @@ See: `docs/session_logs/2025-12-02_1220_msisdn-phonenumber-audit.md` for full au
 
 ---
 
-### **TPPP withdrawals and cash-out documentation (April 2026)**
+### **TPPP cash-withdrawal documentation (April 2026)**
 
 - **Regulatory / product clarity:** **eeziCash** is documented across MMTP as a **wallet cash-withdrawal** service under the TPPP/sponsor-bank framework (wallet debited before withdrawal credential issuance; PIN is a **withdrawal credential**, not VAS retail product resale). This aligns external communications with AML, transaction monitoring, and fraud models.
 - **Artefacts:** `docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html` (flows, ledger excerpts, role matrices); hub `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md` (AML, monitoring, security logging, KB seeding guidance).
-- **Security impact:** Cash-out channels remain subject to **PII redaction** in logs, **immutable audit trails** on financial tables, **velocity and step-up** controls at the API boundary, and **cross-channel** fraud correlation (wallet → eeziCash / EasyPay → RTP). See `docs/policies/13-Information-Security-Policy.md` §10.2.
+- **Security impact:** Cash-withdrawal channels (all Cash-Withdrawal Partners — eeziCash via Flash, EasyPay, Cliquefin / OTT, and any future partner) remain subject to **PII redaction** in logs, **immutable audit trails** on financial tables, **velocity and step-up** controls at the API boundary, and **cross-channel** fraud correlation (wallet → cash withdrawal → RTP). See `docs/policies/13-Information-Security-Policy.md` §10.2 and `docs/policies/20-Cash-Withdrawal-Policy.md` (POL-020 ring-fence).
 
 ### **🏆 Security Achievements**
 - ✅ **USDC API (Feb 2026)**: All USDC endpoints use express-validator at boundary; idempotency (client key or crypto.randomUUID()); VALR credentials guarded; no unsupported request body fields; limit/offset/address length sanitized

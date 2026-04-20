@@ -8,6 +8,10 @@
  *   Tier 1 — FIC Exemption 17 ceiling (ID document OCR-verified, no proof of address)
  *   Tier 2 — Full FICA CDD (ID document + proof of address verified)
  *
+ * Cash-withdrawal velocity controls mirror POL-020 §7.6 – §7.10 and are
+ * enforced by `services/cashWithdrawalVelocityService.js` (log-only until
+ * Phase 3 of `docs/OWN_FUNDS_RINGFENCE_IMPLEMENTATION_PLAN.md`).
+ *
  * All amounts in ZAR (Rand).
  */
 
@@ -24,6 +28,13 @@ const KYC_TIER_LIMITS = {
     canPurchaseVAS: true,
     canReceiveDeposits: false,
     canTransferInternational: false,
+    cashWithdrawalCount: {
+      per60m: 0,
+      per24h: 0,
+      perMonth: 0,
+      uniquePartnersPer24h: 0,
+      uniqueRetailersPer24h: 0,
+    },
   },
   1: {
     label: 'ID Verified',
@@ -37,6 +48,13 @@ const KYC_TIER_LIMITS = {
     canPurchaseVAS: true,
     canReceiveDeposits: true,
     canTransferInternational: false,
+    cashWithdrawalCount: {
+      per60m: 2,
+      per24h: 3,
+      perMonth: 15,
+      uniquePartnersPer24h: 2,
+      uniqueRetailersPer24h: 3,
+    },
   },
   2: {
     label: 'Fully Verified',
@@ -50,6 +68,13 @@ const KYC_TIER_LIMITS = {
     canPurchaseVAS: true,
     canReceiveDeposits: true,
     canTransferInternational: true,
+    cashWithdrawalCount: {
+      per60m: 3,
+      per24h: 5,
+      perMonth: 30,
+      uniquePartnersPer24h: 3,
+      uniqueRetailersPer24h: 5,
+    },
   },
 };
 
@@ -75,9 +100,19 @@ function getWalletDefaults(tier) {
   };
 }
 
+/**
+ * Returns the cash-withdrawal count caps for a tier (POL-020 §7.6).
+ * Tier 0 returns zeroes since Tier 0 cannot withdraw cash.
+ */
+function getCashWithdrawalCountCaps(tier) {
+  const limits = getLimitsForTier(tier);
+  return { ...limits.cashWithdrawalCount };
+}
+
 module.exports = {
   KYC_TIER_LIMITS,
   DEFAULT_TIER,
   getLimitsForTier,
   getWalletDefaults,
+  getCashWithdrawalCountCaps,
 };

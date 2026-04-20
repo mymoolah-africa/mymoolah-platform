@@ -83,7 +83,7 @@
 
 **6. EASYPAY INTEGRATION** ✅ **COMPLETE**
 - **Digital Voucher System**: 14-digit EasyPay codes (format: X XXXX XXXX XXXX X)
-- **Voucher Types**: Cash-out, Top-up, Standalone vouchers
+- **Voucher Types**: Cash-Withdrawal, Top-up, Standalone vouchers
 - **Standalone Vouchers**: New voucher type for use at EasyPay merchants (not redeemable in wallet)
 - **Settlement**: Network merchant settlement with callback support
 - **Voucher Management**: Complete lifecycle management (create, cancel, expiry, settlement)

@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="en-ZA">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MyMoolah &mdash; Wallet Cash Withdrawal Policy &amp; Request for Formal Product Approval</title>
+<!--
+  Template variables (edit before sending to a different recipient):
+    - ADDRESSEE_ORG:    Standard Bank of South Africa Limited
+    - ADDRESSEE_ATTN:   Head of TPPP Sponsorship / Compliance
+    - ADDRESSEE_ADDR:   30 Baker Street, Rosebank, Johannesburg, 2196
+    - LETTER_DATE:      20 April 2026
+    - POLICY_REF:       POL-020 v1.1
+-->
+<style>
+  :root {
+    --navy: #0B2545;
+    --navy-ink: #0B2545;
+    --gold: #C8A85A;
+    --ink: #1A1A1A;
+    --muted: #555;
+    --rule: #D9D5CC;
+    --paper: #FFFFFF;
+    --bg: #EEEBE4;
+  }
+
+  @page {
+    size: A4;
+    margin: 20mm 20mm 22mm 20mm;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: Georgia, "Times New Roman", "Liberation Serif", serif;
+    font-size: 11pt;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .sheet {
+    background: var(--paper);
+    width: 210mm;
+    min-height: 297mm;
+    margin: 24px auto;
+    padding: 22mm 22mm 26mm 22mm;
+    box-shadow: 0 12px 40px rgba(11, 37, 69, 0.10);
+    position: relative;
+  }
+
+  /* Letterhead ---------------------------------------------------- */
+  .letterhead {
+    border-bottom: 2px solid var(--navy);
+    padding-bottom: 14px;
+    margin-bottom: 22px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .brand-mark {
+    width: 58px;
+    height: 58px;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+  }
+  .brand-mark svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  .brand-words {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+  }
+  .brand-words .org {
+    font-size: 14pt;
+    font-weight: 700;
+    color: var(--navy);
+    letter-spacing: 0.3px;
+  }
+  .brand-words .sub {
+    font-size: 9pt;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .entity {
+    text-align: right;
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 8.5pt;
+    color: var(--muted);
+    line-height: 1.45;
+  }
+  .entity strong {
+    color: var(--navy);
+    font-size: 9pt;
+    letter-spacing: 0.3px;
+  }
+
+  /* Meta block ---------------------------------------------------- */
+  .meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 18px;
+  }
+  .meta .addressee { max-width: 60%; }
+  .meta .addressee .attn { color: var(--muted); font-size: 9.5pt; }
+  .meta .addressee .org-to {
+    font-weight: 700;
+    color: var(--navy);
+    font-size: 11.5pt;
+    margin-top: 2px;
+  }
+  .meta .addressee .addr {
+    font-size: 10pt;
+    color: var(--ink);
+    margin-top: 2px;
+  }
+  .meta .date {
+    text-align: right;
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 9.5pt;
+    color: var(--muted);
+  }
+  .meta .date .d {
+    font-size: 11pt;
+    font-weight: 600;
+    color: var(--navy-ink);
+  }
+
+  /* Subject ------------------------------------------------------- */
+  .subject {
+    background: var(--navy);
+    color: #fff;
+    padding: 12px 16px;
+    margin: 14px 0 22px 0;
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 11pt;
+    letter-spacing: 0.4px;
+    border-left: 4px solid var(--gold);
+  }
+  .subject .label {
+    font-size: 8pt;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--gold);
+    display: block;
+    margin-bottom: 3px;
+  }
+  .subject .title { font-weight: 600; }
+
+  /* Body ---------------------------------------------------------- */
+  p { margin: 0 0 10px 0; text-align: justify; }
+  h2 {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 11pt;
+    color: var(--navy);
+    margin: 20px 0 8px 0;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--rule);
+    letter-spacing: 0.3px;
+    page-break-after: avoid;
+  }
+  h2 .sec {
+    display: inline-block;
+    width: 22px;
+    height: 22px;
+    background: var(--gold);
+    color: var(--navy);
+    text-align: center;
+    line-height: 22px;
+    font-size: 9pt;
+    font-weight: 700;
+    border-radius: 3px;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+
+  ul, ol { margin: 4px 0 12px 22px; padding: 0; }
+  li { margin: 3px 0; }
+
+  .salute { margin-bottom: 14px; }
+
+  /* Callouts ------------------------------------------------------ */
+  .callout {
+    border-left: 3px solid var(--gold);
+    background: #FAF7EE;
+    padding: 10px 14px;
+    margin: 12px 0 14px 0;
+    font-size: 10.5pt;
+  }
+  .definitions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 10px 0 14px 0;
+  }
+  .def {
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--navy);
+    padding: 10px 12px;
+  }
+  .def .t {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 9pt;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--navy);
+    margin-bottom: 4px;
+  }
+  .def p { margin: 0; font-size: 10pt; }
+
+  table.controls {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0 12px 0;
+    font-size: 10pt;
+  }
+  table.controls th, table.controls td {
+    border: 1px solid var(--rule);
+    padding: 7px 9px;
+    text-align: left;
+    vertical-align: top;
+  }
+  table.controls th {
+    background: #F4F1EA;
+    color: var(--navy);
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 9pt;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+  }
+
+  /* Signature ----------------------------------------------------- */
+  .sig-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin-top: 28px;
+    page-break-inside: avoid;
+  }
+  .sig-block .line {
+    border-bottom: 1px solid var(--ink);
+    height: 44px;
+    margin-bottom: 6px;
+  }
+  .sig-block .name {
+    font-weight: 700;
+    color: var(--navy);
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 10.5pt;
+  }
+  .sig-block .role {
+    color: var(--muted);
+    font-size: 9.5pt;
+    font-family: "Helvetica Neue", Arial, sans-serif;
+  }
+
+  /* Footer -------------------------------------------------------- */
+  .footer {
+    margin-top: 26px;
+    padding-top: 10px;
+    border-top: 1px solid var(--rule);
+    display: flex;
+    justify-content: space-between;
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 8pt;
+    color: var(--muted);
+    letter-spacing: 0.2px;
+  }
+  .footer .ref { color: var(--navy); font-weight: 600; }
+
+  /* Print --------------------------------------------------------- */
+  @media print {
+    html, body { background: #fff; }
+    .sheet {
+      box-shadow: none;
+      margin: 0;
+      width: auto;
+      min-height: 0;
+      padding: 0;
+    }
+    h2, .sig-grid, .subject { page-break-inside: avoid; }
+    p, li { orphans: 3; widows: 3; }
+  }
+</style>
+</head>
+<body>
+
+<div class="sheet">
+
+  <!-- Letterhead -->
+  <header class="letterhead">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2834.65 2834.65" role="img" aria-label="MyMoolah">
+          <polygon fill="#2D8CCA" points="2277.28,1934.18 2659.27,1534.04 2772.74,1426.49 1490.12,143.87 1490.12,170.96 1490.12,509.34 1490.12,2690.78 1748.55,2434.25 1748.55,778.17 1883.7,918.76 1883.7,2318.97 2142.13,2047.83 2142.13,1187.59 2383.82,1438.99 2277.28,1545.53"/>
+          <polygon fill="#86BE41" points="557.36,1934.18 175.37,1534.04 61.9,1426.49 1344.53,143.87 1344.53,170.96 1344.53,509.34 1344.53,2690.78 1086.1,2434.25 1086.1,778.17 950.95,918.76 950.95,2318.97 692.51,2047.83 692.51,1187.59 450.83,1438.99 557.36,1545.53"/>
+        </svg>
+      </div>
+      <div class="brand-words">
+        <div class="org">MyMoolah Treasury Platform</div>
+        <div class="sub">A Mojaloop-compliant South African digital wallet and payment platform</div>
+      </div>
+    </div>
+    <div class="entity">
+      <strong>MyMoolah (Pty) Ltd</strong><br/>
+      Reg. No. 2024/315592/07<br/>
+      Block A, Erasmus Forum, 434 Rigel Ave South<br/>
+      Erasmusrand, Pretoria, 0181<br/>
+      legal@mymoolah.africa &middot; mymoolah.africa
+    </div>
+  </header>
+
+  <!-- Addressee + date -->
+  <section class="meta">
+    <div class="addressee">
+      <div class="attn">Attention</div>
+      <div class="org-to">Standard Bank of South Africa Limited</div>
+      <div class="addr">
+        Head of TPPP Sponsorship / Group Compliance<br/>
+        30 Baker Street, Rosebank, Johannesburg, 2196<br/>
+        By email &middot; Private &amp; Confidential
+      </div>
+    </div>
+    <div class="date">
+      <div>Our ref</div>
+      <div class="d">POL-020 v1.1</div>
+      <div style="margin-top:10px;">Date</div>
+      <div class="d">20 April 2026</div>
+    </div>
+  </section>
+
+  <!-- Subject -->
+  <div class="subject">
+    <span class="label">Subject</span>
+    <span class="title">MyMoolah Treasury Platform &mdash; Cash Withdrawal Policy and request for formal product approval</span>
+  </div>
+
+  <!-- Salutation -->
+  <p class="salute">Dear Colleagues,</p>
+
+  <!-- Executive summary -->
+  <p>
+    We write to share MyMoolah&rsquo;s formal <strong>Cash Withdrawal &amp; Ring-Fencing of Own Funds Policy</strong> (POL-020,
+    effective 20 April 2026), and to request Standard Bank&rsquo;s written product approval, or written no-objection,
+    for the product described below. MyMoolah is a PASA-certified Third-Party Payment Provider and operates the
+    <strong>MyMoolah Treasury Platform</strong>, which holds customer float in segregated accounts at Standard Bank.
+    The policy operationalises a structural separation between a wallet holder&rsquo;s <em>own funds</em> (ring-fenced and
+    never withdrawable as cash) and <em>third-party funds</em> received for the wallet holder (the only balance eligible
+    for cash collection through any MyMoolah Cash-Withdrawal Partner &mdash; currently eeziCash (Flash Group), EasyPay
+    retail cash-withdrawal, and Cliquefin / OTT cash-withdrawal vouchers, and any future equivalent rail). In our respectful submission this
+    structure places MyMoolah firmly outside the definition of &ldquo;the business of a bank&rdquo; in section&nbsp;1 read with
+    section&nbsp;11 of the Banks Act 94 of 1990, and is consistent with the SARB Position Paper on Electronic Money
+    (NPS&nbsp;01/2020) and with the sponsor-bank segregation posture it contemplates.
+  </p>
+
+  <!-- Section A -->
+  <h2><span class="sec">A</span>Product structure &mdash; Own Funds vs Third-Party Funds</h2>
+
+  <div class="definitions">
+    <div class="def">
+      <div class="t">Own Funds</div>
+      <p>Any amount credited to a MyMoolah wallet from a source where the remitting account holder is, or can reasonably be determined to be, the <strong>same natural person</strong> as the FICA-verified wallet holder. This includes self-EFT from the holder&rsquo;s own bank account, self-initiated PayShap credits, self-loaded NFC/Halo deposits, and all voucher-based cash-in.</p>
+    </div>
+    <div class="def">
+      <div class="t">Third-Party Funds</div>
+      <p>Any amount credited from a <strong>distinct legal or natural person</strong> &mdash; e.g.&nbsp;an employer paying salary, a corporate client&rsquo;s disbursement run, a loan disbursement, or a P2P transfer from another wallet holder.</p>
+    </div>
+  </div>
+
+  <p>
+    <strong>Own Funds are ring-fenced against cash withdrawal.</strong> They may be spent freely on wallet-to-wallet transfers,
+    PayShap, EFT, bill payments, airtime, data, electricity and other value-added services, QR merchant payments, NFC
+    spend, and non-cash digital vouchers &mdash; but they may not, under any circumstance, be converted to physical cash
+    via any MyMoolah Cash-Withdrawal Partner &mdash; eeziCash (Flash Group), EasyPay retail cash-withdrawal,
+    Cliquefin / OTT cash-withdrawal vouchers, USSD cash-withdrawal, or any successor rail. The restriction is absolute; MyMoolah
+    operates no override that would permit Own Funds to be paid out as cash.
+  </p>
+  <p>
+    <strong>Third-Party Funds are eligible for cash redemption</strong>, subject to FICA controls, transaction-monitoring
+    rules, and ordinary KYC-tier limits. In that case the cash payment is the delivery of a payment due to the wallet
+    holder from an identified third party &mdash; a payment-system activity, not deposit repayment.
+  </p>
+
+  <!-- Section B -->
+  <h2><span class="sec">B</span>Legal basis &mdash; why this is not deposit-taking</h2>
+
+  <p>For the following four reasons, read cumulatively, MyMoolah&rsquo;s wallet does not constitute impermissible deposit-taking under the Banks Act:</p>
+  <ol>
+    <li>
+      <strong>No repayable amount as against MyMoolah.</strong> Own Funds credited to the wallet cannot be withdrawn as
+      cash. MyMoolah is therefore not accepting amounts from the public subject to an obligation to repay a deposit in
+      the sense contemplated by section&nbsp;1 of the Banks Act. Own Funds may be <em>used</em> (for VAS, transfers, bill
+      payments), but they cannot be <em>repaid as cash</em>.
+    </li>
+    <li>
+      <strong>Cash redemption is payment delivery, not deposit repayment.</strong> Third-Party Funds may be paid out as
+      cash because, in substance, MyMoolah is delivering a payment due to the wallet holder from an identified third
+      party. This is a payment-system activity within the scope of PASA&rsquo;s TPPP framework and the SARB NPS oversight
+      regime under the NPS Act 78 of 1998.
+    </li>
+    <li>
+      <strong>Segregated sponsor-bank holding.</strong> Customer float is held via Standard Bank in segregated accounts,
+      consistent with the ring-fenced segregation construct contemplated by the SARB Position Paper on Electronic
+      Money (NPS&nbsp;01/2020) and by the Banks Act Exemption Notices applicable to non-bank payment schemes. MyMoolah
+      operates no interest-bearing deposit product, no credit extension, and no on-balance-sheet intermediation of
+      customer funds.
+    </li>
+    <li>
+      <strong>System-enforced, auditable separation.</strong> The Own Funds &ndash; Third-Party Funds distinction is enforced
+      at wallet, ledger, and reconciliation layers and is evidenced by an immutable, hash-chained audit trail, as
+      summarised in Section&nbsp;C below.
+    </li>
+  </ol>
+
+  <!-- Section C -->
+  <h2><span class="sec">C</span>Control environment</h2>
+
+  <table class="controls">
+    <thead>
+      <tr>
+        <th style="width:26%">Control</th>
+        <th>Mechanism</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Wallet-level enforcement</td>
+        <td>Every cash-withdrawal endpoint &mdash; eeziCash PIN purchase, EasyPay cash-withdrawal token, Cliquefin / OTT cash-withdrawal voucher, USSD cash-withdrawal, and any future equivalent Cash-Withdrawal Partner &mdash; routes through the wallet-level guard <code>Wallet.canCashOut()</code> (an internal code identifier retained for continuity), which asserts <code>balance&nbsp;&minus;&nbsp;restricted_balance&nbsp;&ge;&nbsp;amount</code> before debiting. Failure returns a standardised restriction response to the app; no Cash-Available figure is surfaced to the user.</td>
+      </tr>
+      <tr>
+        <td>Ledger-level enforcement</td>
+        <td>Restriction is posted atomically with the inbound deposit as a Journal Entry to the sub-liability account <code>2100-01-02</code> &ldquo;Client Float Liability &mdash; Restricted&rdquo;. Permitted non-cash spend triggers a FIFO release Journal Entry. Every entry is SHA-256 hash-chained.</td>
+      </tr>
+      <tr>
+        <td>Deposit classification</td>
+        <td>Inbound deposits are classified at ingress as <code>own_funds</code>, <code>third_party_credit</code>, <code>voucher_deposit</code>, or <code>unknown</code>, using a name-match of the remitter name against the FICA-verified wallet-holder name. Unknown classifications default to restricted (conservative). Every decision is recorded in an append-only audit table.</td>
+      </tr>
+      <tr>
+        <td>Reconciliation</td>
+        <td>Hourly automated reconciliation asserts <code>SUM(wallets.restricted_balance)&nbsp;==&nbsp;net&nbsp;credit&nbsp;balance&nbsp;of&nbsp;2100-01-02</code>. Variance &gt;&nbsp;R0.01 raises an on-call alert and a CCO notification.</td>
+      </tr>
+      <tr>
+        <td>Monitoring &amp; reporting</td>
+        <td>Blocked cash-withdrawal attempts are logged and feed the transaction-monitoring rule family under POL-004 (Transaction Monitoring &amp; SAR Policy). CTR monitoring operates against the R24,999.99 FICA threshold; STRs are filed via goAML.</td>
+      </tr>
+      <tr>
+        <td>Records</td>
+        <td>Classification, deposit, release, and blocked-attempt records are retained for no less than five years under POL-007 (Data Retention).</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Section D -->
+  <h2><span class="sec">D</span>FICA &amp; AML &mdash; transparent assessment of PIN-only redemption</h2>
+
+  <p>
+    We wish to raise proactively a characteristic common to every cash-withdrawal product currently supported &mdash;
+    eeziCash (Flash Group), EasyPay retail cash-withdrawal, and Cliquefin / OTT cash-withdrawal vouchers &mdash;
+    which we expect Standard Bank&rsquo;s Compliance function to identify: redemption at the merchant, retailer or trader
+    point occurs on the presentation of a PIN or reference token, <strong>without an independent identity verification of
+    the physical cash recipient at the point of dispense</strong>. We have assessed this characteristic under our FICA Risk Management and
+    Compliance Programme and consider the residual risk to be acceptable at the individual-transaction level for the
+    following cumulative reasons:
+  </p>
+  <ul>
+    <li>the <strong>per-credential maximum value</strong> configured by each Cash-Withdrawal Partner (e.g.&nbsp;R500 per eeziCash PIN; partner-specific ceilings for EasyPay and Cliquefin / OTT);</li>
+    <li>full <strong>FICA verification of the wallet holder</strong> at onboarding, who is in every case the originating transactor;</li>
+    <li>a complete <strong>end-to-end digital audit trail</strong> from wallet debit through voucher generation to partner redemption confirmation;</li>
+    <li><strong>transaction-monitoring rules</strong> for unusual voucher-generation patterns, including structuring around the FICA CTR threshold and peer-group deviation; and</li>
+    <li>the <strong>ring-fence itself</strong>, which ensures that only third-party funds traceable to an identified remitter can fund a cash withdrawal.</li>
+  </ul>
+  <p>
+    We would welcome the opportunity to walk Standard Bank&rsquo;s Compliance team through this assessment in detail, and
+    we are committed to implementing any additional control measures Standard Bank considers appropriate.
+  </p>
+
+  <!-- Section E -->
+  <h2><span class="sec">E</span>SARB Draft Directive on Payment Activities</h2>
+
+  <p>
+    We are actively monitoring the South African Reserve Bank&rsquo;s <strong>Draft Directive on Payment Activities</strong>
+    (revised draft published for consultation on 14 November 2025). We recognise that the envisaged activity-based
+    authorisation framework is likely to reclassify cash-withdrawal-at-merchant, money remittance, and scheme / closed-loop
+    payment activities under a new licensing regime, and that both Standard Bank and MyMoolah will need to adapt to
+    that regime in due course. We undertake to engage Standard Bank proactively as the transition timeline becomes
+    clearer, and to ensure continuity of this product within the new framework.
+  </p>
+
+  <!-- Section F -->
+  <h2><span class="sec">F</span>Specific request</h2>
+
+  <p>
+    We respectfully request <strong>Standard Bank&rsquo;s written confirmation that it has no objection, in principle, to
+    the product as described</strong>, with an agreed pathway to formalise that approval once Standard Bank&rsquo;s internal
+    processes permit.
+  </p>
+  <p>
+    We appreciate that Standard Bank&rsquo;s Compliance and Legal teams will need to work through internal approval
+    processes, and in all likelihood PASA consultation, before providing written comfort. Rather than simply awaiting
+    a response, we would be grateful for the opportunity to meet or hold a call &mdash; at Standard Bank&rsquo;s convenience
+    &mdash; to support that internal process with any further detail, walkthroughs, or documentation that may assist.
+  </p>
+
+  <div class="callout">
+    <p style="margin:0">
+      Enclosed / available on request: MyMoolah Cash Withdrawal &amp; Ring-Fencing of Own Funds Policy (POL-020 v1.1);
+      and the underlying FICA Risk Management and Compliance Programme.
+    </p>
+  </div>
+
+  <p>We thank Standard Bank for its continued partnership and look forward to working through this product approval together.</p>
+
+  <p style="margin-top:16px;">Yours faithfully,</p>
+
+  <!-- Signatures -->
+  <div class="sig-grid">
+    <div class="sig-block">
+      <div class="line"></div>
+      <div class="name">Andr&eacute; Botes Sr</div>
+      <div class="role">Chief Executive Officer</div>
+      <div class="role">MyMoolah (Pty) Ltd</div>
+    </div>
+    <div class="sig-block">
+      <div class="line"></div>
+      <div class="name">Andr&eacute; Botes Jr</div>
+      <div class="role">Chief Compliance Officer</div>
+      <div class="role">MyMoolah (Pty) Ltd</div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div>Private &amp; Confidential &middot; Addressee use only</div>
+    <div class="ref">Ref: POL-020 v1.1 &middot; 20 April 2026</div>
+  </footer>
+
+</div>
+
+</body>
+</html>

@@ -3,7 +3,7 @@
 | Field              | Value                                         |
 |--------------------|-----------------------------------------------|
 | **Policy Title**   | Fraud Prevention & Detection Policy           |
-| **Version**        | 1.1                                           |
+| **Version**        | 1.2                                           |
 | **Effective Date** | March 2026                                    |
 | **Next Review**    | March 2027                                    |
 | **Classification** | Confidential                                  |
@@ -26,7 +26,7 @@ This policy applies to all fraud risks arising from the operation of the MyMoola
 - PayShap Real-Time Payments (RTP) via Standard Bank South Africa
 - USDC stablecoin cross-border remittances
 - NFC-initiated cash deposits
-- **Wallet-initiated cash withdrawals** (including eeziCash / Flash retail cash collection and EasyPay retail cash-out)
+- **Wallet-initiated cash withdrawals** via **Cash-Withdrawal Partners** (currently eeziCash via Flash Group, EasyPay retail cash-withdrawal, Cliquefin / OTT cash-withdrawal vouchers, USSD cash-withdrawal, and any future partner)
 - Referral programme and promotional reward systems
 - Internal operations, including employee and contractor access
 
@@ -69,7 +69,8 @@ Each product and channel is assigned a fraud risk rating (Low, Medium, High, Cri
 | NFC deposits | Medium | Stolen card usage, counterfeit NFC devices |
 | Referral programme | Medium | Synthetic accounts, referral farming, velocity abuse |
 | Customer registration | High | Synthetic identity fraud, stolen identity documents |
-| **Wallet cash-out (eeziCash / EasyPay)** | High–Critical | Account takeover followed by immediate cash-out; social engineering to generate withdrawal credentials; collusion at retail; credential theft |
+| **Wallet cash withdrawal (Cash-Withdrawal Partners — eeziCash, EasyPay, Cliquefin / OTT)** | High–Critical | Account takeover followed by immediate cash withdrawal; social engineering to generate withdrawal credentials; collusion at retailer or trader point; credential theft |
+| **Own-Funds classification override abuse (POL-020)** | Medium–High | Attempts to social-engineer the dispute/override channel to have an own-funds deposit re-classified as third-party so that it becomes cash-withdrawable; synthetic third-party arrangements (e.g. a colluding "employer"); borderline-band remitter-name probing |
 
 ## 5. Prevention Controls
 
@@ -110,7 +111,7 @@ MyMoolah operates a 5-tier referral reward system with the following anti-fraud 
 
 - **Behavioural baselines**: The system establishes per-user transaction baselines (typical amounts, frequencies, counterparties, times of day). Deviations exceeding configurable standard-deviation thresholds generate alerts.
 - **Peer-group comparison**: Individual behaviour is compared against cohort norms segmented by KYC tier, account age, and geographic region.
-- **Cross-channel correlation**: Activity across wallet, VAS, PayShap, USDC, and **cash-out** channels (eeziCash, EasyPay) is correlated to identify patterns invisible within a single channel. **Regulatory note:** eeziCash is a **wallet cash withdrawal** (TPPP context), not VAS resale — fraud models must not rely on an incorrect product classification.
+- **Cross-channel correlation**: Activity across wallet, VAS, PayShap, USDC, and **cash-withdrawal** channels (all Cash-Withdrawal Partners — eeziCash, EasyPay, Cliquefin / OTT) is correlated to identify patterns invisible within a single channel. **Regulatory note:** all MyMoolah cash-withdrawal products are **wallet cash withdrawals** in a TPPP context, not VAS resale — fraud models must not rely on an incorrect product classification.
 
 ### 6.2 Velocity and Threshold Checks
 
@@ -298,6 +299,7 @@ All employees and contractors receive fraud awareness training covering:
 |---------|------|--------|--------------------|
 | 1.0 | March 2026 | Chief Compliance Officer | Initial policy creation |
 | 1.1 | April 2026 | Chief Compliance Officer | Wallet cash-out in scope; fraud risk row; cross-channel correlation includes eeziCash/EasyPay; TPPP characterisation note |
+| 1.2 | 20 April 2026 | Chief Compliance Officer | Added Own-Funds classification-override fraud typology (aligned with POL-020). Terminology alignment: "cash withdrawal" adopted as canonical; fraud risk row and cross-channel correlation text reframed around the generic Cash-Withdrawal Partner category (eeziCash via Flash, EasyPay, Cliquefin / OTT, and any future partner). |
 
 ---
 

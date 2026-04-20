@@ -1,5 +1,37 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-20 - POL-020 Cash Withdrawal Policy + SBSA cover letter + Own-Funds ring-fence plan (v2.99.0)
+
+### Summary
+Established the canonical legal and operational framework for cash withdrawals and the ring-fencing of own-funds deposits against cash collection. Produced three primary artefacts: **POL-020 v1.3** (Cash Withdrawal & Ring-Fencing of Own Funds Policy), the **SBSA cover letter** (A4 print-ready HTML requesting Standard Bank's written no-objection to the product), and the **Own-Funds Ring-Fence Implementation Plan** (phased backend rollout: deposit classification, single restricted-balance pool, velocity enforcement, error codes, frontend modal, staged shadow → enforce → operationalise). No runtime code was touched — this release is policy, configuration, and documentation only.
+
+### New
+- **`docs/policies/20-Cash-Withdrawal-Policy.md`** (POL-020 v1.3) — canonical cash-withdrawal policy. Sections §4–§6 establish the absolute own-funds ring-fence; §7.6–§7.11 add count-based velocity caps (Tier 1: 2/60m, 3/24h, 15/month; Tier 2: 3/60m, 5/24h, 30/month), FICA-aligned aggregation triggers (R24,999.99 enhanced review; R49,999.99 goAML CTR auto-file), structuring detection, channel-rotation detection, OTP step-up at 80% daily count cap, pending-review hold at 100%, and a staged-enforcement clause (`log_only` default). Regulatory framework table uses "sponsor-bank-held segregated account" terminology throughout (no "trust account" language).
+- **`docs/policies/2026-04-20_StandardBank_CashWithdrawal_Policy_Letter.html`** — banking-grade A4 cover letter to SBSA TPPP Sponsorship / Group Compliance. References PASA TPPP certification, requests written no-objection to the ring-fenced product, scrubbed of any "existing sponsorship agreement" or "trust account" claims. Real MyMoolah peaks mark inlined as SVG (self-contained file, survives Save-as-PDF). Signed by CEO André Botes Sr and CCO André Botes Jr. Legal-address block uses real reg no 2024/315592/07 and legal@mymoolah.africa.
+- **`docs/OWN_FUNDS_RINGFENCE_IMPLEMENTATION_PLAN.md`** — phased backend plan. Deposit classification via Jaro-Winkler name-match (remitter vs FICA-verified wallet holder); single restricted-balance pool (reuse `wallets.restricted_balance` + `ledger_accounts 2100-01-02`); velocity enforcement service with Redis-backed rolling counters; new error codes (`WALLET.CASH_WITHDRAW_RESTRICTED`, `WALLET.CASH_WITHDRAW_VELOCITY_EXCEEDED`, `WALLET.CASH_WITHDRAW_STEP_UP_REQUIRED`, `WALLET.CASH_WITHDRAW_PENDING_REVIEW`); frontend `CashWithdrawBlockedModal.tsx` (no Cash-Available balance surfaced); shadow → enforce → operationalise rollout stages gated by joint CCO + CTO sign-off.
+- **`config/cashWithdrawalVelocity.js`** — single runtime source of truth for velocity, aggregation, structuring, channel-rotation, and step-up thresholds. Exports `ENFORCEMENT_MODE` (defaults to `log_only` via `CASH_WITHDRAWAL_VELOCITY_MODE` env var), `AGGREGATION`, `STRUCTURING`, `CHANNEL_ROTATION`, `STEP_UP`, `COUNTER_KEYS`, `COUNTER_TTL_SEC`. Not yet consumed by any runtime service — that is Phase 4 of the implementation plan.
+
+### Changed
+- **`config/kycTierLimits.js`** — added per-tier `cashWithdrawalCount` sub-objects (`per60m`, `per24h`, `perMonth`, `uniquePartnersPer24h`, `uniqueRetailersPer24h`) mirroring POL-020 §7.6. Added `getCashWithdrawalCountCaps(tier)` helper. Existing value-based KYC limits unchanged.
+- **`docs/TERMS_AND_CONDITIONS.md`** — v2.3.0 → v2.4.1. New §4.4 ring-fence clause; §4.4.8–§4.4.9 velocity and aggregation; §4.4.10 legal basis. Customer-facing language aligned with POL-020.
+- **`docs/FAQ_MASTER.md`** — §9c expanded with 5 new Q&A entries covering maximum daily withdrawals, OTP step-up behaviour, pending-review mechanics, channel-rotation alerts, and FICA reporting thresholds. Consumed by the LangChain RAG pipeline on next `generate-knowledge-base.js` + `embed-knowledge-base.js` run.
+- **`docs/policies/04-Transaction-Monitoring-Policy.md`** — v1.2 → v1.3. New rule family §5.2.8 with 12 specific rules (`CW-VEL-01/02/03`, `CW-AGG-01/02/03`, `CW-STR-01/02/03`, `CW-CHR-01/02`, `CW-SUP-01/02`) and explicit implementation details (Redis-backed counters, log-only mode during initial rollout, single-source-of-truth pointer to `config/cashWithdrawalVelocity.js`).
+- **Corpus-wide terminology alignment** — `docs/policies/INDEX.md` (v1.3), POL-001 (v1.2), POL-002 (v2.2), POL-003 (v1.2), POL-005 (v1.2), POL-013 (v1.2), POL-018 (v1.2), plus `docs/SECURITY.md`, `docs/STANDARD_BANK_TPPP_BRIEF.md`, `docs/BANKING_GRADE_ARCHITECTURE.md`, `docs/SETTLEMENTS.md`, `docs/DEVELOPMENT_GUIDE.md`, `docs/DOMAIN_MODEL.md`, `docs/USSD_INTEGRATION_GUIDE.md`, `docs/INTEGRATIONS_COMPLETE.md`, `docs/CHART_OF_ACCOUNTS.md`, `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md`, `docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html`, `docs/FLASH_VOUCHER_RINGFENCING_UNDERTAKING.md`. Prose adopts "Cash Withdrawal" / "Cash-Withdrawal Partner" as canonical terms. **Backend code identifiers deliberately preserved** (`Wallet.canCashOut()`, `cashOutRoutes`, `cashOutController`, etc.) — code/docs terminology decoupling is intentional to avoid breaking changes.
+- **Partner-name correction** — `QuickFin` → **Cliquefin** across 25 documents. Single sed pass; zero remaining occurrences.
+- **`docs/index.md`, `docs/README.md`, `docs/PROJECT_STATUS.md`** — recent-work blocks updated to reference POL-020, the letter, the implementation plan, the T&C/FAQ changes, and the terminology sweep.
+
+### Rollback
+- POL-020 and the letter are new files; revert by deleting them.
+- Policy terminology sweep: `git revert` this commit or restore prior policy versions from git history.
+- `config/cashWithdrawalVelocity.js` and the `cashWithdrawalCount` additions to `config/kycTierLimits.js` are not yet consumed at runtime — removing them has no effect on production behaviour.
+
+### No migrations, no runtime code changes, no production deploy required.
+
+### Next steps (backend implementation, later session)
+Phases 1–7 per `docs/OWN_FUNDS_RINGFENCE_IMPLEMENTATION_PLAN.md`: deposit classifier → ingress wiring → `Wallet.canCashOut()` edge cases → velocity service → frontend modal → tests → shadow/enforce/operationalise rollout.
+
+---
+
 ## 2026-04-17 - MobileMart SFTP activation Phase 1: SSH key installed + reply drafted declining 62-IP whitelist (v2.98.1)
 
 ### Summary

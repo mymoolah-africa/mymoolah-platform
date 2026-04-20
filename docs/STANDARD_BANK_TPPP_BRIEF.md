@@ -89,7 +89,7 @@ Commission VAT allocation (internal; hidden from user history, visible in ledger
 
 ## Wallet withdrawals and inbound cash (TPPP) — April 2026 clarification
 
-MMTP supports multiple **outbound** wallet paths: **eeziCash** (Flash — retail **cash** collection after wallet debit), **EasyPay** retail cash-out, **EFT**, **PayShap RTP/RPP**, and **VAS purchases** (airtime, data, electricity, bill pay — not cash withdrawal).
+MMTP supports multiple **outbound** wallet paths: **cash withdrawals** delivered through **Cash-Withdrawal Partners** — currently eeziCash (Flash Group — retail cash collection after wallet debit), EasyPay retail cash-withdrawal, Cliquefin / OTT cash-withdrawal vouchers, USSD cash-withdrawal, and any future equivalent partner — plus **EFT**, **PayShap RTP/RPP**, and **VAS purchases** (airtime, data, electricity, bill pay — not cash withdrawal).
 
 **eeziCash — correct legal and product characterisation for sponsor-bank and PASA communications:** a **wallet cash-withdrawal service** within the TPPP framework. The customer’s wallet is **debited before** a withdrawal credential (PIN) is issued; the PIN is used to **collect cash** at authorised retail. It is **not** correctly described as “VAS voucher resale” or as selling Flash airtime/data VAS to the end user.
 

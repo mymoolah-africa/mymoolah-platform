@@ -42,7 +42,7 @@ This document clarifies core business entities and relationships to ensure a sha
 ## Business Rules (confirmed)
 1. MM has B2B Clients; those Clients have Customers (often employees). Customers can also be MM platform Users.
 2. MM also serves individual Users directly (not tied to a Client). The same person can be both an individual User and a Client Customer.
-3. MM integrates Suppliers (Flash, MobileMart, dtMercury, EasyPay, Zapper, PeachPayments) to provide Payments (e.g., PayShap, vouchers, cash-out) and VAS (airtime, data, electricity, bill pay).
+3. MM integrates Suppliers (Flash, MobileMart, dtMercury, EasyPay, Zapper, PeachPayments, Cliquefin / OTT) to provide Payments (e.g., PayShap, vouchers, cash withdrawals via Cash-Withdrawal Partners) and VAS (airtime, data, electricity, bill pay).
 
 These rules are canonical and must be preserved in future feature design and data modeling.
 

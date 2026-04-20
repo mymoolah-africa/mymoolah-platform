@@ -3,7 +3,7 @@
 | Field | Detail |
 |---|---|
 | **Policy Title** | Anti-Money Laundering & Counter-Terrorism Financing (AML/CFT) Policy |
-| **Version** | 1.1 |
+| **Version** | 1.2 |
 | **Effective Date** | March 2026 |
 | **Next Review Date** | March 2027 |
 | **Classification** | Confidential |
@@ -16,7 +16,7 @@
 
 This policy establishes the framework through which MyMoolah (Pty) Ltd ("MyMoolah") prevents, detects, and reports money laundering (ML) and terrorism financing (TF) activities across all products, services, and channels. It ensures compliance with the Financial Intelligence Centre Act 38 of 2001 (FICA), as amended, the Prevention and Combating of Corrupt Activities Act 12 of 2004 (PRECCA), and aligns with the Financial Action Task Force (FATF) 40 Recommendations.
 
-MyMoolah operates as a Mojaloop-compliant digital wallet and payment platform under sponsorship of Standard Bank of South Africa. All AML/CFT obligations apply to every transaction processed through the MyMoolah platform, including digital wallet operations, **wallet-initiated cash withdrawals** (including partner-facilitated cash collection such as eeziCash / Flash and EasyPay retail cash-out), value-added services (VAS), PayShap real-time payments, USDC cross-border transfers via VALR, and NFC deposit services.
+MyMoolah operates as a Mojaloop-compliant digital wallet and payment platform under sponsorship of Standard Bank of South Africa. All AML/CFT obligations apply to every transaction processed through the MyMoolah platform, including digital wallet operations, **wallet-initiated cash withdrawals** through **Cash-Withdrawal Partners** (currently eeziCash via Flash Group, EasyPay retail cash-withdrawal, Cliquefin / OTT cash-withdrawal vouchers, USSD cash-withdrawal, and any successor partner), value-added services (VAS), PayShap real-time payments, USDC cross-border transfers via VALR, and NFC deposit services.
 
 ---
 
@@ -28,7 +28,7 @@ This policy applies to:
 - All products and services offered through the MyMoolah platform (api-mm.mymoolah.africa, wallet.mymoolah.africa).
 - All customer segments, including individual consumers, business accounts, and agent networks.
 - All jurisdictions in which MyMoolah operates or facilitates transactions, with particular attention to South African domestic operations and cross-border USDC/stablecoin corridors.
-- All third-party service providers, including VALR (USDC exchange), Standard Bank (sponsor bank), VAS suppliers, and **cash-out / cash collection partners** (e.g. Flash for eeziCash, EasyPay for retail cash-out).
+- All third-party service providers, including VALR (USDC exchange), Standard Bank (sponsor bank), VAS suppliers, and **Cash-Withdrawal Partners** (e.g. Flash Group for eeziCash, EasyPay for retail cash-withdrawal, Cliquefin / OTT for cash-withdrawal vouchers).
 
 ---
 
@@ -140,7 +140,7 @@ There is no monetary threshold for STRs. The obligation arises upon reasonable s
 
 ### 6.2 Cash Threshold Reports (CTRs) — FICA S28
 
-Any single cash transaction or aggregated cash transactions by the same person within a 24-hour period reaching or exceeding R24,999.99 shall be reported to the FIC via goAML within the prescribed period. For MyMoolah, this applies to **NFC cash deposit** transactions and to **qualifying cash or cash-equivalent events** processed through authorised retail cash-out channels (including partner-facilitated cash collection), in line with FICA thresholds and operational procedures agreed with the sponsor bank and partners. Operational routing of CTRs must remain consistent with `docs/policies/04-Transaction-Monitoring-Policy.md`.
+Any single cash transaction or aggregated cash transactions by the same person within a 24-hour period reaching or exceeding R24,999.99 shall be reported to the FIC via goAML within the prescribed period. For MyMoolah, this applies to **NFC cash deposit** transactions and to **qualifying cash or cash-equivalent events** processed through authorised Cash-Withdrawal Partner networks, in line with FICA thresholds and operational procedures agreed with the sponsor bank and each Cash-Withdrawal Partner. Operational routing of CTRs must remain consistent with `docs/policies/04-Transaction-Monitoring-Policy.md`.
 
 ### 6.3 Terrorist Property Reports (TPRs) — FICA S28A
 
@@ -195,9 +195,15 @@ All **external communications** to the sponsor bank, PASA, regulators, and partn
 
 ### 9A.2 AML/CFT implications
 
-- **Risk assessment**: Wallet cash-out channels attract typologies common to cash (structuring, rapid in-out, money mules). They must be scored distinctly from **VAS purchase** abuse (e.g. airtime-as-value-transfer) in the enterprise ML/TF risk assessment.
+- **Risk assessment**: Wallet cash-withdrawal channels attract typologies common to cash (structuring, rapid in-out, money mules). They must be scored distinctly from **VAS purchase** abuse (e.g. airtime-as-value-transfer) in the enterprise ML/TF risk assessment.
 - **Monitoring**: Outbound wallet debits for cash collection must be included in transaction monitoring and alert rules per POL-004.
 - **Record keeping**: Double-entry ledger records, partner references, and audit trails for withdrawal flows shall be retained per FICA S22–25 and retrievable for FIC / sponsor-bank examination.
+
+### 9A.3 Ring-fencing of Own Funds against cash withdrawal (POL-020)
+
+Wallet-holder **own deposits** (self-EFT, self-PayShap, NFC self-load, Flash voucher cash-in) are ring-fenced and are **not permitted** to fund any cash withdrawal through any **Cash-Withdrawal Partner** — eeziCash (Flash), EasyPay retail cash-withdrawal, Cliquefin / OTT cash-withdrawal voucher, USSD cash-withdrawal, or any future equivalent. Only **third-party credits** (salaries, disbursements, loans, P2P transfers) may fund a cash withdrawal, and remain subject to the controls in this policy and POL-004. Classification is automated via a name-match at deposit ingress, with a conservative default to "restricted" where remitter identity cannot be confirmed. Full detail: [`20-Cash-Withdrawal-Policy.md`](20-Cash-Withdrawal-Policy.md). Engineering mechanism: [`../OWN_FUNDS_RINGFENCE_IMPLEMENTATION_PLAN.md`](../OWN_FUNDS_RINGFENCE_IMPLEMENTATION_PLAN.md).
+
+This ring-fence is the operational mechanism by which MMTP remains outside the "business of a bank" definition under Banks Act 94/1990 (s1+s11) and consistent with SARB Position Paper NPS 01/2020, and it materially reduces the AML attack surface of every cash-withdrawal channel by removing anonymous-funding vectors.
 
 ---
 
@@ -252,6 +258,7 @@ Any employee who knowingly or negligently fails to comply with this policy shall
 |---|---|---|---|
 | 1.0 | March 2026 | Chief Compliance Officer | Initial policy creation. |
 | 1.1 | April 2026 | Chief Compliance Officer | Wallet cash withdrawals in scope; eeziCash TPPP characterisation (§9A); CTR text extended; training + regulatory references; hub `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md`. |
+| 1.2 | 20 April 2026 | Chief Compliance Officer | New §9A.3 — ring-fencing of Own Funds against cash withdrawal, operationalised by POL-020. Terminology alignment throughout: adopted "cash withdrawal" as canonical; introduced the generic "Cash-Withdrawal Partner" category (eeziCash via Flash, EasyPay, Cliquefin / OTT, and any future partner). |
 
 ---
 

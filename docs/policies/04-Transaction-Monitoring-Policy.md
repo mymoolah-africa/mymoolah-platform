@@ -3,7 +3,7 @@
 | Field              | Value                                         |
 |--------------------|-----------------------------------------------|
 | **Policy Title**   | Transaction Monitoring & Suspicious Activity Reporting Policy |
-| **Version**        | 1.1                                           |
+| **Version**        | 1.3                                           |
 | **Effective Date** | March 2026                                    |
 | **Next Review**    | March 2027                                    |
 | **Classification** | Confidential                                  |
@@ -100,8 +100,39 @@ Funds moving through a circular path — deposited to wallet A, transferred to w
 **5.2.5 VAS Abuse — Airtime as Value Transfer**
 Abnormal volumes of airtime or data purchases that exceed reasonable personal consumption, particularly when purchased for multiple distinct mobile numbers. This typology exploits airtime as a de facto value transfer mechanism. Detection rules flag users exceeding configurable daily/weekly VAS purchase thresholds.
 
-**5.2.6 Wallet cash-out — eeziCash / partner-facilitated cash collection (distinct from VAS)**
-Outbound wallet debits that result in **cash collection** at retail (including **eeziCash** via Flash) shall **not** be modelled as VAS voucher resale for monitoring purposes. Rules shall treat these events as **cash-out / withdrawal** activity: velocity of withdrawals, rapid deposit-to-cash-out sequences, structuring around statutory cash thresholds, and correlation with PayShap or NFC deposit typologies. Misclassification as “VAS only” obscures layering and money-mule behaviour. Regulatory characterisation and flow references: `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md`, `docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html`.
+**5.2.6 Wallet cash withdrawal — Cash-Withdrawal Partner networks (distinct from VAS)**
+Outbound wallet debits that result in **cash collection** through any Cash-Withdrawal Partner (eeziCash via Flash Group, EasyPay retail cash-withdrawal, Cliquefin / OTT cash-withdrawal vouchers, USSD cash-withdrawal, and any future partner) shall **not** be modelled as VAS voucher resale for monitoring purposes. Rules shall treat these events as **cash-withdrawal** activity: velocity of withdrawals, rapid deposit-to-cash-withdrawal sequences, structuring around statutory cash thresholds, and correlation with PayShap or NFC deposit typologies. Misclassification as "VAS only" obscures layering and money-mule behaviour. Regulatory characterisation and flow references: `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md`, `docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html`.
+
+**5.2.7 Own-Funds Cash-Withdrawal Attempts (POL-020)**
+A dedicated rule family monitors **blocked** cash-withdrawal attempts arising from the Own-Funds ring-fence established by POL-020. Detection signals include:
+
+- **Repeated blocked attempts** by the same wallet within a rolling window (potential circumvention probing).
+- **Blocked attempts immediately preceded by an inbound own-funds deposit** (potential test pattern seeking misclassification).
+- **Classification-override density** — elevated rates of classification disputes by a single user or cohort (potential social-engineering of the dispute channel).
+- **Review-band deposits followed by rapid cash withdrawal** — deposits that cleared the name-match on the borderline band (0.85–0.90) followed within minutes by a cash-withdrawal attempt (any Cash-Withdrawal Partner).
+
+Each rule produces alerts under the standard escalation tiers. Patterns materially above baseline are reported to the CCO weekly and factor into the annual FICA risk assessment.
+
+**5.2.8 Cash-Withdrawal Velocity & Aggregation (POL-020 §7.6 – §7.10)**
+A dedicated rule family enforces count-based velocity caps and aggregation triggers on Cash Withdrawals through any Cash-Withdrawal Partner. Thresholds are authoritative in POL-020 §7.6 – §7.10 and mirrored in `config/kycTierLimits.js` and `config/cashWithdrawalVelocity.js`. The rule family comprises:
+
+| Rule ID | Condition | Action | Severity |
+|---|---|---|---|
+| `CW-VEL-01` | > tier cap in rolling 60 minutes | Block; `WALLET.CASH_WITHDRAW_VELOCITY_EXCEEDED`; alert | High |
+| `CW-VEL-02` | > tier cap in rolling 24 hours | Block; alert; compliance review | High |
+| `CW-VEL-03` | > tier cap in calendar month | Block; alert; compliance review | Medium |
+| `CW-AGG-01` | cumulative cash-withdrawal ≥ R24,999.99 in rolling 24 h | Enhanced-review flag (no block) | Medium |
+| `CW-AGG-02` | cumulative cash-withdrawal ≥ R49,999.99 in rolling 24 h | Auto-file `goAML` CTR; same-day hold | Critical |
+| `CW-AGG-03` | ≥ 80 % of tier daily value cap within any 2-hour window | OTP step-up on next attempt | Medium |
+| `CW-STR-01` | ≥ 3 Cash Withdrawals in 24 h each ≥ R2,000 and each below partner per-credential ceiling | Alert; compliance review | High |
+| `CW-STR-02` | ≥ 5 Cash Withdrawals in 7 days where amount × count ≥ 90 % of tier monthly value cap | Alert; compliance review | High |
+| `CW-STR-03` | Third-party credit followed by Cash Withdrawal ≥ 70 % of that credit within 60 minutes | Alert; compliance review; money-mule flag | High |
+| `CW-CHR-01` | 2+ distinct Cash-Withdrawal Partners used by same wallet within rolling 60 minutes | Soft alert | Low |
+| `CW-CHR-02` | 3+ distinct Cash-Withdrawal Partners used by same wallet within rolling 4 hours | Hard block pending compliance review | Critical |
+| `CW-SUP-01` | At 80 % of any 24 h count cap | OTP step-up required on next attempt | Informational |
+| `CW-SUP-02` | At 100 % of any 24 h count cap | Attempt held in pending-review for up to 2 hours | Medium |
+
+Count and value windows are maintained as Redis-backed rolling counters (per user, per rail, per partner, per retailer) and as DB-backed calendar-month aggregates to survive Redis flushes. The service that operates these rules is `services/cashWithdrawalVelocityService.js` (see `docs/OWN_FUNDS_RINGFENCE_IMPLEMENTATION_PLAN.md` Phase 3). Until that service is in enforcing mode, the rule family runs in **log-only** mode and does not block live traffic; alerts still route to Compliance for calibration.
 
 ### 5.3 PayShap RTP-Specific Monitoring
 
@@ -162,7 +193,7 @@ Reports must be filed within the prescribed period. Where a transaction is in pr
 
 ### 7.2 Cash Threshold Reporting Under FICA S28A
 
-All cash transactions at or above R24,999.99 (or the equivalent in foreign currency) are reported to the FIC via an automated CTR process. This includes NFC-initiated cash deposits processed through the MyMoolah platform and **qualifying cash events** arising from **authorised retail cash-out / cash collection** arrangements (including partner-facilitated withdrawals), where statutory thresholds and partner reporting obligations apply. Operational implementation shall remain aligned with POL-001 (AML/CFT) and sponsor-bank requirements.
+All cash transactions at or above R24,999.99 (or the equivalent in foreign currency) are reported to the FIC via an automated CTR process. This includes NFC-initiated cash deposits processed through the MyMoolah platform and **qualifying cash events** arising from **authorised retail cash-withdrawal** arrangements through any Cash-Withdrawal Partner, where statutory thresholds and partner reporting obligations apply. Operational implementation shall remain aligned with POL-001 (AML/CFT) and sponsor-bank requirements.
 
 ### 7.3 goAML Filing Procedure
 
@@ -236,6 +267,8 @@ All compliance staff receive training on:
 |---------|------|--------|--------------------|
 | 1.0 | March 2026 | Chief Compliance Officer | Initial policy creation |
 | 1.1 | April 2026 | Chief Compliance Officer | §5.2.6 wallet cash-out (eeziCash) typology; CTR text extended for partner cash-out |
+| 1.2 | 20 April 2026 | Chief Compliance Officer | §5.2.7 Own-Funds Cash-Withdrawal Attempts rule family — aligned with POL-020. Terminology alignment: "cash withdrawal" adopted as canonical; §5.2.6 and CTR paragraph re-framed around the generic Cash-Withdrawal Partner category (eeziCash via Flash, EasyPay, Cliquefin / OTT, and any future partner). |
+| 1.3 | 20 April 2026 | Chief Compliance Officer | New §5.2.8 — Cash-Withdrawal Velocity & Aggregation rule family. 12 rules covering velocity count caps (`CW-VEL-*`), FICA aggregation triggers (`CW-AGG-*`), structuring (`CW-STR-*`), channel rotation (`CW-CHR-*`), and step-up / pending-review (`CW-SUP-*`). Thresholds are mirrored in `config/kycTierLimits.js` and `config/cashWithdrawalVelocity.js`. Rule family runs in log-only mode until `services/cashWithdrawalVelocityService.js` is in enforcing mode per POL-020 §7.11. |
 
 ---
 

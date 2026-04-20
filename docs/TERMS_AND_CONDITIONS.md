@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Terms and Conditions
 
-**Last Updated**: August 30, 2025  
-**Version**: 2.3.0 - TLS 1.3 & Banking-Grade Security  
-**Effective Date**: [To be set by legal team]
+**Last Updated**: 20 April 2026  
+**Version**: 2.4.1 — Cash Withdrawal Ring-Fencing of Own Funds + Velocity Caps  
+**Effective Date**: 20 April 2026
 
 ---
 
@@ -89,6 +89,28 @@ By accessing, registering, or using the MyMoolah Treasury Platform ("Platform"),
 - **Security Responsibilities**: Password security, device security, fraud prevention
 - **Compliance Requirements**: Legal compliance, tax obligations, regulatory compliance
 - **Fees and Charges**: Account maintenance, transaction fees, service fees
+
+### 4.4 **Cash Withdrawals and Ring-Fencing of Own Funds**
+
+This clause governs cash withdrawals through any Cash-Withdrawal Partner integrated with the Platform. Current and contemplated Cash-Withdrawal Partners include eeziCash (Flash Group), EasyPay retail cash-withdrawal, Cliquefin / OTT cash-withdrawal vouchers, USSD cash-withdrawal initiated through any such partner network, and any successor or replacement cash-withdrawal rail. This clause implements the MyMoolah Cash Withdrawal & Ring-Fencing of Own Funds Policy (POL-020), available on request.
+
+- **4.4.1 Two categories of wallet funds.** Every amount credited to your wallet is classified at the moment of credit as either:
+  - **Own Funds** — funds credited from a source where the remitting account holder is the same natural person as you, the FICA-verified wallet holder. This includes transfers from your own bank account, self-initiated PayShap credits into your wallet, NFC self-loads, and voucher-based cash-in (for example 1Voucher, FNB Voucher, Flash Pay); or
+  - **Third-Party Funds** — funds credited from a distinct person or entity, for example a salary from your employer, a disbursement from a corporate client, a loan disbursement, or a peer-to-peer transfer from another wallet holder.
+- **4.4.2 Ring-fence rule (no cash withdrawal of Own Funds).** Your **Own Funds are ring-fenced and may not be withdrawn as physical cash** through any rail, at any time. This restriction is absolute and cannot be overridden by support staff, management, or engineering.
+- **4.4.3 Cash withdrawal of Third-Party Funds.** Your Third-Party Funds may be used to fund a cash withdrawal (subject to your KYC tier limits, FICA controls, and the fees applicable to the selected rail).
+- **4.4.4 Permitted uses of Own Funds.** Your Own Funds remain fully usable for every non-cash purpose supported by the Platform, including wallet-to-wallet transfers, PayShap, EFT, bill payments, prepaid airtime, data, electricity, QR merchant payments, NFC spend, and digital vouchers that are not cash-equivalent.
+- **4.4.5 Classification is automated.** Classification is performed automatically using a name-match between the remitter's name (as supplied by the sending bank or payment rail) and your FICA-verified wallet-holder name. Where the remitter's name is missing, malformed, or cannot be confidently matched, the deposit is treated, conservatively, as Own Funds.
+- **4.4.6 No "Cash-Available" figure displayed.** The Platform does not display a separate cash-available figure. If you attempt a cash withdrawal that cannot be funded from your Third-Party Funds balance, the Platform will display a standardised notification explaining the restriction and pointing you to the permitted uses of your Own Funds.
+- **4.4.7 Classification disputes.** If you believe a deposit has been mis-classified, you may raise a dispute through the in-app support channel. MyMoolah Compliance will resolve the dispute using the immutable classification audit record. Any re-classification requires four-eyes approval and will not retroactively release a cash withdrawal that has already been declined; you must initiate a new cash-withdrawal request after the dispute is resolved.
+- **4.4.8 Maximum cash-withdrawal frequency (velocity caps).** In addition to your tier value limits, the number of cash withdrawals you may make in any given period is capped, to help protect you against fraud and to meet anti-money-laundering obligations. The caps apply across **all Cash-Withdrawal Partners combined**:
+  - **Tier 1 (ID Verified):** up to **2** cash withdrawals per rolling 60 minutes, up to **3** per rolling 24 hours, and up to **15** per calendar month.
+  - **Tier 2 (Fully Verified):** up to **3** cash withdrawals per rolling 60 minutes, up to **5** per rolling 24 hours, and up to **30** per calendar month.
+  Attempts above these caps are declined with a standardised notification. Attempts that approach the daily cap may require one-time-password ("OTP") step-up authentication. Attempts that reach the daily cap may be held in a short pending-review state (up to two hours) while MyMoolah Compliance assesses the activity. These caps may be revised from time to time and are published in the MyMoolah Cash Withdrawal & Ring-Fencing of Own Funds Policy (POL-020).
+- **4.4.9 Aggregate cash-withdrawal monitoring.** Cumulative cash-withdrawal activity across all Cash-Withdrawal Partners is monitored in accordance with the Financial Intelligence Centre Act 38 of 2001. Where cumulative cash-withdrawal amounts reach statutory thresholds, MyMoolah will file the reports required by law (including Cash Threshold Reports and, where applicable, Suspicious Transaction Reports) and may temporarily restrict further cash withdrawals for the remainder of the applicable day while the matter is assessed.
+- **4.4.10 Legal basis.** This clause exists to ensure MyMoolah does not, in form or in substance, conduct the "business of a bank" under section 1 read with section 11 of the Banks Act 94 of 1990, and to keep the Platform aligned with the SARB Position Paper on Electronic Money (NPS 01/2020), the National Payment System Act 78 of 1998, and the FICA compliance framework.
+
+By using the Platform you acknowledge and accept the Own Funds / Third-Party Funds distinction and the automated classification mechanism described above. The full policy is set out in `docs/policies/20-Cash-Withdrawal-Policy.md`.
 
 ---
 
@@ -275,6 +297,8 @@ By accessing, registering, or using the MyMoolah Treasury Platform ("Platform"),
 ## 📋 **ACCEPTANCE AND VERSION TRACKING**
 
 ### **Version History**
+- **Version 2.4.0**: 20 April 2026 — Cash Withdrawal Ring-Fencing of Own Funds (new §4.4; operationalises POL-020)
+- **Version 2.4.1**: 20 April 2026 — Added §4.4.8 velocity caps (count per 60 min / 24 h / month by tier), §4.4.9 aggregate monitoring / FICA reporting language; renumbered prior §4.4.8 (legal basis) to §4.4.10
 - **Version 2.3.0**: August 30, 2025 - TLS 1.3 & Banking-Grade Security
 - **Version 2.2.0**: August 30, 2025 - International Services UI
 - **Version 2.1.0**: August 29, 2025 - Product Catalog Enhancements
@@ -286,25 +310,25 @@ By accessing, registering, or using the MyMoolah Treasury Platform ("Platform"),
 const userTypeAcceptance = {
   walletUser: {
     accepted: false,
-    version: '2.3.0',
+    version: '2.4.0',
     dateAccepted: null,
-    sections: ['general', 'wallet', 'vas', 'security', 'privacy']
+    sections: ['general', 'wallet', 'cash-withdrawal-ringfence', 'vas', 'security', 'privacy']
   },
   supplier: {
     accepted: false,
-    version: '2.3.0',
+    version: '2.4.0',
     dateAccepted: null,
     sections: ['general', 'supplier', 'financial', 'regulatory', 'security']
   },
   merchant: {
     accepted: false,
-    version: '2.3.0',
+    version: '2.4.0',
     dateAccepted: null,
     sections: ['general', 'merchant', 'financial', 'regulatory', 'security']
   },
   client: {
     accepted: false,
-    version: '2.3.0',
+    version: '2.4.0',
     dateAccepted: null,
     sections: ['general', 'client', 'integration', 'financial', 'regulatory']
   }

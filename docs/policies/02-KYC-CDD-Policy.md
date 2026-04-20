@@ -3,7 +3,7 @@
 | Field | Detail |
 |---|---|
 | **Policy Title** | Know Your Customer & Customer Due Diligence (KYC/CDD) Policy |
-| **Version** | 2.1 |
+| **Version** | 2.2 |
 | **Effective Date** | March 2026 |
 | **Next Review Date** | March 2027 |
 | **Classification** | Confidential |
@@ -26,7 +26,7 @@ This policy applies to:
 
 - All prospective and existing customers of the MyMoolah platform, including individual consumers, business entities, and agent accounts.
 - All channels through which customer onboarding occurs (mobile application at wallet.mymoolah.africa, API integrations).
-- All MyMoolah products requiring identity verification, including digital wallet, **wallet-initiated cash withdrawals** (eeziCash / Flash, EasyPay retail cash-out), VAS, PayShap, USDC cross-border transfers, and NFC deposits.
+- All MyMoolah products requiring identity verification, including digital wallet, **wallet-initiated cash withdrawals** via **Cash-Withdrawal Partners** (currently eeziCash via Flash Group, EasyPay retail cash-withdrawal, Cliquefin / OTT cash-withdrawal vouchers, USSD cash-withdrawal, and any future partner), VAS, PayShap, USDC cross-border transfers, and NFC deposits.
 - All employees, contractors, and third-party service providers involved in the customer identification and verification process.
 - The entire customer lifecycle — from onboarding through ongoing monitoring to relationship termination.
 
@@ -116,7 +116,7 @@ MyMoolah implements a progressive three-tier KYC model that balances regulatory 
 ### 5.3 Account Feature Restrictions by Tier
 
 - **Tier 0 (USSD Basic)**: May purchase VAS products (airtime, data, electricity, bills) up to tier limits. Funds may be received but not sent or withdrawn. No PayShap, no USDC. Designed for financial inclusion on basic/feature phones via USSD.
-- **Tier 1 (ID Verified)**: Domestic wallet-to-wallet transfers, bill payments, cash-out (Flash eeziCash, EasyPay), and PayShap enabled within Exemption 17 limits. No international transfers. No USDC.
+- **Tier 1 (ID Verified)**: Domestic wallet-to-wallet transfers, bill payments, cash withdrawals through Cash-Withdrawal Partners (eeziCash via Flash, EasyPay, Cliquefin / OTT), and PayShap enabled within Exemption 17 limits. No international transfers. No USDC.
 - **Tier 2 (Fully Verified)**: Full platform access including PayShap, NFC deposits, USDC cross-border transfers (via VALR), MoolahMove international payments, and elevated transaction limits.
 
 ### 5.4 Tier Upgrade Paths
@@ -348,6 +348,7 @@ In accordance with FICA Sections 22–25:
 | 1.0 | March 2026 | Chief Compliance Officer | Initial policy creation. |
 | 2.0 | March 2026 | Chief Compliance Officer | Replaced Bronze/Silver/Gold/Platinum tiers with Tier 0/1/2 model. Added USSD channel (Tier 0). Defined explicit transaction limits per tier. Added FIC Exemption 17 regulatory basis. Added tier upgrade paths. Limits enforced in code via `config/kycTierLimits.js`. |
 | 2.1 | April 2026 | Chief Compliance Officer | Scope extended to wallet cash-out channels (eeziCash/Flash, EasyPay); cross-ref `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md`. |
+| 2.2 | 20 April 2026 | Chief Compliance Officer | Terminology alignment to POL-020: adopted "cash withdrawal" as canonical term; introduced the generic "Cash-Withdrawal Partner" category (eeziCash via Flash, EasyPay, Cliquefin / OTT, and any future partner). |
 
 ---
 

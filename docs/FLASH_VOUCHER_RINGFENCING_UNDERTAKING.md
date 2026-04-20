@@ -168,6 +168,10 @@ MMTP can provide Flash with periodic reports on:
 
 This undertaking extends to **any future Flash cash-in voucher or payment acceptance product**. Any new Flash deposit mechanism integrated into MMTP will automatically inherit the same dual-layer ringfencing controls.
 
+### 5A. Alignment with POL-020 (20 April 2026)
+
+On 20 April 2026, MyMoolah adopted **POL-020 — Cash Withdrawal & Ring-Fencing of Own Funds**, which extends the same underlying mechanism (single-pool `wallets.restricted_balance`, wallet-level `canCashOut` guard, sub-liability account `2100-01-02`, and FIFO release on permitted non-cash spend) to cover **all own-money deposits** into MyMoolah wallets — not only Flash voucher cash-in. The effect is that the cash-withdrawal ban described in this undertaking remains absolute for Flash voucher deposits, and now sits inside a broader regulatory posture under which only **third-party credits** (salaries, disbursements, loans, P2P transfers) fund cash withdrawals through **any Cash-Withdrawal Partner** — eeziCash (Flash), EasyPay retail cash-withdrawal, Cliquefin / OTT cash-withdrawal vouchers, USSD cash-withdrawal, or any future equivalent. Policy reference: `docs/policies/20-Cash-Withdrawal-Policy.md`. Engineering reference: `docs/OWN_FUNDS_RINGFENCE_IMPLEMENTATION_PLAN.md`. No change to Flash voucher handling or settlement is implied by this alignment.
+
 The system is architecturally designed for extensibility:
 - The `restrictedFundsService.js` module handles all restriction logic centrally
 - New payment rails (H2H EFT, RTC/TCIB) automatically receive the restriction-release treatment (allowed spend)

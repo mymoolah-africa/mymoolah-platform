@@ -14,7 +14,7 @@ Welcome to the MyMoolah Treasury Platform development guide! This platform is bu
 - **Workspace rules**: `.cursor/rules/*.mdc` — always applied; non‑negotiables (workflow, git, DB helper, security).
 - **Skills**: `.agents/skills/**/SKILL.md` — read when the task matches (migrations, recon, Redis, UI patterns). See `docs/CURSOR_SKILLS.md`.
 - **Continuity**: `docs/CURSOR_2.0_RULES_FINAL.md`, `docs/AGENT_HANDOVER.md`, `docs/session_logs/`.
-- **Withdrawals / TPPP / eeziCash:** Engineering and support wording must match `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md` (wallet cash-out vs VAS). Flow diagrams: `docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html`.
+- **Cash withdrawals / TPPP / Cash-Withdrawal Partners:** Engineering and support wording must match `docs/policies/20-Cash-Withdrawal-Policy.md` (POL-020) and `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md` (wallet cash withdrawal vs VAS; ring-fence of Own Funds). Partner-specific flows: eeziCash (Flash), EasyPay, Cliquefin / OTT, USSD. Flow diagrams: `docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html`. Backend identifiers (`canCashOut`, `purchaseCashOutPin`, `issueEasyPayCashout`, route paths containing `cashout`) retain their historical spelling.
 
 ### **Platform Architecture**
 - **Multi-Supplier Integration**: Unified product catalog across Flash, MobileMart, dtMercury, and Peach

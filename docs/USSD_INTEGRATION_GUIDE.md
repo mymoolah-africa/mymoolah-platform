@@ -80,7 +80,7 @@ The following artefacts implement the USSD channel:
 | `migrations/20260326_01_add_ussd_tier0_fields.js` | Adds `ussd_pin`, `ussd_pin_attempts`, `ussd_locked_until`, `registration_channel`, `preferred_language`; extends `kycStatus` enum with `ussd_basic`; index on `registration_channel`. |
 | `services/ussdSessionService.js` | Redis session create / read / update / destroy; TTL management. |
 | `services/ussdAuthService.js` | MSISDN lookup, SA ID / passport validation, bcrypt PIN hash, verification, progressive lockout, Tier 0 user registration. |
-| `services/ussdMenuService.js` | State machine for all menu flows; balance, VAS, cash-out, limits, mini statement, PIN change, referral, help. |
+| `services/ussdMenuService.js` | State machine for all menu flows; balance, VAS, cash withdrawal, limits, mini statement, PIN change, referral, help. |
 | `controllers/ussdController.js` | Parses Cellfind query parameters, orchestrates session + menu, builds **XML** responses, MSISDN masking in logs. |
 | `routes/ussd.js` | Express router; **GET** and **POST** `/` with IP whitelist then controller. |
 | `middleware/ussdIpWhitelist.js` | Restricts traffic to **Cellfind** source IPs from configuration; production requires `CELLFIND_ALLOWED_IPS`. |
@@ -252,7 +252,7 @@ More
 | `USSD_TIER0_MONTHLY_LIMIT` | Tier 0 monthly outflow cap (**ZAR**). | **3000** |
 | `REDIS_URL` | Required for sessions. | Platform standard. |
 
-Additional variables apply to **downstream** features (e.g. Flash account number for cash-out). See deployment secrets and `docs/` runbooks for the full matrix.
+Additional variables apply to **downstream** features (e.g. Flash account number for cash withdrawal). See deployment secrets and `docs/` runbooks for the full matrix.
 
 ---
 
@@ -317,7 +317,7 @@ curl -s "http://localhost:PORT/api/v1/ussd?msisdn=27821234567&sessionid=test-ses
 | **MSISDN binding** | Session stores MSISDN; mismatch **destroys** session and returns generic security message. |
 | **Rate limiting** | **60 requests / hour** per `msisdn` (fallback to client IP if missing), `express-rate-limit`, XML **429** body. **Active in production** only (see `server.js`). |
 | **PII in logs** | MSISDN **masked** in controller logs (e.g. first 4 + last 4 visible). |
-| **Idempotency** | VAS purchases use deterministic keys: `ussd-{productType}-{sessionId}-{amountRand}` to reduce double-spend on gateway retries. Cash-out uses a separate reference pattern including session and timestamp. |
+| **Idempotency** | VAS purchases use deterministic keys: `ussd-{productType}-{sessionId}-{amountRand}` to reduce double-spend on gateway retries. Cash withdrawals use a separate reference pattern including session and timestamp. |
 | **Transport** | Production must use **TLS 1.2+** (prefer **1.3**) between Cellfind and MyMoolah; terminate at load balancer / Cloud Run as per platform standard. |
 | **Secrets** | No shared secrets in USSD query string for MVP; future enhancements (HMAC, signed payloads) should be captured in a revision of this guide. |
 
@@ -329,7 +329,7 @@ Security and GRC stakeholders should review **POPIA** implications of displaying
 
 ### Phase 1 — MVP (complete)
 
-- Registration (Tier 0), USSD PIN set / verify, **balance**, **airtime**, **data**, **mini statement**, **cash out** (eeziCash), **change PIN**, **referral code**, **help**.
+- Registration (Tier 0), USSD PIN set / verify, **balance**, **airtime**, **data**, **mini statement**, **cash withdrawal** (via any Cash-Withdrawal Partner — currently eeziCash), **change PIN**, **referral code**, **help**.
 
 ### Phase 2 — Extended Services (complete — April 2026)
 

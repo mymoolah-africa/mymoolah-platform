@@ -3,7 +3,7 @@
 | Field | Detail |
 |---|---|
 | **Policy Title** | Independent Compliance Review & Audit Policy |
-| **Version** | 1.1 |
+| **Version** | 1.2 |
 | **Effective Date** | March 2026 |
 | **Next Review Date** | March 2027 |
 | **Classification** | Confidential |
@@ -25,7 +25,7 @@ Independent compliance review is a cornerstone of sound governance in financial 
 This policy applies to:
 
 - All compliance review and audit activities conducted by, or on behalf of, MyMoolah.
-- All aspects of MyMoolah's compliance programme, including but not limited to AML/CFT controls, KYC/CDD procedures, transaction monitoring, **wallet cash-out and partner-facilitated cash collection** (eeziCash / Flash, EasyPay), sanctions screening, data protection, information security, and regulatory reporting. **TPPP withdrawal documentation** (`docs/WITHDRAWALS_COMPLIANCE_AND_KB.md`, `docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html`) shall be in scope for periodic review to ensure policies, KB, and external communications remain aligned.
+- All aspects of MyMoolah's compliance programme, including but not limited to AML/CFT controls, KYC/CDD procedures, transaction monitoring, **wallet cash withdrawals** through Cash-Withdrawal Partners (currently eeziCash via Flash Group, EasyPay retail cash-withdrawal, Cliquefin / OTT cash-withdrawal vouchers, USSD cash-withdrawal, and any future partner), sanctions screening, data protection, information security, and regulatory reporting. **TPPP withdrawal documentation** (`docs/WITHDRAWALS_COMPLIANCE_AND_KB.md`, `docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html`) shall be in scope for periodic review to ensure policies, KB, and external communications remain aligned.
 - Internal compliance reviews conducted by MyMoolah's Compliance function.
 - External compliance reviews conducted by independent third-party auditors or specialists.
 - Regulatory examinations and inspections by the SARB, FSCA, FIC, or other competent authorities.
@@ -305,6 +305,7 @@ An independent external assessment of the compliance function's effectiveness sh
 |---|---|---|---|
 | 1.0 | March 2026 | Chief Compliance Officer | Initial policy creation |
 | 1.1 | April 2026 | Chief Compliance Officer | Scope includes wallet cash-out / TPPP withdrawal documentation review |
+| 1.2 | 20 April 2026 | Chief Compliance Officer | Terminology alignment to POL-020: adopted "cash withdrawal" as canonical; introduced the generic "Cash-Withdrawal Partner" category (eeziCash via Flash, EasyPay, Cliquefin / OTT, and any future partner). |
 
 ---
 

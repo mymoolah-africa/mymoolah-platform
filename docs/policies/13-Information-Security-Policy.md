@@ -3,7 +3,7 @@
 | Field | Detail |
 |---|---|
 | **Policy Title** | Information Security Policy |
-| **Version** | 1.1 |
+| **Version** | 1.2 |
 | **Effective Date** | March 2026 |
 | **Next Review** | March 2027 |
 | **Classification** | Confidential |
@@ -174,7 +174,7 @@ All application logs shall use structured JSON format. Logs must include: timest
 
 All authentication events, authorisation decisions, data access, and administrative actions shall be logged with immutable timestamps. Audit logs shall be retained for a minimum of five years in compliance with financial record-keeping requirements.
 
-**Withdrawal and cash-out flows:** Wallet debits for **cash withdrawal** (including eeziCash and EasyPay cash-out) are high-impact events. Logs shall record **non-PII** correlation identifiers (transaction IDs, idempotency keys, internal user IDs) sufficient for fraud and AML investigation. Full narrative flows for engineering and compliance review: `docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html` and `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md`.
+**Cash-withdrawal flows:** Wallet debits for **cash withdrawal** through any **Cash-Withdrawal Partner** (eeziCash via Flash Group, EasyPay retail cash-withdrawal, Cliquefin / OTT cash-withdrawal vouchers, USSD cash-withdrawal, and any future partner) are high-impact events. Logs shall record **non-PII** correlation identifiers (transaction IDs, idempotency keys, internal user IDs) sufficient for fraud and AML investigation. Full narrative flows for engineering and compliance review: `docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html` and `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md`.
 
 ### 10.3 Monitoring and Alerting
 
@@ -255,6 +255,7 @@ Non-compliance with this policy may result in disciplinary action, including ter
 |---|---|---|---|
 | 1.0 | March 2026 | CISO / CTO | Initial policy creation. |
 | 1.1 | April 2026 | CISO / CTO | §10.2 withdrawal/cash-out audit logging expectations; hub reference for TPPP flows |
+| 1.2 | 20 April 2026 | CISO / CTO | Terminology alignment to POL-020: adopted "cash withdrawal" as canonical; introduced the generic "Cash-Withdrawal Partner" category (eeziCash via Flash, EasyPay, Cliquefin / OTT, and any future partner). |
 
 ---
 

@@ -10,7 +10,7 @@ This document outlines the banking-grade architecture implemented for MyMoolah t
 
 ### TPPP wallet withdrawals (April 2026)
 
-Outbound wallet flows include **cash withdrawal** rails (**eeziCash** / Flash retail cash collection, **EasyPay** retail cash-out), **electronic transfers** (EFT, PayShap), and **VAS** purchases. Architecture and compliance documentation distinguish **eeziCash** as a **wallet cash-withdrawal mechanism** under the TPPP/sponsor-bank framework (wallet debit precedes withdrawal credential; PIN is not VAS product resale). See `docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html`, `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md`, and `docs/STANDARD_BANK_TPPP_BRIEF.md`.
+Outbound wallet flows include **cash withdrawal** rails delivered through **Cash-Withdrawal Partners** (currently eeziCash via Flash Group, EasyPay retail cash-withdrawal, Cliquefin / OTT cash-withdrawal vouchers, USSD cash-withdrawal, and any future partner), **electronic transfers** (EFT, PayShap), and **VAS** purchases. Architecture and compliance documentation characterise every such partner credential as a **wallet cash-withdrawal mechanism** under the TPPP/sponsor-bank framework (wallet debit precedes withdrawal credential; the PIN / reference / token is not VAS product resale). See `docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html`, `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md`, `docs/policies/20-Cash-Withdrawal-Policy.md`, and `docs/STANDARD_BANK_TPPP_BRIEF.md`.
 
 ### Double-Entry Ledger & Chart of Accounts
 - **28 live ledger accounts** across 6 categories: Assets, Liabilities, Revenue, Expenses, Clearing/Suspense
