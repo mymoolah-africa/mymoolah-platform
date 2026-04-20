@@ -442,9 +442,8 @@ const sendExpiryReminders = async () => {
         status: { [Op.in]: ['pending_payment', 'active'] },
         voucherType: { [Op.in]: ['easypay_topup', 'easypay_topup_active'] },
         expiresAt: { [Op.between]: [now, reminderThreshold] },
-        [Op.or]: [
-          { '$metadata.expiryReminderSent$': null },
-          sequelize.literal("(metadata->>'expiryReminderSent') IS NULL")
+        [Op.and]: [
+          sequelize.literal("(metadata IS NULL OR metadata->>'expiryReminderSent' IS NULL)")
         ]
       }
     });
