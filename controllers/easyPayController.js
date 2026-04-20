@@ -395,16 +395,29 @@ class EasyPayController {
       console.log(`[EasyPay] paymentNotification: credited wallet ${wallet.id} with R${netAmount.toFixed(2)} net (gross R${grossAmountRand.toFixed(2)}, fee R${totalFee.toFixed(2)})`);
 
       try {
-        const smsService = require('../services/smsService');
-        const user = await User.findByPk(bill.userId);
-        if (user && user.phoneNumber && smsService.isConfigured()) {
-          const phone = user.phoneNumber.startsWith('+') ? user.phoneNumber : `+27${user.phoneNumber.replace(/^0/, '')}`;
-          const walletBal = parseFloat(wallet.balance || 0);
-          const msg = `MyMoolah: R${netAmount.toFixed(2)} deposited to your wallet. EasyPay top-up R${grossAmountRand.toFixed(2)} (fee R${totalFee.toFixed(2)}). Bal: R${walletBal.toFixed(2)}`;
-          setImmediate(() => smsService.sendSms(phone, msg.substring(0, 160), { type: 'easypay', reference: `EP-SMS-${transactionRef}` }).catch(e => console.error('[EasyPay] Success SMS error:', e.message)));
-        }
-      } catch (smsErr) {
-        console.error('[EasyPay] Success SMS setup error:', smsErr.message);
+        const notificationService = require('../services/notificationService');
+        await notificationService.createNotification(
+          bill.userId,
+          'txn_wallet_credit',
+          'EasyPay Deposit Received',
+          `R${netAmount.toFixed(2)} deposited to your wallet (R${grossAmountRand.toFixed(2)} paid, R${totalFee.toFixed(2)} fee)`,
+          {
+            payload: {
+              subtype: 'easypay_deposit',
+              grossAmount: grossAmountRand,
+              netAmount,
+              fee: totalFee,
+              easyPayNumber: EasyPayNumber,
+              reference: transactionRef,
+              action: 'view_receipt'
+            },
+            severity: 'info',
+            category: 'transaction',
+            source: 'easypay'
+          }
+        );
+      } catch (notifErr) {
+        console.error('[EasyPay] Notification error:', notifErr.message);
       }
 
       res.status(200).json({ EchoData });
