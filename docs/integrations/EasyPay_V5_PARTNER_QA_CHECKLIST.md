@@ -23,7 +23,7 @@ MyMoolah **Phase 1 — Top-up @ EasyPay (cash-in)** is implemented on **EasyPay�
 | A2 | Confirm **MMTP always issues** the **14-digit** number; EasyPay does **not** replace it with a different PIN for this product. | Matches current `generateEasyPayNumber()` + `Bill` / `Voucher` model. |
 | A3 | Confirm **amount** in **`paymentNotification`** is the **gross** amount the customer paid at the terminal (in **cents** per V5), and whether any fields carry **fee**, **net**, or **VAT** breakdown. | MMTP currently **recalculates** fee via `easyPayDepositService.calculateEasyPayFee()` from env; if EP provides authoritative fee/net, we should align. |
 | A4 | Confirm **min/max** cash top-up amounts for this product (MMTP currently enforces **R50–R4000** on API; USSD uses a fixed menu within that range). | Contract vs app limits. |
-| A5 | Confirm **PIN expiry window** — MMTP currently expires bills after **96 hours (4 days)** from generation. Does EasyPay's switch enforce its own expiry? If different, which takes precedence? | Prevents mismatch where EP accepts a PIN that MMTP considers expired (ResponseCode 3). Must align both sides. |
+| A5 | ~~Confirm PIN expiry window~~ **ANSWERED (Apr 2026)**: EasyPay confirmed they **cannot expire PINs** on their side — they have no knowledge of a PIN until it is presented at POS. Expiry is 100% MMTP's responsibility via `authorisationRequest` ResponseCode 3. MMTP decision: **30 days** (configurable via `EASYPAY_PIN_EXPIRY_DAYS`). 3-day expiry reminder notification added. | ✅ Implemented. |
 
 ---
 

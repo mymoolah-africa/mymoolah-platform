@@ -423,21 +423,97 @@ const handleExpiredVouchers = async () => {
   }
 };
 
+const sendExpiryReminders = async () => {
+  try {
+    try {
+      await sequelize.authenticate();
+    } catch (dbErr) {
+      console.warn('[ExpiryReminder] Skipping — database not ready:', dbErr.message);
+      return;
+    }
+
+    const expiryDays = parseInt(process.env.EASYPAY_PIN_EXPIRY_DAYS || '30', 10);
+    const reminderDays = parseInt(process.env.EASYPAY_PIN_REMINDER_DAYS || '3', 10);
+    const reminderThreshold = new Date(Date.now() + reminderDays * 24 * 60 * 60 * 1000);
+    const now = new Date();
+
+    const expiringVouchers = await Voucher.findAll({
+      where: {
+        status: { [Op.in]: ['pending_payment', 'active'] },
+        voucherType: { [Op.in]: ['easypay_topup', 'easypay_topup_active'] },
+        expiresAt: { [Op.between]: [now, reminderThreshold] },
+        [Op.or]: [
+          { '$metadata.expiryReminderSent$': null },
+          sequelize.literal("(metadata->>'expiryReminderSent') IS NULL")
+        ]
+      }
+    });
+
+    if (expiringVouchers.length === 0) return;
+
+    const notificationService = require('../services/notificationService');
+
+    for (const voucher of expiringVouchers) {
+      try {
+        if (!voucher.userId) continue;
+        if (voucher.metadata?.expiryReminderSent) continue;
+
+        const expiresAt = new Date(voucher.expiresAt);
+        const daysLeft = Math.max(1, Math.ceil((expiresAt - now) / (24 * 60 * 60 * 1000)));
+        const amount = parseFloat(voucher.originalAmount || 0);
+
+        await notificationService.createNotification(
+          voucher.userId,
+          'txn_wallet_credit',
+          'EasyPay PIN Expiring Soon',
+          `Your EasyPay deposit PIN for R${amount.toFixed(2)} expires in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}. Visit any EasyPay retailer to complete your top-up, or generate a new PIN in the app.`,
+          {
+            payload: {
+              subtype: 'easypay_pin_expiry_reminder',
+              easyPayCode: voucher.easyPayCode,
+              amount,
+              expiresAt: expiresAt.toISOString(),
+              daysLeft,
+              action: 'view_vouchers'
+            },
+            severity: 'warning',
+            category: 'transaction',
+            source: 'system'
+          }
+        );
+
+        await voucher.update({
+          metadata: { ...voucher.metadata, expiryReminderSent: new Date().toISOString() }
+        });
+
+        console.log(`[ExpiryReminder] Sent reminder for PIN ${voucher.easyPayCode} — ${daysLeft} days left`);
+      } catch (vErr) {
+        console.error(`[ExpiryReminder] Failed for voucher ${voucher.id}:`, vErr.message);
+      }
+    }
+
+    console.log(`[ExpiryReminder] Processed ${expiringVouchers.length} expiring PINs`);
+  } catch (error) {
+    console.error('[ExpiryReminder] Error:', error.message);
+  }
+};
+
 // Start automatic expiration handling (run every hour) with readiness gate
 const startExpirationHandler = () => {
-  
-  
   // Run after short delay to allow DB to finish starting
   setTimeout(handleExpiredVouchers, 5000);
-  
-  // Then run every hour
+  setTimeout(sendExpiryReminders, 10000);
+
+  // Expired voucher check: every hour
   setInterval(handleExpiredVouchers, 60 * 60 * 1000);
-  
-  
+
+  // Expiry reminders: once per day (every 24 hours)
+  setInterval(sendExpiryReminders, 24 * 60 * 60 * 1000);
 };
 
 // Export for manual execution if needed
 exports.handleExpiredVouchers = handleExpiredVouchers;
+exports.sendExpiryReminders = sendExpiryReminders;
 exports.startExpirationHandler = startExpirationHandler;
 exports.EASYPAY_EXPIRATION_CONFIG = EASYPAY_EXPIRATION_CONFIG;
 
@@ -696,8 +772,8 @@ exports.issueEasyPayVoucher = async (req, res) => {
     // Generate EasyPay number
     const easyPayCode = generateEasyPayNumber();
 
-    // Set expiration (96 hours from now - 4 days) for EasyPay top-up request
-    const expiresAt = new Date(Date.now() + 96 * 60 * 60 * 1000);
+    const expiryDays = parseInt(process.env.EASYPAY_PIN_EXPIRY_DAYS || '30', 10);
+    const expiresAt = new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000);
 
     try {
       // Create EasyPay top-up request voucher
@@ -845,8 +921,8 @@ exports.issueEasyPayCashout = async (req, res) => {
     // Generate EasyPay number
     const easyPayCode = generateEasyPayNumber();
 
-    // Set expiration (96 hours from now - 4 days)
-    const expiresAt = new Date(Date.now() + 96 * 60 * 60 * 1000);
+    const expiryDays = parseInt(process.env.EASYPAY_PIN_EXPIRY_DAYS || '30', 10);
+    const expiresAt = new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000);
 
     try {
       // Use transaction to ensure atomicity
@@ -1103,9 +1179,8 @@ exports.issueEasyPayStandaloneVoucher = async (req, res) => {
     // Generate EasyPay number (14-digit PIN)
     const easyPayCode = generateEasyPayNumber();
 
-    // Set expiration (96 hours from now - 4 days)
-    const expiryHours = parseFloat(process.env.EASYPAY_VOUCHER_EXPIRY_HOURS || '96');
-    const expiresAt = new Date(Date.now() + expiryHours * 60 * 60 * 1000);
+    const expiryDays = parseInt(process.env.EASYPAY_PIN_EXPIRY_DAYS || '30', 10);
+    const expiresAt = new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000);
 
     try {
       // Use transaction to ensure atomicity
@@ -1298,11 +1373,11 @@ exports.processEasyPaySettlement = async (req, res) => {
       return sendErrorResponse(res, ERROR_CODES.PIN_NOT_FOUND, 'EasyPay top-up request not found', requestId);
     }
     
-    // Check if voucher has expired (96 hours = 96 * 60 * 60 * 1000 ms)
-    const expiryTime = 96 * 60 * 60 * 1000;
+    const expiryDays = parseInt(process.env.EASYPAY_PIN_EXPIRY_DAYS || '30', 10);
+    const expiryTime = expiryDays * 24 * 60 * 60 * 1000;
     const voucherAge = Date.now() - new Date(voucher.createdAt).getTime();
     if (voucherAge > expiryTime) {
-      return sendErrorResponse(res, ERROR_CODES.PIN_EXPIRED, 'EasyPay PIN has expired. PINs expire after 96 hours.', requestId);
+      return sendErrorResponse(res, ERROR_CODES.PIN_EXPIRED, `EasyPay PIN has expired. PINs are valid for ${expiryDays} days. Please generate a new PIN.`, requestId);
     }
 
     // Apply fee structure (configurable via environment variables)
@@ -1504,11 +1579,11 @@ exports.processEasyPayStandaloneVoucherSettlement = async (req, res) => {
       return sendErrorResponse(res, ERROR_CODES.PIN_NOT_FOUND, 'EasyPay standalone voucher not found', requestId);
     }
     
-    // Check if voucher has expired (96 hours = 4 days)
-    const expiryTime = 96 * 60 * 60 * 1000;
+    const expiryDays = parseInt(process.env.EASYPAY_PIN_EXPIRY_DAYS || '30', 10);
+    const expiryTime = expiryDays * 24 * 60 * 60 * 1000;
     const voucherAge = Date.now() - new Date(voucher.createdAt).getTime();
     if (voucherAge > expiryTime) {
-      return sendErrorResponse(res, ERROR_CODES.PIN_EXPIRED, 'EasyPay PIN has expired. PINs expire after 96 hours (4 days).', requestId);
+      return sendErrorResponse(res, ERROR_CODES.PIN_EXPIRED, `EasyPay PIN has expired. PINs are valid for ${expiryDays} days. Please generate a new PIN.`, requestId);
     }
 
     // Verify settlement amount matches voucher amount
@@ -1652,11 +1727,11 @@ exports.processEasyPayCashoutSettlement = async (req, res) => {
       return sendErrorResponse(res, ERROR_CODES.PIN_NOT_FOUND, 'EasyPay cash-out voucher not found', requestId);
     }
     
-    // Check if voucher has expired (96 hours)
-    const expiryTime = 96 * 60 * 60 * 1000;
+    const expiryDays = parseInt(process.env.EASYPAY_PIN_EXPIRY_DAYS || '30', 10);
+    const expiryTime = expiryDays * 24 * 60 * 60 * 1000;
     const voucherAge = Date.now() - new Date(voucher.createdAt).getTime();
     if (voucherAge > expiryTime) {
-      return sendErrorResponse(res, ERROR_CODES.PIN_EXPIRED, 'EasyPay PIN has expired. PINs expire after 96 hours.', requestId);
+      return sendErrorResponse(res, ERROR_CODES.PIN_EXPIRED, `EasyPay PIN has expired. PINs are valid for ${expiryDays} days. Please generate a new PIN.`, requestId);
     }
 
     // Verify settlement amount matches voucher amount
@@ -2302,8 +2377,8 @@ exports.listAllVouchersForMe = async (req, res) => {
       if (!effectiveExpiresAt) {
         const createdTs = new Date(voucher.createdAt).getTime();
         if (voucher.status === 'pending_payment' && voucher.easyPayCode) {
-          // EasyPay pending: 96 hours from creation
-          effectiveExpiresAt = new Date(createdTs + 96 * 60 * 60 * 1000);
+          const epExpiryDays = parseInt(process.env.EASYPAY_PIN_EXPIRY_DAYS || '30', 10);
+          effectiveExpiresAt = new Date(createdTs + epExpiryDays * 24 * 60 * 60 * 1000);
         } else if (voucher.status === 'active') {
           // Active MMVoucher: 12 months from creation
           effectiveExpiresAt = new Date(createdTs + 365 * 24 * 60 * 60 * 1000);

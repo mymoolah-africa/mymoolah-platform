@@ -86,8 +86,11 @@ class EasyPayController {
       const isExpiredStatus = bill.status === 'expired' || bill.status === 'cancelled';
       const isExpiredDate = bill.dueDate && new Date(bill.dueDate) < new Date(new Date().toDateString());
       if (isExpiredStatus || isExpiredDate) {
+        const expiryDays = parseInt(process.env.EASYPAY_PIN_EXPIRY_DAYS || '30', 10);
+        const expiredOn = bill.dueDate ? new Date(bill.dueDate).toISOString().split('T')[0] : 'unknown';
         return res.status(200).json({
           ResponseCode: '3', // ExpiredPayment
+          ResponseMessage: `Payment expired. This PIN expired on ${expiredOn}. PINs are valid for ${expiryDays} days from generation. The customer can generate a new PIN in the MyMoolah app.`,
           correctAmount: bill.amount,
           minAmount: bill.minAmount || bill.amount,
           maxAmount: bill.maxAmount || bill.amount,
@@ -177,9 +180,11 @@ class EasyPayController {
       const isExpiredStatus = bill.status === 'expired' || bill.status === 'cancelled';
       const isExpiredDate = bill.dueDate && new Date(bill.dueDate) < new Date(new Date().toDateString());
       if (isExpiredStatus || isExpiredDate) {
+        const expiryDays = parseInt(process.env.EASYPAY_PIN_EXPIRY_DAYS || '30', 10);
+        const expiredOn = bill.dueDate ? new Date(bill.dueDate).toISOString().split('T')[0] : 'unknown';
         return res.status(200).json({
           ResponseCode: '3',
-          ResponseMessage: 'Expired payment',
+          ResponseMessage: `Payment expired. This PIN expired on ${expiredOn}. PINs are valid for ${expiryDays} days from generation. The customer can generate a new PIN in the MyMoolah app.`,
           Amount: bill.amount,
           expiryDate: bill.dueDate || new Date().toISOString().split('T')[0],
           echoData: EchoData
@@ -236,7 +241,7 @@ class EasyPayController {
         ResponseCode: '0',
         ResponseMessage: 'Allow payment',
         Amount: amount,
-        expiryDate: bill.dueDate || new Date(Date.now() + 96 * 60 * 60 * 1000).toISOString().split('T')[0],
+        expiryDate: bill.dueDate || new Date(Date.now() + parseInt(process.env.EASYPAY_PIN_EXPIRY_DAYS || '30', 10) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         echoData: EchoData
       });
     } catch (error) {
