@@ -1,5 +1,30 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-21 - SBSA H2H RM5v2 over-limit re-run on TEST (v2.99.2)
+
+### Summary
+Re-ran Scenario 5 (over-limit) from Colette's UAT matrix with a transaction of R500,001.00 — R1 above the confirmed Cr Transaction Limit of R500,000. File uploaded to SBSA TEST (`196.8.85.62:5022`) at 10:47:04 SAST on 2026-04-20. Three-transaction Pain.001 (Tx1 R500,001, Tx2 R1, Tx3 R1; batch total R500,003). ACK received +18s (GrpSts RCVD), INTAUDTST received +25s (GrpSts **RJCT**, Status Code **0009**, Status Description **"RUN EXCEEDS LIMIT"**, all 3 txns RJCT). No FINAUDTST emitted — consistent with RM9/RM10 where INTAUD RJCT is the terminal state. The per-transaction code 0006 ("TRANSACTION AMOUNT EXCEEDS LIMIT") was not triggered because the batch total (R500,003) exceeded the Sub Batch Limit (R500,000) before the per-tx check could fire. With both limits equal at R500,000, the 0006 path is arithmetically unreachable.
+
+### Key findings
+- **Status Code 0009 is dual-purpose**: used for "invalid ordering account" (RM9, no description) AND "RUN EXCEEDS LIMIT" (RM5v2, with description). The `AddtlInf` Status Description is the authoritative differentiator — `pain002PollerService` must key on description, not code alone.
+- **FINAUDTST is not emitted after INTAUD RJCT**: confirmed across RM9 (invalid account), RM10 (past date), and RM5v2 (batch over-limit). The poller should treat INTAUD RJCT as terminal.
+- **0006 path untestable on current profile**: requires Cr Transaction Limit < Sub Batch Limit (e.g. per-tx R100,000, batch R500,000). Email to Colette proposes Option A (lower per-tx limit on TEST) or Option B (accept 0009 as the operational reality).
+
+### New
+- **`scripts/test-sbsa-rm5-rerun.js`** — Pain.001 generator for the RM5v2 scenario (3 txns: R500,001 + R1 + R1).
+- **`docs/test/sbsa-uat-rm5v2-responses-2026-04-20/`** — 3 XML artefacts (original Pain.001, ACK, INTAUDTST RJCT).
+- **`docs/test/sbsa-sftp-uat-rm5v2-report-2026-04-20.txt`** — formal PASS/FAIL report with timestamps and interpretation.
+- **`docs/test/COLETTE_REPLY_2026-04-20_rm5-rerun.md`** — draft email to Colette with RM5v2 results, profile analysis, and PROD smoke test proposal.
+
+### Open items
+- **Pending**: Colette's reply on Option A vs Option B for 0006 testing, and PROD smoke test scheduling.
+- **Pending**: Update `pain002PollerService` to disambiguate 0009 by `AddtlInf` description.
+- **Pending**: Update `pain002PollerService` to treat INTAUD RJCT as terminal (no FINAUD expected).
+
+### No runtime application code changes. No migrations.
+
+---
+
 ## 2026-04-21 - Zapper SFTP user provisioned on sftp-1-vm + reconciliation config corrected (v2.99.1)
 
 ### Summary

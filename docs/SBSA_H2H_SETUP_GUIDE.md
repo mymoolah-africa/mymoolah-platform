@@ -1,6 +1,6 @@
 # SBSA Host-to-Host (H2H) Setup Guide
 
-**Date**: 2026-03-13 (Last connectivity test: 2026-04-16)
+**Date**: 2026-03-13 (Last UAT test: 2026-04-20, RM5v2 over-limit re-run)
 
 ---
 
@@ -199,7 +199,7 @@ sftp -i ~/.ssh/sbsa_sftp_key -P 5022 mymoolahuser@196.8.86.53
 ### Important: Statements Have No Test Environment
 Colette confirmed (2026-03-26): **"Statements does not have a test environment, once development has been completed, we can move to Production, for statements only."** MT940/MT942 files will only flow in Production.
 
-### SBSA Response Files Found (from Melanie's Mar 30 testing, in /BAS/)
+### SBSA Response Files — Melanie's Mar 30 testing (in /BAS/)
 
 | File | Status | Meaning |
 |------|--------|---------|
@@ -209,6 +209,48 @@ Colette confirmed (2026-03-26): **"Statements does not have a test environment, 
 | RM4 NACK | RJCT | Duplicate MsgId |
 | RM5 NACK | RJCT | Duplicate MsgId |
 | RM6 ACK + INTAUD + FINAUD | ACSP | ALL 3 txns processed successfully |
+
+### SBSA Response Files — Colette's Apr 17 UAT (6 scenarios, RM7–RM12)
+
+Ran 2026-04-17 15:55–18:36 SAST, 20-min intervals. Full report: `docs/test/sbsa-sftp-uat-report-2026-04-17.txt`.
+
+| Scenario | File | GrpSts | Status Code | Verdict |
+|----------|------|--------|-------------|---------|
+| RM7 Valid SSVS | ACK + INTAUD + FINAUD | ACSP | 0000 | PASS — 3 txns settled in 3m40s |
+| RM8 Duplicate MsgId | NACK | RJCT | — | PASS — "Duplicate MsgId" in 17s |
+| RM9 Invalid DbtrAcct (123456789) | ACK + INTAUD | RJCT | 0009 | PASS — all 3 txns rejected (expected 0003, got 0009; Colette confirmed 0009 is canonical) |
+| RM10 Past date (2014-11-12) | ACK + INTAUD | RJCT | 0014 | PASS — exact match with test sheet |
+| RM11 Over-limit R96.15 | ACK + INTAUD + FINAUD | ACSP | 0000 | PARTIAL — R96.15 below TEST profile limit (R500,000); over-limit path not triggered |
+| RM12 10-tx mixed (7 valid, 3 invalid) | ACK + INTAUD + FINAUD + UNPAID | PART | 0003/0000 | PARTIAL — 4 ACSP, 6 RJCT; UNPAID overrode FINAUD for 2 txns; VET not received |
+
+### SBSA Response Files — RM5v2 Over-Limit Re-run (2026-04-20)
+
+Re-ran with R500,001 (R1 over confirmed Cr Transaction Limit). Full report: `docs/test/sbsa-sftp-uat-rm5v2-report-2026-04-20.txt`.
+
+| Response | GrpSts | Status Code | Description |
+|----------|--------|-------------|-------------|
+| ACK (+18s) | RCVD | — | File received |
+| INTAUDTST (+25s) | RJCT | 0009 | RUN EXCEEDS LIMIT — all 3 txns RJCT |
+| FINAUDTST | not emitted | — | SBSA does not issue FINAUD after INTAUD RJCT |
+
+Batch total R500,003 exceeded Sub Batch Limit (R500,000) → batch-level rejection before per-tx check. Code 0006 unreachable while both limits are equal.
+
+### SBSA Pain.002 Status Code Reference (confirmed via UAT)
+
+| Code | Description | Scenario | GrpSts | Notes |
+|------|-------------|----------|--------|-------|
+| 0000 | Success | RM7 valid, RM11 under-limit | ACSP / PDNG | PDNG at INTAUD, ACSP at FINAUD |
+| 0003 | INVALID ACCOUNT NUMBER | RM12 invalid beneficiary accounts | PART | Per-tx RJCT within a mixed batch |
+| 0009 | (no description) | RM9 invalid ordering account | RJCT | Whole batch rejected |
+| 0009 | RUN EXCEEDS LIMIT | RM5v2 batch over sub-batch limit | RJCT | Whole batch rejected; 0009 is dual-purpose — disambiguate by `AddtlInf` |
+| 0014 | ACTION DATE INVALID | RM10 past execution date | RJCT | Whole batch rejected |
+| — | Duplicate MsgId | RM8 duplicate file | RJCT (NACK) | Detected at file level, no INTAUD/FINAUD |
+
+**Poller implementation notes:**
+- Status Code 0009 carries two distinct meanings; the `AddtlInf` Status Description is the authoritative differentiator.
+- FINAUDTST is not emitted after INTAUD RJCT — treat INTAUD RJCT as a terminal state.
+- UNPAID can override FINAUD on a per-transaction basis (observed in RM12).
+- Read from `/Inbox/` only in production; `/BAS/` is TEST-only (dual-delivery, appended filenames).
 
 ---
 
