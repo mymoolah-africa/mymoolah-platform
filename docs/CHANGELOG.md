@@ -1,5 +1,58 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-21 - Zapper SFTP user provisioned on sftp-1-vm + reconciliation config corrected (v2.99.1)
+
+### Summary
+Completed the MyMoolah-side provisioning for Zapper's daily mark-off SFTP feed. Created the `zapper` SFTP user on the Thorntech SFTP Gateway VM (`sftp-1-vm`, 34.35.137.166) with Dillon Poultney's RSA 2048 public key (fingerprint `SHA256:EkGSJ40gqWvwpF+x1m30vB9t5duCBnU9xMUk8GA6Gl4`), mirroring the MobileMart precedent (2026-04-17) row-for-row. Created firewall rule `allow-zapper-sftp` scoped to Zapper's single static egress IP (`52.213.37.176/32`) on `tcp:5022`. Applied a forward-only correction migration (`20260421_01_fix_zapper_sftp_path.js`) to set `recon_supplier_configs.sftp_path` to `/home/zapper/inbox` on UAT, staging, and production (the original seed migration `20260413_01` had already been applied with the pre-fix value `/home/zapper`, so the canonical banking-grade pattern was used: leave the applied migration untouched and ship a forward-only UPDATE). Drafted the go-live email to Dillon (`docs/integrations/ZAPPER_EMAIL_DILLON_GO_LIVE.md`) including connection details and the 1-row synthetic test CSV for the smoke-test handshake. **No runtime application code changes** — this is infrastructure, DB config, and documentation only.
+
+### New (operational, on `sftp-1-vm` Postgres DB `sftpgw`)
+- **`users`** — id=5, username=`zapper`, enabled=true, user_type=`SFTP`, password=NULL (key-only), uses_password=false, uid=904, gid=904, home_folder_id=4. Mirrors MobileMart (id=4) exactly.
+- **`folder`** — id=4, parent_id=0, name=`zapper`, absolute_path=`/zapper`, `cloud_connection_inherited_id=1` → `gs://mymoolah-sftp-inbound/zapper/`, cloud_relative_path=`/zapper`.
+- **`user_folder_permission`** — user_id=5, folder_id=4, permission=`READ_WRITE`.
+- **`authorities`** — user_id=5, authority=`ROLE_SFTP`.
+- **`public_key`** — id=3, user_id=5, name=`zapper-dillon-2026-04-21`, value_len=436, enabled=true, generated=false. Key fingerprint SHA256:`EkGSJ40gqWvwpF+x1m30vB9t5duCBnU9xMUk8GA6Gl4` (verified on both local Mac and inside gateway VM before insert — no transit tampering).
+
+### New (GCP infrastructure on project `mymoolah-db`)
+- **Firewall rule `allow-zapper-sftp`** — `tcp:5022` from `52.213.37.176/32` (Zapper's AWS eu-west-1 NAT egress) to `sftp-1-deployment` target tag. Created 2026-04-21.
+- **GCS placeholders** — `gs://mymoolah-sftp-inbound/zapper/.keep` and `gs://mymoolah-sftp-inbound/zapper/inbox/.keep` ensure the prefix exists for `SFTPWatcherService`.
+
+### New (repo)
+- **`migrations/20260421_01_fix_zapper_sftp_path.js`** — forward-only, idempotent UPDATE correcting `recon_supplier_configs.sftp_path` for `ZAPPER` from `/home/zapper` to `/home/zapper/inbox`. Proper `down()` reverts to `/home/zapper`. Applied on UAT/staging/production 2026-04-21.
+- **`docs/integrations/ZAPPER_SFTP_PROVISIONING_RUNBOOK.md`** — full runbook with pre-execution plan and post-execution record (IAP-via-IPv6 blocker + temp /32 workaround documented; CTE-visibility gotcha documented).
+- **`docs/integrations/ZAPPER_EMAIL_DILLON_GO_LIVE.md`** — the go-live email to Dillon, attaching the test CSV and requesting the renamed (`zapper_markoff_20260422.csv`) handshake upload to `/zapper/inbox/`.
+- **`docs/integrations/ZAPPER_EMAIL_DRAFT_SFTP_FOLLOWUP.md`** — earlier pre-go-live draft (requesting sample file + filename convention); superseded by `ZAPPER_EMAIL_DILLON_GO_LIVE.md` but kept for the audit trail.
+- **`integrations/zapper/samples/zapper_markoff_TESTHANDSHAKE.csv`** + **`README.md`** — 1-row synthetic CSV for the smoke test, plus a README explaining column-to-field mappings and expected pipeline outcomes.
+
+### Changed
+- **`integrations/zapper/ZAPPER_REFERENCE.md`** — SFTP section: status line updated to **"SFTP user live on gateway"**. Added gateway user id, folder id, fingerprint, firewall rule, runbook, and go-live email references.
+- **`.gitignore`** — added `keys/` to prevent partner `.pub` keys from being committed to the public repo.
+
+### Gotchas documented for next time
+- **IAP WebSocket blocked on IPv6-broken Mac** — `gcloud compute ssh --tunnel-through-iap` fails with `Errno 51 Network unreachable` when the local machine has no IPv6 route (`tunnel.cloudproxy.app` has an AAAA record, Python websocket-client tries it first). Workaround: temporarily add the admin's public IPv4 to the existing `allow-admin-ssh-2222-temp` firewall rule and SSH directly on port 2222 without IAP.
+- **CTE-sibling visibility in `WITH … INSERT … RETURNING` chains** — an `UPDATE` in a sibling CTE cannot see rows just inserted by another CTE in the same statement. Do the link-home `UPDATE users SET home_folder_id = …` as a separate statement after the first transaction commits.
+
+### Open items
+- **Pending**: Dillon's test-file upload (smoke test) — awaiting his action after the go-live email.
+- **Pending after smoke test**: remove the temporary `102.164.83.33/32` entry from firewall rule `allow-admin-ssh-2222-temp`. Exact command captured in `docs/integrations/ZAPPER_SFTP_PROVISIONING_RUNBOOK.md` §Step 7b.
+
+### Rollback
+On `sftp-1-vm` Postgres:
+```sql
+BEGIN;
+DELETE FROM public_key WHERE user_id = 5;
+DELETE FROM authorities WHERE user_id = 5;
+DELETE FROM user_folder_permission WHERE user_id = 5;
+UPDATE users SET home_folder_id = NULL WHERE id = 5;
+DELETE FROM folder WHERE id = 4;
+DELETE FROM users WHERE id = 5;
+COMMIT;
+```
+Firewall: `gcloud compute firewall-rules delete allow-zapper-sftp --project=mymoolah-db`. Migration: `./scripts/run-migrations-master.sh <env> down 20260421_01` (reverts `sftp_path` to `/home/zapper`).
+
+### No migrations touching runtime application code, no production deploy of backend or frontend.
+
+---
+
 ## 2026-04-20 - POL-020 Cash Withdrawal Policy + SBSA cover letter + Own-Funds ring-fence plan (v2.99.0)
 
 ### Summary

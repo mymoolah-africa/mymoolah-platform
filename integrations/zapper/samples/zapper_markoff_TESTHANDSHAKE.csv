@@ -1,0 +1,2 @@
+ZapperId,TransactionProcessorReference,PaymentCreatedUTCDate,ProcessedAmount,ZapperMerchantId,ZoomLoginMerchantName,OrganisationReference,PaymentMethodType,PaymentMethodTitle,TotalThirdPartyVouchersRedeemedAmount,TotalMerchantVouchersRedeemedAmount
+TEST0000000000000001,11111111-1111-1111-1111-111111111111,"Apr 22, 2026 9:00am",1.00,99999,MyMoolah SFTP Handshake Test,test-org-ref-0001,2,ExternalPaymentMethod,0.00,0.00

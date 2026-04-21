@@ -1,6 +1,6 @@
 # Zapper Integration Reference
 
-**Last Updated**: 2026-02-21
+**Last Updated**: 2026-04-21
 **Purpose**: Master reference for Zapper integration — source of truth links, document inventory, credentials, and testing guide
 
 ---
@@ -68,13 +68,20 @@ Zapper is a QR-code-based payment acceptance integration. Customers scan a Zappe
 |-----------|-------|
 | SFTP Host | `34.35.137.166` |
 | SFTP Port | `5022` |
-| SFTP User | `zapper` |
-| GCS Prefix | `gs://mymoolah-sftp-inbound/zapper/` |
+| SFTP User | `zapper` (id=5 on Thorntech gateway, uid/gid 904) |
+| Gateway folder | `/zapper` (folder id=4, home folder, READ_WRITE) |
+| Drop path (convention) | `/zapper/inbox/` |
+| GCS Prefix | `gs://mymoolah-sftp-inbound/zapper/` (inherited via cloud_connection id=1) |
+| SSH public key | `keys/zapper_dillon.pub` (local, NOT committed — repo is public). Fingerprint `SHA256:EkGSJ40gqWvwpF+x1m30vB9t5duCBnU9xMUk8GA6Gl4`. Installed as `public_key.id=3, name='zapper-dillon-2026-04-21'` on the gateway. |
+| Source IP (whitelisted) | `52.213.37.176/32` via firewall rule `allow-zapper-sftp` on `tcp:5022` |
 | Adapter | `ZapperAdapter` (`services/reconciliation/adapters/ZapperAdapter.js`) |
-| ReconSupplierConfig | `supplier_code: 'ZAPPER'` |
+| ReconSupplierConfig | `supplier_code: 'ZAPPER'`, `sftp_path: '/home/zapper/inbox'` |
+| Test fixture | `integrations/zapper/samples/zapper_markoff_TESTHANDSHAKE.csv` (+ README) |
 | Setup Guide | `docs/integrations/ZAPPER_SFTP_SETUP_GUIDE.md` |
+| Provisioning runbook | `docs/integrations/ZAPPER_SFTP_PROVISIONING_RUNBOOK.md` |
+| Go-live email (to Dillon) | `docs/integrations/ZAPPER_EMAIL_DILLON_GO_LIVE.md` |
 
-**Status**: Infrastructure code ready. Pending: SFTP user creation on gateway VM (requires Zapper's SSH public key and source IP from Dillon Poultney).
+**Status (2026-04-21)**: **SFTP user live on gateway**. Infrastructure, firewall, DB config, GCS folder, SSH key — all complete on UAT/Staging/Production. Awaiting Dillon's test-file upload for end-to-end smoke test. Daily cadence will start once smoke test passes.
 
 ---
 

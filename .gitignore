@@ -22,6 +22,11 @@ easy*.???
 uploads/
 idempotencyKey
 
+# SSH public keys from partners — stays local (repo is public).
+# The keys themselves are not secret, but keeping them out of a public repo
+# keeps our partner-key inventory out of the open for supply-chain hygiene.
+keys/
+
 # Node modules
 mymoolah-wallet-frontend/node_modules/
 
