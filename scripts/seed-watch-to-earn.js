@@ -236,10 +236,10 @@ async function seedWatchToEarn() {
       }
     ];
     
-    // Use short 15-second test video from Google (CORS-enabled, works everywhere)
-    // Perfect for UAT demos - quick to watch and test the full flow
-    const videoUrl = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
-    const thumbnailUrl = 'https://storage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerBlazes.jpg';
+    // Short ~10-second test video from W3Schools (reliable, works everywhere)
+    // Google's gtv-videos-bucket now returns 403 - switched Apr 2026
+    const videoUrl = 'https://www.w3schools.com/html/mov_bbb.mp4';
+    const thumbnailUrl = 'https://www.w3schools.com/html/img_chania.jpg';
     
     for (const ad of ads) {
       await client.query(`
@@ -252,7 +252,7 @@ async function seedWatchToEarn() {
           "totalViews", "totalEngagements", metadata, "createdAt", "updatedAt"
         ) VALUES (
           $1, $2, $3, $4, $5, $6,
-          15, $7, $8, 600.00, 600.00,
+          10, $7, $8, 600.00, 600.00,
           $9, $10, NULL,
           $11, NULL,
           $12, NOW(), $13, $14,
@@ -263,7 +263,7 @@ async function seedWatchToEarn() {
           description = $4,
           "videoUrl" = $5,
           "thumbnailUrl" = $6,
-          "durationSeconds" = 15,
+          "durationSeconds" = 10,
           "adType" = $7,
           "costPerView" = $9,
           "rewardPerView" = $10,

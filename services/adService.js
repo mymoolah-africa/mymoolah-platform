@@ -15,6 +15,10 @@ const { Op } = require('sequelize');
 const ledgerService = require('./ledgerService');
 
 class AdService {
+  constructor() {
+    this._demoAdsEnsured = false;
+  }
+
   /**
    * Get available ads for user
    * Simple query for launch - no complex targeting yet
@@ -29,21 +33,10 @@ class AdService {
         process.env.NODE_ENV === 'staging' ||
         (process.env.DATABASE_URL && (process.env.DATABASE_URL.includes('uat') || process.env.DATABASE_URL.includes('staging')));
 
-      // UAT/Staging: if no ads in DB, ensure demo data so Earn Moolahs shows demo videos (same as UAT)
-      if (isNonProduction) {
-        const adsBefore = await AdCampaign.findAll({
-          where: { status: 'active', moderationStatus: 'approved', remainingBudget: { [Op.gt]: 0 } },
-          include: [{
-            model: MerchantFloat,
-            as: 'merchant',
-            where: { adFloatBalance: { [Op.gte]: sequelize.col('AdCampaign.costPerView') } },
-            required: true
-          }],
-          limit: 1
-        });
-        if (adsBefore.length === 0) {
-          await this._ensureDemoAdsForNonProduction();
-        }
+      // UAT/Staging: ensure demo ads exist and have valid video URLs (runs once per server start)
+      if (isNonProduction && !this._demoAdsEnsured) {
+        await this._ensureDemoAdsForNonProduction();
+        this._demoAdsEnsured = true;
       }
 
       // Get ads with sufficient budget
@@ -96,8 +89,8 @@ class AdService {
    * So staging shows "Earn Moolahs" demo videos without manual seed step.
    */
   async _ensureDemoAdsForNonProduction() {
-    const videoUrl = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
-    const thumbnailUrl = 'https://storage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerBlazes.jpg';
+    const videoUrl = 'https://www.w3schools.com/html/mov_bbb.mp4';
+    const thumbnailUrl = 'https://www.w3schools.com/html/img_chania.jpg';
     const demoAds = [
       { id: '00000000-0001-0000-0000-000000000001', title: 'Vodacom Airtime Deals', description: 'Get amazing airtime deals with Vodacom. Top up now and save!', adType: 'reach', costPerView: 6.00, rewardPerView: 2.00 },
       { id: '00000000-0002-0000-0000-000000000002', title: 'MTN Data Bundles', description: 'Stream, browse, and stay connected with MTN data bundles.', adType: 'reach', costPerView: 6.00, rewardPerView: 2.00 },
@@ -139,13 +132,13 @@ class AdService {
             "totalViews", "totalEngagements", metadata, "createdAt", "updatedAt"
           ) VALUES (
             :id, 'DUMMY_AD_MERCHANT_001', :title, :description, :videoUrl, :thumbnailUrl,
-            15, :adType, 'active', 600.00, 600.00, :costPerView, :rewardPerView, NULL,
+            10, :adType, 'active', 600.00, 600.00, :costPerView, :rewardPerView, NULL,
             'leads-test@mymoolah.africa', NULL, 'approved', NOW(), 'admin', 'Test ad - approved for UAT/Staging',
             0, 0, '{"isTestAd": true}', NOW(), NOW()
           )
           ON CONFLICT (id) DO UPDATE SET
             title = :title, description = :description, "videoUrl" = :videoUrl, "thumbnailUrl" = :thumbnailUrl,
-            "durationSeconds" = 15, "costPerView" = :costPerView, "rewardPerView" = :rewardPerView, "updatedAt" = NOW()
+            "durationSeconds" = 10, "costPerView" = :costPerView, "rewardPerView" = :rewardPerView, "updatedAt" = NOW()
         `, {
           replacements: {
             id: ad.id,
