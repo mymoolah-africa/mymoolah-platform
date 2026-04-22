@@ -72,9 +72,26 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       validate: {
         notEmpty: true,
-        // Validates the PLAINTEXT before beforeCreate/beforeUpdate encrypts it.
-        // afterFind decrypts on load, so this always sees plaintext at validate time.
-        len: [5, 20],
+        // Validates the plaintext before beforeCreate/beforeUpdate encrypts it.
+        // afterFind decrypts on load, so this usually sees plaintext at validate
+        // time. BUT if FIELD_ENCRYPTION_KEY is unavailable or mismatched (e.g.
+        // env-config drift), afterFind's decrypt() returns ciphertext unchanged
+        // and the instance carries ciphertext into .save(). In that case we must
+        // NOT block unrelated updates (login counters, password_hash, status) by
+        // failing a plaintext-length rule against ciphertext the validator was
+        // never meant to see.
+        plaintextLength(value) {
+          if (typeof value !== 'string') {
+            throw new Error('idNumber must be a string');
+          }
+          // If value looks like encrypted ciphertext, skip length check — it's
+          // not our job to validate opaque ciphertext length. The plaintext was
+          // already validated at create time; nothing mutates idNumber here.
+          if (value.startsWith('enc:v1:')) return;
+          if (value.length < 5 || value.length > 20) {
+            throw new Error('idNumber must be between 5 and 20 characters');
+          }
+        },
       },
     },
     idNumberHash: {
@@ -303,13 +320,25 @@ module.exports = (sequelize, DataTypes) => {
     if (this.loginAttempts >= 5) {
       this.lockedUntil = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
     }
-    await this.save();
+    // Targeted save: only persist the two fields we touched, and skip full
+    // instance validation. We must not re-validate unrelated fields like
+    // `idNumber` (which holds encrypted ciphertext at rest and would fail
+    // the plaintext `len` validator) on a lockout-counter bump.
+    await this.save({
+      fields: ['loginAttempts', 'lockedUntil'],
+      validate: false,
+      hooks: false,
+    });
   };
 
   User.prototype.resetLoginAttempts = async function() {
     this.loginAttempts = 0;
     this.lockedUntil = null;
-    await this.save();
+    await this.save({
+      fields: ['loginAttempts', 'lockedUntil'],
+      validate: false,
+      hooks: false,
+    });
   };
 
   // Tier-related methods

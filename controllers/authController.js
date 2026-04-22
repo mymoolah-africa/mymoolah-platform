@@ -186,7 +186,10 @@ class AuthController {
       }
 
       const newHash = await bcrypt.hash(newPassword, 12);
-      await user.update({ password_hash: newHash });
+      await user.update(
+        { password_hash: newHash },
+        { fields: ['password_hash'], validate: false, hooks: false }
+      );
 
       return res.json({ success: true, message: 'Password changed successfully' });
     } catch (error) {
@@ -289,9 +292,15 @@ class AuthController {
         });
       }
       
-      // Successful login — reset attempts and update lastLoginAt
+      // Successful login — reset attempts and update lastLoginAt.
+      // Both calls use targeted field updates + validate:false to avoid
+      // re-running full instance validators on encrypted-at-rest fields
+      // (e.g. idNumber) that are unrelated to this update.
       await user.resetLoginAttempts();
-      await user.update({ lastLoginAt: new Date() });
+      await user.update(
+        { lastLoginAt: new Date() },
+        { fields: ['lastLoginAt'], validate: false, hooks: false }
+      );
       
       const token = jwt.sign(
         { id: user.id, email: user.email },
@@ -606,9 +615,14 @@ class AuthController {
         });
       }
       
-      // Hash and update password
+      // Hash and update password.
+      // Targeted update + validate:false — we only touch password_hash,
+      // so do not re-run instance validators on encrypted-at-rest fields.
       const newHash = await bcrypt.hash(newPassword, 12);
-      await user.update({ password_hash: newHash });
+      await user.update(
+        { password_hash: newHash },
+        { fields: ['password_hash'], validate: false, hooks: false }
+      );
       
       console.log(`✅ Password reset successful for user ${user.id} (${maskMsisdn(phoneNumber)})`);
       
