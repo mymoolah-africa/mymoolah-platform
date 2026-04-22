@@ -87,7 +87,7 @@ class SmsService {
         }
       );
 
-      console.log(`✅ SMS sent to ${phoneNumber}:`, JSON.stringify(response.data).substring(0, 300));
+      console.log(`✅ SMS sent to ${phoneNumber}:`, JSON.stringify(response.data));
 
       // MyMobileAPI response shape (verified 2026-04-22):
       //   { cost, remainingBalance, eventId, sample, costBreakdown: [{ quantity, cost, network }] }
