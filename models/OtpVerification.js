@@ -85,12 +85,25 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.JSONB,
       allowNull: true,
       comment: 'Additional metadata (new phone number for phone_change, etc.)'
+    },
+    // Explicit timestamp attributes with field mapping so Sequelize translates
+    // `createdAt` / `updatedAt` in where/order clauses to the snake_case DB columns.
+    // Setting these at the options level alone (createdAt: 'created_at') only
+    // renames the auto-column but does NOT add a `field` mapping to the attribute,
+    // which breaks queries like `where: { createdAt: ... }`.
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'created_at'
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'updated_at'
     }
   }, {
     tableName: 'otp_verifications',
     timestamps: true,
-    createdAt: 'created_at',
-    updatedAt: 'updated_at',
     underscored: false
   });
 

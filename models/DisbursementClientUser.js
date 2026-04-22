@@ -47,12 +47,20 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DATE,
       allowNull: true,
     },
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'created_at',
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'updated_at',
+    },
   }, {
     tableName: 'disbursement_client_users',
     underscored: true,
     timestamps: true,
-    createdAt: 'created_at',
-    updatedAt: 'updated_at',
   });
 
   DisbursementClientUser.associate = (models) => {

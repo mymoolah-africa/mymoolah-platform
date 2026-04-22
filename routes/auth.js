@@ -1,8 +1,37 @@
 const express = require('express');
 const router = express.Router();
+const rateLimit = require('express-rate-limit');
 const authController = require('../controllers/authController');
 const authMiddleware = require('../middleware/auth');
 const { body, validationResult } = require('express-validator');
+
+// Rate limiting for authentication endpoints (banking-grade)
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // 10 attempts per IP per window (account-level lock at 5 is tighter)
+  message: { success: false, message: 'Too many login attempts from this IP, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: { trustProxy: false },
+});
+
+const forgotPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { success: false, message: 'Too many password reset requests, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: { trustProxy: false },
+});
+
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5, // 5 registrations per IP per hour
+  message: { success: false, message: 'Too many registration attempts, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: { trustProxy: false },
+});
 
 // Validation middleware
 const validateRequest = (req, res, next) => {
@@ -33,7 +62,7 @@ router.get('/verify', authMiddleware, authController.verify);
 router.post('/refresh', authMiddleware, authController.refreshToken);
 
 // POST /api/v1/auth/register
-router.post('/register', [
+router.post('/register', registerLimiter, [
   body('email')
     .isEmail()
     .normalizeEmail()
@@ -91,7 +120,7 @@ router.post('/register', [
 ], authController.register);
 
 // POST /api/v1/auth/login
-router.post('/login', [
+router.post('/login', loginLimiter, [
   body('identifier')
     .matches(phoneRegex)
     .withMessage('Identifier must be a valid South African mobile number'),
@@ -117,7 +146,7 @@ router.post('/change-password', [
 ], authController.changePassword);
 
 // POST /api/v1/auth/forgot-password - Request password reset OTP
-router.post('/forgot-password', [
+router.post('/forgot-password', forgotPasswordLimiter, [
   body('phoneNumber')
     .matches(phoneRegex)
     .withMessage('Invalid South African mobile number'),

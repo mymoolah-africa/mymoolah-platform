@@ -86,14 +86,22 @@ module.exports = (sequelize, DataTypes) => {
     vatExclusive: {
       type: DataTypes.BOOLEAN,
       allowNull: true
+    },
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'created_at'
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'updated_at'
     }
   }, {
     sequelize,
     modelName: 'FlashTransaction',
     tableName: 'flash_transactions',
-    timestamps: true,
-    createdAt: 'created_at',
-    updatedAt: 'updated_at'
+    timestamps: true
   });
 
   return FlashTransaction;

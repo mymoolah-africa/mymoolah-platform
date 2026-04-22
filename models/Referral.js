@@ -2,7 +2,7 @@
  * Referral Model
  * 
  * Tracks individual referral invitations and their status
- * Part of MyMoolah 4-level earnings network for job creation
+ * Part of MyMoolah 3-level earnings network for job creation (5% / 3% / 2%)
  * 
  * @author MyMoolah Treasury Platform
  * @date 2025-12-22
@@ -106,12 +106,20 @@ module.exports = (sequelize, DataTypes) => {
     metadata: {
       type: DataTypes.JSONB,
       allowNull: true
+    },
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'created_at'
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'updated_at'
     }
   }, {
     tableName: 'referrals',
     timestamps: true,
-    createdAt: 'created_at',
-    updatedAt: 'updated_at',
     underscored: false
   });
 

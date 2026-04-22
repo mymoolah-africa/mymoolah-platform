@@ -90,11 +90,15 @@ module.exports = (sequelize, DataTypes) => {
     metadata: {
       type: DataTypes.JSONB,
       allowNull: true
+    },
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'created_at'
     }
   }, {
     tableName: 'referral_payouts',
     timestamps: true,
-    createdAt: 'created_at',
     updatedAt: false,
     underscored: false
   });

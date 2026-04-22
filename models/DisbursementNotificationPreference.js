@@ -38,12 +38,20 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: {},
     },
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'created_at',
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'updated_at',
+    },
   }, {
     tableName: 'disbursement_notification_preferences',
     underscored: true,
     timestamps: true,
-    createdAt: 'created_at',
-    updatedAt: 'updated_at',
   });
 
   DisbursementNotificationPreference.associate = (models) => {

@@ -62,11 +62,15 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       allowNull: true,
     },
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'created_at',
+    },
   }, {
     tableName: 'disbursement_client_fees',
     underscored: true,
     timestamps: true,
-    createdAt: 'created_at',
     updatedAt: false,
   });
 

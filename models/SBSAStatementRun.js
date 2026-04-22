@@ -82,12 +82,20 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
       field: 'completed_at',
     },
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'created_at',
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'updated_at',
+    },
   }, {
     tableName: 'sbsa_statement_runs',
     underscored: true,
     timestamps: true,
-    createdAt: 'created_at',
-    updatedAt: 'updated_at',
     indexes: [
       { unique: true, fields: ['file_hash'] },
       { fields: ['status', 'created_at'] },

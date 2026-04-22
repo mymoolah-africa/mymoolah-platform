@@ -62,12 +62,20 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: 0,
       field: 'chain_depth',
       comment: 'Number of levels in chain (0-3)'
+    },
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'created_at'
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'updated_at'
     }
   }, {
     tableName: 'referral_chains',
     timestamps: true,
-    createdAt: 'created_at',
-    updatedAt: 'updated_at',
     underscored: false
   });
 

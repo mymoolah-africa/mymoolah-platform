@@ -222,10 +222,8 @@ class AuthController {
         });
       }
       
-      // DEBUG: Log normalized phone number for troubleshooting
       console.log(`🔍 [LOGIN] Original: ${maskMsisdn(originalIdentifier)}, Normalized: ${maskMsisdn(identifier)}`);
       
-      // Search by E.164 phoneNumber (all users now have E.164 format after migration)
       const user = await User.findOne({ 
         where: { 
           phoneNumber: identifier
@@ -238,7 +236,7 @@ class AuthController {
       });
       
       if (!user) {
-        console.log(`❌ [LOGIN] User not found for any phone format. Searched: ${uniqueFormats.join(', ')} (original: ${originalIdentifier})`);
+        console.log(`❌ [LOGIN] User not found for: ${maskMsisdn(identifier)} (original: ${maskMsisdn(originalIdentifier)})`);
         return res.status(401).json({ 
           success: false, 
           message: 'Invalid mobile number or password.' 
@@ -247,7 +245,17 @@ class AuthController {
       
       console.log(`✅ [LOGIN] User found: ${user.id}, phoneNumber in DB: ${user.phoneNumber} (matched format)`);
       
-      // Check password first, then fall back to USSD PIN
+      // Check account lock before password verification
+      if (user.isLocked()) {
+        const minutesLeft = Math.ceil((user.lockedUntil - Date.now()) / 60000);
+        console.log(`🔒 [LOGIN] Account locked for user ${user.id} — ${minutesLeft} min remaining`);
+        return res.status(403).json({ 
+          success: false, 
+          message: `Account is temporarily locked due to too many failed login attempts. Try again in ${minutesLeft} minute(s).`
+        });
+      }
+      
+      // Check password, then fall back to USSD PIN
       let isValidPassword = false;
       if (user.password_hash) {
         isValidPassword = await bcrypt.compare(password, user.password_hash);
@@ -256,9 +264,20 @@ class AuthController {
         isValidPassword = await bcrypt.compare(password, user.ussd_pin);
       }
       if (!isValidPassword) {
+        await user.incrementLoginAttempts();
+        const attemptsLeft = Math.max(0, 5 - user.loginAttempts);
+        console.log(`❌ [LOGIN] Failed attempt for user ${user.id} — attempts: ${user.loginAttempts}/5`);
+        
+        if (user.loginAttempts >= 5) {
+          return res.status(403).json({ 
+            success: false, 
+            message: 'Account has been temporarily locked due to too many failed login attempts. Try again in 30 minutes.'
+          });
+        }
+        
         return res.status(401).json({ 
           success: false, 
-          message: 'Invalid mobile number or password.' 
+          message: `Invalid mobile number or password. ${attemptsLeft} attempt(s) remaining.`
         });
       }
       
@@ -269,6 +288,10 @@ class AuthController {
           message: 'Account is not active. Please contact support.' 
         });
       }
+      
+      // Successful login — reset attempts and update lastLoginAt
+      await user.resetLoginAttempts();
+      await user.update({ lastLoginAt: new Date() });
       
       const token = jwt.sign(
         { id: user.id, email: user.email },
@@ -453,22 +476,24 @@ class AuthController {
       const result = await otpService.createPasswordResetOtp(phoneNumber, ipAddress, userAgent);
       
       if (!result.success) {
-        // Rate limit or other error
         let errorMessage = result.error || 'Unable to process request. Please try again later.';
         
-        // Add reset time if available (for rate limit errors)
-        if (result.resetAt) {
+        // Rate limit errors include resetAt; any other failure is a server/logic error.
+        const isRateLimited = Boolean(result.resetAt);
+        
+        if (isRateLimited) {
           const resetTime = new Date(result.resetAt);
           const now = new Date();
           const minutesUntilReset = Math.ceil((resetTime - now) / (1000 * 60));
-          
           if (minutesUntilReset > 0) {
             errorMessage += ` You can try again in ${minutesUntilReset} minute(s).`;
           }
+          return res.status(429).json({ success: false, message: errorMessage });
         }
         
-        return res.status(429).json({
+        return res.status(500).json({
           success: false,
+          errorCode: 'OTP_CREATE_ERROR',
           message: errorMessage
         });
       }
