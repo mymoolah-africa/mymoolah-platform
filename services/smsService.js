@@ -87,15 +87,27 @@ class SmsService {
         }
       );
 
-      console.log(`✅ SMS sent to ${phoneNumber}:`, JSON.stringify(response.data).substring(0, 200));
-      
-      // Parse response (MyMobileAPI returns array of results)
-      const result = response.data?.messages?.[0] || response.data;
-      
+      console.log(`✅ SMS sent to ${phoneNumber}:`, JSON.stringify(response.data).substring(0, 300));
+
+      // MyMobileAPI response shape (verified 2026-04-22):
+      //   { cost, remainingBalance, eventId, sample, costBreakdown: [{ quantity, cost, network }] }
+      // `eventId` is their tracking identifier — required when asking their
+      // support team to diagnose non-delivery. Fall back to the legacy
+      // `.messages[0].id` / `.id` shapes in case the API response ever changes.
+      const data = response.data || {};
+      const eventId = data.eventId ?? data.id ?? data?.messages?.[0]?.id ?? null;
+      const network = data?.costBreakdown?.[0]?.network || null;
+      const cost = typeof data.cost === 'number' ? data.cost : null;
+      const remainingBalance = typeof data.remainingBalance === 'number' ? data.remainingBalance : null;
+
       return {
         success: true,
-        messageId: result?.id || result?.messageId || response.data?.id,
-        status: result?.status || 'sent',
+        messageId: eventId ? String(eventId) : null,
+        eventId,
+        network,
+        cost,
+        remainingBalance,
+        status: 'sent',
         phoneNumber,
         timestamp: new Date().toISOString()
       };
