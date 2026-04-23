@@ -252,6 +252,29 @@ Batch total R500,003 exceeded Sub Batch Limit (R500,000) → batch-level rejecti
 - UNPAID can override FINAUD on a per-transaction basis (observed in RM12).
 - Read from `/Inbox/` only in production; `/BAS/` is TEST-only (dual-delivery, appended filenames).
 
+**Parser/poller changes shipped 2026-04-23 (ahead of PROD penny, gated OFF until go-live):**
+- `services/standardbank/pain002Parser.js` captures `<AddtlInf>` as `rejectionReasonDetail`; exposes `responseType` (ACK/NACK/INTAUD/FINAUD/UNPAID/VET) derived from the filename; surfaces group-level `addtlInf`; classifies `ACWC` as rejected only under UNPAID.
+- `services/standardbank/pain002PollerService.js` filename filter widened to `/^MYMOOLAH_<user>_(ACK|NACK|INTAUD|FINAUD|UNP_DATA|VET_DATA)_(TST|PRD)_/i` and passes the filename into the parser.
+- `services/standardbank/disbursementService.processPain002Response` now:
+  - Treats `ACK`/`VET` as informational (no DB writes).
+  - On `NACK` marks all pending payments in the run rejected with group `AddtlInf`.
+  - Treats `INTAUD` `GrpSts=RJCT` as terminal and force-closes any residual pending txns.
+  - Keeps `INTAUD PDNG` rows in `pending` until FINAUD.
+  - Treats `UNPAID` as authoritative per-tx over prior FINAUD; preserves `pre_unpaid_status`, `unpaid_reason_code`, `unpaid_tx_status`, and `unpaid_applied_at` in `payment.metadata`.
+  - Refuses to downgrade a UNPAID override when a later FINAUD row arrives for the same `endToEndId`.
+
+### SBSA Response Files — PROD Penny Test (scheduled 2026-04-23, pending execution)
+
+Single R1.00 penny: debtor `272406481 / 002154` → creditor `10111730633 / 051001`. Generator: `scripts/test-sbsa-penny-prod.js --confirm-prod`. Runbook: `docs/test/SBSA_PROD_PENNY_RUNBOOK.md`. Response capture: `docs/test/sbsa-prod-penny-responses-<YYYY-MM-DD>/`.
+
+| Response | GrpSts | Status Code | Description |
+|----------|--------|-------------|-------------|
+| ACK | (pending) | — | (pending) |
+| INTAUD_PRD | (pending) | — | (pending) |
+| FINAUD_PRD | (pending) | — | (pending) |
+
+PROD has **no `/BAS/` folder** — poll `/Inbox/` only. App-level GCS-gateway path (`scripts/test-sbsa-penny-prod-app.js`) runs as Penny #2 after Penny #1 PASS and env gates flipped (`SBSA_H2H_GO_LIVE=true` in `scripts/deploy-backend.sh`).
+
 ---
 
 ## 6. PGP Encryption (NOT REQUIRED — confirmed with Colette 2026-03-24)

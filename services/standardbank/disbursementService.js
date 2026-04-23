@@ -635,14 +635,45 @@ async function rejectRun(runId, checkerUserId, reason) {
  * Updates payment statuses and recalculates run counts.
  * Called by the SFTP inbox poller.
  *
+ * SBSA response handling rules (confirmed UAT 2026-04-17..2026-04-20):
+ *   - ACK         : informational, no per-tx updates (payments list is empty).
+ *   - NACK        : file-level rejection; mark all pending payments in the run
+ *                   as rejected with the group-level AddtlInf.
+ *   - INTAUD RJCT : TERMINAL — SBSA will not emit FINAUD. Mark rejected txns
+ *                   terminally; set run status accordingly.
+ *   - INTAUD other: interim status; only rejections are terminal, accepted
+ *                   transactions stay 'pending' until FINAUD.
+ *   - FINAUD      : authoritative for any transaction not already overridden
+ *                   by UNPAID; do NOT downgrade a payment already marked
+ *                   'rejected' via UNPAID.
+ *   - UNPAID      : AUTHORITATIVE over FINAUD on a per-transaction basis.
+ *                   Applies regardless of prior FINAUD state. Original FINAUD
+ *                   status is preserved in payment.metadata.pre_unpaid_status.
+ *   - VET         : informational (validation summary), not applied to txns.
+ *
  * @param {Object} pain002Data - Output of parsePain002()
- * @returns {Promise<{ run: Object, updated: number, failed: number, accepted: number }>}
+ * @returns {Promise<{ run: Object, updated: number, failed: number, accepted: number, responseType: string|null, terminal: boolean }>}
  */
 async function processPain002Response(pain002Data) {
-  const { originalMsgId, payments } = pain002Data;
-  if (!payments || payments.length === 0) {
-    logger.warn('Pain.002 had no payment statuses to process');
-    return { run: null, updated: 0, failed: 0, accepted: 0 };
+  const {
+    originalMsgId,
+    payments = [],
+    responseType = null,
+    groupStatus = null,
+    addtlInf = null,
+  } = pain002Data || {};
+
+  // ACK and VET are informational — nothing to update per-transaction.
+  if (responseType === 'ACK' || responseType === 'VET') {
+    logger.info(`Pain.002 ${responseType}: informational only (originalMsgId=${originalMsgId})`);
+    return {
+      run: null,
+      updated: 0,
+      failed: 0,
+      accepted: 0,
+      responseType,
+      terminal: false,
+    };
   }
 
   const run = await db.DisbursementRun.findOne({
@@ -653,12 +684,89 @@ async function processPain002Response(pain002Data) {
   });
 
   if (!run) {
-    logger.warn(`Pain.002: no run found for Pain.001 msgId ${originalMsgId}`);
-    return { run: null, updated: 0, failed: 0, accepted: 0 };
+    logger.warn(`Pain.002 ${responseType || ''}: no run found for Pain.001 msgId ${originalMsgId}`);
+    return {
+      run: null,
+      updated: 0,
+      failed: 0,
+      accepted: 0,
+      responseType,
+      terminal: false,
+    };
+  }
+
+  // NACK: whole-file rejection at SBSA's side (e.g. duplicate MsgId).
+  // No per-tx TxInfAndSts blocks — mark all pending payments rejected.
+  if (responseType === 'NACK') {
+    const dbTx = await db.sequelize.transaction();
+    try {
+      const reason = addtlInf || 'File rejected by SBSA (NACK)';
+      const [updated] = await db.DisbursementPayment.update(
+        {
+          status:           'rejected',
+          rejection_code:   'NACK',
+          rejection_reason: reason,
+          processed_at:     new Date(),
+        },
+        {
+          where: { run_id: run.id, status: 'pending' },
+          transaction: dbTx,
+        }
+      );
+
+      await run.update({
+        failed_count:  db.sequelize.literal(`failed_count + ${updated}`),
+        pending_count: 0,
+        status:        'failed',
+        completed_at:  new Date(),
+      }, { transaction: dbTx });
+
+      await dbTx.commit();
+      logger.info(`Pain.002 NACK: Run ${run.run_reference} — ${updated} payments marked rejected (${reason})`);
+
+      setImmediate(async () => {
+        try {
+          const { notifyRunResult } = require('./disbursementNotificationService');
+          const refreshedRun = await db.DisbursementRun.findByPk(run.id);
+          await notifyRunResult(refreshedRun);
+        } catch (notifyErr) {
+          logger.warn('Notification failed (non-critical):', notifyErr.message);
+        }
+      });
+
+      return {
+        run,
+        updated,
+        failed: updated,
+        accepted: 0,
+        responseType,
+        terminal: true,
+      };
+    } catch (err) {
+      await dbTx.rollback();
+      throw err;
+    }
+  }
+
+  // INTAUD, FINAUD, UNPAID: per-transaction updates.
+  if (!payments || payments.length === 0) {
+    logger.warn(`Pain.002 ${responseType || ''}: had no per-tx statuses to process`);
+    return {
+      run,
+      updated: 0,
+      failed: 0,
+      accepted: 0,
+      responseType,
+      terminal: false,
+    };
   }
 
   let accepted = 0;
   let failed   = 0;
+
+  // INTAUD with group-level RJCT is terminal: SBSA will not emit FINAUD.
+  const intaudTerminal =
+    responseType === 'INTAUD' && String(groupStatus || '').toUpperCase() === 'RJCT';
 
   const dbTx = await db.sequelize.transaction();
   try {
@@ -669,35 +777,141 @@ async function processPain002Response(pain002Data) {
         lock: true,
       });
       if (!payment) {
-        logger.warn(`Pain.002: no payment found for endToEndId ${p.endToEndId}`);
+        logger.warn(`Pain.002 ${responseType || ''}: no payment found for endToEndId ${p.endToEndId}`);
         continue;
       }
+
+      // ─── Apply per-responseType rules ───────────────────────────────────
+
+      const previousStatus = payment.status;
+      const newStatus      = p.status;            // 'accepted' | 'rejected' from parser
+      const rejectionDetail = p.rejectionReasonDetail || p.rejectionReason || null;
+
+      if (responseType === 'UNPAID') {
+        // UNPAID is authoritative over prior FINAUD/INTAUD — always apply.
+        const priorMetadata = payment.metadata || {};
+        await payment.update({
+          status:           newStatus,
+          rejection_code:   p.rejectionCode || null,
+          rejection_reason: rejectionDetail,
+          processed_at:     new Date(),
+          metadata: {
+            ...priorMetadata,
+            pre_unpaid_status:      previousStatus,
+            unpaid_reason_code:     p.unpaidReasonCode || null,
+            unpaid_tx_status:       p.txStatus || null,
+            unpaid_applied_at:      new Date().toISOString(),
+          },
+        }, { transaction: dbTx });
+
+        if (newStatus === 'accepted') accepted++;
+        else failed++;
+        continue;
+      }
+
+      if (responseType === 'FINAUD') {
+        // FINAUD is authoritative over INTAUD but MUST NOT downgrade a
+        // payment already overridden by UNPAID.
+        if (previousStatus === 'rejected' && payment.metadata &&
+            payment.metadata.pre_unpaid_status) {
+          logger.info(`Pain.002 FINAUD: skipping ${p.endToEndId} — already overridden by UNPAID`);
+          continue;
+        }
+        await payment.update({
+          status:           newStatus,
+          rejection_code:   p.rejectionCode || null,
+          rejection_reason: rejectionDetail,
+          processed_at:     new Date(),
+        }, { transaction: dbTx });
+
+        if (newStatus === 'accepted') accepted++;
+        else failed++;
+        continue;
+      }
+
+      if (responseType === 'INTAUD') {
+        if (intaudTerminal) {
+          // Group-level RJCT: SBSA will not emit FINAUD. Apply terminally.
+          await payment.update({
+            status:           newStatus,
+            rejection_code:   p.rejectionCode || null,
+            rejection_reason: rejectionDetail,
+            processed_at:     new Date(),
+          }, { transaction: dbTx });
+        } else if (newStatus === 'rejected') {
+          // Per-tx rejection within a PART/PDNG INTAUD — terminal for this tx.
+          await payment.update({
+            status:           'rejected',
+            rejection_code:   p.rejectionCode || null,
+            rejection_reason: rejectionDetail,
+            processed_at:     new Date(),
+          }, { transaction: dbTx });
+        } else {
+          // PDNG transactions in INTAUD stay 'pending' until FINAUD —
+          // do not touch the row.
+          continue;
+        }
+
+        if (newStatus === 'accepted') accepted++;
+        else failed++;
+        continue;
+      }
+
+      // Fallback (responseType null / unknown): legacy behaviour —
+      // apply the parsed status directly. Kept for backward compatibility.
       await payment.update({
-        status:           p.status,
-        rejection_code:   p.rejectionCode,
-        rejection_reason: p.rejectionReason,
+        status:           newStatus,
+        rejection_code:   p.rejectionCode || null,
+        rejection_reason: rejectionDetail,
         processed_at:     new Date(),
       }, { transaction: dbTx });
 
-      if (p.status === 'accepted') accepted++;
+      if (newStatus === 'accepted') accepted++;
       else failed++;
     }
 
     const pending  = await db.DisbursementPayment.count({ where: { run_id: run.id, status: 'pending' }, transaction: dbTx });
-    const newStatus = failed > 0 && pending === 0 ? (accepted > 0 ? 'partial' : 'failed')
-                    : pending === 0 ? 'completed'
-                    : 'processing';
+    const newRunStatus = pending === 0
+      ? (failed > 0 ? (accepted > 0 ? 'partial' : 'failed') : 'completed')
+      : (intaudTerminal ? 'processing' : 'processing');
+
+    const terminal = pending === 0 || intaudTerminal;
+
+    // If INTAUD was terminal but some txns (unlikely) are still pending —
+    // force their status to rejected so the run doesn't hang forever.
+    if (intaudTerminal && pending > 0) {
+      const reason = addtlInf || 'INTAUD RJCT — terminal, FINAUD not emitted by SBSA';
+      const [forced] = await db.DisbursementPayment.update(
+        {
+          status:           'rejected',
+          rejection_code:   '0009',
+          rejection_reason: reason,
+          processed_at:     new Date(),
+        },
+        {
+          where: { run_id: run.id, status: 'pending' },
+          transaction: dbTx,
+        }
+      );
+      failed += forced;
+      logger.info(`Pain.002 INTAUD terminal: forced ${forced} remaining pending payments to rejected`);
+    }
+
+    const finalPending = intaudTerminal ? 0 : pending;
+    const finalStatus  = finalPending === 0
+      ? (failed > 0 ? (accepted > 0 ? 'partial' : 'failed') : 'completed')
+      : 'processing';
 
     await run.update({
       success_count: db.sequelize.literal(`success_count + ${accepted}`),
       failed_count:  db.sequelize.literal(`failed_count + ${failed}`),
-      pending_count: pending,
-      status:        newStatus,
-      completed_at:  pending === 0 ? new Date() : null,
+      pending_count: finalPending,
+      status:        finalStatus,
+      completed_at:  finalPending === 0 ? new Date() : null,
     }, { transaction: dbTx });
 
     await dbTx.commit();
-    logger.info(`Pain.002 processed: Run ${run.run_reference} — ${accepted} accepted, ${failed} failed, ${pending} still pending`);
+    logger.info(`Pain.002 ${responseType || 'legacy'} processed: Run ${run.run_reference} — ${accepted} accepted, ${failed} failed, ${finalPending} still pending${intaudTerminal ? ' (INTAUD terminal)' : ''}`);
 
     setImmediate(async () => {
       try {
@@ -709,7 +923,14 @@ async function processPain002Response(pain002Data) {
       }
     });
 
-    return { run, updated: accepted + failed, failed, accepted };
+    return {
+      run,
+      updated: accepted + failed,
+      failed,
+      accepted,
+      responseType,
+      terminal,
+    };
   } catch (err) {
     await dbTx.rollback();
     throw err;

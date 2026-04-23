@@ -1,0 +1,97 @@
+================================================================================
+SBSA H2H — PRODUCTION Penny Test — Test Report
+================================================================================
+
+Date:            <YYYY-MM-DD (weekday)>
+Environment:     SBSA PRODUCTION SFTP (196.8.86.53:5022, user mymoolahuser)
+Operator:        Andre Botes / MyMoolah Treasury Platform
+Gateway:         sftp-1-vm @ africa-south1-a (GCP project mymoolah-db)
+Reason for run:  Go-live penny test following SBSA confirmation (Colette,
+                 email 2026-04-22) that H2H is now live on PROD. Purpose is
+                 to prove end-to-end round-trip on the PROD profile before
+                 enabling the scheduler-driven pollers and the app-level
+                 GCS-gateway upload path.
+
+Input file:
+  Filename:      MYMOOLAH_OWN11_Pain001v3_ZAR_PRD_<timestamp>.xml
+  MsgId:         MM-PRODPENNY<...>
+  Size:          <bytes> bytes
+  Debtor Acct:   272406481 / branch 002154
+  ReqdExctnDt:   <YYYY-MM-DD>
+  NbOfTxs:       1
+  CtrlSum:       1.00
+  Transactions:
+    Tx1  R1.00   Andre Botes   Standard Bank   10111730633 / 051001
+                 EndToEndId    PROD-PENNY-<ts>-01
+                 Reference     MMTP PROD PENNY R1
+
+Expected (based on UAT RM7 success on 2026-04-17):
+  ACK (GrpSts RCVD) + INTAUD_PRD (GrpSts PDNG, Tx1 PDNG) + FINAUD_PRD
+  (GrpSts ACSP, Tx1 ACSP).
+
+================================================================================
+Actual SBSA responses
+================================================================================
+
+Upload landed in /Outbox at  <YYYY-MM-DD HH:MM:SS SAST>
+
+1) ACK
+   Filename:    MYMOOLAH_OWN11_ACK_PRD_<timestamp>_<SBSAMsgId>.xml
+   SBSA MsgId:  <...>
+   Arrived:     <HH:MM:SS SAST>  (+<Ns> after upload)
+   GrpSts:      RCVD
+   Verdict:     PASS / FAIL — <notes>
+
+2) INTAUD
+   Filename:    MYMOOLAH_OWN11_INTAUD_PRD_<timestamp>_<SBSAMsgId>.xml
+   SBSA MsgId:  <...>
+   Arrived:     <HH:MM:SS SAST>  (+<Ns> after upload)
+   GrpSts:      <PDNG | PART | RJCT>
+   Per-transaction:
+     Tx1 (R1.00)  TxSts <...>  Code <...>  "<AddtlInf>"
+   Verdict:     PASS / FAIL — <notes>
+
+3) FINAUD
+   Filename:    MYMOOLAH_OWN11_FINAUD_PRD_<timestamp>_<SBSAMsgId>.xml
+   SBSA MsgId:  <...>
+   Arrived:     <HH:MM:SS SAST>  (+<Ns> after upload)
+   GrpSts:      <ACSP | PART | RJCT>
+   Per-transaction:
+     Tx1 (R1.00)  TxSts <ACSP | RJCT>  <reason if any>
+   Verdict:     PASS / FAIL — <notes>
+
+================================================================================
+Settlement confirmation
+================================================================================
+
+Account:           272406481 (MyMoolah PROD profile)
+Statement date:    <next business day, YYYY-MM-DD>
+Debit observed:    R1.00 on <YYYY-MM-DD>
+Beneficiary shown: <as per statement line>
+Verdict:           PASS / FAIL
+
+================================================================================
+Overall verdict
+================================================================================
+
+  PASS  — PROD file-level round-trip (Pain.001 upload → ACK → INTAUD → FINAUD)
+          verified end-to-end, with R1.00 debit on MyMoolah PROD account
+          272406481 confirmed via statement.
+
+  FAIL  — <describe failure mode, responses missing, codes, next action>
+
+================================================================================
+Follow-up actions
+================================================================================
+
+- [ ] Reply to Colette + Melanie (see docs/test/COLETTE_REPLY_<date>_prod-penny.md)
+      requesting formal PROD go-live sign-off.
+- [ ] Flip env gates in scripts/deploy-backend.sh:
+        SBSA_SFTP_UPLOAD_ENABLED=true
+        SBSA_PAIN002_POLLER_MODE=scheduler
+        SBSA_STATEMENT_POLLER_MODE=scheduler
+        RECON_SFTP_WATCHER_MODE=scheduler
+      and deploy.
+- [ ] Run ./scripts/setup-cloud-scheduler.sh --production.
+- [ ] Execute Phase 6 — second R1.00 penny via the app-level
+      sbsaSftpClientService.uploadPain001File() path.

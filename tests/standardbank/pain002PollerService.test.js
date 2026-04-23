@@ -79,7 +79,7 @@ afterEach(() => {
 // ── Tests ──────────────────────────────────────────────────────────────────
 
 describe('pain002PollerService.pollForPain002Files — filtering', () => {
-  it('skips files in processed/ and failed/, dotfiles, and files without pain002 in the name', async () => {
+  it('skips files in processed/ and failed/, dotfiles, and files without a recognised SBSA response name', async () => {
     process.env.STANDARDBANK_ENVIRONMENT = 'uat';
     const prefix = 'standardbank/uat/inbox/payments/';
     mockGetFiles.mockResolvedValueOnce([[
@@ -92,7 +92,8 @@ describe('pain002PollerService.pollForPain002Files — filtering', () => {
     ]]);
 
     mockParsePain002.mockReturnValue({
-      msgId: 'M1', originalMsgId: 'O1', groupStatus: 'ACCP', payments: [],
+      msgId: 'M1', originalMsgId: 'O1', groupStatus: 'ACCP',
+      responseType: null, addtlInf: null, payments: [],
     });
     mockProcessPain002Response.mockResolvedValue({ accepted: 0, failed: 0, run: null });
 
@@ -102,6 +103,56 @@ describe('pain002PollerService.pollForPain002Files — filtering', () => {
     expect(result.processed).toBe(1);
     expect(result.failed).toBe(0);
     expect(mockParsePain002).toHaveBeenCalledTimes(1);
+  });
+
+  it('accepts the full SBSA response family (ACK/NACK/INTAUD/FINAUD/UNP_DATA/VET_DATA) on TST and PRD', async () => {
+    process.env.STANDARDBANK_ENVIRONMENT = 'production';
+    const prefix = 'standardbank/inbox/payments/';
+    mockGetFiles.mockResolvedValueOnce([[
+      fakeGcsFile(`${prefix}MYMOOLAH_OWN11_ACK_TST_20260417131408295_51885347.xml`),
+      fakeGcsFile(`${prefix}MYMOOLAH_OWN11_NACK_TST_20260417161529293_51886487.xml`),
+      fakeGcsFile(`${prefix}MYMOOLAH_OWN11_INTAUD_TST_20260417131420670_51885352.xml`),
+      fakeGcsFile(`${prefix}MYMOOLAH_OWN11_FINAUD_PRD_20260424093532000_00000002.xml`),
+      fakeGcsFile(`${prefix}MYMOOLAH_OWN11_UNP_DATA_PRD_20260424093905000_00000003.xml`),
+      fakeGcsFile(`${prefix}MYMOOLAH_OWN11_VET_DATA_TST_20260417173710755_51886896.xml`),
+      fakeGcsFile(`${prefix}unrelated_file.xml`),
+    ]]);
+
+    mockParsePain002.mockReturnValue({
+      msgId: 'M', originalMsgId: 'O', groupStatus: 'ACCP',
+      responseType: null, addtlInf: null, payments: [],
+    });
+    mockProcessPain002Response.mockResolvedValue({ accepted: 0, failed: 0, run: null });
+
+    const svc = loadServiceFresh();
+    const result = await svc.pollForPain002Files();
+
+    expect(result.processed).toBe(6);
+    expect(mockParsePain002).toHaveBeenCalledTimes(6);
+  });
+});
+
+describe('pain002PollerService.processFile — responseType propagation', () => {
+  it('passes the filename through to parsePain002 so the parser can classify responseType', async () => {
+    const gcsFile = fakeGcsFile('standardbank/inbox/payments/MYMOOLAH_OWN11_FINAUD_PRD_20260424093532000_00000002.xml');
+
+    mockParsePain002.mockReturnValue({
+      msgId: 'M', originalMsgId: 'MM-PROD-PENNY-1', groupStatus: 'ACSP',
+      responseType: 'FINAUD', addtlInf: null,
+      payments: [{ endToEndId: 'PROD-PENNY-1-01', status: 'accepted', txStatus: 'ACSP' }],
+    });
+    mockProcessPain002Response.mockResolvedValue({ accepted: 1, failed: 0, run: null });
+
+    const svc = loadServiceFresh();
+    await svc.processFile(gcsFile);
+
+    expect(mockParsePain002).toHaveBeenCalledWith(
+      '<Document/>',
+      { filename: 'MYMOOLAH_OWN11_FINAUD_PRD_20260424093532000_00000002.xml' }
+    );
+    expect(mockProcessPain002Response).toHaveBeenCalledTimes(1);
+    const passed = mockProcessPain002Response.mock.calls[0][0];
+    expect(passed.responseType).toBe('FINAUD');
   });
 });
 
@@ -119,7 +170,7 @@ describe('pain002PollerService.processFile — happy path', () => {
     const result = await svc.processFile(gcsFile);
 
     expect(gcsFile.download).toHaveBeenCalledTimes(1);
-    expect(mockParsePain002).toHaveBeenCalledWith('<Document/>');
+    expect(mockParsePain002).toHaveBeenCalledWith('<Document/>', { filename: 'pain002_good.xml' });
     expect(mockProcessPain002Response).toHaveBeenCalledTimes(1);
     expect(gcsFile.move).toHaveBeenCalledTimes(1);
     expect(gcsFile.move.mock.calls[0][0]).toMatch(/processed\//);

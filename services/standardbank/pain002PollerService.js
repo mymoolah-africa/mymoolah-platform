@@ -3,14 +3,27 @@
 /**
  * Pain.002 Poller Service — SBSA H2H Disbursement Response Processing
  *
- * Polls GCS for Pain.002 (CustomerPaymentStatusReport) XML files from
- * Standard Bank, parses them, and updates disbursement payment statuses.
+ * Polls GCS for SBSA Pain.002-family response XML files, parses them, and
+ * updates disbursement payment statuses.
+ *
+ * SBSA response types handled (ISO 20022 Pain.002 documents in all cases):
+ *   ACK      — File received
+ *   NACK     — File rejected outright (e.g. duplicate MsgId)
+ *   INTAUD   — Interim audit (per-tx PDNG/RJCT). INTAUD GrpSts RJCT is terminal:
+ *              SBSA does NOT emit FINAUD after an INTAUD RJCT (confirmed RM9 +
+ *              RM10 + RM5v2, 2026-04-17..2026-04-20).
+ *   FINAUD   — Final audit (per-tx ACSP/RJCT; authoritative over INTAUD).
+ *   VET_DATA — Validation data for mixed files (informational).
+ *   UNP_DATA — Unpaid / post-settlement bounce. AUTHORITATIVE over FINAUD on a
+ *              per-transaction basis (RM12 UAT 2026-04-17 observation).
  *
  * Flow:
  *   1. Poll GCS  gs://mymoolah-sftp-inbound/standardbank/inbox/payments/
- *   2. Filter for *Pain002* or *pain002* filenames (skip processed/ and failed/)
+ *   2. Filter for SBSA response filenames (skip processed/ and failed/)
  *   3. Download each file, parse via pain002Parser
- *   4. Delegate to disbursementService.processPain002Response()
+ *   4. Delegate to disbursementService.processPain002Response(), passing the
+ *      responseType so the consumer can apply the INTAUD-terminal and
+ *      UNPAID-authoritative rules above.
  *   5. On success → move file to processed/ subfolder
  *   6. On parse failure → move file to failed/ subfolder
  *   7. On processPain002Response failure → leave file in inbox (retry next poll)
@@ -50,7 +63,12 @@ const SBSA_ENV = process.env.STANDARDBANK_ENVIRONMENT
 
 const ENV_PREFIX = SBSA_ENV === 'production' ? '' : `${SBSA_ENV}/`;
 
-const PAIN002_PATTERN = /pain002/i;
+// Match all SBSA Pain.002-family response files (TEST + PROD).
+// Pattern: MYMOOLAH_<USERID>_<TYPE>_(TST|PRD)_<timestamp>...
+// Also accept legacy 'pain002'/'Pain002' naming for backward compatibility
+// with any files produced by earlier testing.
+const SBSA_RESPONSE_PATTERN =
+  /(MYMOOLAH_[A-Z0-9]+_(ACK|NACK|INTAUD|FINAUD|UNP_DATA|VET_DATA)_(TST|PRD)_|pain002)/i;
 const DEFAULT_POLL_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
 const processedFiles = new Set();
@@ -95,7 +113,7 @@ async function pollForPain002Files() {
 
     const basename = f.name.split('/').pop();
     if (!basename || basename.startsWith('.')) return false;
-    if (!PAIN002_PATTERN.test(basename)) return false;
+    if (!SBSA_RESPONSE_PATTERN.test(basename)) return false;
     if (processedFiles.has(f.name)) {
       logger.info('Skipping already-processed file', { file: basename });
       return false;
@@ -173,10 +191,10 @@ async function processFile(gcsFile) {
     throw err;
   }
 
-  // Step 2: Parse
+  // Step 2: Parse (pass filename so parser can set responseType)
   let pain002Data;
   try {
-    pain002Data = parsePain002(xmlContent);
+    pain002Data = parsePain002(xmlContent, { filename: basename });
   } catch (parseErr) {
     logger.error('Pain.002 parse failed — moving to failed/', {
       file: basename,
@@ -194,9 +212,11 @@ async function processFile(gcsFile) {
 
   logger.info('Pain.002 parsed successfully', {
     file: basename,
+    responseType: pain002Data.responseType,
     msgId: pain002Data.msgId,
     originalMsgId: pain002Data.originalMsgId,
     groupStatus: pain002Data.groupStatus,
+    addtlInf: pain002Data.addtlInf,
     paymentCount: pain002Data.payments.length,
   });
 

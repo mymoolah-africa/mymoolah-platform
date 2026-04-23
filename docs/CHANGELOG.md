@@ -1,5 +1,61 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-23 - SBSA H2H PROD Penny readiness: pain002 parser/poller correctness + PROD penny tooling (v2.99.6)
+
+### Summary
+Shipped the four outstanding pain002 parser/poller correctness fixes identified during UAT (0009 dual-purpose, INTAUD RJCT terminal, UNPAID authoritative, filename-pattern widening) and built the full tooling for the SBSA H2H PRODUCTION Penny test scheduled for 2026-04-23. All new code paths remain dormant in production until the single `SBSA_H2H_GO_LIVE=true` gate in `scripts/deploy-backend.sh` is flipped post-penny. No production behaviour changes until that flag is flipped and redeployed.
+
+### New code paths (gated OFF in PROD — safe to deploy)
+- `services/standardbank/pain002Parser.js` — captures `<AddtlInf>` into `rejectionReasonDetail`; exposes `responseType` derived from the filename (`ACK|NACK|INTAUD|FINAUD|UNPAID|VET`); surfaces group-level `addtlInf`; treats `ACWC` as rejected only under UNPAID; extracts `unpaidReasonCode` from UNPAID AddtlInf; exports `classifyResponseType()`.
+- `services/standardbank/pain002PollerService.js` — filename filter widened to `/^MYMOOLAH_<user>_(ACK|NACK|INTAUD|FINAUD|UNP_DATA|VET_DATA)_(TST|PRD)_/i` (legacy `pain002` still accepted); passes filename into parser; logs responseType and addtlInf.
+- `services/standardbank/disbursementService.processPain002Response` — full rewrite with per-responseType rules:
+  - `ACK`/`VET` → informational (no DB writes).
+  - `NACK` → mark all pending payments rejected with group AddtlInf; run → `failed`.
+  - `INTAUD` `GrpSts=RJCT` → terminal; force-close residual pending txns.
+  - `INTAUD PDNG` → leave pending, wait for FINAUD.
+  - `FINAUD` → authoritative, but must not downgrade a UNPAID override.
+  - `UNPAID` → always wins per-tx; preserves `pre_unpaid_status`, `unpaid_reason_code`, `unpaid_tx_status`, `unpaid_applied_at` in `payment.metadata`.
+- `scripts/test-sbsa-penny-prod.js` — R1.00 Pain.001 PRD generator for `272406481 → 10111730633/051001`; guarded by `--confirm-prod`; forces `SBSA_FILE_ENV=PRD`; writes to `/tmp/sbsa-prod-penny/` and dumps XML to stdout for review; does NOT upload.
+- `scripts/test-sbsa-penny-prod-app.js` — app-level (GCS-gateway) R1.00 Penny #2 via `sbsaSftpClientService.uploadPain001File()`. Refuses without `--confirm-prod`; warns when env flags imply a dry-run (writes to `/tmp/sbsa-outbox/` when `SBSA_SFTP_UPLOAD_ENABLED != true`).
+- `scripts/sbsa-prod-penny-poll.sh` — bash helper to run on `sftp-1-vm`; polls SBSA PROD `/Inbox` every 60s for up to 30 min; downloads every `MYMOOLAH_OWN11_*_PRD_*.xml` response; stops early on FINAUD.
+
+### New tests (all green, 0 regressions)
+- `tests/standardbank/pain002Parser.test.js` — 9 tests covering `classifyResponseType`, group-level 0009 disambiguation, per-tx 0009 disambiguation (INVALID ACCOUNT vs RUN EXCEEDS LIMIT), UNPAID ACWC→rejected semantics, UNPAID `unpaidReasonCode` extraction, ACWC-outside-UNPAID backward compatibility, input validation.
+- `tests/standardbank/pain002PollerService.test.js` — extended with 3 new cases: full SBSA response-family filename matching on TST + PRD, responseType propagation from filename into parser, updated happy-path assertion for new parser call signature.
+- `tests/disbursement/disbursementService.processPain002Response.test.js` — 6 new service-level cases: ACK informational, NACK whole-run rejection, INTAUD-RJCT terminal, INTAUD-PART PDNG-stays-pending, UNPAID overrides FINAUD with metadata preservation, FINAUD does not downgrade UNPAID override.
+- Full suite: 149/149 disbursement + 26/26 standardbank tests pass.
+
+### New docs
+- `docs/test/SBSA_PROD_PENNY_RUNBOOK.md` — 11-step operator runbook (generate → review → scp → ssh → poll → upload → capture → report → settle → email → post-penny enablement) with explicit rollback paths.
+- `docs/test/sbsa-sftp-prod-penny-report-TEMPLATE.txt` — audit-grade PROD penny report template.
+- `docs/test/sbsa-prod-penny-responses-2026-04-23/README.md` — response-capture directory with expected timings and `/BAS/`-is-TEST-only note.
+- `docs/test/COLETTE_REPLY_2026-04-23_prod-penny.md` — draft email to Colette + Melanie reporting round-trip success and requesting formal PROD go-live sign-off.
+
+### Deploy-script changes
+- `scripts/deploy-backend.sh` — added a single `SBSA_H2H_GO_LIVE` gate (default `false`). When `ENVIRONMENT=production && SBSA_H2H_GO_LIVE=true`, the four SBSA env vars flip in lockstep:
+  - `SBSA_SFTP_UPLOAD_ENABLED=true`
+  - `SBSA_STATEMENT_POLLER_MODE=scheduler`
+  - `SBSA_PAIN002_POLLER_MODE=scheduler`
+  - `RECON_SFTP_WATCHER_MODE=scheduler`
+  Defaults stay OFF/false, so this deploy is a no-op until operator flips the gate. Override per-deploy with `SBSA_H2H_GO_LIVE=true ./scripts/deploy-backend.sh --production`.
+
+### Migrations
+None. All metadata changes live inside the existing `DisbursementPayment.metadata` JSONB column.
+
+### Restart requirements
+Backend restart required because `disbursementService.js` is imported at boot. No data migration, no config change needed to ship the correctness fixes — they remain dormant until the go-live gate is flipped.
+
+### Operator actions (not auto-executed by the AI agent)
+1. Run `node scripts/test-sbsa-penny-prod.js --confirm-prod`, review XML.
+2. Follow `docs/test/SBSA_PROD_PENNY_RUNBOOK.md` Steps 3–8 (scp → ssh → poll → upload → capture).
+3. Fill in `docs/test/sbsa-sftp-prod-penny-report-<date>.txt` from the template.
+4. Confirm R1.00 debit on account `272406481` next business day.
+5. Send `docs/test/COLETTE_REPLY_<date>_prod-penny.md` to SBSA.
+6. After success + sign-off: flip `SBSA_H2H_GO_LIVE=true` in `scripts/deploy-backend.sh`, redeploy, run `./scripts/setup-cloud-scheduler.sh --production`.
+7. Run `node scripts/test-sbsa-penny-prod-app.js --confirm-prod` for Penny #2 (app-level GCS path).
+
+---
+
 ## 2026-04-21 - SBSA H2H RM5v2 over-limit re-run on TEST (v2.99.2)
 
 ### Summary
