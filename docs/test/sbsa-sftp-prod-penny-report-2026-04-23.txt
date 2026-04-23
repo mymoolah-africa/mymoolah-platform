@@ -1,0 +1,161 @@
+================================================================================
+SBSA H2H — PRODUCTION Penny Test #1 — Test Report
+================================================================================
+
+Date:            2026-04-23 (Thursday)
+Environment:     SBSA PRODUCTION SFTP (196.8.86.53:5022, user mymoolahuser)
+Operator:        Andre Botes / MyMoolah Treasury Platform
+Gateway:         sftp-1-vm @ africa-south1-a (GCP project mymoolah-db)
+Reason for run:  Go-live penny test following SBSA confirmation (Colette,
+                 email 2026-04-22) that H2H is now live on PROD. Purpose is
+                 to prove end-to-end round-trip on the PROD profile before
+                 enabling the scheduler-driven pollers and the app-level
+                 GCS-gateway upload path.
+
+Input file:
+  Filename:      MYMOOLAH_OWN11_Pain001v3_ZAR_PRD_20260423104522947.xml
+  MsgId:         MM-PRODPENNY1776933922946-MOB8KTXF
+  Size:          2344 bytes
+  MD5 (laptop):  e5f0cefb86fd09d9e130d3b6011d14ef
+  MD5 (VM):      e5f0cefb86fd09d9e130d3b6011d14ef  (integrity verified)
+  MD5 on SBSA:   (cannot verify; SBSA exposes size 2344 bytes, owner 200:100)
+  Debtor Acct:   272406481 / branch 002154
+  ReqdExctnDt:   2026-04-24
+  NbOfTxs:       1
+  CtrlSum:       1.00
+  Transactions:
+    Tx1  R1.00   Andre Botes   Standard Bank   10111730633 / 051001
+                 EndToEndId    PROD-PENNY-1776933922946-01
+                 Reference     MMTP PROD PENNY R1
+
+Expected (based on UAT RM7 success on 2026-04-17):
+  ACK (GrpSts RCVD) + INTAUD_PRD (GrpSts PDNG, Tx1 PDNG) + FINAUD_PRD
+  (GrpSts ACSP, Tx1 ACSP). Round-trip ~4-5 min.
+
+================================================================================
+Timeline (SAST, UTC+2)
+================================================================================
+
+10:45:22.947  Pain.001 generated locally via scripts/test-sbsa-penny-prod.js
+              --confirm-prod on operator laptop.
+10:45         Pain.001 scp'd to sftp-1-vm:/tmp/ (MD5 integrity verified
+              across laptop, VM, and SBSA-reported size).
+10:52:51      Polling helper launched on sftp-1-vm (Poll #1 proved SBSA
+              SFTP connectivity: login ok, /Inbox listable, empty of PRD
+              responses as expected).
+10:55:36.381  (UTC 08:55:36.381Z) sftp batch PUT opened to 196.8.86.53.
+10:55:37.317  (UTC 08:55:37.317Z) sftp batch PUT complete. Exit code 0.
+              File visible on SBSA /Outbox as
+              -rw------- 1 200 100 2344 Apr 23 08:55 MYMOOLAH_OWN11_...xml
+10:55:55      Poll #4 — /Inbox empty of pain.002-family files for our MsgId.
+11:05         Poll #14 — /Inbox empty; fresh PROVSTMT landed at 11:05 SAST
+              (proves inbound pipe fully healthy).
+11:20         Poll #28 — /Inbox empty; fresh PROVSTMT landed at 11:20 SAST.
+11:22:19      Poll #30 — /Inbox still empty. Max poll window reached.
+11:22:51      Poller exited naturally after 30 minutes / 30 polls.
+              Our Pain.001 STILL visible on SBSA /Outbox with original
+              mtime 10:55, untouched. No ACK, no NACK, no INTAUD, no
+              FINAUD, no UNP_DATA, no VET_DATA received for our MsgId.
+
+================================================================================
+Actual SBSA responses
+================================================================================
+
+Upload landed in /Outbox at  2026-04-23 10:55:37 SAST
+Poll window                   2026-04-23 10:52:51 through 11:22:51 SAST
+
+1) ACK
+   NOT RECEIVED within 30-minute polling window.
+
+2) INTAUD
+   NOT RECEIVED within 30-minute polling window.
+
+3) FINAUD
+   NOT RECEIVED within 30-minute polling window.
+
+4) NACK / UNP_DATA / VET_DATA
+   NOT RECEIVED within 30-minute polling window.
+
+Inbound pipe health during window:
+  - PROVSTMT files continued to land in /Inbox on normal 15-min cadence
+    (observed: 11:05 SAST, 11:20 SAST).
+  - FINSTMT feed visible on normal schedule (last at 08:15 SAST, pre-test).
+  - This isolates the outage to pain.002 processing for our MsgId; the
+    inbound channel itself is not at fault.
+
+Outbox state at T+30min:
+  - MYMOOLAH_OWN11_Pain001v3_ZAR_PRD_20260423104522947.xml still present,
+    mtime 10:55, size 2344, owner 200:100, mode -rw-------.
+  - SBSA payments processor has not removed / consumed the file within
+    the poll window.
+
+================================================================================
+Settlement confirmation
+================================================================================
+
+Account:           272406481 (MyMoolah PROD profile)
+Statement date:    (pending — to be checked next business day 2026-04-24)
+Debit observed:    NOT YET — no settlement expected until SBSA processes
+                   the Pain.001 file. Likely no debit if SBSA never picks
+                   it up.
+Verdict:           PENDING
+
+================================================================================
+Overall verdict
+================================================================================
+
+  INCONCLUSIVE — PROD file-level round-trip test #1 did NOT produce any
+  pain.002-family response within the 30-minute polling window. The
+  SFTP upload itself was clean (exit code 0, file visible on /Outbox,
+  MD5 integrity verified end-to-end) and the inbound channel is healthy
+  (PROVSTMT feed flowing normally throughout the window). The
+  outstanding question is whether the SBSA PROD payments processor has
+  picked up our file and is silently processing it, whether a first-use
+  approval step is pending on SBSA's side, or whether the file was
+  rejected silently. Awaiting SBSA operator input before any next step.
+
+  NO RE-UPLOAD WILL BE ATTEMPTED until SBSA confirms disposition of
+  this first file. See docs/test/COLETTE_REPLY_2026-04-23_prod-penny.md
+  for the escalation email drafted to Colette and Melanie.
+
+================================================================================
+Evidence preserved
+================================================================================
+
+- docs/test/sbsa-prod-penny-responses-2026-04-23/poll-log-T0-to-T30.log
+  Full 30-minute poll log, 110 lines, 30 polls every 60s.
+- /tmp/sbsa-prod-penny/MYMOOLAH_OWN11_Pain001v3_ZAR_PRD_20260423104522947.xml
+  Original Pain.001 on operator laptop.
+- sftp-1-vm:/tmp/MYMOOLAH_OWN11_Pain001v3_ZAR_PRD_20260423104522947.xml
+  Same file staged on VM (also MD5 e5f0cefb86fd09d9e130d3b6011d14ef).
+- SBSA /Outbox retains our Pain.001 at time of report write.
+- SBSA /Inbox observed clean of pain.002-family files for our MsgId
+  throughout the poll window (verified by automated poll #1–#30 and by
+  manual sftp ls -la at 10:59, 11:07 and 11:22 SAST).
+
+================================================================================
+Follow-up actions
+================================================================================
+
+- [x] Poller stopped and evidence archived.
+- [x] Escalation email drafted at
+      docs/test/COLETTE_REPLY_2026-04-23_prod-penny.md — operator to
+      review and send (email or WhatsApp) to Colette and Melanie.
+- [ ] WAIT for SBSA response before any further action.
+- [ ] If SBSA confirms file was received-but-pending-approval: allow
+      processing to complete, monitor /Inbox, then update this report
+      with actual timestamps and retry the sign-off version of the
+      Colette email.
+- [ ] If SBSA confirms file was rejected: capture reason, adjust
+      Pain.001 shape or profile settings accordingly, then generate
+      a fresh Pain.001 with new MsgId and re-run from Step 3 of the
+      runbook.
+- [ ] If SBSA confirms a manual/first-use release is required on
+      their side: perform that step together, then monitor /Inbox for
+      the delayed responses.
+- [ ] Flip env gates in scripts/deploy-backend.sh
+      (SBSA_H2H_GO_LIVE=true) only after a successful first penny.
+- [ ] Run ./scripts/setup-cloud-scheduler.sh --production only after
+      the gate flip.
+- [ ] Execute Phase 6 (app-level penny) only after file-level round-trip
+      is proven on PROD.

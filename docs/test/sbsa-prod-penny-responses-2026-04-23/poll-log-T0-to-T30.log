@@ -1,0 +1,110 @@
+═══════════════════════════════════════════════════════════════════
+ SBSA PROD Penny polling started at 2026-04-23T08:52:51Z
+  host          : 196.8.86.53:5022
+  user          : mymoolahuser
+  key           : /home/andremacbookpro/.ssh/sbsa_sftp_key
+  output dir    : /tmp/sbsa-prod-penny-responses
+  poll interval : 60s
+  max runtime   : 1800s
+═══════════════════════════════════════════════════════════════════
+[2026-04-23T08:52:51Z] Poll #1  (elapsed 0s)
+  no matching files in /Inbox yet
+  have:  ACK=0  INTAUD=0  FINAUD=0
+[2026-04-23T08:53:52Z] Poll #2  (elapsed 61s)
+  no matching files in /Inbox yet
+  have:  ACK=0  INTAUD=0  FINAUD=0
+[2026-04-23T08:54:53Z] Poll #3  (elapsed 122s)
+  no matching files in /Inbox yet
+  have:  ACK=0  INTAUD=0  FINAUD=0
+[2026-04-23T08:55:55Z] Poll #4  (elapsed 184s)
+  no matching files in /Inbox yet
+  have:  ACK=0  INTAUD=0  FINAUD=0
+[2026-04-23T08:56:56Z] Poll #5  (elapsed 245s)
+  no matching files in /Inbox yet
+  have:  ACK=0  INTAUD=0  FINAUD=0
+[2026-04-23T08:57:57Z] Poll #6  (elapsed 306s)
+  no matching files in /Inbox yet
+  have:  ACK=0  INTAUD=0  FINAUD=0
+[2026-04-23T08:58:58Z] Poll #7  (elapsed 367s)
+  no matching files in /Inbox yet
+  have:  ACK=0  INTAUD=0  FINAUD=0
+[2026-04-23T08:59:59Z] Poll #8  (elapsed 428s)
+  no matching files in /Inbox yet
+  have:  ACK=0  INTAUD=0  FINAUD=0
+[2026-04-23T09:01:00Z] Poll #9  (elapsed 489s)
+  no matching files in /Inbox yet
+  have:  ACK=0  INTAUD=0  FINAUD=0
+[2026-04-23T09:02:01Z] Poll #10  (elapsed 550s)
+  no matching files in /Inbox yet
+  have:  ACK=0  INTAUD=0  FINAUD=0
+[2026-04-23T09:03:02Z] Poll #11  (elapsed 611s)
+  no matching files in /Inbox yet
+  have:  ACK=0  INTAUD=0  FINAUD=0
+[2026-04-23T09:04:03Z] Poll #12  (elapsed 672s)
+  no matching files in /Inbox yet
+  have:  ACK=0  INTAUD=0  FINAUD=0
+[2026-04-23T09:05:04Z] Poll #13  (elapsed 733s)
+  no matching files in /Inbox yet
+  have:  ACK=0  INTAUD=0  FINAUD=0
+[2026-04-23T09:06:05Z] Poll #14  (elapsed 794s)
+  no matching files in /Inbox yet
+  have:  ACK=0  INTAUD=0  FINAUD=0
+[2026-04-23T09:07:06Z] Poll #15  (elapsed 855s)
+  no matching files in /Inbox yet
+  have:  ACK=0  INTAUD=0  FINAUD=0
+[2026-04-23T09:08:06Z] Poll #16  (elapsed 915s)
+  no matching files in /Inbox yet
+  have:  ACK=0  INTAUD=0  FINAUD=0
+[2026-04-23T09:09:08Z] Poll #17  (elapsed 977s)
+  no matching files in /Inbox yet
+  have:  ACK=0  INTAUD=0  FINAUD=0
+[2026-04-23T09:10:09Z] Poll #18  (elapsed 1038s)
+  no matching files in /Inbox yet
+  have:  ACK=0  INTAUD=0  FINAUD=0
+[2026-04-23T09:11:10Z] Poll #19  (elapsed 1099s)
+  no matching files in /Inbox yet
+  have:  ACK=0  INTAUD=0  FINAUD=0
+[2026-04-23T09:12:10Z] Poll #20  (elapsed 1159s)
+  no matching files in /Inbox yet
+  have:  ACK=0  INTAUD=0  FINAUD=0
+[2026-04-23T09:13:11Z] Poll #21  (elapsed 1220s)
+  no matching files in /Inbox yet
+  have:  ACK=0  INTAUD=0  FINAUD=0
+[2026-04-23T09:14:12Z] Poll #22  (elapsed 1281s)
+  no matching files in /Inbox yet
+  have:  ACK=0  INTAUD=0  FINAUD=0
+[2026-04-23T09:15:12Z] Poll #23  (elapsed 1341s)
+  no matching files in /Inbox yet
+  have:  ACK=0  INTAUD=0  FINAUD=0
+[2026-04-23T09:16:14Z] Poll #24  (elapsed 1403s)
+  no matching files in /Inbox yet
+  have:  ACK=0  INTAUD=0  FINAUD=0
+[2026-04-23T09:17:15Z] Poll #25  (elapsed 1464s)
+  no matching files in /Inbox yet
+  have:  ACK=0  INTAUD=0  FINAUD=0
+[2026-04-23T09:18:16Z] Poll #26  (elapsed 1525s)
+  no matching files in /Inbox yet
+  have:  ACK=0  INTAUD=0  FINAUD=0
+[2026-04-23T09:19:16Z] Poll #27  (elapsed 1585s)
+  no matching files in /Inbox yet
+  have:  ACK=0  INTAUD=0  FINAUD=0
+[2026-04-23T09:20:18Z] Poll #28  (elapsed 1647s)
+  no matching files in /Inbox yet
+  have:  ACK=0  INTAUD=0  FINAUD=0
+[2026-04-23T09:21:18Z] Poll #29  (elapsed 1707s)
+  no matching files in /Inbox yet
+  have:  ACK=0  INTAUD=0  FINAUD=0
+[2026-04-23T09:22:19Z] Poll #30  (elapsed 1768s)
+  no matching files in /Inbox yet
+  have:  ACK=0  INTAUD=0  FINAUD=0
+[2026-04-23T09:23:20Z] Max poll window (1800s) reached — stopping.
+═══════════════════════════════════════════════════════════════════
+ Files captured in /tmp/sbsa-prod-penny-responses:
+total 0
+drwxr-x---  2 andremacbookpro users  40 Apr 23 08:52 .
+drwxrwxrwt 17 root            root  700 Apr 23 08:52 ..
+═══════════════════════════════════════════════════════════════════
+ Next: copy these back to the laptop, e.g.
+   gcloud compute scp --recurse sftp-1-vm:/tmp/sbsa-prod-penny-responses docs/test/sbsa-prod-penny-responses-$(date +%F)/ \
+     --project=mymoolah-db --zone=africa-south1-a --tunnel-through-iap
+═══════════════════════════════════════════════════════════════════
