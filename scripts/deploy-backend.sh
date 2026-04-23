@@ -49,6 +49,9 @@ else
   SBSA_CALLBACK_BASE_URL="https://api-mm.mymoolah.africa"
 fi
 
+log() { echo "📋 [$((SECONDS))s] $*"; }
+err() { echo "❌ $*" >&2; exit 1; }
+
 # ─── SBSA H2H Go-Live Gate ───────────────────────────────────────────────────
 # Flip SBSA_H2H_GO_LIVE to "true" ONLY AFTER the manual PROD penny test passes
 # and settlement is confirmed on account 272406481. This one switch enables:
@@ -76,9 +79,6 @@ else
   RECON_SFTP_WATCHER_MODE_VAL="off"
   log "🔒 SBSA H2H gate: CLOSED (uploads off, pollers off)"
 fi
-
-log() { echo "📋 [$((SECONDS))s] $*"; }
-err() { echo "❌ $*" >&2; exit 1; }
 
 ENV_UPPER=$(echo "$ENVIRONMENT" | tr '[:lower:]' '[:upper:]')
 log "🚀 Build and Deploy Backend -> ${ENV_UPPER}"
