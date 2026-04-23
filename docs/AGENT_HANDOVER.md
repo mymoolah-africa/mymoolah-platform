@@ -832,7 +832,7 @@ You're part of a **banking-grade software system** where:
 - SMS Fee: R0.40 incl VAT via `SMS_FEE_AMOUNT` env var (defaults to 0.40)
 - Ledger: `4000-20-03` SMS Fee Revenue — migration applied to staging + production
 - SFTP Gateway: `34.35.137.166`, **port 5022** — ✅ Running
-- SBSA H2H: PG15 + SSH key submitted ✅ | SOAP handler live ✅ | TEST UAT complete (6 scenarios + RM5v2 re-run) ✅ | PROD smoke test pending (awaiting Colette scheduling)
+- SBSA H2H: PG15 + SSH key submitted ✅ | SOAP handler live ✅ | TEST UAT complete (6 scenarios + RM5v2 re-run) ✅ | **Pain.002 parser/poller correctness fixes shipped 2026-04-23 (AddtlInf, INTAUD-terminal, UNPAID-authoritative, filename widening) — gated OFF in PROD via `SBSA_H2H_GO_LIVE=false`** ✅ | PROD Penny tooling ready (`scripts/test-sbsa-penny-prod.js`, `scripts/test-sbsa-penny-prod-app.js`, `scripts/sbsa-prod-penny-poll.sh`, `docs/test/SBSA_PROD_PENNY_RUNBOOK.md`) — PROD Penny #1 PENDING operator execution (awaiting André to run the generator + manual SFTP upload from sftp-1-vm)
 - PayShap RTP: Standard Bank ✅ | Discovery Bank ✅ (Peach DECOMMISSIONED)
 - Production: `api-mm.mymoolah.africa`, `wallet.mymoolah.africa` — live
 - **Backend redeploy required** for USSD Phase 2 + previous VAS/voucher/electricity changes
