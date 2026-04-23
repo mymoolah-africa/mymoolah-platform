@@ -57,6 +57,11 @@ before Step 3 if you're at all unsure.
 
 ## Step 3 — Copy the file onto sftp-1-vm
 
+> **Note:** `sftp-1-vm`'s SSH daemon listens on port **2222**, not the default
+> 22. Both `scp` and `ssh` invocations **must** specify the port — `scp` uses
+> `--scp-flag="-P 2222"` (capital `P`), `ssh` uses `--ssh-flag="-p 2222"`
+> (lowercase `p`). Without it, gcloud reports `Failed to connect to port 22`.
+
 ```bash
 FNAME=$(ls /tmp/sbsa-prod-penny/MYMOOLAH_OWN11_Pain001v3_ZAR_PRD_*.xml | head -1)
 echo "Uploading: $FNAME"
@@ -64,13 +69,15 @@ echo "Uploading: $FNAME"
 gcloud compute scp "$FNAME" sftp-1-vm:/tmp/ \
   --project=mymoolah-db \
   --zone=africa-south1-a \
-  --tunnel-through-iap
+  --tunnel-through-iap \
+  --scp-flag="-P 2222"
 
-# Also copy the polling helper:
+# Also copy the polling helper (may already be pre-staged):
 gcloud compute scp scripts/sbsa-prod-penny-poll.sh sftp-1-vm:/tmp/sbsa-prod-penny-poll.sh \
   --project=mymoolah-db \
   --zone=africa-south1-a \
-  --tunnel-through-iap
+  --tunnel-through-iap \
+  --scp-flag="-P 2222"
 ```
 
 ## Step 4 — SSH into sftp-1-vm
@@ -144,7 +151,8 @@ gcloud compute scp --recurse \
   docs/test/sbsa-prod-penny-responses-$(date +%F)/_vm-capture \
   --project=mymoolah-db \
   --zone=africa-south1-a \
-  --tunnel-through-iap
+  --tunnel-through-iap \
+  --scp-flag="-P 2222"
 ```
 
 Then move the XML files out of `_vm-capture/` into
