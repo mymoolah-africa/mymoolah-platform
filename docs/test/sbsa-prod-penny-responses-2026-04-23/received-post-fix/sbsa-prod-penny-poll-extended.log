@@ -1,0 +1,279 @@
+═══════════════════════════════════════════════════════════════════
+ SBSA PROD Penny polling started at 2026-04-23T09:32:06Z
+  host          : 196.8.86.53:5022
+  user          : mymoolahuser
+  key           : /home/andremacbookpro/.ssh/sbsa_sftp_key
+  output dir    : /tmp/sbsa-prod-penny-responses
+  poll interval : 120s
+  max runtime   : 14400s
+═══════════════════════════════════════════════════════════════════
+[2026-04-23T09:32:06Z] Poll #1  (elapsed 0s)
+  no matching files in /Inbox yet
+  have:  ACK=0  INTAUD=0  FINAUD=0
+[2026-04-23T09:34:08Z] Poll #2  (elapsed 122s)
+  no matching files in /Inbox yet
+  have:  ACK=0  INTAUD=0  FINAUD=0
+[2026-04-23T09:36:09Z] Poll #3  (elapsed 243s)
+  no matching files in /Inbox yet
+  have:  ACK=0  INTAUD=0  FINAUD=0
+[2026-04-23T09:38:10Z] Poll #4  (elapsed 364s)
+  no matching files in /Inbox yet
+  have:  ACK=0  INTAUD=0  FINAUD=0
+[2026-04-23T09:40:11Z] Poll #5  (elapsed 485s)
+  no matching files in /Inbox yet
+  have:  ACK=0  INTAUD=0  FINAUD=0
+[2026-04-23T09:42:11Z] Poll #6  (elapsed 605s)
+  no matching files in /Inbox yet
+  have:  ACK=0  INTAUD=0  FINAUD=0
+[2026-04-23T09:44:13Z] Poll #7  (elapsed 727s)
+  no matching files in /Inbox yet
+  have:  ACK=0  INTAUD=0  FINAUD=0
+[2026-04-23T09:46:13Z] Poll #8  (elapsed 847s)
+  no matching files in /Inbox yet
+  have:  ACK=0  INTAUD=0  FINAUD=0
+[2026-04-23T09:48:14Z] Poll #9  (elapsed 968s)
+  no matching files in /Inbox yet
+  have:  ACK=0  INTAUD=0  FINAUD=0
+[2026-04-23T09:50:15Z] Poll #10  (elapsed 1089s)
+  no matching files in /Inbox yet
+  have:  ACK=0  INTAUD=0  FINAUD=0
+[2026-04-23T09:52:16Z] Poll #11  (elapsed 1210s)
+  no matching files in /Inbox yet
+  have:  ACK=0  INTAUD=0  FINAUD=0
+[2026-04-23T09:54:16Z] Poll #12  (elapsed 1330s)
+  no matching files in /Inbox yet
+  have:  ACK=0  INTAUD=0  FINAUD=0
+[2026-04-23T09:56:17Z] Poll #13  (elapsed 1451s)
+  no matching files in /Inbox yet
+  have:  ACK=0  INTAUD=0  FINAUD=0
+[2026-04-23T09:58:18Z] Poll #14  (elapsed 1572s)
+  downloading  MYMOOLAH_OWN11_ACK_PRD_20260423115647713_241773561.xml
+    saved (840 bytes)
+  downloading  MYMOOLAH_OWN11_INTAUD_PRD_20260423115651264_241772495.xml
+    saved (2948 bytes)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T10:00:20Z] Poll #15  (elapsed 1694s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T10:02:21Z] Poll #16  (elapsed 1815s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T10:04:22Z] Poll #17  (elapsed 1936s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T10:06:22Z] Poll #18  (elapsed 2056s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T10:08:23Z] Poll #19  (elapsed 2177s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T10:10:24Z] Poll #20  (elapsed 2298s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T10:12:24Z] Poll #21  (elapsed 2418s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T10:14:25Z] Poll #22  (elapsed 2539s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T10:16:26Z] Poll #23  (elapsed 2660s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T10:18:27Z] Poll #24  (elapsed 2781s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T10:20:28Z] Poll #25  (elapsed 2902s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T10:22:29Z] Poll #26  (elapsed 3023s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T10:24:30Z] Poll #27  (elapsed 3144s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T10:26:30Z] Poll #28  (elapsed 3264s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T10:28:31Z] Poll #29  (elapsed 3385s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T10:30:32Z] Poll #30  (elapsed 3506s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T10:32:33Z] Poll #31  (elapsed 3627s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T10:34:34Z] Poll #32  (elapsed 3748s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T10:36:35Z] Poll #33  (elapsed 3869s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T10:38:36Z] Poll #34  (elapsed 3990s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T10:40:36Z] Poll #35  (elapsed 4110s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T10:42:37Z] Poll #36  (elapsed 4231s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T10:44:38Z] Poll #37  (elapsed 4352s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T10:46:39Z] Poll #38  (elapsed 4473s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T10:48:40Z] Poll #39  (elapsed 4594s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T10:50:41Z] Poll #40  (elapsed 4715s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T10:52:42Z] Poll #41  (elapsed 4836s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T10:54:42Z] Poll #42  (elapsed 4956s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T10:56:43Z] Poll #43  (elapsed 5077s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T10:58:44Z] Poll #44  (elapsed 5198s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T11:00:45Z] Poll #45  (elapsed 5319s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T11:02:46Z] Poll #46  (elapsed 5440s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T11:04:47Z] Poll #47  (elapsed 5561s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T11:06:48Z] Poll #48  (elapsed 5682s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T11:08:48Z] Poll #49  (elapsed 5802s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T11:10:49Z] Poll #50  (elapsed 5923s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T11:12:50Z] Poll #51  (elapsed 6044s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T11:14:51Z] Poll #52  (elapsed 6165s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T11:16:52Z] Poll #53  (elapsed 6286s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T11:18:53Z] Poll #54  (elapsed 6407s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T11:20:54Z] Poll #55  (elapsed 6528s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T11:22:55Z] Poll #56  (elapsed 6649s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T11:24:56Z] Poll #57  (elapsed 6770s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T11:26:57Z] Poll #58  (elapsed 6891s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T11:28:58Z] Poll #59  (elapsed 7012s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T11:30:59Z] Poll #60  (elapsed 7133s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T11:32:59Z] Poll #61  (elapsed 7253s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T11:35:00Z] Poll #62  (elapsed 7374s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T11:37:01Z] Poll #63  (elapsed 7495s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T11:39:02Z] Poll #64  (elapsed 7616s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T11:41:03Z] Poll #65  (elapsed 7737s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T11:43:03Z] Poll #66  (elapsed 7857s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T11:45:04Z] Poll #67  (elapsed 7978s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T11:47:05Z] Poll #68  (elapsed 8099s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T11:49:06Z] Poll #69  (elapsed 8220s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T11:51:07Z] Poll #70  (elapsed 8341s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T11:53:08Z] Poll #71  (elapsed 8462s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T11:55:08Z] Poll #72  (elapsed 8582s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T11:57:09Z] Poll #73  (elapsed 8703s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T11:59:10Z] Poll #74  (elapsed 8824s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T12:01:11Z] Poll #75  (elapsed 8945s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T12:03:12Z] Poll #76  (elapsed 9066s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T12:05:13Z] Poll #77  (elapsed 9187s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T12:07:13Z] Poll #78  (elapsed 9307s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T12:09:14Z] Poll #79  (elapsed 9428s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T12:11:15Z] Poll #80  (elapsed 9549s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T12:13:16Z] Poll #81  (elapsed 9670s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T12:15:17Z] Poll #82  (elapsed 9791s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T12:17:18Z] Poll #83  (elapsed 9912s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T12:19:19Z] Poll #84  (elapsed 10033s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T12:21:20Z] Poll #85  (elapsed 10154s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T12:23:20Z] Poll #86  (elapsed 10274s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T12:25:21Z] Poll #87  (elapsed 10395s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T12:27:22Z] Poll #88  (elapsed 10516s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T12:29:23Z] Poll #89  (elapsed 10637s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T12:31:24Z] Poll #90  (elapsed 10758s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T12:33:25Z] Poll #91  (elapsed 10879s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T12:35:26Z] Poll #92  (elapsed 11000s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T12:37:27Z] Poll #93  (elapsed 11121s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T12:39:27Z] Poll #94  (elapsed 11241s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T12:41:28Z] Poll #95  (elapsed 11362s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T12:43:29Z] Poll #96  (elapsed 11483s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T12:45:30Z] Poll #97  (elapsed 11604s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T12:47:31Z] Poll #98  (elapsed 11725s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T12:49:32Z] Poll #99  (elapsed 11846s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T12:51:33Z] Poll #100  (elapsed 11967s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T12:53:33Z] Poll #101  (elapsed 12087s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T12:55:34Z] Poll #102  (elapsed 12208s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T12:57:35Z] Poll #103  (elapsed 12329s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T12:59:36Z] Poll #104  (elapsed 12450s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T13:01:37Z] Poll #105  (elapsed 12571s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T13:03:38Z] Poll #106  (elapsed 12692s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T13:05:39Z] Poll #107  (elapsed 12813s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T13:07:40Z] Poll #108  (elapsed 12934s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T13:09:41Z] Poll #109  (elapsed 13055s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T13:11:41Z] Poll #110  (elapsed 13175s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T13:13:42Z] Poll #111  (elapsed 13296s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T13:15:43Z] Poll #112  (elapsed 13417s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T13:17:44Z] Poll #113  (elapsed 13538s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T13:19:45Z] Poll #114  (elapsed 13659s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T13:21:46Z] Poll #115  (elapsed 13780s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T13:23:46Z] Poll #116  (elapsed 13900s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T13:25:47Z] Poll #117  (elapsed 14021s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T13:27:48Z] Poll #118  (elapsed 14142s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T13:29:49Z] Poll #119  (elapsed 14263s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T13:31:49Z] Poll #120  (elapsed 14383s)
+  have:  ACK=1  INTAUD=1  FINAUD=0
+[2026-04-23T13:33:50Z] Max poll window (14400s) reached — stopping.
+═══════════════════════════════════════════════════════════════════
+ Files captured in /tmp/sbsa-prod-penny-responses:
+total 8
+drwxr-x---  2 andremacbookpro users   80 Apr 23 09:58 .
+drwxrwxrwt 17 root            root   740 Apr 23 12:38 ..
+-rw-------  1 andremacbookpro users  840 Apr 23 09:58 MYMOOLAH_OWN11_ACK_PRD_20260423115647713_241773561.xml
+-rw-------  1 andremacbookpro users 2948 Apr 23 09:58 MYMOOLAH_OWN11_INTAUD_PRD_20260423115651264_241772495.xml
+═══════════════════════════════════════════════════════════════════
+ Next: copy these back to the laptop, e.g.
+   gcloud compute scp --recurse sftp-1-vm:/tmp/sbsa-prod-penny-responses docs/test/sbsa-prod-penny-responses-$(date +%F)/ \
+     --project=mymoolah-db --zone=africa-south1-a --tunnel-through-iap
+═══════════════════════════════════════════════════════════════════

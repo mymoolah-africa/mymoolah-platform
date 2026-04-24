@@ -2,6 +2,14 @@
 SBSA H2H — PRODUCTION Penny Test #1 — Test Report
 ================================================================================
 
+FINAL STATUS: ✅ SUCCESS (see "Resolution" section at bottom, added 2026-04-24)
+  Initial verdict (2026-04-23 12:00 SAST) was INCONCLUSIVE due to a
+  missing processing rule on SBSA's side which delayed pickup by 60 min.
+  SBSA fixed the rule at 11:54 SAST, picked up our file at ~11:55 SAST,
+  and delivered ACK (11:56:47), INTAUD PDNG 0000 (11:56:51), and
+  FINAUD ACSP 0000 (overnight at 2026-04-24 05:56:06 SAST). R1.00
+  settlement verified on both statements 2026-04-24.
+
 Date:            2026-04-23 (Thursday)
 Environment:     SBSA PRODUCTION SFTP (196.8.86.53:5022, user mymoolahuser)
 Operator:        Andre Botes / MyMoolah Treasury Platform
@@ -159,3 +167,88 @@ Follow-up actions
       the gate flip.
 - [ ] Execute Phase 6 (app-level penny) only after file-level round-trip
       is proven on PROD.
+
+================================================================================
+RESOLUTION (added 2026-04-24 09:30 SAST)
+================================================================================
+
+ROOT CAUSE (per Melanie Block, SBSA, email 2026-04-23 18:45 SAST):
+
+  "Client submitted file at 10:55 AM, we only picked up the file at
+  11:55 AM, this is because of a missing processing rule. Which is
+  corrected on our side at 11:54 AM."
+
+SBSA reaffirmed in the same email that their process is fully
+automated: auto-pickup every 1 min, ACK SLA up to 1 min, INTAUD SLA
+up to 5 min, FINAUD whenever BOL completes the final audit cycle.
+
+WHAT WE CAPTURED
+
+On 2026-04-23 at 11:32 SAST (pre-emptively, before Melanie's reply)
+the MyMoolah operator restarted a longer-window poller on sftp-1-vm
+(PID 221588, 120s interval, 4-hour max). It ran from 11:32:06 SAST
+through 15:33:50 SAST and captured the following files from SBSA
+/Inbox AFTER the processing-rule fix at 11:54:
+
+  1) MYMOOLAH_OWN11_ACK_PRD_20260423115647713_241773561.xml
+     SBSA CreDtTm : 2026-04-23T11:56:47 SAST
+     Size         : 840 bytes
+     OrgnlMsgId   : MM-PRODPENNY1776933922946-MOB8KTXF ✔
+     GrpSts       : RCVD
+     Elapsed      : T+ (picked up ~60 min after upload, then ACK'd 12 s later)
+
+  2) MYMOOLAH_OWN11_INTAUD_PRD_20260423115651264_241772495.xml
+     SBSA CreDtTm : 2026-04-23T11:56:51 SAST
+     Size         : 2948 bytes
+     OrgnlMsgId   : MM-PRODPENNY1776933922946-MOB8KTXF ✔
+     GrpSts       : PDNG  / TxSts: PDNG
+     Status Code  : 0000
+     Status Desc  : NO ERROR FOUND — PROCESSED SUCCESSFULLY
+     Elapsed      : 4 s after ACK (well inside the 5 min SLA)
+
+The 4-hour extended window expired at 2026-04-23 15:33:50 SAST with
+FINAUD still not arrived (expected — FINAUD fires after BOL
+overnight processing on ReqdExctnDt = 2026-04-24).
+
+OVERNIGHT BOL SETTLEMENT
+
+On 2026-04-24 07:01 UTC (09:01 SAST) the operator reconnected to SBSA
+SFTP and observed /Outbox was EMPTY (our Pain.001 fully consumed),
+and /Inbox contained a new file:
+
+  3) MYMOOLAH_OWN11_FINAUD_PRD_20260424055606710_241875663.xml
+     SBSA CreDtTm : 2026-04-24T05:56:06 SAST
+     Size         : 2955 bytes
+     OrgnlMsgId   : MM-PRODPENNY1776933922946-MOB8KTXF ✔
+     GrpSts       : ACSP  / TxSts: ACSP
+     Status Code  : 0000
+     Status Desc  : NO ERROR FOUND — PROCESSED SUCCESSFULLY
+
+This is the standard UAT RM7 "all-green" shape — ACSP
+(AcceptedSettlementInProcess) on both the group and the single
+transaction. File downloaded to /tmp/sbsa-prod-penny-responses/ and
+then scp'd to
+docs/test/sbsa-prod-penny-responses-2026-04-23/received-post-fix/.
+
+SETTLEMENT VERIFIED ON STATEMENTS (2026-04-24)
+
+  - Debtor account  272406481  (MyMoolah PROD):   R1.00 debit confirmed
+  - Creditor account 10111730633 (Andre Botes):   R1.00 credit confirmed
+
+UPDATED VERDICT
+
+  ✅ SUCCESS — Full end-to-end round-trip on SBSA PROD:
+      SFTP upload → ACK RCVD → INTAUD PDNG 0000 → FINAUD ACSP 0000 →
+      R1.00 actually moved between accounts and is visible on both
+      statements. The bug was entirely on SBSA's side (missing
+      processing rule, now fixed 2026-04-23 11:54 SAST) and does not
+      affect the file structure, credentials, profile, gateway, or
+      sender behaviour. No change required on our side.
+
+NEXT STEP
+
+  SBSA (Melanie) explicitly invited a second penny test to validate
+  the fix and confirm normal 1-min pickup timings. Penny Test #2 is
+  scheduled for today 2026-04-24, same setup (manual sftp-1-vm path,
+  R1.00, creditor 10111730633), new MsgId, ReqdExctnDt 2026-04-27
+  (Monday, weekend-safe). Report to follow.

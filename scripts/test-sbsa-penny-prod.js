@@ -34,7 +34,13 @@
  * Usage:
  *   node scripts/test-sbsa-penny-prod.js --confirm-prod
  *
- * @date 2026-04-23
+ * Optional flags:
+ *   --exec-date YYYY-MM-DD   Override ReqdExctnDt (default: today + 1 day).
+ *                            Use this to avoid weekend dates, e.g. when
+ *                            running Friday → target Monday settlement.
+ *
+ * @date 2026-04-23 (initial)
+ * @update 2026-04-24 — added --exec-date override for Penny #2 (weekend-safe)
  */
 
 'use strict';
@@ -113,7 +119,19 @@ function main() {
 
   const runTs  = Date.now();
   const runRef = `PROD-PENNY-${runTs}`;
-  const paymentDate = new Date(Date.now() + 24 * 3600 * 1000).toISOString().slice(0, 10);
+
+  const execDateArgIdx = process.argv.indexOf('--exec-date');
+  let paymentDate;
+  if (execDateArgIdx >= 0 && process.argv[execDateArgIdx + 1]) {
+    const override = process.argv[execDateArgIdx + 1];
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(override)) {
+      process.stderr.write(`\n❌ --exec-date must be YYYY-MM-DD (got: ${override})\n\n`);
+      process.exit(2);
+    }
+    paymentDate = override;
+  } else {
+    paymentDate = new Date(Date.now() + 24 * 3600 * 1000).toISOString().slice(0, 10);
+  }
 
   const payments = [
     {
