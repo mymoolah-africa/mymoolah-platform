@@ -1,13 +1,22 @@
 {
-  "//": "MyMoolah Treasury Platform — Codespaces port-visibility defaults.",
-  "//1": "This file exists ONLY to make the backend (3001) and frontend (3000) ports start",
-  "//2": "with visibility='public' on every Codespace rebuild/restart. Without this, GitHub",
-  "//3": "defaults forwarded ports to 'private', which silently breaks cross-origin fetches",
-  "//4": "between the two ports and surfaces as a misleading 'CORS / no Access-Control-Allow-",
-  "//5": "Origin' error in the browser (the preflight is actually being 302-redirected by the",
-  "//6": "Codespaces proxy to github.com/login because of the missing session cookie).",
-  "//7": "Intentionally minimal: no image, no features, no postCreateCommand — GitHub falls back",
-  "//8": "to its default universal dev image and leaves all existing project tooling intact.",
+  "//": "MyMoolah Treasury Platform — GitHub Codespaces configuration.",
+  "//1": "Kept deliberately minimal: no image override, no features, no remote user",
+  "//2": "changes. GitHub continues to use its default universal dev image and all",
+  "//3": "existing project tooling (node, npm, git, etc.) is inherited unchanged.",
+  "//4": "",
+  "//5": "This file does two things:",
+  "//6": "  1. Forwards ports 3000 (frontend) and 3001 (backend) as PUBLIC by default.",
+  "//7": "     Without this, Codespaces defaults forwarded ports to 'private', which",
+  "//8": "     silently causes the frontend → backend preflight to be 302-redirected",
+  "//9": "     to github.com/login and surfaces in the browser as a misleading",
+  "//10": "     'Access-Control-Allow-Origin missing' error.",
+  "//11": "  2. Runs scripts/codespaces-bootstrap.sh on every create/rebuild to",
+  "//12": "     re-hydrate tools that live in $HOME (wiped on rebuild): google-cloud-",
+  "//13": "     sdk and node_modules. The script is idempotent, safe to re-run, and",
+  "//14": "     never fails the Codespace boot (exit 0 unconditionally).",
+  "//15": "",
+  "//16": "This file is read ONLY by Codespaces — local dev, Cloud Run (UAT / staging /",
+  "//17": "production) and CI ignore it completely.",
 
   "name": "MyMoolah Backend (Codespaces)",
 
@@ -24,5 +33,9 @@
       "onAutoForward": "silent",
       "visibility": "public"
     }
-  }
+  },
+
+  "postCreateCommand": "bash scripts/codespaces-bootstrap.sh",
+
+  "waitFor": "postCreateCommand"
 }
