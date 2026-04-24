@@ -35,12 +35,20 @@
  *   node scripts/test-sbsa-penny-prod.js --confirm-prod
  *
  * Optional flags:
- *   --exec-date YYYY-MM-DD   Override ReqdExctnDt (default: today + 1 day).
- *                            Use this to avoid weekend dates, e.g. when
- *                            running Friday → target Monday settlement.
+ *   --exec-date YYYY-MM-DD   Override ReqdExctnDt. If provided, the operator's
+ *                            date is honoured verbatim but the script warns
+ *                            loudly if it falls on a weekend or SA public
+ *                            holiday (the decision to proceed remains with
+ *                            the operator).
+ *
+ *                            Default (no --exec-date): next SA business day
+ *                            strictly AFTER today (via utils/saPublicHolidays).
+ *                            So Friday → Monday, Friday-before-Freedom-Day →
+ *                            Tuesday, Christmas Eve → 27 Dec (observed), etc.
  *
  * @date 2026-04-23 (initial)
  * @update 2026-04-24 — added --exec-date override for Penny #2 (weekend-safe)
+ * @update 2026-04-24 — default ReqdExctnDt now SA-holiday-aware (was today+1)
  */
 
 'use strict';
@@ -120,6 +128,14 @@ function main() {
   const runTs  = Date.now();
   const runRef = `PROD-PENNY-${runTs}`;
 
+  const {
+    nextBusinessDay,
+    isBusinessDay,
+    describeDate,
+  } = require('../utils/saPublicHolidays');
+
+  const today = new Date().toISOString().slice(0, 10);
+
   const execDateArgIdx = process.argv.indexOf('--exec-date');
   let paymentDate;
   if (execDateArgIdx >= 0 && process.argv[execDateArgIdx + 1]) {
@@ -129,8 +145,24 @@ function main() {
       process.exit(2);
     }
     paymentDate = override;
+    if (!isBusinessDay(paymentDate)) {
+      const { reason } = describeDate(paymentDate);
+      const suggestion = nextBusinessDay(paymentDate);
+      process.stderr.write([
+        '',
+        '⚠  --exec-date override is NOT an SA business day',
+        `   ReqdExctnDt : ${paymentDate}`,
+        `   Reason      : ${reason}`,
+        `   Suggestion  : --exec-date ${suggestion}`,
+        '',
+        '   SBSA will typically roll forward to the next business day, but your',
+        '   Pain.001 and internal ledger will record the non-business date.',
+        '   Proceeding with the operator-supplied value.',
+        '',
+      ].join('\n'));
+    }
   } else {
-    paymentDate = new Date(Date.now() + 24 * 3600 * 1000).toISOString().slice(0, 10);
+    paymentDate = nextBusinessDay(today);
   }
 
   const payments = [
@@ -166,7 +198,13 @@ function main() {
   console.log(`Size            : ${fs.statSync(fullPath).size} bytes`);
   console.log(`MsgId           : ${msgId}`);
   console.log(`Run reference   : ${runRef}`);
-  console.log(`ReqdExctnDt     : ${paymentDate}`);
+  const dateInfo = describeDate(paymentDate);
+  console.log(
+    `ReqdExctnDt     : ${paymentDate}` +
+    (dateInfo.businessDay
+      ? '  (SA business day)'
+      : `  ⚠ ${dateInfo.reason}`)
+  );
   console.log(`Debtor          : ${DEBTOR_NAME} / ${DEBTOR_ACCOUNT} / ${DEBTOR_BRANCH}`);
   console.log(`Creditor        : ${CREDITOR_NAME} / ${CREDITOR_ACCOUNT} / ${CREDITOR_BRANCH} (${CREDITOR_BANK})`);
   console.log(`Amount          : R${PENNY_AMOUNT.toFixed(2)} (single tx, total R${totalAmount.toFixed(2)}, count ${paymentCount})`);

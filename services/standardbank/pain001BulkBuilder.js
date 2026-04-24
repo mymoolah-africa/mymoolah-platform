@@ -18,6 +18,15 @@
  */
 
 const crypto = require('crypto');
+const {
+  nextBusinessDay,
+  isBusinessDay,
+  describeDate,
+} = require('../../utils/saPublicHolidays');
+
+const logger = {
+  warn: (...a) => console.warn('[pain001BulkBuilder]', ...a),
+};
 
 /**
  * ISO 20022 Pain.002 rejection code → human-readable reason + permanent flag
@@ -72,7 +81,16 @@ function generatePain001Filename() {
  * @param {Object} params
  * @param {string} params.runReference       - DisbursementRun.run_reference
  * @param {string} params.rail               - 'eft' | 'rtc' (stored for tracking; does not alter XML structure)
- * @param {string} [params.paymentDate]      - ISO date YYYY-MM-DD (defaults to today)
+ * @param {string} [params.paymentDate]      - ISO date YYYY-MM-DD. If omitted,
+ *                                             defaults to the next SA business
+ *                                             day strictly after today (skips
+ *                                             weekends + public holidays via
+ *                                             utils/saPublicHolidays).
+ *                                             If supplied, honoured verbatim
+ *                                             but a structured warning is logged
+ *                                             when the date is not a business
+ *                                             day (SBSA will typically roll but
+ *                                             our internal ledger will not).
  * @param {string} [params.debtorName]       - Account holder name (MyMoolah)
  * @param {string} [params.debtorAccount]    - SBSA treasury account number
  * @param {string} [params.debtorBranchCode] - SBSA branch code
@@ -90,7 +108,7 @@ function generatePain001Filename() {
 function buildPain001Bulk(params) {
   const {
     runReference,
-    paymentDate = new Date().toISOString().slice(0, 10),
+    paymentDate,
     debtorName       = process.env.SBSA_DEBTOR_NAME    || 'MyMoolah (Pty) Ltd',
     debtorAccount    = process.env.SBSA_DEBTOR_ACCOUNT || '000000000',
     debtorBranchCode = process.env.SBSA_DEBTOR_BRANCH  || '051001',
@@ -100,6 +118,27 @@ function buildPain001Bulk(params) {
 
   if (!payments || payments.length === 0) {
     throw new Error('payments array is required and must not be empty');
+  }
+
+  // Resolve the execution date with SA public-holiday awareness.
+  //   - If the caller omits `paymentDate`, default to the next SA business
+  //     day strictly AFTER today. This avoids Sat/Sun/public-holiday
+  //     ReqdExctnDt values that SBSA would silently roll forward (causing
+  //     our internal ledger's expected-settlement date to disagree with
+  //     what SBSA actually books).
+  //   - If the caller supplies `paymentDate`, honour it verbatim but emit
+  //     a structured warning when it is not a business day. The decision
+  //     to proceed remains with the caller (may be intentional in tests
+  //     or for a specific future-dated run).
+  const resolvedPaymentDate = paymentDate || nextBusinessDay(new Date().toISOString().slice(0, 10));
+  if (paymentDate && !isBusinessDay(paymentDate)) {
+    const info = describeDate(paymentDate);
+    const suggestion = nextBusinessDay(paymentDate);
+    logger.warn(
+      `ReqdExctnDt=${paymentDate} is not an SA business day (${info.reason}). ` +
+      `SBSA typically rolls forward to ${suggestion}; internal ledger will still ` +
+      `record ${paymentDate}. Caller should pass a business day unless this is intentional.`
+    );
   }
 
   const creDtTm = new Date().toISOString();
@@ -185,7 +224,7 @@ function buildPain001Bulk(params) {
       <PmtTpInf>
         <InstrPrty>NORM</InstrPrty>
       </PmtTpInf>
-      <ReqdExctnDt>${paymentDate}</ReqdExctnDt>
+      <ReqdExctnDt>${resolvedPaymentDate}</ReqdExctnDt>
       <Dbtr>
         <Nm>${cleanRef(debtorName)}</Nm>
       </Dbtr>
