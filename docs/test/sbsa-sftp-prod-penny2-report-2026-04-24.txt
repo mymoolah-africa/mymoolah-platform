@@ -1,0 +1,220 @@
+================================================================================
+SBSA H2H — PRODUCTION Penny Test #2 — Test Report (INTERIM)
+================================================================================
+
+Status at time of writing:
+  ✅ SUCCESS so far (ACK + INTAUD clean). FINAUD expected overnight
+     Tue 2026-04-28 → Wed 2026-04-29 (see Freedom Day note below).
+  Final status will be updated when FINAUD lands and settlement is
+  verified on both statements.
+
+Date:            2026-04-24 (Friday)
+Environment:     SBSA PRODUCTION SFTP (196.8.86.53:5022, user mymoolahuser)
+Operator:        Andre Botes / MyMoolah Treasury Platform
+Gateway:         sftp-1-vm @ africa-south1-a (GCP project mymoolah-db)
+Reason for run:  SBSA's developer (via Melanie Block, email 2026-04-23 18:45
+                 SAST) invited a second penny test to validate their
+                 missing-processing-rule fix end-to-end and confirm normal
+                 pickup/ACK/INTAUD timings. Penny #1 round-tripped cleanly
+                 yesterday with the 60-min delayed pickup; this run is to
+                 confirm normal timings now that the rule is in place.
+
+Input file:
+  Filename:      MYMOOLAH_OWN11_Pain001v3_ZAR_PRD_20260424091709718.xml
+  MsgId:         MM-PRODPENNY1777015029717-MOCKV8BA
+  EndToEndId:    PROD-PENNY-1777015029717-01
+  Size:          2344 bytes
+  MD5 (laptop):  71b795e738680cd0079060f2d292d008
+  MD5 (VM):      71b795e738680cd0079060f2d292d008  (integrity verified)
+  Debtor:        MyMoolah (Pty) Ltd / 272406481 / branch 002154 / DbtrAgt 033012
+  Creditor:      Andre Botes / 10111730633 / branch 051001 / CdtrAgt 051001
+  Amount:        R1.00 ZAR (single tx, NbOfTxs=1, CtrlSum=1.00)
+  PmtMtd:        TRF
+  InstrPrty:     NORM
+  BtchBookg:     true
+  ReqdExctnDt:   2026-04-27 (sent by us; SBSA rolled to 2026-04-28 — see
+                 Freedom Day note below)
+  RmtInf:        MMTP PROD PENNY R1
+
+Generator:
+  scripts/test-sbsa-penny-prod.js --confirm-prod --exec-date 2026-04-27
+  (--exec-date added this morning to allow explicit control of ReqdExctnDt)
+
+================================================================================
+Timeline (SAST, UTC+2)
+================================================================================
+
+09:17:09.718  Pain.001 generated locally via generator script on laptop.
+09:17:xx      scp'd to sftp-1-vm:/tmp/ (MD5 integrity verified across
+              laptop and VM).
+09:31:22      Baseline-diff poller on VM started (snapshotted current
+              /Inbox contents to exclude Penny #1 residual responses).
+09:30:40.490  (UTC 07:30:40.490Z) sftp -b PUT opened to SBSA /Outbox.
+09:30:41.398  (UTC 07:30:41.398Z) sftp -b PUT complete. Exit code 0.
+              File visible on SBSA /Outbox as
+              -rw------- 1 200 100 2344 Apr 24 07:30 MYMOOLAH_OWN11_...xml
+09:30:59      SBSA CreDtTm on ACK (filename timestamp 20260424093059092)
+              T+18 seconds from T0.
+09:31:02      SBSA CreDtTm on INTAUD (filename ts 20260424093102699)
+              T+22 seconds from T0. SBSA /Outbox already empty at this
+              point (file consumed in under 20 s).
+09:31:23      Poller Poll #1 listed /Inbox, diffed against baseline,
+              detected 2 new files (Penny #2 ACK + INTAUD). Downloaded
+              both successfully (840 B + 2948 B).
+09:31:25      Poller exited cleanly (ACK + INTAUD both captured;
+              FINAUD deferred to overnight BOL).
+
+================================================================================
+SBSA responses (parsed)
+================================================================================
+
+1) ACK PRD
+   File:         MYMOOLAH_OWN11_ACK_PRD_20260424093059092_241909820.xml
+   Size:         840 bytes
+   SBSA MsgId:   241909820
+   OrgnlMsgId:   MM-PRODPENNY1777015029717-MOCKV8BA ✔
+   CreDtTm:      2026-04-24T09:30:58 SAST
+   GrpSts:       RCVD
+   Verdict:      ✅ Received and acknowledged by SBSA processor.
+
+2) INTAUD PRD
+   File:         MYMOOLAH_OWN11_INTAUD_PRD_20260424093102699_241909850.xml
+   Size:         2948 bytes
+   SBSA MsgId:   241909798
+   OrgnlMsgId:   MM-PRODPENNY1777015029717-MOCKV8BA ✔
+   OrgnlEndToEndId: PROD-PENNY-1777015029717-01 ✔
+   OrgnlInstrId: I9445BBD916B4460A
+   CreDtTm:      2026-04-24T09:31:02 SAST
+   GrpSts:       PDNG
+   TxSts:        PDNG
+   Rsn:          NARR
+   AddtlInf:     "Status Code : 0000",
+                 "Status Description : NO ERROR FOUND-PROCESSED SUCCESSFULLY"
+   Verdict:      ✅ Validated, queued for BOL. No errors. Same shape as
+                 Penny #1's INTAUD.
+
+3) FINAUD PRD
+   EXPECTED overnight 2026-04-28 → 2026-04-29 (after SBSA's BOL
+   settlement on Tue 2026-04-28, since SBSA rolled ReqdExctnDt from
+   our 2026-04-27 to 2026-04-28 due to Freedom Day — see below).
+
+================================================================================
+Freedom Day observation (important)
+================================================================================
+
+Our Pain.001:       ReqdExctnDt = 2026-04-27 (Monday, what we requested)
+SBSA INTAUD echoes: ReqdExctnDt = 2026-04-28 (Tuesday, what SBSA booked)
+
+Why:  Monday 2026-04-27 is Freedom Day, a South African public holiday.
+      BOL does not settle on public holidays. SBSA's processor correctly
+      rolled forward to the next business day, which is Tuesday
+      2026-04-28. This is graceful, correct behaviour on SBSA's side.
+
+Implication for this test:
+      FINAUD will fire after BOL's overnight cycle on Tuesday. So
+      expect FINAUD in SBSA /Inbox around Wed 2026-04-29 early morning
+      (~05:56 SAST based on Penny #1's pattern), and R1.00 debit/credit
+      visible on both statements Wed 2026-04-29.
+
+Implication for future work:
+      Our pain001BulkBuilder does NOT currently know about SA public
+      holidays. For this penny test, operator intervention via
+      --exec-date would have caught it (a 2026-04-28 choice would have
+      avoided the roll). For production flows with high transaction
+      volumes we should make the app-level generator holiday-aware
+      rather than relying on SBSA's roll-forward, for internal-ledger
+      and audit-trail consistency. Tech-debt decision left to operator
+      (not actioned in this session).
+
+================================================================================
+Comparison to Penny #1 (resolved)
+================================================================================
+
+Metric                       Penny #1 (2026-04-23)      Penny #2 (2026-04-24)
+---------------------------  -------------------------  ----------------------
+Upload time (SAST)           10:55:37                   09:30:40
+Pickup delay                 60 min (SBSA rule missing) <1 min (rule fixed)
+ACK delay (T0 to ACK)        60 min 10 s                18 s
+INTAUD delay (T0 to INTAUD)  60 min 14 s                22 s
+INTAUD status                PDNG / 0000                PDNG / 0000
+FINAUD delivery              overnight 05:56 SAST       expected overnight
+                             (same-day ReqdExctnDt)     2026-04-29 (Freedom
+                                                        Day roll)
+Settlement verified          ✅ 2026-04-24 both sides   pending Wed 2026-04-29
+SBSA rule fix                YES (at 11:54 SAST)        working perfectly
+Operator escalation needed   YES (email to Colette/Mel) NO
+Verdict                      ✅ SUCCESS (post-fix)       ✅ SUCCESS so far
+
+================================================================================
+SBSA SLA compliance
+================================================================================
+
+SBSA stated SLAs (Melanie Block, 2026-04-23 18:45 SAST email):
+  Pickup                : ≤ 1 min
+  ACK                   : ≤ 1 min
+  Interim (INTAUD)      : ≤ 5 min
+  Final (FINAUD)        : whenever BOL completes
+
+Penny #2 actual:
+  Pickup                : ~20 s (well inside)
+  ACK                   : 18 s from T0 (well inside)
+  INTAUD                : 22 s from T0 / 4 s after ACK (well inside)
+  FINAUD                : pending (expected Wed 2026-04-29)
+
+All SLAs currently being outperformed by large margin. Consistent with
+a healthy, fully automated processing path.
+
+================================================================================
+Evidence preserved
+================================================================================
+
+docs/test/sbsa-prod-penny2-responses-2026-04-24/
+  MYMOOLAH_OWN11_ACK_PRD_20260424093059092_241909820.xml
+  MYMOOLAH_OWN11_INTAUD_PRD_20260424093102699_241909850.xml
+  poll.log                  (baseline-diff poller log)
+  baseline.txt              (3 Penny #1 residual files excluded from diff)
+
+/tmp/sbsa-prod-penny/MYMOOLAH_OWN11_Pain001v3_ZAR_PRD_20260424091709718.xml
+  (local laptop copy of the Pain.001 we sent)
+
+sftp-1-vm:/tmp/MYMOOLAH_OWN11_Pain001v3_ZAR_PRD_20260424091709718.xml
+  (gateway copy of the Pain.001, same MD5)
+
+SBSA /Outbox at 09:32 SAST: empty (file consumed).
+SBSA /Inbox at 09:32 SAST:
+  Penny #1:  ACK (23 Apr 11:56), INTAUD (23 Apr 11:56), FINAUD (24 Apr 05:56)
+  Penny #2:  ACK (24 Apr 09:30), INTAUD (24 Apr 09:31)
+
+================================================================================
+Follow-up actions
+================================================================================
+
+- [x] ACK + INTAUD captured and parsed clean.
+- [x] Responses pulled to laptop docs/test/sbsa-prod-penny2-responses-2026-04-24/.
+- [x] Poll log archived.
+- [x] This interim report written.
+- [ ] Colette + Melanie success email sent (operator action).
+- [ ] FINAUD overnight poll / manual check Wed 2026-04-29 morning.
+- [ ] Statement confirmation Wed 2026-04-29: R1.00 debit on 272406481 and
+      R1.00 credit on 10111730633.
+- [ ] Final report update when FINAUD + settlement confirmed.
+- [ ] Only after Penny #2 fully closes: consider flipping
+      SBSA_H2H_GO_LIVE=true in production deploy script.
+- [ ] After gate flip: run ./scripts/setup-cloud-scheduler.sh --production.
+- [ ] After scheduler confirmed catching a real response: Penny #3 via
+      the app-level GCS-gateway path.
+
+================================================================================
+Operational lessons
+================================================================================
+
+1. Baseline-diff polling is the correct approach when pre-existing
+   response files may still be in SBSA /Inbox. The original poller
+   exited immediately on seeing Penny #1's FINAUD (`FINAUD=1`) and
+   required a 1-line strategy change to work correctly for Penny #2.
+2. Extended poller windows (≥ 2 hours) are cheap insurance for
+   first-time tests. The 30-min window we used on Penny #1 would
+   have missed the response if the SBSA rule had taken slightly
+   longer to deploy.
+3. Freedom Day roll-forward is handled gracefully by SBSA and does
+   not require a resend. Good to know for future holiday dates.
