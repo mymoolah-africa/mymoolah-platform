@@ -1,0 +1,28 @@
+{
+  "//": "MyMoolah Treasury Platform — Codespaces port-visibility defaults.",
+  "//1": "This file exists ONLY to make the backend (3001) and frontend (3000) ports start",
+  "//2": "with visibility='public' on every Codespace rebuild/restart. Without this, GitHub",
+  "//3": "defaults forwarded ports to 'private', which silently breaks cross-origin fetches",
+  "//4": "between the two ports and surfaces as a misleading 'CORS / no Access-Control-Allow-",
+  "//5": "Origin' error in the browser (the preflight is actually being 302-redirected by the",
+  "//6": "Codespaces proxy to github.com/login because of the missing session cookie).",
+  "//7": "Intentionally minimal: no image, no features, no postCreateCommand — GitHub falls back",
+  "//8": "to its default universal dev image and leaves all existing project tooling intact.",
+
+  "name": "MyMoolah Backend (Codespaces)",
+
+  "forwardPorts": [3000, 3001],
+
+  "portsAttributes": {
+    "3000": {
+      "label": "Wallet Frontend (Vite)",
+      "onAutoForward": "silent",
+      "visibility": "public"
+    },
+    "3001": {
+      "label": "MyMoolah Backend API",
+      "onAutoForward": "silent",
+      "visibility": "public"
+    }
+  }
+}
