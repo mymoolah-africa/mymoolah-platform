@@ -4,19 +4,26 @@
   "//2": "changes. GitHub continues to use its default universal dev image and all",
   "//3": "existing project tooling (node, npm, git, etc.) is inherited unchanged.",
   "//4": "",
-  "//5": "This file does two things:",
+  "//5": "This file does three things:",
   "//6": "  1. Forwards ports 3000 (frontend) and 3001 (backend) as PUBLIC by default.",
   "//7": "     Without this, Codespaces defaults forwarded ports to 'private', which",
   "//8": "     silently causes the frontend → backend preflight to be 302-redirected",
   "//9": "     to github.com/login and surfaces in the browser as a misleading",
   "//10": "     'Access-Control-Allow-Origin missing' error.",
-  "//11": "  2. Runs scripts/codespaces-bootstrap.sh on every create/rebuild to",
-  "//12": "     re-hydrate tools that live in $HOME (wiped on rebuild): google-cloud-",
-  "//13": "     sdk and node_modules. The script is idempotent, safe to re-run, and",
-  "//14": "     never fails the Codespace boot (exit 0 unconditionally).",
-  "//15": "",
-  "//16": "This file is read ONLY by Codespaces — local dev, Cloud Run (UAT / staging /",
-  "//17": "production) and CI ignore it completely.",
+  "//11": "  2. onCreateCommand wipes any stale git-lfs-owned hooks in .git/hooks/ so",
+  "//12": "     GitHub Codespaces' auto-injected 'ghcr.io/devcontainers/features/git-",
+  "//13": "     lfs' feature can reinstall them cleanly. Without this, a leftover",
+  "//14": "     pre-push hook from a previous session causes the feature's postCreate",
+  "//15": "     to exit 2 with 'Hook already exists: pre-push', which in turn aborts",
+  "//16": "     ALL postCreate commands (including ours) and boots the Codespace in",
+  "//17": "     the yellow 'recovery mode' alpine fallback.",
+  "//18": "  3. Runs scripts/codespaces-bootstrap.sh on every create/rebuild to",
+  "//19": "     re-hydrate tools that live in $HOME (wiped on rebuild): google-cloud-",
+  "//20": "     sdk and node_modules. The script is idempotent, safe to re-run, and",
+  "//21": "     never fails the Codespace boot (exit 0 unconditionally).",
+  "//22": "",
+  "//23": "This file is read ONLY by Codespaces — local dev, Cloud Run (UAT / staging /",
+  "//24": "production) and CI ignore it completely.",
 
   "name": "MyMoolah Backend (Codespaces)",
 
@@ -34,6 +41,8 @@
       "visibility": "public"
     }
   },
+
+  "onCreateCommand": "rm -f .git/hooks/pre-push .git/hooks/post-checkout .git/hooks/post-commit .git/hooks/post-merge || true",
 
   "postCreateCommand": "bash scripts/codespaces-bootstrap.sh",
 
