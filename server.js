@@ -147,6 +147,7 @@ const CatalogSynchronizationService = require('./services/catalogSynchronization
 const sweepRoutes = require('./routes/sweep.js');
 
 const sendMoneyRoutes = require('./routes/sendMoney.js');
+const walletBankPaymentRoutes = require('./routes/walletBankPayments.js');
 const beneficiariesRoutes = require('./routes/beneficiaries.js');
 const unifiedBeneficiariesRoutes = require('./routes/unifiedBeneficiaries.js');
 const airtimeRoutes = require('./routes/airtime.js');
@@ -466,6 +467,7 @@ app.use('/api/v1/kyc', walletReadLimiter);
 // Financial write limiter (10/min for money-moving POST/PUT/DELETE — skips GETs)
 app.use('/api/v1/transactions', financialLimiter);
 app.use('/api/v1/wallets', financialLimiter);
+app.use('/api/v1/wallet-bank-payments', financialLimiter);
 app.use('/api/v1/airtime', financialLimiter);
 app.use('/api/v1/usdc', financialLimiter);
 app.use('/api/v1/nfc', financialLimiter);
@@ -498,6 +500,7 @@ app.use('/api/v1/qr', qrPaymentRoutes);
 app.use('/api/v1/requests', requestRoutes);
 app.use('/api/v1/sweep', sweepRoutes);
 app.use('/api/v1/send-money', sendMoneyRoutes);
+app.use('/api/v1/wallet-bank-payments', walletBankPaymentRoutes);
 app.use('/api/v1/beneficiaries', beneficiariesRoutes);
 app.use('/api/v1/unified-beneficiaries', unifiedBeneficiariesRoutes);
 app.use('/api/v1/airtime', airtimeRoutes);

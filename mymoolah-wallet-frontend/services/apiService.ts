@@ -68,6 +68,36 @@ export interface TransferStatus {
   completedAt?: string;
 }
 
+export interface WalletBankPaymentQuote {
+  rail: 'eft' | 'payshap';
+  amount: number;
+  feeAmount: number;
+  totalDebit: number;
+  currency: string;
+  settlementEstimate: {
+    estimatedReceiverAvailabilityDate?: string;
+    message: string;
+    cutoffSast?: string;
+  };
+  beneficiary: {
+    id: number;
+    name: string;
+    bankName?: string;
+    accountNumberLast4?: string;
+    branchCode?: string;
+  };
+}
+
+export interface WalletBankPaymentResult {
+  paymentId: string;
+  status: 'processing' | 'completed' | 'failed';
+  rail: 'eft' | 'payshap';
+  amount: number;
+  feeAmount: number;
+  totalDebit: number;
+  settlementEstimate: WalletBankPaymentQuote['settlementEstimate'];
+}
+
 export interface VASProduct {
   id: string;
   name: string;
@@ -298,6 +328,32 @@ class ApiService {
       body: JSON.stringify({ paymentMethodId, amount, recipient, reference }),
     });
     return response.data!
+  }
+
+  async quoteWalletBankPayment(
+    beneficiaryAccountId: number,
+    amount: number,
+    rail: 'eft' | 'payshap'
+  ): Promise<WalletBankPaymentQuote> {
+    const response = await this.request<WalletBankPaymentQuote>('/api/v1/wallet-bank-payments/quote', {
+      method: 'POST',
+      body: JSON.stringify({ beneficiaryAccountId, amount, rail }),
+    });
+    return response.data!;
+  }
+
+  async submitWalletBankPayment(
+    beneficiaryAccountId: number,
+    amount: number,
+    rail: 'eft' | 'payshap',
+    reference?: string
+  ): Promise<WalletBankPaymentResult> {
+    const response = await this.request<WalletBankPaymentResult>('/api/v1/wallet-bank-payments/submit', {
+      method: 'POST',
+      headers: { 'X-Idempotency-Key': generateIdempotencyKey() },
+      body: JSON.stringify({ beneficiaryAccountId, amount, rail, reference }),
+    });
+    return response.data!;
   }
 
   async getTransferStatus(transactionId: string): Promise<TransferStatus> {

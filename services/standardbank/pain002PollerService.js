@@ -46,6 +46,7 @@
 const { Storage } = require('@google-cloud/storage');
 const { parsePain002 } = require('./pain002Parser');
 const { processPain002Response } = require('./disbursementService');
+const { processPain002Response: processWalletBankPain002Response } = require('../walletBankPaymentService');
 const { notifyRunResult } = require('./disbursementNotificationService');
 
 const storage = new Storage();
@@ -220,8 +221,9 @@ async function processFile(gcsFile) {
     paymentCount: pain002Data.payments.length,
   });
 
-  // Step 3: Update disbursement statuses (do NOT catch — leave in inbox for retry)
+  // Step 3: Update H2H consumers (do NOT catch — leave in inbox for retry)
   const result = await processPain002Response(pain002Data);
+  const walletBankResult = await processWalletBankPain002Response(pain002Data);
 
   // Step 4: Move to processed/
   await moveFile(gcsFile, 'processed');
@@ -235,6 +237,8 @@ async function processFile(gcsFile) {
     paymentCount: pain002Data.payments.length,
     accepted: result.accepted,
     failed: result.failed,
+    walletBankUpdated: walletBankResult.updated,
+    walletBankReversed: walletBankResult.reversed,
     runReference: result.run?.run_reference || null,
   });
 
