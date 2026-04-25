@@ -2,6 +2,18 @@
 
 module.exports = {
   async up(queryInterface, Sequelize) {
+    const tableExists = async (tableName) => {
+      const tables = await queryInterface.showAllTables();
+      return tables.map((table) => (typeof table === 'string' ? table : table.tableName)).includes(tableName);
+    };
+
+    const addIndexIfMissing = async (tableName, fields, options) => {
+      if (!(await tableExists(tableName))) return;
+      const indexes = await queryInterface.showIndex(tableName);
+      if (indexes.some((index) => index.name === options.name)) return;
+      await queryInterface.addIndex(tableName, fields, options);
+    };
+
     await queryInterface.createTable('transaction_fee_policies', {
       id: { type: Sequelize.INTEGER, autoIncrement: true, primaryKey: true },
       code: { type: Sequelize.STRING(80), allowNull: false, unique: true },
@@ -23,13 +35,13 @@ module.exports = {
       updatedAt: { type: Sequelize.DATE, allowNull: false, defaultValue: Sequelize.literal('NOW()') },
     });
 
-    await queryInterface.addIndex('transaction_fee_policies', ['transaction_type', 'rail', 'channel', 'customer_tier', 'currency'], {
+    await addIndexIfMissing('transaction_fee_policies', ['transaction_type', 'rail', 'channel', 'customer_tier', 'currency'], {
       name: 'idx_fee_policies_lookup',
     });
-    await queryInterface.addIndex('transaction_fee_policies', ['effective_from', 'effective_to'], {
+    await addIndexIfMissing('transaction_fee_policies', ['effective_from', 'effective_to'], {
       name: 'idx_fee_policies_effective_dates',
     });
-    await queryInterface.addIndex('transaction_fee_policies', ['status'], {
+    await addIndexIfMissing('transaction_fee_policies', ['status'], {
       name: 'idx_fee_policies_status',
     });
 
@@ -88,41 +100,69 @@ module.exports = {
       updatedAt: { type: Sequelize.DATE, allowNull: false, defaultValue: Sequelize.literal('NOW()') },
     });
 
-    await queryInterface.addIndex('wallet_bank_payments', ['user_id', 'createdAt'], {
+    await addIndexIfMissing('wallet_bank_payments', ['user_id', 'createdAt'], {
       name: 'idx_wallet_bank_payments_user_created',
     });
-    await queryInterface.addIndex('wallet_bank_payments', ['pain001_msg_id'], {
+    await addIndexIfMissing('wallet_bank_payments', ['pain001_msg_id'], {
       name: 'idx_wallet_bank_payments_msg_id',
     });
-    await queryInterface.addIndex('wallet_bank_payments', ['end_to_end_id'], {
+    await addIndexIfMissing('wallet_bank_payments', ['end_to_end_id'], {
       name: 'idx_wallet_bank_payments_end_to_end_id',
     });
-    await queryInterface.addIndex('wallet_bank_payments', ['status'], {
+    await addIndexIfMissing('wallet_bank_payments', ['status'], {
       name: 'idx_wallet_bank_payments_status',
     });
 
-    await queryInterface.bulkInsert('transaction_fee_policies', [
-      {
-        code: 'WALLET_BANK_EFT_UAT_FLAT_R2',
-        transaction_type: 'wallet_bank_payment',
-        rail: 'eft',
-        channel: 'wallet',
-        customer_tier: 'all',
-        currency: 'ZAR',
-        fee_type: 'flat',
-        fixed_fee: 2.00,
-        percentage_fee_bps: 0,
-        effective_from: new Date('2026-04-25T00:00:00.000Z'),
-        status: 'active',
-        metadata: { launchPolicy: 'UAT', editableFromMMAP: true },
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-    ]);
+    await queryInterface.sequelize.query(`
+      INSERT INTO transaction_fee_policies (
+        code,
+        transaction_type,
+        rail,
+        channel,
+        customer_tier,
+        currency,
+        fee_type,
+        fixed_fee,
+        percentage_fee_bps,
+        effective_from,
+        status,
+        metadata,
+        "createdAt",
+        "updatedAt"
+      )
+      VALUES (
+        'WALLET_BANK_EFT_UAT_FLAT_R2',
+        'wallet_bank_payment',
+        'eft',
+        'wallet',
+        'all',
+        'ZAR',
+        'flat',
+        2.00,
+        0,
+        '2026-04-25T00:00:00.000Z',
+        'active',
+        '{"launchPolicy":"UAT","editableFromMMAP":true}'::jsonb,
+        NOW(),
+        NOW()
+      )
+      ON CONFLICT (code) DO UPDATE SET
+        fixed_fee = EXCLUDED.fixed_fee,
+        percentage_fee_bps = EXCLUDED.percentage_fee_bps,
+        status = EXCLUDED.status,
+        metadata = EXCLUDED.metadata,
+        "updatedAt" = NOW();
+    `);
   },
 
   async down(queryInterface) {
-    await queryInterface.dropTable('wallet_bank_payments');
-    await queryInterface.dropTable('transaction_fee_policies');
+    const tables = await queryInterface.showAllTables();
+    const tableNames = tables.map((table) => (typeof table === 'string' ? table : table.tableName));
+    if (tableNames.includes('wallet_bank_payments')) {
+      await queryInterface.dropTable('wallet_bank_payments');
+    }
+    if (tableNames.includes('transaction_fee_policies')) {
+      await queryInterface.dropTable('transaction_fee_policies');
+    }
   },
 };
