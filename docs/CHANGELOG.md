@@ -1,5 +1,61 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-25 - Wallet-to-bank EFT H2H activation (v3.0.0)
+
+### Summary
+Activated the wallet-to-bank payment path for UAT. Bank payments now default to SBSA H2H EFT, with an optional **Instant Payment** toggle that uses existing PayShap RPP rails. The implementation reuses existing H2H Pain.001/SFTP infrastructure, existing PayShap RPP logic, existing idempotency middleware, existing beneficiary records, and the existing SA public-holiday utility.
+
+### New runtime code
+- **`routes/walletBankPayments.js`** — Authenticated, KYC-gated endpoints:
+  - `POST /api/v1/wallet-bank-payments/quote`
+  - `POST /api/v1/wallet-bank-payments/submit`
+- **`services/walletBankPaymentService.js`** — Wallet-bank quote/submit orchestration, EFT submission, PayShap RPP submission, wallet debit, file upload, rejection reversal/refund, and Pain.002 update handling.
+- **`services/transactionFeeService.js`** — Customer-facing fee quote service. EFT uses DB-backed policy; PayShap uses existing RPP tiered fee service.
+- **`utils/eftSettlementEstimator.js`** — EFT receipt estimate using `15:00 SAST`, Saturday intake, weekends, and SA public holidays.
+- **`models/TransactionFeePolicy.js`** — Effective-dated fee policy model for future MMAP configuration.
+- **`models/WalletBankPayment.js`** — Customer wallet-to-bank payment lifecycle tracking.
+
+### Frontend
+- **`mymoolah-wallet-frontend/pages/SendMoneyPage.tsx`**
+  - Bank payment modal defaults to **Bank EFT**.
+  - Adds **Instant Payment** toggle for PayShap RPP.
+  - Shows fee, total debit, and receiver timing messaging before submission.
+  - Uses one bank-payment flow rather than separate EFT/PayShap modals.
+- **`mymoolah-wallet-frontend/services/apiService.ts`**
+  - Added typed wallet-bank quote and submit methods.
+
+### Database migration
+- **`migrations/20260425110000_create_wallet_bank_payments_and_fee_policies.js`**
+  - Creates `transaction_fee_policies`.
+  - Creates `wallet_bank_payments`.
+  - Seeds launch/UAT EFT fee policy `WALLET_BANK_EFT_UAT_FLAT_R2` = `R2.00`.
+
+### Banking-grade controls
+- Wallet-bank endpoints are JWT authenticated, KYC-gated, and financial-rate-limited.
+- Submit endpoint uses `X-Idempotency-Key` from the frontend API service.
+- EFT submission snapshots the fee policy and settlement estimate for auditability.
+- Pain.002 rejection/NACK handling reverses and refunds the wallet-bank EFT.
+- Production remains gated: keep `WALLET_BANK_EFT_ENABLED=false` until Penny #2 FINAUD and R10 inbound validation are complete.
+
+### Tests and validation
+- Added `tests/eft-settlement-estimator.test.js` with 3 passing tests:
+  - Before-cutoff same-day intake.
+  - Friday after-cutoff Saturday intake with Monday/holiday roll.
+  - Saturday before-cutoff intake.
+- Validation performed:
+  - `npm test -- --runTestsByPath tests/eft-settlement-estimator.test.js`
+  - `node --check` on new backend files and migration.
+  - `npx tsc --noEmit` in `mymoolah-wallet-frontend`.
+  - Cursor lints: no errors on edited files.
+
+### Restart / migration requirements
+- Run migration in Codespaces/UAT before testing.
+- Restart backend and wallet frontend after pulling this commit.
+- Commit: `f288790f feat(wallet-bank): activate EFT H2H payments`
+- Session log: `docs/session_logs/2026-04-25_1121_wallet-bank-eft-h2h-activation.md`
+
+---
+
 ## 2026-04-23 - SBSA H2H PROD Penny readiness: pain002 parser/poller correctness + PROD penny tooling (v2.99.6)
 
 ### Summary

@@ -1,14 +1,27 @@
 # MyMoolah Treasury Platform
 
-**Last Updated**: April 16, 2026  
-**Version**: 2.97.7 - TPPP withdrawals + compliance/KB alignment (eeziCash)  
-**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **CHART OF ACCOUNTS** ✅ **ELECTRICITY SUPPLIER COMPARISON** ✅ **LEDGER AUDIT** ✅ **CLOUD SCHEDULER** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **POPIA ID ENCRYPTION** ✅ **LANGCHAIN RAG AI** ✅ **PASA T-PPP BADGE**
+**Last Updated**: April 25, 2026  
+**Version**: 3.0.0 - Wallet-to-bank EFT H2H activation  
+**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **SBSA H2H EFT UAT ACTIVATION** ✅ **PAYSHAP RPP INSTANT PAYMENT** ✅ **CHART OF ACCOUNTS** ✅ **ELECTRICITY SUPPLIER COMPARISON** ✅ **LEDGER AUDIT** ✅ **CLOUD SCHEDULER** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **POPIA ID ENCRYPTION** ✅ **LANGCHAIN RAG AI** ✅ **PASA T-PPP BADGE**
 
-**Recent work**: **Apr 20, 2026** — New **POL-020 Cash Withdrawal & Ring-Fencing of Own Funds** policy (`docs/policies/20-Cash-Withdrawal-Policy.md`), Standard Bank product-approval letter (`docs/policies/2026-04-20_StandardBank_CashWithdrawal_Policy_Letter.html`), Own-Funds ring-fence engineering plan, T&C §4.4 and FAQ §9c updates, and terminology alignment across the policy corpus — "cash withdrawal" is now canonical (replacing "cash-out" in policy/legal/user-facing text) and a generic **Cash-Withdrawal Partner** category covers eeziCash (Flash Group), EasyPay, Cliquefin / OTT, USSD cash-withdrawal, and any future partner. Backend code identifiers retain their historical `CashOut` spelling. **Apr 16** — Corporate policies, security architecture doc, FAQ, sponsor TPPP brief, and KB operator guides updated for **wallet cash withdrawals**: TPPP characterisation (not VAS voucher resale), transaction monitoring typology **§5.2.6**, AML **§9A**, fraud scope, IS policy logging, compliance review scope. New hub `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md`. **Apr 14** — `docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html` + legal correction narrative (session log). Earlier: Chart of Accounts, electricity supplier comparison, ledger audit — see `docs/CHANGELOG.md`.
+**Recent work**: **Apr 25, 2026** — Wallet-to-bank payments activated for UAT: bank payments default to **SBSA H2H EFT**, with an **Instant Payment** toggle for PayShap RPP. Added DB-backed effective-dated transaction fee policies for future MMAP management, seeded UAT EFT fee `R2.00`, added quote/submit APIs, wallet-bank payment tracking, Pain.002 rejection reversal/refund handling, and EFT receiver timing estimates using `15:00 SAST` cutoff + Saturday intake + SA public holidays. Commit `f288790f`. **Apr 24** — SBSA H2H PROD Penny #2 ACK + INTAUD succeeded in 22 seconds; FINAUD expected 2026-04-29 due to Freedom Day roll. **Apr 20** — POL-020 Cash Withdrawal & Ring-Fencing of Own Funds policy and related compliance docs. See `docs/CHANGELOG.md`.
 
 ---
 
-## 🚀 **LATEST UPDATE: TPPP withdrawals — policies, security, FAQ, KB hub (April 16, 2026)**
+## 🚀 **LATEST UPDATE: Wallet-to-bank EFT H2H activation (April 25, 2026)**
+
+### **Wallet-to-bank payments**
+
+- **Default rail:** Bank payments in Send Money use SBSA H2H EFT by default.
+- **Instant option:** Users can toggle **Instant Payment** to use PayShap RPP, with higher-fee disclosure.
+- **Fee platform:** `transaction_fee_policies` stores effective-dated customer fees for future MMAP control. UAT launch EFT fee is `R2.00`.
+- **Audit trail:** `wallet_bank_payments` snapshots fee policy, total debit, rail, Pain.001 IDs, and settlement estimate.
+- **Receipt estimate:** EFT messaging uses a `15:00 SAST` cutoff, Saturday intake, weekends, and SA public holidays.
+- **UAT requirement:** Run migration `20260425110000_create_wallet_bank_payments_and_fee_policies.js` in Codespaces before testing.
+
+---
+
+## 🚀 **PREVIOUS UPDATE: TPPP withdrawals — policies, security, FAQ, KB hub (April 16, 2026)**
 
 ### **Withdrawals and eeziCash (regulatory + operational)**
 

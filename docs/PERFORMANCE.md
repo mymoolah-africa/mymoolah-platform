@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Performance Documentation
 
-**Last Updated**: March 19, 2026
-**Version**: 2.11.32 - VAS served from `v_best_offers` materialized view for all types (see `services/productCatalogService.js`)
-**Status**: ✅ **USDC LIMIT CHECKS DB-AGGREGATION ONLY** ✅ **EASYPAY STANDALONE VOUCHER UI OPTIMIZED** ✅ **RECONCILIATION OPTIMIZED** ✅ **FLASH + MOBILEMART** ✅ **REFERRAL SYSTEM OPTIMIZED** ✅ **PEACH PAYMENTS COMPLETE** ✅ **ZAPPER REVIEWED** ✅ **PRODUCTION READY**
+**Last Updated**: April 25, 2026
+**Version**: 3.0.0 - Wallet-to-bank EFT H2H performance notes
+**Status**: ✅ **WALLET-BANK EFT INDEXED TRACKING** ✅ **USDC LIMIT CHECKS DB-AGGREGATION ONLY** ✅ **EASYPAY STANDALONE VOUCHER UI OPTIMIZED** ✅ **RECONCILIATION OPTIMIZED** ✅ **FLASH + MOBILEMART** ✅ **REFERRAL SYSTEM OPTIMIZED** ✅ **PEACH PAYMENTS COMPLETE** ✅ **ZAPPER REVIEWED** ✅ **PRODUCTION READY**
 
 ---
 
@@ -11,12 +11,24 @@
 The MyMoolah Treasury Platform is optimized for **high-performance financial transactions** with **TLS 1.3** and **banking-grade security**. The platform is designed to handle **millions of transactions** with sub-second response times while maintaining enterprise-grade security and reliability.
 
 ### **🏆 Performance Achievements**
+- ✅ **Wallet-bank EFT quote/submit path**: Fee lookup uses indexed effective-dated DB policy; EFT settlement estimate is local deterministic logic; submit reuses existing H2H and PayShap services.
 - ✅ **Sub-Second Response Times**: <200ms average API response times
 - ✅ **TLS 1.3 Optimization**: Optimized TLS 1.3 for maximum performance
 - ✅ **Database Optimization**: Optimized queries with proper indexing
 - ✅ **Caching Strategy**: Multi-layer caching for performance
 - ✅ **Load Balancing**: Ready for horizontal scaling
 - ✅ **Memory Optimization**: Efficient memory usage and garbage collection
+
+---
+
+## 💸 **WALLET-BANK EFT PERFORMANCE NOTES**
+
+- **Fee lookup**: `transaction_fee_policies` has lookup indexes on transaction type, rail, channel, tier, currency, and effective dates.
+- **Payment tracking**: `wallet_bank_payments` is indexed by user/date, Pain.001 message ID, EndToEndId, and status for customer history, Pain.002 processing, and operational searches.
+- **Quote path**: EFT quotes do not call SBSA. They calculate fee and settlement estimate locally from DB policy and holiday/cutoff rules.
+- **Submit path**: EFT submit performs one wallet row lock, debit, payment tracking insert, Standard Bank transaction insert, transaction inserts, and then H2H file upload.
+- **Pain.002 processing**: Wallet-bank processing is added as a second consumer after existing disbursement processing; it filters by `pain001MsgId` and only touches matching `wallet_bank_payments`.
+- **Frontend UX**: Quote calls are debounced in `SendMoneyPage.tsx` to avoid excessive quote requests while the amount is being typed.
 
 ---
 

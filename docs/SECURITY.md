@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Security Documentation
 
-**Last Updated**: April 16, 2026
-**Version**: 2.97.7 - TPPP withdrawal compliance documentation (eeziCash characterisation)
-**Status**: ✅ **USDC API VALIDATION AT BOUNDARY** ✅ **USDC IDEMPOTENCY & VALR GUARDS** ✅ **EASYPAY STANDALONE VOUCHER UI SECURE** ✅ **RECONCILIATION SECURITY IMPLEMENTED** ⚠️ **CRITICAL PII EXPOSURE IDENTIFIED** 🔴 **ENCRYPTION AT REST REQUIRED** ✅ **STAGING/PRODUCTION DATABASES SECURED** ✅ **REFERRAL SYSTEM FRAUD PREVENTION ACTIVE** ✅ **RULE 12A DOCUMENTED** ✅ **DB CONNECTION HELPER PATTERN ESTABLISHED** ✅ **LEDGER AUDIT LIVE** ✅ **RATE LIMITERS UNIFIED** ✅ **KYC RAW SQL**
+**Last Updated**: April 25, 2026
+**Version**: 3.0.0 - Wallet-to-bank EFT H2H security notes
+**Status**: ✅ **WALLET-BANK EFT AUTH/KYC/RATE LIMITS** ✅ **USDC API VALIDATION AT BOUNDARY** ✅ **USDC IDEMPOTENCY & VALR GUARDS** ✅ **EASYPAY STANDALONE VOUCHER UI SECURE** ✅ **RECONCILIATION SECURITY IMPLEMENTED** ⚠️ **CRITICAL PII EXPOSURE IDENTIFIED** 🔴 **ENCRYPTION AT REST REQUIRED** ✅ **STAGING/PRODUCTION DATABASES SECURED** ✅ **REFERRAL SYSTEM FRAUD PREVENTION ACTIVE** ✅ **RULE 12A DOCUMENTED** ✅ **DB CONNECTION HELPER PATTERN ESTABLISHED** ✅ **LEDGER AUDIT LIVE** ✅ **RATE LIMITERS UNIFIED** ✅ **KYC RAW SQL**
 
 ---
 
@@ -68,7 +68,18 @@ See: `docs/session_logs/2025-12-02_1220_msisdn-phonenumber-audit.md` for full au
 - **Artefacts:** `docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html` (flows, ledger excerpts, role matrices); hub `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md` (AML, monitoring, security logging, KB seeding guidance).
 - **Security impact:** Cash-withdrawal channels (all Cash-Withdrawal Partners — eeziCash via Flash, EasyPay, Cliquefin / OTT, and any future partner) remain subject to **PII redaction** in logs, **immutable audit trails** on financial tables, **velocity and step-up** controls at the API boundary, and **cross-channel** fraud correlation (wallet → cash withdrawal → RTP). See `docs/policies/13-Information-Security-Policy.md` §10.2 and `docs/policies/20-Cash-Withdrawal-Policy.md` (POL-020 ring-fence).
 
+### **Wallet-to-bank EFT security notes (April 2026)**
+
+- **Boundary controls:** `/api/v1/wallet-bank-payments/quote` and `/api/v1/wallet-bank-payments/submit` require JWT authentication and KYC verification.
+- **Rate limiting:** The wallet-bank route is registered under `financialLimiter` in `server.js`.
+- **Idempotency:** Frontend submissions include `X-Idempotency-Key`; backend middleware prevents duplicate processing for repeat submits.
+- **PII minimisation:** `wallet_bank_payments` stores account number last four digits only; full account number remains in the existing beneficiary payment method / Standard Bank transaction path needed for payment execution.
+- **Auditability:** Each payment snapshots fee policy, fee amount, total debit, settlement estimate, Pain.001 message ID, and EndToEndId.
+- **Asynchronous reversal safety:** Pain.002 NACK/rejection handling reverses and refunds EFT wallet-bank payments. Reversal creates a refund transaction and marks the payment `reversed`.
+- **Production gate:** Keep `WALLET_BANK_EFT_ENABLED=false` in production until SBSA Penny #2 FINAUD and inbound R10 validation are signed off.
+
 ### **🏆 Security Achievements**
+- ✅ **Wallet-Bank EFT (Apr 2026)**: JWT + KYC boundary, financial rate limiter, idempotent submit, fee snapshotting, account last-four storage, Pain.002 reversal/refund path
 - ✅ **USDC API (Feb 2026)**: All USDC endpoints use express-validator at boundary; idempotency (client key or crypto.randomUUID()); VALR credentials guarded; no unsupported request body fields; limit/offset/address length sanitized
 - ✅ **TLS 1.3 Implementation**: Complete TLS 1.3 with banking-grade cipher suites
 - ✅ **OTP System**: Banking-grade OTP verification for password reset and phone changes

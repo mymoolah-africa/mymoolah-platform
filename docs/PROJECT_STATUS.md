@@ -1,16 +1,19 @@
 # MyMoolah Treasury Platform - Project Status
 
-**Last Updated**: April 16, 2026  
-**Version**: 2.97.7 - TPPP withdrawal policies + compliance/KB hub  
-**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **CHART OF ACCOUNTS** ✅ **ELECTRICITY SUPPLIER COMPARISON** ✅ **LEDGER AUDIT** ✅ **CLOUD SCHEDULER** ✅ **CLOUD BUILD DEPLOYS** ✅ **LANGCHAIN RAG AI** ✅ **POPIA ENCRYPTION** ✅ **PAYSHAP RTP** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
+**Last Updated**: April 25, 2026  
+**Version**: 3.0.0 - Wallet-to-bank EFT H2H activation  
+**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **SBSA H2H EFT UAT ACTIVATION** ✅ **PAYSHAP RPP INSTANT PAYMENT** ✅ **CHART OF ACCOUNTS** ✅ **ELECTRICITY SUPPLIER COMPARISON** ✅ **LEDGER AUDIT** ✅ **CLOUD SCHEDULER** ✅ **CLOUD BUILD DEPLOYS** ✅ **LANGCHAIN RAG AI** ✅ **POPIA ENCRYPTION** ✅ **PAYSHAP RTP** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
 
 ---
 
 ## 🎯 **CURRENT STATUS OVERVIEW**
 
-Production live at api-mm.mymoolah.africa and wallet.mymoolah.africa. **April 20, 2026:** New **POL-020 Cash Withdrawal & Ring-Fencing of Own Funds** policy + Standard Bank product-approval letter + Own-Funds ring-fence engineering plan + T&C §4.4 and FAQ §9c. Terminology alignment across policies 01, 02, 03, 04, 05, 13, 18 and the WITHDRAWALS hub: "cash withdrawal" adopted as canonical in policy and user-facing text; generic **Cash-Withdrawal Partner** category covers eeziCash (Flash), EasyPay, Cliquefin / OTT, and any future partner. Backend code identifiers retain their historical `CashOut` spelling. **April 16:** Major `docs/` refresh for **TPPP wallet cash withdrawals** — TPPP characterisation (not VAS voucher resale); AML **POL-001 §9A**, transaction monitoring **POL-004 §5.2.6**, fraud **POL-005**, KYC **POL-002** scope, IS **POL-013 §10.2**, compliance review **POL-018**; `docs/security.md`, `docs/BANKING_GRADE_ARCHITECTURE.md`, `docs/STANDARD_BANK_TPPP_BRIEF.md`, `docs/FAQ_MASTER.md`, `docs/AI_SUPPORT_SYSTEM.md`, `docs/BANKING_GRADE_SUPPORT_SYSTEM.md`, `docs/index.md`, `docs/SETTLEMENTS.md`, `docs/ZERO_SHORTCUTS_POLICY.md`; hub **`docs/WITHDRAWALS_COMPLIANCE_AND_KB.md`**. Builds on **Apr 14** flow HTML + legal correction session. **April 5:** Chart of Accounts visual; production audit R50 discrepancy. **April 4:** Electricity supplier comparison deployed. Earlier ledger audit, `v_best_offers`, KYC raw SQL — see `CHANGELOG.md`.
+Production live at api-mm.mymoolah.africa and wallet.mymoolah.africa. **April 25, 2026:** Wallet-to-bank payments activated for UAT. Bank payments in Send Money default to **SBSA H2H EFT**, with **Instant Payment** toggle for PayShap RPP. Added effective-dated DB fee policies (`transaction_fee_policies`) for future MMAP control, wallet-bank payment lifecycle table (`wallet_bank_payments`), quote/submit API, Pain.002 reversal/refund path, and receiver timing estimates based on `15:00 SAST`, Saturday intake, weekends, and SA public holidays. Implementation commit: `f288790f`. Codespaces UAT must run migration `20260425110000_create_wallet_bank_payments_and_fee_policies.js` before testing. **April 24:** SBSA H2H PROD Penny #2 ACK + INTAUD succeeded in 22 seconds; FINAUD expected 2026-04-29. **April 20:** POL-020 Cash Withdrawal & Ring-Fencing of Own Funds policy + Standard Bank product-approval letter + Own-Funds ring-fence engineering plan. Earlier ledger audit, `v_best_offers`, KYC raw SQL — see `CHANGELOG.md`.
 
-### **📋 Latest: TPPP withdrawals — policies, security, FAQ, KB (v2.97.7, Apr 16, 2026)** ✅ **COMPLETE**
+### **📋 Latest: Wallet-to-bank EFT H2H activation (v3.0.0, Apr 25, 2026)** ✅ **IMPLEMENTED / UAT TESTING PENDING**
+Consumer bank payments now default to H2H EFT and offer Instant Payment via PayShap RPP. New wallet-bank quote/submit API, DB fee policies, payment tracking, settlement estimates, and Pain.002 reversal/refund handling are committed to `main`. Next step is Codespaces UAT migration + E2E testing. Session log: `docs/session_logs/2026-04-25_1121_wallet-bank-eft-h2h-activation.md`.
+
+### **📋 Previous: TPPP withdrawals — policies, security, FAQ, KB (v2.97.7, Apr 16, 2026)** ✅ **COMPLETE**
 Full alignment pack for sponsor-bank, AML, monitoring, fraud, IS, and customer/support content. Cross-reference `docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html` (Apr 14).
 
 ### **📋 Previous: Chart of Accounts + Electricity Supplier Comparison + Ledger Audit (v2.79.0–v2.81.1, Mar 30–Apr 5, 2026)** ✅ **COMPLETE**

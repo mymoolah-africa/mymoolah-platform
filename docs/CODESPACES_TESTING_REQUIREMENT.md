@@ -1,8 +1,8 @@
 # Codespaces Testing Requirement - MyMoolah Platform
 
 **Status**: ✅ **MANDATORY** - All testing must be performed in Codespaces  
-**Last Updated**: March 4, 2026  
-**Version**: 1.1.0
+**Last Updated**: April 25, 2026  
+**Version**: 1.2.0 - Wallet-bank EFT UAT testing
 
 ---
 
@@ -16,6 +16,53 @@
 - ✅ **ALWAYS** use Codespaces as the primary testing environment
 
 **Reason**: Codespaces has the correct environment configuration, database connections, and credentials that match production-like conditions.
+
+---
+
+## 💸 **WALLET-BANK EFT UAT TESTING (APRIL 2026)**
+
+After pulling commit `f288790f` in Codespaces:
+
+1. **Run migrations first**
+   ```bash
+   ./scripts/run-migrations-master.sh uat
+   ```
+   Confirm `20260425110000_create_wallet_bank_payments_and_fee_policies.js` is applied.
+
+2. **Confirm UAT feature flags**
+   ```bash
+   WALLET_BANK_EFT_ENABLED=true
+   SBSA_H2H_EFT_CUTOFF_SAST=15:00
+   SBSA_H2H_EFT_SATURDAY_PROCESSING=true
+   ```
+   Production must remain disabled until SBSA Penny #2 FINAUD and R10 inbound validation are complete.
+
+3. **Restart backend and wallet frontend**
+   Use the standard Codespaces startup script for the current testing mode. Do not start/stop production services.
+
+4. **Test default EFT**
+   - Open wallet Send Money.
+   - Select or create a bank beneficiary.
+   - Confirm bank payment defaults to **Bank EFT**.
+   - Enter an amount.
+   - Confirm the UI shows fee, total debit, and receiver date estimate.
+   - Submit and confirm status is `processing`.
+
+5. **Test Instant Payment**
+   - Toggle **Instant Payment** on.
+   - Confirm fee text changes to PayShap/Instant messaging.
+   - Submit and confirm PayShap RPP path is used.
+
+6. **Database checks**
+   - Confirm `wallet_bank_payments` row created.
+   - Confirm fee snapshot and settlement estimate are populated.
+   - Confirm `standard_bank_transactions` row created.
+   - Confirm wallet debit equals amount + fee.
+
+7. **Negative-path checks**
+   - Insufficient balance returns a safe validation error.
+   - Duplicate submit with same idempotency key does not double debit.
+   - Pain.002 NACK/rejection test should reverse/refund the payment.
 
 ---
 

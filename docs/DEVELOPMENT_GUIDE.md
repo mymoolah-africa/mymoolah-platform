@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Development Guide
 
-**Last Updated**: April 16, 2026  
-**Version**: 2.97.7 - TPPP withdrawal docs + policy alignment  
-**Status**: ✅ **CLOUD BUILD DEPLOYS** ✅ **EEZIAIRTIME REDEMPTION UI** ✅ **EEZIPAY KB** ✅ **INTERNATIONAL AIRTIME PINLESS (AWAITING FLASH)** ✅ **EASYPAY STANDALONE VOUCHER** ✅ **RECONCILIATION LIVE** ✅ **REFERRAL SYSTEM LIVE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY** ✅ **CHART OF ACCOUNTS** ✅ **LEDGER AUDIT** ✅ **ELECTRICITY SUPPLIER COMPARISON** ✅ **CLOUD SCHEDULER**
+**Last Updated**: April 25, 2026  
+**Version**: 3.0.0 - Wallet-to-bank EFT H2H activation  
+**Status**: ✅ **CLOUD BUILD DEPLOYS** ✅ **SBSA H2H EFT UAT ACTIVATION** ✅ **PAYSHAP RPP INSTANT PAYMENT** ✅ **EEZIAIRTIME REDEMPTION UI** ✅ **EEZIPAY KB** ✅ **INTERNATIONAL AIRTIME PINLESS (AWAITING FLASH)** ✅ **EASYPAY STANDALONE VOUCHER** ✅ **RECONCILIATION LIVE** ✅ **REFERRAL SYSTEM LIVE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY** ✅ **CHART OF ACCOUNTS** ✅ **LEDGER AUDIT** ✅ **ELECTRICITY SUPPLIER COMPARISON** ✅ **CLOUD SCHEDULER**
 
 ---
 
@@ -32,6 +32,14 @@ Welcome to the MyMoolah Treasury Platform development guide! This platform is bu
 - **Migrations**: Run `run-migrations-master.sh` from **Codespaces** (Cloud SQL Auth Proxy running)
 - **Codespaces startup**: Main backend + proxy only → `./scripts/one-click-restart-and-start.sh`. **Admin Portal** (disbursement clients, etc.) → `./scripts/start-all-services.sh` (main 3001, portal BE 3002, portal FE 3003, wallet 3000); logs: `/tmp/mymoolah-logs/*.log`. Details: `docs/CODESPACES_TESTING_REQUIREMENT.md`.
 - **See:** `scripts/README_DEPLOYMENT.md` for "Where to Run What" and typical workflow; `DEVELOPMENT_DEPLOYMENT_WORKFLOW.md` for complete workflow
+
+### **Wallet-to-bank EFT development notes (v3.0.0)**
+- **Default rail**: Consumer bank payments default to SBSA H2H EFT.
+- **Instant rail**: The Send Money modal's **Instant Payment** toggle uses existing PayShap RPP logic.
+- **Backend endpoints**: `/api/v1/wallet-bank-payments/quote` and `/api/v1/wallet-bank-payments/submit`.
+- **Migration required before UAT**: `20260425110000_create_wallet_bank_payments_and_fee_policies.js`.
+- **Fee policy**: UAT EFT fee is seeded as `WALLET_BANK_EFT_UAT_FLAT_R2` (`R2.00`). Future fee edits should use `transaction_fee_policies` and later MMAP, not hardcoded constants.
+- **Testing**: After pulling in Codespaces, run migrations, restart backend/frontend, then test default EFT and Instant Payment toggle with a real saved bank beneficiary.
 
 ---
 

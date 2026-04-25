@@ -1,5 +1,8 @@
 # Database Connection Guide - UAT, Staging & Production
 
+**Last Updated**: April 25, 2026  
+**Latest Migration Note**: Wallet-bank EFT activation adds `20260425110000_create_wallet_bank_payments_and_fee_policies.js`.
+
 ## 🎯 **CRITICAL: NEVER STRUGGLE WITH PASSWORDS AGAIN**
 
 This guide ensures **100% reliable** database connections for UAT, Staging, and Production. **ALWAYS** use the provided scripts and helpers - never write custom connection logic.
@@ -66,6 +69,8 @@ This guide ensures **100% reliable** database connections for UAT, Staging, and 
 **Rule (updated Feb 2026):** Run **migrations first** when you add or change UAT/Staging/Production schema. Run **seed scripts only after** the relevant migrations have been run for that environment. Order is always: migrations → then seed.
 
 **Note (Mar 2026):** The repo's `cloud-sql-proxy` binary is Linux x86-64. On Mac ARM64, it will fail with "cannot execute binary file". **Run migrations in Codespaces** (Linux) for Staging/Production. Local Mac: use UAT with direct connection if configured, or run migrations from Codespaces.
+
+**Wallet-bank EFT note (Apr 2026):** Before testing wallet-to-bank EFT in Codespaces/UAT, apply `20260425110000_create_wallet_bank_payments_and_fee_policies.js`. It creates `transaction_fee_policies`, `wallet_bank_payments`, and seeds the UAT EFT fee policy `WALLET_BANK_EFT_UAT_FLAT_R2` (`R2.00`).
 
 ---
 

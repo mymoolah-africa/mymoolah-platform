@@ -1,10 +1,10 @@
 # MyMoolah Treasury Platform - Documentation Index
 
-**Last Updated**: April 16, 2026  
+**Last Updated**: April 25, 2026  
 **Project Status**: 🚀 **PRODUCTION LIVE - api-mm.mymoolah.africa, wallet.mymoolah.africa**  
-**Version**: 2.97.7 - TPPP withdrawals + policies + KB hub  
+**Version**: 3.0.0 - Wallet-to-bank EFT H2H activation  
 
-For recent work, see [CHANGELOG.md](./CHANGELOG.md) and [AGENT_HANDOVER.md](./AGENT_HANDOVER.md). **Apr 20, 2026:** [20-Cash-Withdrawal-Policy.md](./policies/20-Cash-Withdrawal-Policy.md) (POL-020 — Cash Withdrawal & Ring-Fencing of Own Funds), [Standard Bank product-approval letter](./policies/2026-04-20_StandardBank_CashWithdrawal_Policy_Letter.html), [Own-Funds ring-fence implementation plan](./OWN_FUNDS_RINGFENCE_IMPLEMENTATION_PLAN.md); terminology alignment across the policy corpus and the WITHDRAWALS hub — "cash withdrawal" adopted as canonical, with a generic **Cash-Withdrawal Partner** category (eeziCash via Flash, EasyPay, Cliquefin / OTT, plus any future partner). **Apr 16:** [WITHDRAWALS_COMPLIANCE_AND_KB.md](./WITHDRAWALS_COMPLIANCE_AND_KB.md) — hub for the **regulatory characterisation** of wallet cash withdrawals (TPPP; not VAS voucher resale), AML/monitoring/fraud/IS policy updates, [FAQ_MASTER.md](./FAQ_MASTER.md) §9, and AI KB embedding notes. **Apr 14:** [MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html](./integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html) (print/PDF flows). **Apr 5:** Chart of Accounts visual, electricity supplier comparison, ledger audit — [CHART_OF_ACCOUNTS.md](./CHART_OF_ACCOUNTS.md).
+For recent work, see [CHANGELOG.md](./CHANGELOG.md) and [AGENT_HANDOVER.md](./AGENT_HANDOVER.md). **Apr 25, 2026:** Wallet-to-bank payments activated for UAT. Bank payments default to **SBSA H2H EFT** with an **Instant Payment** toggle for existing PayShap RPP rails. New docs/session log: [2026-04-25 wallet-bank EFT H2H activation](./session_logs/2026-04-25_1121_wallet-bank-eft-h2h-activation.md). New API: `POST /api/v1/wallet-bank-payments/quote` and `POST /api/v1/wallet-bank-payments/submit`. New migration: `20260425110000_create_wallet_bank_payments_and_fee_policies.js` (fee policies + wallet-bank payment tracking + R2 EFT UAT fee). **Apr 20:** [20-Cash-Withdrawal-Policy.md](./policies/20-Cash-Withdrawal-Policy.md) (POL-020 — Cash Withdrawal & Ring-Fencing of Own Funds). **Apr 16:** [WITHDRAWALS_COMPLIANCE_AND_KB.md](./WITHDRAWALS_COMPLIANCE_AND_KB.md). **Apr 5:** Chart of Accounts visual, electricity supplier comparison, ledger audit — [CHART_OF_ACCOUNTS.md](./CHART_OF_ACCOUNTS.md).
 
 ---
 
@@ -13,6 +13,7 @@ For recent work, see [CHANGELOG.md](./CHANGELOG.md) and [AGENT_HANDOVER.md](./AG
 MyMoolah is a **full Treasury Platform** (wallet + general ledger + integrations) built on **Mojaloop standards** and **ISO 20022 banking standards**. The platform is designed to handle **millions of transactions** with banking-grade security and performance.
 
 ### **🏆 ACHIEVEMENTS COMPLETED**
+- ✅ **Wallet-to-bank EFT H2H UAT activation** with Instant Payment PayShap toggle
 - ✅ **Banking-Grade Support Engine** with AI-powered assistance
 - ✅ **Complete VAS Integration** (Flash, MobileMart, Peach Payments)
 - ✅ **DTMercury Banking Integration** for external transfers

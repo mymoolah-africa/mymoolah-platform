@@ -1,12 +1,15 @@
-**Last Updated**: April 7, 2026
-**Version**: 2.89.0 - Disbursement Phase 2 (Client Management API)
-**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **EEZIAIRTIME PIN & COPY** ✅ **EASYPAY** ✅ **RECONCILIATION LIVE** ✅ **REFERRAL SYSTEM LIVE** ✅ **OTP SYSTEM LIVE** ✅ **MOBILEMART INTEGRATED** ✅ **ELECTRICITY SUPPLIER COMPARISON**
+**Last Updated**: April 25, 2026
+**Version**: 3.0.0 - Wallet-to-bank EFT H2H API
+**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **WALLET-BANK EFT UAT API** ✅ **PAYSHAP RPP INSTANT PAYMENT** ✅ **EEZIAIRTIME PIN & COPY** ✅ **EASYPAY** ✅ **RECONCILIATION LIVE** ✅ **REFERRAL SYSTEM LIVE** ✅ **OTP SYSTEM LIVE** ✅ **MOBILEMART INTEGRATED** ✅ **ELECTRICITY SUPPLIER COMPARISON**
 
 ---
 
 ## Recent Updates
 
 **For full change history**, see [CHANGELOG.md](./CHANGELOG.md) and [AGENT_HANDOVER.md](./AGENT_HANDOVER.md).
+
+### v3.0.0 — Wallet-to-bank EFT H2H API (April 25, 2026)
+New `/api/v1/wallet-bank-payments` endpoints quote and submit consumer wallet-to-bank payments. EFT is the default rail; PayShap RPP is available through the Instant Payment option. Requires migration `20260425110000_create_wallet_bank_payments_and_fee_policies.js` before UAT testing.
 
 ### v2.89.0 — Disbursement Client Management API (April 7, 2026)
 New `/api/v1/disbursement-clients` endpoints for corporate client onboarding, KYB document management, fee configuration, and beneficiary file parsing. See [Disbursement Client API](#disbursement-client-management) section below.
@@ -33,6 +36,105 @@ VITE_API_BASE_URL=https://<your-backend-forwarded-host>
 ```
 
 Ensure `CORS_ORIGINS` (backend) includes `https://<your-3000-forwarded-host>`.
+
+---
+
+## 💸 **WALLET-BANK PAYMENT API**
+
+### **Overview**
+Wallet-bank payment endpoints support consumer wallet-to-bank transfers. EFT is the default H2H rail. Instant Payment uses existing PayShap RPP rails and applies existing RPP fee logic.
+
+### **Quote Wallet-Bank Payment**
+```http
+POST /api/v1/wallet-bank-payments/quote
+Authorization: Bearer <jwt_token>
+Content-Type: application/json
+```
+
+**Request**
+```json
+{
+  "beneficiaryAccountId": 123,
+  "amount": 100.00,
+  "rail": "eft"
+}
+```
+
+**Rail values**
+- `eft` — SBSA H2H EFT, default bank-payment rail.
+- `payshap` — Instant Payment via PayShap RPP.
+
+**Response**
+```json
+{
+  "success": true,
+  "data": {
+    "rail": "eft",
+    "amount": 100,
+    "feeAmount": 2,
+    "totalDebit": 102,
+    "currency": "ZAR",
+    "settlementEstimate": {
+      "cutoffSast": "15:00",
+      "requestedExecutionDate": "2026-04-25",
+      "estimatedReceiverAvailabilityDate": "2026-04-28",
+      "message": "Receiver should receive funds by Tuesday, 28 April 2026."
+    },
+    "beneficiary": {
+      "id": 123,
+      "name": "Beneficiary Name",
+      "bankName": "Standard Bank",
+      "accountNumberLast4": "1234",
+      "branchCode": "051001"
+    }
+  }
+}
+```
+
+### **Submit Wallet-Bank Payment**
+```http
+POST /api/v1/wallet-bank-payments/submit
+Authorization: Bearer <jwt_token>
+X-Idempotency-Key: <uuid>
+Content-Type: application/json
+```
+
+**Request**
+```json
+{
+  "beneficiaryAccountId": 123,
+  "amount": 100.00,
+  "rail": "eft",
+  "reference": "Rent Apr"
+}
+```
+
+**Response**
+```json
+{
+  "success": true,
+  "data": {
+    "paymentId": "WB-EFT-...",
+    "status": "processing",
+    "rail": "eft",
+    "amount": 100,
+    "feeAmount": 2,
+    "totalDebit": 102,
+    "settlementEstimate": {
+      "message": "Receiver should receive funds by Tuesday, 28 April 2026."
+    }
+  }
+}
+```
+
+### **Security and Operational Notes**
+- Endpoints require JWT auth and KYC verification.
+- Submit is protected by the platform idempotency middleware.
+- Routes are covered by the financial transaction rate limiter.
+- EFT submissions snapshot fee policy and settlement estimate in `wallet_bank_payments`.
+- Pain.002 NACK/rejection responses reverse/refund wallet-bank EFTs.
+- UAT launch fee policy: `WALLET_BANK_EFT_UAT_FLAT_R2` (`R2.00`).
+- Production should remain disabled with `WALLET_BANK_EFT_ENABLED=false` until SBSA Penny #2 FINAUD and inbound R10 validation are confirmed.
 
 ---
 

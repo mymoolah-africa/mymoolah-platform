@@ -1,12 +1,24 @@
 # 🏦 Banking-Grade Architecture for MyMoolah
 
-**Last Updated**: April 16, 2026
-**Version**: 2.97.7 - TPPP withdrawal documentation (eeziCash legal characterisation)
-**Status**: ✅ **PRODUCTION DB MIGRATED** ✅ **USDC DB-AGGREGATION ONLY (NO JS SUM)** ✅ **FLOAT MONITORING LIVE** ✅ **LEDGER INTEGRATION COMPLETE** ✅ **RECONCILIATION LIVE** ✅ **FLASH + MOBILEMART** ✅ **PEACH PAYMENTS INTEGRATED** ✅ **ZAPPER REVIEWED** ✅ **PRODUCTION READY** ✅ **CHART OF ACCOUNTS (28 ACCOUNTS)** ✅ **AUTOMATED LEDGER AUDIT** ✅ **CLOUD SCHEDULER** ✅ **ELECTRICITY SUPPLIER COMPARISON**
+**Last Updated**: April 25, 2026
+**Version**: 3.0.0 - Wallet-to-bank EFT H2H architecture
+**Status**: ✅ **PRODUCTION DB MIGRATED** ✅ **WALLET-BANK EFT UAT ACTIVATION** ✅ **PAYSHAP RPP INSTANT PAYMENT** ✅ **USDC DB-AGGREGATION ONLY (NO JS SUM)** ✅ **FLOAT MONITORING LIVE** ✅ **LEDGER INTEGRATION COMPLETE** ✅ **RECONCILIATION LIVE** ✅ **FLASH + MOBILEMART** ✅ **PEACH PAYMENTS INTEGRATED** ✅ **ZAPPER REVIEWED** ✅ **PRODUCTION READY** ✅ **CHART OF ACCOUNTS (28 ACCOUNTS)** ✅ **AUTOMATED LEDGER AUDIT** ✅ **CLOUD SCHEDULER** ✅ **ELECTRICITY SUPPLIER COMPARISON**
 
 ## Overview
 
 This document outlines the banking-grade architecture implemented for MyMoolah to handle **millions of customers and transactions** with enterprise-level performance, security, and scalability. The platform now includes **USDC Send with full API validation and DB-only aggregation for limits** (February 2026), **complete Peach Payments integration**, **comprehensive Zapper integration review**, and a **world-class automated reconciliation system** for multi-supplier transaction reconciliation (MobileMart + Flash configured, January 14, 2026).
+
+### Wallet-to-bank EFT H2H activation (April 2026)
+
+Consumer wallet-to-bank payments now use a single bank-payment modal with two rails:
+- **Default EFT**: SBSA H2H Pain.001 via the existing GCS/SFTP gateway and `pain001BulkBuilder`.
+- **Instant Payment**: PayShap RPP via existing `standardbankRppService`.
+
+The architecture adds two customer-facing payment domain tables:
+- **`transaction_fee_policies`**: Effective-dated fee policies for customer transaction fees. UAT launch policy is `WALLET_BANK_EFT_UAT_FLAT_R2` (`R2.00`). This is the future MMAP configuration source.
+- **`wallet_bank_payments`**: Wallet-to-bank payment lifecycle audit table. Stores rail, status, fee snapshot, total debit, bank last four, Pain.001 message ID, EndToEndId, and settlement estimate.
+
+Operationally, EFT payments are asynchronous: wallet debit occurs when the H2H file is submitted; Pain.002 NACK/rejection responses trigger wallet reversal/refund. Receiver availability is estimated from `15:00 SAST`, Saturday intake, weekends, and SA public holidays.
 
 ### TPPP wallet withdrawals (April 2026)
 
