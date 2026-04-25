@@ -39,7 +39,9 @@ Welcome to the MyMoolah Treasury Platform development guide! This platform is bu
 - **Backend endpoints**: `/api/v1/wallet-bank-payments/quote` and `/api/v1/wallet-bank-payments/submit`.
 - **Migration required before UAT**: `20260425110000_create_wallet_bank_payments_and_fee_policies.js`.
 - **Fee policy**: UAT EFT fee is seeded as `WALLET_BANK_EFT_UAT_FLAT_R2` (`R2.00`). Future fee edits should use `transaction_fee_policies` and later MMAP, not hardcoded constants.
-- **Testing**: After pulling in Codespaces, run migrations, restart backend/frontend, then test default EFT and Instant Payment toggle with a real saved bank beneficiary.
+- **Migration status**: The EFT migration was hardened for partial reruns after an `idx_fee_policies_lookup` already-exists conflict. André confirmed UAT and staging master migration scripts completed successfully in Codespaces.
+- **Testing**: After pulling in Codespaces, restart backend/frontend, then test default EFT and Instant Payment toggle with a real saved bank beneficiary.
+- **Website boundary**: Public website SEO, page optimisation, FAQs, and website AI support belong in the separate website project/Claude Code. Keep this repo focused on MMTP backend/wallet services, MMAP-facing APIs, auth, audit, and integration contracts.
 
 ---
 

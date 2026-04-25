@@ -21,13 +21,15 @@
 
 ## 💸 **WALLET-BANK EFT UAT TESTING (APRIL 2026)**
 
-After pulling commit `f288790f` in Codespaces:
+After pulling commit `f288790f` and the follow-up migration-hardening/docs commit in Codespaces:
 
 1. **Run migrations first**
    ```bash
    ./scripts/run-migrations-master.sh uat
    ```
    Confirm `20260425110000_create_wallet_bank_payments_and_fee_policies.js` is applied.
+
+   **Current status (Apr 25):** André confirmed the hardened migration completed successfully for UAT and staging after the partial-run index conflict was fixed. If a database already has a partial run, pull latest `main` first, then rerun the master migration script.
 
 2. **Confirm UAT feature flags**
    ```bash

@@ -3,8 +3,8 @@
 **Session Date**: 2026-04-25 11:21 SAST  
 **Agent**: Cursor AI Agent  
 **User**: André  
-**Session Duration**: ~30 minutes  
-**Commit**: `f288790f feat(wallet-bank): activate EFT H2H payments`
+**Session Duration**: ~60 minutes  
+**Commits**: `f288790f feat(wallet-bank): activate EFT H2H payments`; migration idempotency/docs follow-up committed later in the session.
 
 ---
 
@@ -30,6 +30,9 @@ The work stayed scoped to EFT H2H activation and the Send Money payment flow. It
 - [x] Added frontend API service methods for wallet-bank quote and submit.
 - [x] Added targeted settlement estimator tests.
 - [x] Committed and pushed implementation to `main`.
+- [x] Fixed the EFT migration so partial runs are safe to rerun across UAT, staging, and production migration targets.
+- [x] Confirmed André successfully reran the migration in Codespaces for UAT and staging after pulling the fix.
+- [x] Documented the website ownership decision: public website SEO/content should be managed outside this MMTP repo, while Cursor/MMTP owns secure APIs, MMAP integration, auth, audit, and wallet/backend services.
 
 ---
 
@@ -40,6 +43,8 @@ The work stayed scoped to EFT H2H activation and the Send Money payment flow. It
 - **Receipt estimate**: EFT uses `15:00 SAST` cutoff for launch. Saturday before 15:00 is treated as a processing intake day, with receiver availability rolled to the next SA business day.
 - **Reversal model**: H2H EFT is asynchronous. Wallet debit occurs on submission; rejected/NACK/failed EFTs are reversed and refunded via wallet credit and refund transaction.
 - **Production gating**: Wallet-bank EFT defaults to enabled outside production unless explicitly disabled. Production should keep `WALLET_BANK_EFT_ENABLED=false` until Penny #2 FINAUD and inbound R10 validation are complete.
+- **Migration safety**: The EFT migration must be idempotent because Codespaces/UAT migrations can fail after table/index creation but before Sequelize records completion.
+- **Website boundary**: `www.mymoolah.africa` SEO, pages, FAQ content, marketing copy, and website AI support should be managed in the website project/Claude Code. This MMTP repo should expose stable banking-grade APIs for MMAP and website integrations.
 
 ---
 
@@ -74,6 +79,7 @@ The work stayed scoped to EFT H2H activation and the Send Money payment flow. It
 - **Frontend duplicate SendMoneyPage**: Only the routed `mymoolah-wallet-frontend/pages/SendMoneyPage.tsx` was changed. The duplicate component file was not touched.
 - **Jest config warning**: Targeted test run passes but Jest still prints an existing config warning for unknown option `setupFilesAfterSetup`; not introduced by this session.
 - **Docs were stale**: Several top-level docs still referenced April 16/20 work as latest. This follow-up docs pass updates those canonical docs to reflect v3.0.0.
+- **Migration partial-run failure**: Codespaces initially hit `ERROR: relation "idx_fee_policies_lookup" already exists` because a partial run created indexes before Sequelize marked the migration complete. The migration now checks for existing tables/indexes, uses conflict-safe fee-policy seed upsert logic, and conditionally drops tables in rollback.
 
 ---
 
@@ -92,13 +98,16 @@ The work stayed scoped to EFT H2H activation and the Send Money payment flow. It
   - `npx tsc --noEmit` in `mymoolah-wallet-frontend`
 - [x] Cursor lints:
   - No linter errors on edited files.
-- [ ] Codespaces UAT E2E test still pending after pull, migration, and restart.
+- [x] Codespaces migrations:
+  - André pulled the migration fix and reported UAT and staging migration runs completed successfully.
+- [ ] Codespaces wallet UI E2E test still pending after restart and feature-flag confirmation.
 
 ---
 
 ## Next Steps
-- [ ] In Codespaces, pull latest `main`.
-- [ ] Run migration `20260425110000_create_wallet_bank_payments_and_fee_policies.js` against UAT using the master migration script.
+- [x] In Codespaces, pull latest `main`.
+- [x] Run migration `20260425110000_create_wallet_bank_payments_and_fee_policies.js` against UAT using the master migration script.
+- [x] Run the same migration safely against staging using the master migration script.
 - [ ] Restart backend and wallet frontend so the new model, route, and Send Money UI load.
 - [ ] Confirm `WALLET_BANK_EFT_ENABLED=true` for UAT only.
 - [ ] Confirm production remains gated until Penny #2 FINAUD and R10 inbound validation complete.
@@ -106,12 +115,14 @@ The work stayed scoped to EFT H2H activation and the Send Money payment flow. It
 - [ ] Test Instant Payment toggle and confirm PayShap RPP fee disclosure and submission path.
 - [ ] Test insufficient-balance and idempotency paths for wallet-bank submit endpoint.
 - [ ] After UAT evidence, decide whether to add MMAP fee-management UI for `transaction_fee_policies`.
+- [ ] Keep website SEO/content/FAQ/AI-support implementation in the separate website codebase managed through Claude Code; coordinate only via MMTP APIs.
 
 ---
 
 ## Important Context for Next Agent
 - The implementation commit is `f288790f`.
 - EFT fee is currently database-seeded as R2.00 for all wallet-bank EFT payments.
+- The EFT migration was hardened after a partial-run index conflict and should now be rerunnable in UAT, staging, and production migration scripts.
 - PayShap Instant Payment uses existing RPP fee service and existing RPP submission logic.
 - New routes are KYC-gated and financial-rate-limited.
 - Production should not be enabled until explicit business approval after SBSA Penny #2 final audit and inbound R10 validation.
@@ -124,6 +135,7 @@ The work stayed scoped to EFT H2H activation and the Send Money payment flow. It
 - Should MMAP fee policy management be prioritised immediately after UAT, or deferred until after production EFT enablement?
 - Should the EFT receipt estimate text use "by next business day" wording or a precise date only?
 - Should wallet-bank EFT completion update the customer-facing transaction from `processing` to `completed` when FINAUD accepts, in addition to updating `wallet_bank_payments` and `standard_bank_transactions`?
+- When the website project is ready, which MMTP API contracts should be published first for MMAP launch links, public FAQ content, and AI support handoff?
 
 ---
 

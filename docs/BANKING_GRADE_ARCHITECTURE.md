@@ -20,6 +20,10 @@ The architecture adds two customer-facing payment domain tables:
 
 Operationally, EFT payments are asynchronous: wallet debit occurs when the H2H file is submitted; Pain.002 NACK/rejection responses trigger wallet reversal/refund. Receiver availability is estimated from `15:00 SAST`, Saturday intake, weekends, and SA public holidays.
 
+The launch migration was hardened for banking-grade deployment safety after a Codespaces partial-run index conflict. It is now safe to rerun after partial failure because it checks existing tables/indexes, uses conflict-safe fee-policy seed logic, and applies defensive rollback checks. UAT and staging migration runs were confirmed successful in Codespaces on Apr 25, 2026.
+
+Public website SEO, marketing pages, FAQs, and website AI support are intentionally outside this MMTP repo and should be maintained in the separate website project/Claude Code. MMTP remains the system of record for secure APIs, MMAP integration, authentication, audit trails, wallet ledgers, and payment orchestration.
+
 ### TPPP wallet withdrawals (April 2026)
 
 Outbound wallet flows include **cash withdrawal** rails delivered through **Cash-Withdrawal Partners** (currently eeziCash via Flash Group, EasyPay retail cash-withdrawal, Cliquefin / OTT cash-withdrawal vouchers, USSD cash-withdrawal, and any future partner), **electronic transfers** (EFT, PayShap), and **VAS** purchases. Architecture and compliance documentation characterise every such partner credential as a **wallet cash-withdrawal mechanism** under the TPPP/sponsor-bank framework (wallet debit precedes withdrawal credential; the PIN / reference / token is not VAS product resale). See `docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html`, `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md`, `docs/policies/20-Cash-Withdrawal-Policy.md`, and `docs/STANDARD_BANK_TPPP_BRIEF.md`.

@@ -17,6 +17,11 @@ Notes for Codespaces development:
 Notes for AI-assisted development:
 - **Workspace rules** (`.cursor/rules/*.mdc`) and **skills** (`.agents/skills/`) are documented in `docs/CURSOR_2.0_RULES_FINAL.md` and `docs/CURSOR_SKILLS.md`. They do not replace this security profile; agents must still follow parameterized queries, secrets handling, and POPIA logging rules defined here and in project rules.
 
+### Website / API Security Boundary (April 2026)
+- `www.mymoolah.africa` SEO, public content, FAQs, and website AI support should be managed in the separate website project/Claude Code.
+- This MMTP repo remains responsible for secure API contracts, MMAP integration, auth, RBAC, audit trails, wallet ledgers, payment orchestration, and PII-safe backend services.
+- Website integrations must consume MMTP through authenticated, rate-limited APIs rather than direct database access.
+
 ### **🔴 CRITICAL SECURITY ISSUES - PRODUCTION BLOCKERS**
 
 ⚠️ **MSISDN PII EXPOSURE (Identified 2025-12-02)**

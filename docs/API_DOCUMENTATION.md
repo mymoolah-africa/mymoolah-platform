@@ -9,7 +9,10 @@
 **For full change history**, see [CHANGELOG.md](./CHANGELOG.md) and [AGENT_HANDOVER.md](./AGENT_HANDOVER.md).
 
 ### v3.0.0 — Wallet-to-bank EFT H2H API (April 25, 2026)
-New `/api/v1/wallet-bank-payments` endpoints quote and submit consumer wallet-to-bank payments. EFT is the default rail; PayShap RPP is available through the Instant Payment option. Requires migration `20260425110000_create_wallet_bank_payments_and_fee_policies.js` before UAT testing.
+New `/api/v1/wallet-bank-payments` endpoints quote and submit consumer wallet-to-bank payments. EFT is the default rail; PayShap RPP is available through the Instant Payment option. Requires migration `20260425110000_create_wallet_bank_payments_and_fee_policies.js` before UAT testing. The migration is now hardened for partial reruns and was confirmed successful for UAT and staging in Codespaces.
+
+### Website / MMAP integration boundary (April 25, 2026)
+`www.mymoolah.africa` SEO, public content, FAQs, and website AI support should be managed in the separate website project/Claude Code. MMTP APIs documented here remain the source of truth for secure wallet, MMAP, auth, audit, and payment integration contracts consumed by that website.
 
 ### v2.89.0 — Disbursement Client Management API (April 7, 2026)
 New `/api/v1/disbursement-clients` endpoints for corporate client onboarding, KYB document management, fee configuration, and beneficiary file parsing. See [Disbursement Client API](#disbursement-client-management) section below.

@@ -29,6 +29,8 @@ The MyMoolah Treasury Platform is optimized for **high-performance financial tra
 - **Submit path**: EFT submit performs one wallet row lock, debit, payment tracking insert, Standard Bank transaction insert, transaction inserts, and then H2H file upload.
 - **Pain.002 processing**: Wallet-bank processing is added as a second consumer after existing disbursement processing; it filters by `pain001MsgId` and only touches matching `wallet_bank_payments`.
 - **Frontend UX**: Quote calls are debounced in `SendMoneyPage.tsx` to avoid excessive quote requests while the amount is being typed.
+- **Migration resilience**: The launch migration is hardened for partial reruns by checking existing tables/indexes before creation and using conflict-safe fee-policy seed logic.
+- **Website separation**: Public website SEO/content/FAQ/AI support should stay in the separate website project so MMTP performance work remains focused on APIs, MMAP integration, wallet services, and payment rails.
 
 ---
 

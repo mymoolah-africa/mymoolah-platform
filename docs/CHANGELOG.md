@@ -2,6 +2,12 @@
 
 ## 2026-04-25 - Wallet-to-bank EFT H2H activation (v3.0.0)
 
+### Follow-up: migration hardening, docs wrap-up, and website boundary
+- Hardened `20260425110000_create_wallet_bank_payments_and_fee_policies.js` after a Codespaces partial-run failure where `idx_fee_policies_lookup` already existed before Sequelize marked the migration complete.
+- The migration is now safe to rerun after partial failure: it checks tables/indexes before creation, uses conflict-safe fee-policy seed logic, and conditionally drops tables during rollback.
+- André confirmed the fixed migration completed successfully for UAT and staging via the master migration scripts in Codespaces.
+- Documented the website operating boundary: `www.mymoolah.africa` SEO, public content, FAQs, and website AI support should live in the separate website project/Claude Code; MMTP/Cursor owns secure banking APIs, MMAP integration, auth, audit, and backend/wallet services.
+
 ### Summary
 Activated the wallet-to-bank payment path for UAT. Bank payments now default to SBSA H2H EFT, with an optional **Instant Payment** toggle that uses existing PayShap RPP rails. The implementation reuses existing H2H Pain.001/SFTP infrastructure, existing PayShap RPP logic, existing idempotency middleware, existing beneficiary records, and the existing SA public-holiday utility.
 

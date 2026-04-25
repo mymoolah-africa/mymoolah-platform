@@ -4,7 +4,7 @@
 **Version**: 3.0.0 - Wallet-to-bank EFT H2H activation  
 **Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **SBSA H2H EFT UAT ACTIVATION** ✅ **PAYSHAP RPP INSTANT PAYMENT** ✅ **CHART OF ACCOUNTS** ✅ **ELECTRICITY SUPPLIER COMPARISON** ✅ **LEDGER AUDIT** ✅ **CLOUD SCHEDULER** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **POPIA ID ENCRYPTION** ✅ **LANGCHAIN RAG AI** ✅ **PASA T-PPP BADGE**
 
-**Recent work**: **Apr 25, 2026** — Wallet-to-bank payments activated for UAT: bank payments default to **SBSA H2H EFT**, with an **Instant Payment** toggle for PayShap RPP. Added DB-backed effective-dated transaction fee policies for future MMAP management, seeded UAT EFT fee `R2.00`, added quote/submit APIs, wallet-bank payment tracking, Pain.002 rejection reversal/refund handling, and EFT receiver timing estimates using `15:00 SAST` cutoff + Saturday intake + SA public holidays. Commit `f288790f`. **Apr 24** — SBSA H2H PROD Penny #2 ACK + INTAUD succeeded in 22 seconds; FINAUD expected 2026-04-29 due to Freedom Day roll. **Apr 20** — POL-020 Cash Withdrawal & Ring-Fencing of Own Funds policy and related compliance docs. See `docs/CHANGELOG.md`.
+**Recent work**: **Apr 25, 2026** — Wallet-to-bank payments activated for UAT: bank payments default to **SBSA H2H EFT**, with an **Instant Payment** toggle for PayShap RPP. Added DB-backed effective-dated transaction fee policies for future MMAP management, seeded UAT EFT fee `R2.00`, added quote/submit APIs, wallet-bank payment tracking, Pain.002 rejection reversal/refund handling, and EFT receiver timing estimates using `15:00 SAST` cutoff + Saturday intake + SA public holidays. The EFT migration was hardened after a partial-run index conflict; André confirmed UAT and staging migrations completed successfully in Codespaces. Website SEO/content/FAQ/AI support belongs in the separate website project/Claude Code; this repo owns MMTP APIs, MMAP integration, audit, auth, and wallet/backend services. Commit `f288790f`. **Apr 24** — SBSA H2H PROD Penny #2 ACK + INTAUD succeeded in 22 seconds; FINAUD expected 2026-04-29 due to Freedom Day roll. **Apr 20** — POL-020 Cash Withdrawal & Ring-Fencing of Own Funds policy and related compliance docs. See `docs/CHANGELOG.md`.
 
 ---
 
@@ -17,7 +17,8 @@
 - **Fee platform:** `transaction_fee_policies` stores effective-dated customer fees for future MMAP control. UAT launch EFT fee is `R2.00`.
 - **Audit trail:** `wallet_bank_payments` snapshots fee policy, total debit, rail, Pain.001 IDs, and settlement estimate.
 - **Receipt estimate:** EFT messaging uses a `15:00 SAST` cutoff, Saturday intake, weekends, and SA public holidays.
-- **UAT requirement:** Run migration `20260425110000_create_wallet_bank_payments_and_fee_policies.js` in Codespaces before testing.
+- **UAT status:** Migration `20260425110000_create_wallet_bank_payments_and_fee_policies.js` is hardened for reruns and was confirmed successful for UAT and staging in Codespaces; wallet UI E2E testing remains the next step.
+- **Website boundary:** Public website SEO, page updates, FAQs, and website AI support should be managed in the separate website project/Claude Code. MMTP should expose stable, secure APIs for MMAP and website integration.
 
 ---
 
