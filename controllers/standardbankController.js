@@ -585,10 +585,12 @@ async function initiatePayShapRpp(req, res) {
   } catch (err) {
     console.error('SBSA RPP initiation error:', err.message);
     // Pass through SBSA business rejection codes (422 = business reject, 400 = validation)
-    const httpStatus = err.sbsaStatus === 422 ? 422 : err.sbsaStatus === 400 ? 400 : 500;
+    const httpStatus = err.statusCode || (err.sbsaStatus === 422 ? 422 : err.sbsaStatus === 400 ? 400 : 500);
     return res.status(httpStatus).json({
       success: false,
+      error: err.code || (httpStatus >= 500 ? 'PAYSHAP_RPP_FAILED' : 'PAYSHAP_RPP_REJECTED'),
       message: err.message || 'Failed to initiate PayShap payment',
+      ...(err.details ? { details: err.details } : {}),
       ...(err.sbsaBody ? { sbsaDetail: err.sbsaBody } : {}),
     });
   }

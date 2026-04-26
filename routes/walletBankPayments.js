@@ -27,7 +27,8 @@ function handleError(res, err) {
   return res.status(statusCode).json({
     success: false,
     message: statusCode >= 500 ? 'Could not process wallet to bank payment. Please try again.' : err.message,
-    error: statusCode >= 500 ? 'WALLET_BANK_PAYMENT_FAILED' : err.message,
+    error: statusCode >= 500 ? 'WALLET_BANK_PAYMENT_FAILED' : (err.code || err.message),
+    ...(err.details ? { details: err.details } : {}),
   });
 }
 

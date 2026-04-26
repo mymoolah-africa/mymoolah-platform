@@ -38,6 +38,10 @@ and the services that post to it.
 - No account code may be used in application code unless it appears in this
   document and has a corresponding row in the `ledger_accounts` table (via
   migration).
+- VAT control entries are posted only on MMTP's own earned revenue. Supplier,
+  bank, client, and merchant pass-through charges are posted VAT-inclusive to
+  clearing/payable accounts and do not create MMTP VAT control rows. See
+  `docs/VAT_ACCOUNTING_STRATEGY.md`.
 - Accounts marked **NEEDS MIGRATION** are referenced in code with env-var
   fallback defaults. They function in environments where the env var is set
   or where the account was manually created, but they lack an idempotent
@@ -117,7 +121,7 @@ Expense accounts track costs incurred. Normal side: **debit**
 
 | Code | Name | Normal | Migration | Used By | Notes |
 |------|------|--------|-----------|---------|-------|
-| `5000-10-01` | Cost of Sales: PayShap SBSA Fee | debit | `20260224_03`, `20260224_02` | `standardbankRtpService.js`, `standardbankRppService.js` | SBSA fee per PayShap RPP/RTP transaction (R5.00 ex-VAT per txn) |
+| `5000-10-01` | Cost of Sales: PayShap SBSA Fee | debit | `20260224_03`, `20260224_02` | `standardbankRtpService.js` | SBSA fee cost account for flows where MMTP absorbs the fee. RPP customer fees use pass-through clearing instead. |
 | `5000-10-02` | Cost of Sales: EasyPay Cash Handling Fee | debit | `20260410_01` | `easyPayDepositService.js` (batch recon job) | Variable per-merchant cash handling cost; MMTP absorbs; posted from SFTP recon file |
 | `5100-02-01` | Referral Expense | debit | `20260405_01` | `production-full-audit.js` | Referral commission expense; currently referenced only in audit reconciliation — accrual posting path TBD |
 | `5100-03-01` | Ad Reward Expense | debit | `20260224_03` | `adService.js` | Watch-to-Earn user reward payout (R2–R3 per view) |
@@ -204,30 +208,31 @@ The settlement batch total equals the sum of all net deposits (gross − fee) fo
 ### 3.2 PayShap RTP Inbound (Request-to-Pay — Paid Callback)
 
 User requests money via RTP; payer's bank pays MMTP via PayShap.
-SBSA charges R5.75 (R5.00 + R0.75 VAT) per transaction — full pass-through to user.
+SBSA charges R5.75 VAT-inclusive per transaction — full pass-through to user. MMTP earns no RTP markup, so no VAT control entry or TaxTransaction is created.
 
 ```
 Reference: SBSA-RTP-{rtpId}
 
 DR  1100-01-01  Standard Bank Current Account    R10.00    (gross inflow)
 CR  2100-01-01  Client Float Liability            R4.25    (net to wallet)
-CR  5000-10-01  Cost of Sales: PayShap SBSA Fee   R5.00    (SBSA fee ex-VAT)
-CR  2300-10-01  VAT Control Account               R0.75    (VAT on SBSA fee)
+CR  2200-02-01  Supplier Clearing Account         R5.75    (SBSA fee payable/pass-through, VAT incl)
 ```
 
 ### 3.3 PayShap RPP Outbound (Regular Payment Push)
 
 User sends money to external bank account via PayShap.
-MMTP charges user: principal + SBSA fee + MM markup + VAT.
+MMTP charges user: principal + SBSA pass-through fee + MM markup. The SBSA fee is not MMTP revenue and is not posted to VAT control for MMTP margin reporting. VAT control records only VAT on MMTP's own markup.
+
+**Example**: R60.00 Instant Payment, SBSA fee R5.75 VAT incl (R5.00 + R0.75), MMTP markup R1.00 VAT incl (R0.87 + R0.13):
 
 ```
 Reference: SBSA-RPP-{transferId}
 
-DR  2100-01-01  Client Float Liability           R{total}  (full user charge)
-CR  1100-01-01  Standard Bank Current Account    R{principal}  (outflow to beneficiary)
-CR  5000-10-01  Cost of Sales: PayShap SBSA Fee  R{sbsaFee}    (SBSA fee ex-VAT)
-CR  4000-20-01  Transaction Fee Revenue          R{mmMarkup}   (MM markup ex-VAT)
-CR  2300-10-01  VAT Control Account              R{netVat}     (VAT on combined fees)
+DR  2100-01-01  Client Float Liability           R66.75  (principal + SBSA fee + MMTP markup)
+CR  1100-01-01  Standard Bank Current Account    R60.00  (principal outflow to beneficiary)
+CR  2200-02-01  Supplier Clearing Account        R5.75   (SBSA fee payable/pass-through, VAT incl)
+CR  4000-20-01  Transaction Fee Revenue          R0.87   (MMTP markup ex-VAT)
+CR  2300-10-01  VAT Control Account              R0.13   (VAT on MMTP markup only)
 ```
 
 ### 3.4 VAS Purchase (Airtime / Data / Electricity / Bills)
@@ -662,9 +667,10 @@ sensible defaults. This allows per-environment overrides without code changes.
 | `LEDGER_ACCOUNT_BANK` | `1100-01-01` | Standard Bank Current Account | standardbankRtpService, standardbankRppService, standardbankDepositNotificationService |
 | `LEDGER_ACCOUNT_UNALLOCATED` | `2600-01-01` | Unallocated Deposits / Suspense | standardbankDepositNotificationService |
 | `LEDGER_ACCOUNT_REFERRAL_PAYABLE` | `2200-03-01` | Referral Commission Payable | referralPayoutService |
-| `LEDGER_ACCOUNT_PAYSHAP_SBSA_COST` | `5000-10-01` | Cost of Sales: PayShap SBSA Fee | standardbankRtpService, standardbankRppService |
-| `LEDGER_ACCOUNT_TRANSACTION_FEE_REVENUE` | *(none)* | Transaction Fee Revenue | standardbankRppService, voucherController |
-| `LEDGER_ACCOUNT_VAT_CONTROL` | *(none)* | VAT Control Account | standardbankRtpService, standardbankRppService, voucherController, commissionVatService |
+| `LEDGER_ACCOUNT_PAYSHAP_SBSA_CLEARING` | `2200-02-01` | Supplier Clearing Account | standardbankRppService and standardbankRtpService pass-through SBSA fee payable |
+| `LEDGER_ACCOUNT_PAYSHAP_SBSA_COST` | `5000-10-01` | Cost of Sales: PayShap SBSA Fee | Only use when MMTP absorbs SBSA fee; not for customer-collected pass-through fees |
+| `LEDGER_ACCOUNT_TRANSACTION_FEE_REVENUE` | *(none)* | Transaction Fee Revenue | standardbankRppService, voucherController, flashController |
+| `LEDGER_ACCOUNT_VAT_CONTROL` | *(none)* | VAT Control Account | MMTP revenue VAT only: standardbankRppService markup, voucherController margin, flashController margin, commissionVatService |
 | `LEDGER_ACCOUNT_MM_COMMISSION_CLEARING` | *(none)* | MM Commission Clearing | commissionVatService, qrPaymentController |
 | `LEDGER_ACCOUNT_COMMISSION_REVENUE` | *(none)* | Commission Revenue | commissionVatService, qrPaymentController |
 | `LEDGER_ACCOUNT_NFC_FLOAT` | `1200-10-10` | NFC Deposit Float Account | nfcDepositService |

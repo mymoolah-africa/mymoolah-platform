@@ -8,12 +8,11 @@
  *   e.g. at 0-999 txns/month: R5.75 + R1.00 = R6.75 charged to user
  *
  * VAT accounting (all fees VAT inclusive at 15%):
- *   Output VAT  = VAT on total user charge (R6.75 / 1.15 × 0.15)
- *   Input VAT   = VAT on SBSA cost (R5.75 / 1.15 × 0.15) — reclaimable
- *   Net VAT payable to SARS = output VAT - input VAT (= VAT on R1.00 markup only)
- *   SBSA cost (ex-VAT) → LEDGER_ACCOUNT_PAYSHAP_SBSA_COST (cost of sale)
- *   MM markup (ex-VAT) → LEDGER_ACCOUNT_TRANSACTION_FEE_REVENUE
- *   Net VAT payable     → LEDGER_ACCOUNT_VAT_CONTROL
+ *   SBSA fee is a throughput/pass-through amount collected from the user and payable to SBSA.
+ *   MMTP VAT control only records VAT on MMTP's own R1.00 markup.
+ *   SBSA fee (VAT incl) → LEDGER_ACCOUNT_PAYSHAP_SBSA_CLEARING / supplier clearing
+ *   MM markup (ex-VAT)  → LEDGER_ACCOUNT_TRANSACTION_FEE_REVENUE
+ *   MM markup VAT       → LEDGER_ACCOUNT_VAT_CONTROL
  *
  * ACID ordering: lock wallet → validate balance → call SBSA → debit + record → commit
  *
@@ -26,6 +25,81 @@ const db = require('../models');
 const { buildPain001 } = require('../integrations/standardbank/builders/pain001Builder');
 const sbClient = require('../integrations/standardbank/client');
 const feeService = require('./payshapFeeService');
+
+function roundMoney(value) {
+  return Number(Number(value || 0).toFixed(2));
+}
+
+function formatRand(value) {
+  return `R${roundMoney(value).toFixed(2)}`;
+}
+
+function createInsufficientBalanceError({ wallet, requestedAmount, fee, totalDebit }) {
+  const availableBalance = roundMoney(wallet.balance);
+  const instantPaymentFee = roundMoney(fee.sbsaFeeVatIncl);
+  const totalUserFee = roundMoney(fee.totalUserFeeVatIncl);
+  const maximumPaymentAmount = roundMoney(Math.max(availableBalance - totalUserFee, 0));
+  const message = totalUserFee > instantPaymentFee
+    ? `Insufficient balance. Instant Payment bank fee is ${formatRand(instantPaymentFee)} and total fee is ${formatRand(totalUserFee)}. You can send up to ${formatRand(maximumPaymentAmount)} with your current balance.`
+    : `Insufficient balance. Instant Payment fee is ${formatRand(instantPaymentFee)}. You can send up to ${formatRand(maximumPaymentAmount)} with your current balance.`;
+
+  const err = new Error(message);
+  err.statusCode = 400;
+  err.code = 'INSUFFICIENT_BALANCE';
+  err.details = {
+    availableBalance,
+    requestedAmount: roundMoney(requestedAmount),
+    instantPaymentFee,
+    totalUserFee,
+    totalDebit: roundMoney(totalDebit),
+    maximumPaymentAmount,
+    currency: 'ZAR',
+  };
+  return err;
+}
+
+function buildRppLedgerLines({
+  numAmount,
+  totalDebit,
+  fee,
+  monthlyCount,
+  clientFloatCode,
+  bankLedgerCode,
+  sbsaClearingCode,
+  feeRevenueCode,
+  vatControlCode,
+}) {
+  const lines = [
+    { accountCode: clientFloatCode, dc: 'debit', amount: totalDebit, memo: 'Wallet debit (RPP principal + fees)' },
+    { accountCode: bankLedgerCode, dc: 'credit', amount: numAmount, memo: 'Bank outflow (RPP principal to beneficiary)' },
+    { accountCode: sbsaClearingCode, dc: 'credit', amount: fee.sbsaFeeVatIncl, memo: `SBSA PayShap fee payable (pass-through, tier: ${monthlyCount} txns)` },
+  ];
+
+  if (feeRevenueCode && fee.mmMarkupExVat > 0) {
+    lines.push({ accountCode: feeRevenueCode, dc: 'credit', amount: fee.mmMarkupExVat, memo: 'MM PayShap markup revenue ex-VAT' });
+  }
+
+  if (vatControlCode && fee.mmMarkupVat > 0) {
+    lines.push({ accountCode: vatControlCode, dc: 'credit', amount: fee.mmMarkupVat, memo: 'VAT payable on MM PayShap markup' });
+  } else if (fee.mmMarkupVat > 0 && feeRevenueCode) {
+    // No VAT control account configured: keep the entry balanced without losing the user fee.
+    const revenueLine = lines.find(line => line.accountCode === feeRevenueCode && line.memo === 'MM PayShap markup revenue ex-VAT');
+    if (revenueLine) {
+      revenueLine.amount = Number((revenueLine.amount + fee.mmMarkupVat).toFixed(2));
+      revenueLine.memo = 'MM PayShap markup revenue VAT-inclusive fallback';
+    }
+  }
+
+  const creditTotal = lines
+    .filter(line => line.dc === 'credit')
+    .reduce((sum, line) => sum + Number(line.amount), 0);
+  const balancingDelta = Number((totalDebit - creditTotal).toFixed(2));
+  if (Math.abs(balancingDelta) >= 0.01) {
+    lines[2].amount = Number((lines[2].amount + balancingDelta).toFixed(2));
+  }
+
+  return lines;
+}
 
 async function initiateRppPayment(params) {
   const {
@@ -93,7 +167,18 @@ async function initiateRppPayment(params) {
     const canDebit = wallet.canDebit(totalDebit);
     if (!canDebit.allowed) {
       await txn.rollback();
-      throw new Error(canDebit.reason || 'Insufficient funds');
+      if ((canDebit.reason || '').toLowerCase().includes('insufficient balance')) {
+        throw createInsufficientBalanceError({
+          wallet,
+          requestedAmount: numAmount,
+          fee,
+          totalDebit,
+        });
+      }
+      const err = new Error(canDebit.reason || 'Insufficient funds');
+      err.statusCode = 400;
+      err.code = 'WALLET_DEBIT_NOT_ALLOWED';
+      throw err;
     }
 
     // Call SBSA API while holding the lock (prevents double-spend)
@@ -198,8 +283,7 @@ async function initiateRppPayment(params) {
       { transaction: txn }
     );
 
-    // VAT record — only the net VAT payable (output - input)
-    // Output VAT is on the full user charge; input VAT (SBSA cost) is reclaimable
+    // VAT record — only MMTP markup VAT. SBSA fee VAT is pass-through and informational.
     const now = new Date();
     const taxPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     await db.TaxTransaction.create(
@@ -225,10 +309,11 @@ async function initiateRppPayment(params) {
         metadata: {
           merchantTransactionId,
           userId,
-          outputVat: fee.totalOutputVat,
-          inputVat: fee.sbsaVat,
+          outputVat: fee.mmMarkupVat,
+          inputVat: 0,
           netVatPayable: fee.netVatPayable,
           sbsaFeeVatIncl: fee.sbsaFeeVatIncl,
+          sbsaVatPassThrough: fee.sbsaVat,
           mmMarkupVatIncl: fee.mmMarkupVatIncl,
         },
       },
@@ -242,52 +327,35 @@ async function initiateRppPayment(params) {
       const ledgerService = require('./ledgerService');
       const clientFloatCode = process.env.LEDGER_ACCOUNT_CLIENT_FLOAT || '2100-01-01';
       const bankLedgerCode = process.env.LEDGER_ACCOUNT_BANK || '1100-01-01';
-      const sbsaCostCode = process.env.LEDGER_ACCOUNT_PAYSHAP_SBSA_COST || '5000-10-01';
-      const feeRevenueCode = process.env.LEDGER_ACCOUNT_TRANSACTION_FEE_REVENUE;
-      const vatControlCode = process.env.LEDGER_ACCOUNT_VAT_CONTROL;
+      const sbsaClearingCode = process.env.LEDGER_ACCOUNT_PAYSHAP_SBSA_CLEARING || process.env.LEDGER_ACCOUNT_SUPPLIER_CLEARING || '2200-02-01';
+      const feeRevenueCode = process.env.LEDGER_ACCOUNT_TRANSACTION_FEE_REVENUE || '4000-20-01';
+      const vatControlCode = process.env.LEDGER_ACCOUNT_VAT_CONTROL || '2300-10-01';
 
       /*
        * Ledger entries for RPP:
        *
        * DR  Client Float     totalDebit           (wallet debit: principal + total fee)
        * CR  Bank             numAmount            (outbound payment to recipient)
-       * CR  SBSA Cost        sbsaFeeExVat         (cost of sale: SBSA fee ex-VAT)
+       * CR  SBSA Clearing    sbsaFeeVatIncl       (SBSA fee pass-through payable)
        * CR  Fee Revenue      mmMarkupExVat        (MM markup revenue ex-VAT)
-       * CR  VAT Control      netVatPayable        (output VAT - input VAT = VAT on markup only)
+       * CR  VAT Control      mmMarkupVat          (VAT on MM markup only)
        *
        * Proof: DR = CR
        *   totalDebit = numAmount + sbsaFeeVatIncl + mmMarkupVatIncl
-       *              = numAmount + sbsaFeeExVat + sbsaVat + mmMarkupExVat + mmMarkupVat
-       *   CR sum     = numAmount + sbsaFeeExVat + mmMarkupExVat + (totalOutputVat - sbsaVat)
-       *              = numAmount + sbsaFeeExVat + mmMarkupExVat + totalOutputVat - sbsaVat
-       *   totalOutputVat = sbsaVat + mmMarkupVat  ✓
-       *   So CR = numAmount + sbsaFeeExVat + mmMarkupExVat + sbsaVat + mmMarkupVat - sbsaVat
-       *         = numAmount + sbsaFeeExVat + mmMarkupExVat + mmMarkupVat
-       *         = numAmount + sbsaFeeExVat + mmMarkupVatIncl  ✓ (= totalDebit)
+       *   CR sum     = numAmount + sbsaFeeVatIncl + mmMarkupExVat + mmMarkupVat
+       *              = numAmount + sbsaFeeVatIncl + mmMarkupVatIncl
        */
-      // Build credits — use exact arithmetic to guarantee DR = CR
-      // totalDebit = numAmount + sbsaFeeVatIncl + mmMarkupVatIncl
-      //            = numAmount + sbsaFeeExVat + sbsaVat + mmMarkupExVat + mmMarkupVat
-      // CR: Bank (numAmount) + SBSA Cost ex-VAT + MM Revenue ex-VAT + VAT Control (net)
-      // Net VAT = totalOutputVat - sbsaVat = mmMarkupVat only
-      // To avoid floating point drift, derive vatControlAmount as the balancing figure
-      const creditsSoFar = Number((numAmount + fee.sbsaFeeExVat + fee.mmMarkupExVat).toFixed(2));
-      const vatControlAmount = Number((totalDebit - creditsSoFar).toFixed(2));
-
-      const lines = [
-        { accountCode: clientFloatCode, dc: 'debit', amount: totalDebit, memo: 'Wallet debit (RPP principal + fee)' },
-        { accountCode: bankLedgerCode, dc: 'credit', amount: numAmount, memo: 'Bank outflow (RPP payment)' },
-        { accountCode: sbsaCostCode, dc: 'credit', amount: fee.sbsaFeeExVat, memo: `SBSA PayShap cost ex-VAT (tier: ${monthlyCount} txns)` },
-      ];
-      if (feeRevenueCode) {
-        lines.push({ accountCode: feeRevenueCode, dc: 'credit', amount: fee.mmMarkupExVat, memo: 'MM PayShap markup revenue ex-VAT' });
-      }
-      if (vatControlCode) {
-        lines.push({ accountCode: vatControlCode, dc: 'credit', amount: vatControlAmount, memo: 'Net VAT payable (output VAT - input VAT on SBSA cost)' });
-      } else {
-        // No VAT control account — absorb into SBSA cost to keep books balanced
-        lines[2].amount = Number((fee.sbsaFeeExVat + vatControlAmount).toFixed(2));
-      }
+      const lines = buildRppLedgerLines({
+        numAmount,
+        totalDebit,
+        fee,
+        monthlyCount,
+        clientFloatCode,
+        bankLedgerCode,
+        sbsaClearingCode,
+        feeRevenueCode,
+        vatControlCode,
+      });
 
       await ledgerService.postJournalEntry({
         reference: `SBSA-RPP-${merchantTransactionId}`,
@@ -317,4 +385,6 @@ async function initiateRppPayment(params) {
 
 module.exports = {
   initiateRppPayment,
+  createInsufficientBalanceError,
+  buildRppLedgerLines,
 };

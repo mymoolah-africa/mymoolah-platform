@@ -18,13 +18,13 @@
 
 | Fee | Amount | Who pays | Who receives |
 |-----|--------|----------|--------------|
-| **SBSA fee** | R3.00 VAT incl | MM | SBSA |
-| **MM transaction fee** | R4.00 VAT incl | Wallet user | MM |
+| **SBSA RPP fee** | R5.75 VAT incl | Wallet user | SBSA (pass-through) |
+| **MMTP RPP markup** | R1.00 VAT incl | Wallet user | MMTP |
 
-- **RPP (outbound)**: User debits principal + R4 fee (e.g. send R100 → debit R104)
-- **RTP (inbound)**: RTP is an administrative request; when Paid, user credits principal − R4 fee (e.g. receive R200 → credit R196)
-- **VAT**: Both fees VAT incl; split posted to `LEDGER_ACCOUNT_TRANSACTION_FEE_REVENUE` (net) and `LEDGER_ACCOUNT_VAT_CONTROL` (payable)
-- **TaxTransaction**: Output VAT recorded for audit
+- **RPP (outbound)**: User debits principal + SBSA pass-through fee + MMTP markup (e.g. send R100 → debit R106.75 at the current first-tier fee).
+- **RTP (inbound)**: RTP is an administrative request; when Paid, user credits principal − SBSA fee. No MMTP markup is charged on RTP.
+- **VAT**: VAT control records only VAT on MMTP's own markup/revenue. SBSA RPP/RTP fees are posted as VAT-inclusive pass-through payable/clearing amounts.
+- **TaxTransaction**: Output VAT records are created only for MMTP revenue. Pass-through SBSA fees do not create MMTP TaxTransaction rows.
 
 ---
 
@@ -35,8 +35,8 @@ MyMoolah Treasury Platform (MMTP) will integrate with Standard Bank's PayShap ra
 ### **Integration Scope (Phase 1 – Implementation Complete)**
 1. **Deposit Notification (Credit) Endpoint**: SBSA notifies when a deposit hits the MMTP T-PPP bank account; resolve reference → wallet/float; credit if valid, error if not found.
 2. **PayShap Outbound & Request Money**:
-   - RPP: Initiate payments from wallet → third-party bank accounts (principal + R4 fee debited).
-   - RTP: Administrative request to payer's bank; when Paid, wallet credited principal − R4 fee.
+   - RPP: Initiate payments from wallet → third-party bank accounts (principal + SBSA pass-through fee + MMTP markup debited).
+   - RTP: Administrative request to payer's bank; when Paid, wallet credited principal − SBSA fee.
 
 ### **Key Benefits**
 - Direct integration with sponsor bank (Standard Bank)

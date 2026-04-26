@@ -1,5 +1,25 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-26 - VAT strategy formalisation and pass-through fee alignment
+
+### Summary
+Formalised MMTP's VAT accounting policy: MMTP records VAT control and TaxTransaction rows only on MMTP-owned revenue, markup, or commission. Supplier, bank, client, and merchant pass-through charges are posted VAT-inclusive to clearing/payable accounts and do not create MMTP VAT control records.
+
+### Code alignment
+- Updated `services/standardbankRtpService.js` so PayShap RTP SBSA fees post to SBSA/supplier clearing as pass-through and no longer create TaxTransaction/VAT-control entries.
+- Updated `controllers/qrPaymentController.js` so Zapper supplier VAT is informational only; VAT control now records only MMTP QR fee VAT.
+- Updated `controllers/voucherController.js` so EasyPay cash-out provider fees post to supplier clearing and only the MMTP margin VAT posts to VAT control.
+- Updated `controllers/flashController.js` so Flash cash-out provider fees post to clearing and only the MMTP cash-out margin VAT posts to VAT control.
+- Updated `services/payshapFeeService.js` comments to distinguish informational supplier VAT from MMTP VAT liability.
+- Added and applied `scripts/correct-production-rtp-pass-through-ledger.js` to production: 6 historical RTP entries were corrected non-destructively with `CORR-RTP-PASS-*` journals, reclassifying R34.50 from SBSA cost/VAT control to supplier clearing.
+- Follow-up production audit confirmed no remaining Zapper VAT debit lines, EasyPay provider expense lines, or Flash cash-out VAT-control lines matching the legacy pass-through patterns.
+
+### Documentation
+- Added `docs/VAT_ACCOUNTING_STRATEGY.md` as the canonical VAT policy and classification matrix.
+- Updated `docs/CHART_OF_ACCOUNTS.md`, `docs/BANKING_GRADE_ARCHITECTURE.md`, `docs/integrations/StandardBankPayShap.md`, and `docs/README.md`.
+
+---
+
 ## 2026-04-25 - Wallet-to-bank EFT H2H activation (v3.0.0)
 
 ### Follow-up: migration hardening, docs wrap-up, and website boundary

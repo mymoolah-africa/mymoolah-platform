@@ -42,9 +42,6 @@ async function allocateZapperFeeAndVat({
   mmFeeExclVat,
   mmFeeInclVat,
   mmVat,
-  supplierCostExclVat,
-  supplierCostInclVat,
-  supplierVat,
   walletTransactionId,
   idempotencyKey,
   userId,
@@ -59,46 +56,7 @@ async function allocateZapperFeeAndVat({
     const now = new Date();
     const taxPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-    // Create TaxTransaction record for INPUT VAT (paid to Zapper - claimable)
-    if (supplierVat > 0) {
-      const inputTaxTransactionId = `TAX-ZAPPER-INPUT-${uuidv4()}`;
-      const inputTaxPayload = {
-        taxTransactionId: inputTaxTransactionId,
-        originalTransactionId: walletTransactionId,
-        taxCode: 'VAT_15',
-        taxName: 'VAT 15% (Input)',
-        taxType: 'vat',
-        baseAmount: supplierCostExclVat,
-        taxAmount: supplierVat,
-        totalAmount: supplierCostInclVat,
-        taxRate: VAT_RATE,
-        calculationMethod: 'exclusive',
-        businessContext: 'wallet_user',
-        transactionType: 'zapper_qr_payment',
-        entityId: 'ZAPPER',
-        entityType: 'supplier',
-        taxPeriod,
-        taxYear: now.getFullYear(),
-        status: 'calculated',
-        vat_direction: 'input',
-        supplier_code: 'ZAPPER',
-        is_claimable: true,
-        metadata: {
-          idempotencyKey,
-          userId,
-          vatRate: VAT_RATE,
-          paymentAmount,
-          merchantName,
-          vatType: 'input'
-        },
-      };
-
-      try {
-        await TaxTransaction.create(inputTaxPayload);
-      } catch (taxErr) {
-        console.error('⚠️ Failed to persist input VAT transaction:', taxErr.message);
-      }
-    }
+    // Zapper supplier fees are pass-through amounts. MMTP only records VAT on its own fee revenue.
 
     // Create TaxTransaction record for OUTPUT VAT (charged to user - payable)
     if (mmVat > 0) {
@@ -141,7 +99,7 @@ async function allocateZapperFeeAndVat({
       }
     }
 
-    // Post ledger entries for VAT and revenue allocation
+    // Post ledger entries for MMTP fee revenue and its output VAT only.
     if (
       LEDGER_ACCOUNT_MM_COMMISSION_CLEARING &&
       LEDGER_ACCOUNT_COMMISSION_REVENUE &&
@@ -163,12 +121,6 @@ async function allocateZapperFeeAndVat({
               dc: 'credit',
               amount: mmVat,
               memo: 'Output VAT payable (charged to user)',
-            },
-            {
-              accountCode: LEDGER_ACCOUNT_VAT_CONTROL,
-              dc: 'debit',
-              amount: supplierVat,
-              memo: 'Input VAT claimable (paid to Zapper)',
             },
             {
               accountCode: LEDGER_ACCOUNT_COMMISSION_REVENUE,
@@ -814,8 +766,8 @@ class QRPaymentController {
       const mmFeeInclVat = fees.mmFeeInclVatCents / 100; // VAT-inclusive (what user pays)
       const supplierCostExclVat = fees.supplierCostCents / 100; // VAT-exclusive (base cost)
       const mmFeeExclVat = fees.mmFeeCents / 100; // VAT-exclusive (base fee)
-      const supplierVat = fees.supplierVatCents / 100; // Input VAT (claimable)
-      const mmVat = fees.mmVatCents / 100; // Output VAT (payable)
+      const supplierVat = fees.supplierVatCents / 100; // Supplier VAT embedded in pass-through cost (informational)
+      const mmVat = fees.mmVatCents / 100; // Output VAT on MMTP fee (payable)
 
       // Check sufficient balance (payment amount + total fee)
       if (parseFloat(wallet.balance) < totalDebitAmount) {
@@ -982,8 +934,8 @@ class QRPaymentController {
           mmFeeExclVat: mmFeeExclVat, // VAT-exclusive (base fee)
           supplierCost: supplierCostInclVat, // VAT-inclusive (what we pay Zapper)
           supplierCostExclVat: supplierCostExclVat, // VAT-exclusive (base cost)
-          supplierVat: supplierVat, // Input VAT (claimable)
-          mmVat: mmVat, // Output VAT (payable)
+          supplierVat: supplierVat, // Supplier VAT embedded in pass-through cost (informational)
+          mmVat: mmVat, // Output VAT on MMTP fee (payable)
           tierLevel: fees.tierLevel,
           reference: finalReference,
           zapperFloat,

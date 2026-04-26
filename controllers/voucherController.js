@@ -871,10 +871,12 @@ exports.issueEasyPayCashout = async (req, res) => {
     const mmMargin = parseFloat(process.env.EASYPAY_CASHOUT_MM_MARGIN || '300') / 100; // R3.00
     const vatRate = parseFloat(process.env.EASYPAY_CASHOUT_VAT_RATE || '0.15'); // 15%
 
-    // Calculate VAT breakdown (VAT Inclusive amounts)
-    const userFeeVAT = (userFee / (1 + vatRate)) * vatRate; // R1.04
-    const providerFeeVAT = (providerFee / (1 + vatRate)) * vatRate; // R0.65
-    const mmMarginVAT = (mmMargin / (1 + vatRate)) * vatRate; // R0.39
+    // Calculate VAT breakdown (VAT-inclusive amounts).
+    // EasyPay provider fee is pass-through; MMTP VAT control applies only to MMTP margin.
+    const userFeeVAT = Number(((userFee / (1 + vatRate)) * vatRate).toFixed(2)); // R1.04
+    const providerFeeVAT = Number(((providerFee / (1 + vatRate)) * vatRate).toFixed(2)); // R0.65
+    const mmMarginVAT = Number(((mmMargin / (1 + vatRate)) * vatRate).toFixed(2)); // R0.39
+    const mmMarginExVat = Number((mmMargin - mmMarginVAT).toFixed(2));
 
     const totalRequired = amount + userFee; // Voucher amount + transaction fee
 
@@ -958,7 +960,9 @@ exports.issueEasyPayCashout = async (req, res) => {
                 userFeeVAT: userFeeVAT,
                 providerFeeVAT: providerFeeVAT,
                 mmMarginVAT: mmMarginVAT,
-                totalVAT: userFeeVAT + providerFeeVAT + mmMarginVAT
+                vatControlAmount: mmMarginVAT,
+                passThroughProviderVat: providerFeeVAT,
+                totalVATInformational: userFeeVAT + providerFeeVAT + mmMarginVAT
               }
             }
           }
@@ -1041,7 +1045,9 @@ exports.issueEasyPayCashout = async (req, res) => {
                 userFeeVAT: userFeeVAT,
                 providerFeeVAT: providerFeeVAT,
                 mmMarginVAT: mmMarginVAT,
-                totalVAT: userFeeVAT + providerFeeVAT + mmMarginVAT
+                vatControlAmount: mmMarginVAT,
+                passThroughProviderVat: providerFeeVAT,
+                totalVATInformational: userFeeVAT + providerFeeVAT + mmMarginVAT
               }
             },
             isCashoutFee: true,
@@ -1056,6 +1062,7 @@ exports.issueEasyPayCashout = async (req, res) => {
           const LEDGER_ACCOUNT_TRANSACTION_FEE_REVENUE = process.env.LEDGER_ACCOUNT_TRANSACTION_FEE_REVENUE;
           const LEDGER_ACCOUNT_VAT_CONTROL = process.env.LEDGER_ACCOUNT_VAT_CONTROL;
           const LEDGER_ACCOUNT_CLIENT_FLOAT = process.env.LEDGER_ACCOUNT_CLIENT_FLOAT;
+          const LEDGER_ACCOUNT_SUPPLIER_CLEARING = process.env.LEDGER_ACCOUNT_EASYPAY_CASHOUT_FEE_CLEARING || process.env.LEDGER_ACCOUNT_SUPPLIER_CLEARING || '2200-02-01';
           
           // Only post if required account codes are configured
           if (LEDGER_ACCOUNT_TRANSACTION_FEE_REVENUE && LEDGER_ACCOUNT_VAT_CONTROL && LEDGER_ACCOUNT_CLIENT_FLOAT) {
@@ -1071,9 +1078,9 @@ exports.issueEasyPayCashout = async (req, res) => {
                 lines: [
                   { accountCode: LEDGER_ACCOUNT_CLIENT_FLOAT, dc: 'debit', amount: totalRequired, memo: 'User wallet debit (voucher + fee)' },
                   { accountCode: floatLedgerCode, dc: 'credit', amount: amount, memo: 'EasyPay Cash-out Float credit' },
-                  { accountCode: LEDGER_ACCOUNT_TRANSACTION_FEE_REVENUE, dc: 'credit', amount: mmMargin, memo: 'MM revenue (fee margin)' },
-                  { accountCode: LEDGER_ACCOUNT_VAT_CONTROL, dc: 'credit', amount: userFeeVAT, memo: 'VAT payable (on user fee)' },
-                  { accountCode: 'PROVIDER_FEE_EXP', dc: 'debit', amount: providerFee, memo: 'Provider fee expense (EasyPay)' }
+                  { accountCode: LEDGER_ACCOUNT_SUPPLIER_CLEARING, dc: 'credit', amount: providerFee, memo: 'EasyPay cash-out fee payable (pass-through)' },
+                  { accountCode: LEDGER_ACCOUNT_TRANSACTION_FEE_REVENUE, dc: 'credit', amount: mmMarginExVat, memo: 'MM revenue (cash-out fee margin ex-VAT)' },
+                  { accountCode: LEDGER_ACCOUNT_VAT_CONTROL, dc: 'credit', amount: mmMarginVAT, memo: 'VAT payable on MM cash-out margin' }
                 ],
                 reference: voucherTransactionId
               });

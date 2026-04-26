@@ -3,8 +3,9 @@
 /**
  * Migration: Create PayShap SBSA Cost ledger account (5000-10-01)
  *
- * This is a Cost of Sales account for the SBSA PayShap transaction fee
- * that MyMoolah pays to Standard Bank per RPP and RTP transaction.
+ * This is a Cost of Sales account for SBSA PayShap fees only when MMTP
+ * absorbs the fee. Customer-collected SBSA RPP/RTP fees are pass-through
+ * and must post to supplier clearing, not this expense account.
  *
  * Account structure:
  *   5000-10-01 = Cost of Sales: PayShap SBSA Fee
@@ -12,20 +13,11 @@
  *   Normal side: debit
  *
  * Used by:
- *   standardbankRppService.js  — LEDGER_ACCOUNT_PAYSHAP_SBSA_COST
- *   standardbankRtpService.js  — LEDGER_ACCOUNT_PAYSHAP_SBSA_COST
+ *   Future fee-absorbed PayShap flows only
  *
- * RPP ledger entry:
- *   DR  Client Float     (total user charge)
- *   CR  Bank             (principal outflow)
- *   CR  SBSA Cost        (SBSA fee ex-VAT)   ← this account
- *   CR  Fee Revenue      (MM markup ex-VAT)
- *   CR  VAT Control      (net VAT payable)
- *
- * RTP ledger entry (on Paid callback):
- *   DR  Bank             (principal inflow)
- *   CR  Client Float     (net credit to wallet)
- *   CR  SBSA Cost        (SBSA fee ex-VAT)   ← this account
+ * Current customer-collected RPP/RTP fee model:
+ *   CR  Supplier Clearing (SBSA fee VAT-inclusive pass-through)
+ *   CR  Fee Revenue / VAT Control only for MMTP-owned markup
  *
  * @author MyMoolah Treasury Platform
  * @date 2026-02-24

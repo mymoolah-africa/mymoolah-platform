@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { apiService, type RecipientInfo, type RecipientMethod, type PaymentQuote, type TransferResult, type WalletBankPaymentQuote } from '../services/apiService';
+import { apiService, type RecipientInfo, type RecipientMethod, type PaymentQuote, type TransferResult, type WalletBankPaymentQuote, type ApiError } from '../services/apiService';
 import { beneficiaryService, type PaymentBeneficiary } from '../services/beneficiaryService';
 import { getToken } from '../utils/authToken';
 import { APP_CONFIG } from '../config/app-config';
@@ -900,6 +900,21 @@ export function SendMoneyPage() {
     }
   };
 
+  const getWalletBankPaymentErrorMessage = (err: ApiError | Error | any) => {
+    const payload = err?.payload || {};
+    const details = payload.details || {};
+    if (payload.error === 'INSUFFICIENT_BALANCE' && details.maximumPaymentAmount !== undefined) {
+      const instantPaymentFee = Number(details.instantPaymentFee || 0);
+      const totalUserFee = Number(details.totalUserFee || instantPaymentFee);
+      const maximumPaymentAmount = Number(details.maximumPaymentAmount || 0);
+      const feeMessage = totalUserFee > instantPaymentFee
+        ? `Instant Payment bank fee is ${formatCurrency(instantPaymentFee)} and total fee is ${formatCurrency(totalUserFee)}.`
+        : `Instant Payment fee is ${formatCurrency(instantPaymentFee)}.`;
+      return `${feeMessage} You can send up to ${formatCurrency(maximumPaymentAmount)} with your current balance.`;
+    }
+    return err?.message || 'Bank payment failed. Please try again.';
+  };
+
   // One-time payment flow (Pay Now card)
   const handlePayNow = async () => {
     // Validate required fields including MSISDN
@@ -974,7 +989,7 @@ export function SendMoneyPage() {
         );
       } catch (err: any) {
         logError('SendMoneyPage', 'Wallet-bank payment failed', err as Error);
-        showError('Payment Failed', err?.message || 'Bank payment failed. Please try again.', 'error');
+        showError('Payment Failed', getWalletBankPaymentErrorMessage(err), 'error');
       } finally {
         setIsProcessing(false);
       }
@@ -1203,7 +1218,7 @@ export function SendMoneyPage() {
       
     } catch (error: any) {
       logError('SendMoneyPage', 'Payment processing failed', error as Error);
-      showError('Error', error?.message || 'Payment failed. Please try again.', 'error');
+      showError('Error', selectedBeneficiary?.accountType === 'bank' ? getWalletBankPaymentErrorMessage(error) : (error?.message || 'Payment failed. Please try again.'), 'error');
     } finally {
       setIsProcessing(false);
     }

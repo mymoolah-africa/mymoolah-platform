@@ -5,7 +5,7 @@
  * 1. Finds all existing Zapper QR payment transactions
  * 2. Checks if they have proper fee structure, VAT allocation, and float crediting
  * 3. Updates transactions that need correction
- * 4. Creates missing TaxTransaction records
+ * 4. Creates missing TaxTransaction records for MMTP fee revenue only
  * 5. Updates Zapper float account balance
  * 
  * Usage:
@@ -244,6 +244,12 @@ async function allocateZapperFeeAndVat({
 }
 
 async function auditAndUpdateZapperTransactions() {
+  if (process.env.ZAPPER_LEGACY_FEE_AUDIT_ALLOW !== 'true') {
+    throw new Error(
+      'Legacy Zapper fee audit is disabled. It predates the 2026-04 VAT strategy and may treat pass-through supplier fees as MMTP revenue. Set ZAPPER_LEGACY_FEE_AUDIT_ALLOW=true only after Finance confirms the historical scope.'
+    );
+  }
+
   console.log('🔍 Auditing Zapper QR Payment Transactions...\n');
 
   // Test database connection first

@@ -232,8 +232,8 @@ async function calculateTierFees(userId, supplierCode, serviceType, transactionA
       mmFeeCents: mmFeeExclVatCents, // Base fee (VAT exclusive)
       
       // VAT amounts
-      supplierVatCents, // Input VAT (paid to supplier, claimable)
-      mmVatCents, // Output VAT (charged to user, payable)
+      supplierVatCents, // Supplier VAT embedded in supplier cost (informational unless MMTP is principal)
+      mmVatCents, // Output VAT on MMTP fee revenue
       
       // VAT-inclusive amounts (for crediting supplier and charging user)
       supplierCostInclVatCents, // Total to credit supplier float

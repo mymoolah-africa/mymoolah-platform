@@ -8,12 +8,10 @@
  *   e.g. at 0-999 txns/month: R5.75 charged to user (same as SBSA charges MM)
  *   MM net revenue = R0 on RTP fees
  *
- * VAT accounting (all fees VAT inclusive at 15%):
- *   Output VAT  = VAT on SBSA fee collected from user
- *   Input VAT   = VAT on SBSA fee paid to SBSA (reclaimable)
- *   Net VAT payable to SARS = R0 (output = input, pure pass-through)
- *   SBSA cost (ex-VAT) → LEDGER_ACCOUNT_PAYSHAP_SBSA_COST (cost of sale)
- *   VAT Control = R0 net (output and input cancel)
+ * VAT accounting:
+ *   SBSA fee is pass-through, not MMTP revenue.
+ *   No VAT control or TaxTransaction is posted unless MMTP earns a markup.
+ *   SBSA fee (VAT incl) → LEDGER_ACCOUNT_PAYSHAP_SBSA_CLEARING / supplier clearing.
  *
  * RTP is an administrative request to payer's bank; no money moves at initiation.
  * When Paid callback received: credit wallet (principal - SBSA fee).
@@ -49,6 +47,21 @@ const BANK_BRANCH_CODES = {
 
 function getBankCodeFromName(bankName) {
   return BANK_BRANCH_CODES[bankName] || '';
+}
+
+function buildRtpPaidLedgerLines({
+  principalAmount,
+  netCredit,
+  fee,
+  bankLedgerCode,
+  clientFloatCode,
+  sbsaClearingCode,
+}) {
+  return [
+    { accountCode: bankLedgerCode, dc: 'debit', amount: principalAmount, memo: 'Bank inflow (RTP paid)' },
+    { accountCode: clientFloatCode, dc: 'credit', amount: netCredit, memo: 'Wallet credit (RTP principal - SBSA pass-through fee)' },
+    { accountCode: sbsaClearingCode, dc: 'credit', amount: fee.sbsaFeeVatIncl, memo: 'SBSA PayShap RTP fee payable (pass-through)' },
+  ];
 }
 
 async function initiateRtpRequest(params) {
@@ -351,40 +364,7 @@ async function creditWalletOnPaid(rtpRequest, rawBody) {
       { transaction: txn }
     );
 
-    // VAT record — net VAT payable = R0 (pure pass-through, output = input)
-    const now = new Date();
-    const taxPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    await db.TaxTransaction.create(
-      {
-        taxTransactionId: `TAX-${uuidv4()}`,
-        originalTransactionId: `RTP-FEE-${merchantTransactionId}`,
-        taxCode: 'VAT_15',
-        taxName: 'VAT 15%',
-        taxType: 'vat',
-        baseAmount: fee.sbsaFeeExVat,
-        taxAmount: 0,
-        totalAmount: fee.sbsaFeeVatIncl,
-        taxRate: 0.15,
-        calculationMethod: 'inclusive',
-        businessContext: 'wallet_user',
-        transactionType: 'payshap_rtp',
-        entityId: String(userId),
-        entityType: 'customer',
-        taxPeriod,
-        taxYear: now.getFullYear(),
-        status: 'calculated',
-        vat_direction: 'output',
-        metadata: {
-          merchantTransactionId,
-          userId,
-          outputVat: fee.sbsaVat,
-          inputVat: fee.sbsaVat,
-          netVatPayable: 0,
-          note: 'RTP is pure pass-through: output VAT = input VAT, net = R0',
-        },
-      },
-      { transaction: txn }
-    );
+    // No TaxTransaction for RTP SBSA fee: this is pass-through, not MMTP income.
 
     await txn.commit();
 
@@ -393,50 +373,25 @@ async function creditWalletOnPaid(rtpRequest, rawBody) {
       const ledgerService = require('./ledgerService');
       const clientFloatCode = process.env.LEDGER_ACCOUNT_CLIENT_FLOAT || '2100-01-01';
       const bankLedgerCode = process.env.LEDGER_ACCOUNT_BANK || '1100-01-01';
-      const sbsaCostCode = process.env.LEDGER_ACCOUNT_PAYSHAP_SBSA_COST || '5000-10-01';
+      const sbsaClearingCode = process.env.LEDGER_ACCOUNT_PAYSHAP_SBSA_CLEARING || process.env.LEDGER_ACCOUNT_SUPPLIER_CLEARING || '2200-02-01';
 
       /*
        * Ledger entries for RTP (on Paid):
        *
        * DR  Bank             principalAmount      (inflow from payer's bank)
        * CR  Client Float     netCredit            (wallet credit: principal - SBSA fee)
-       * CR  SBSA Cost        sbsaFeeExVat         (cost of sale: SBSA fee ex-VAT)
-       * CR  VAT Control      R0                   (output = input, net zero — omitted)
+       * CR  SBSA Clearing    sbsaFeeVatIncl       (SBSA fee pass-through payable)
        *
-       * Note: VAT on SBSA fee is both output (collected) and input (paid to SBSA).
-       * Net VAT impact = R0. No VAT Control entry needed.
-       *
-       * Proof: DR = CR
-       *   principalAmount = netCredit + sbsaFeeVatIncl
-       *                   = netCredit + sbsaFeeExVat + sbsaVat
-       *   CR = netCredit + sbsaFeeExVat  (+ R0 VAT)
-       *   Missing: sbsaVat — this is the input VAT reclaimable from SARS
-       *   In practice: DR Bank = CR Float + CR SBSA Cost + CR VAT Input (reclaimable)
-       *   We record the VAT as a separate input VAT entry if vatControlCode is set.
+       * Proof: principalAmount = netCredit + sbsaFeeVatIncl
        */
-      // Derive VAT as balancing figure to guarantee DR = CR regardless of rounding
-      // DR Bank = CR Float + CR SBSA Cost ex-VAT + CR VAT Control (sbsaVat)
-      const creditsSoFar = Number((netCredit + fee.sbsaFeeExVat).toFixed(2));
-      const vatBalancing = Number((principalAmount - creditsSoFar).toFixed(2));
-
-      const vatControlCode = process.env.LEDGER_ACCOUNT_VAT_CONTROL;
-      const lines = [
-        { accountCode: bankLedgerCode, dc: 'debit', amount: principalAmount, memo: 'Bank inflow (RTP paid)' },
-        { accountCode: clientFloatCode, dc: 'credit', amount: netCredit, memo: 'Wallet credit (RTP principal - SBSA fee)' },
-        { accountCode: sbsaCostCode, dc: 'credit', amount: fee.sbsaFeeExVat, memo: 'SBSA PayShap cost ex-VAT (pass-through)' },
-      ];
-
-      if (vatControlCode && vatBalancing > 0) {
-        lines.push({
-          accountCode: vatControlCode,
-          dc: 'credit',
-          amount: vatBalancing,
-          memo: 'VAT on SBSA cost (input VAT reclaimable — net zero for RTP pass-through)',
-        });
-      } else if (vatBalancing > 0) {
-        // Absorb into SBSA cost to keep books balanced
-        lines[2].amount = Number((fee.sbsaFeeExVat + vatBalancing).toFixed(2));
-      }
+      const lines = buildRtpPaidLedgerLines({
+        principalAmount,
+        netCredit,
+        fee,
+        bankLedgerCode,
+        clientFloatCode,
+        sbsaClearingCode,
+      });
 
       await ledgerService.postJournalEntry({
         reference: `SBSA-RTP-${merchantTransactionId}`,
@@ -918,4 +873,5 @@ module.exports = {
   creditWalletOnPaid,
   processRtpCallback,
   retryRtpAsPbac,
+  buildRtpPaidLedgerLines,
 };

@@ -27,6 +27,18 @@ export interface ApiResponse<T = any> {
   error?: string;
 }
 
+export class ApiError extends Error {
+  status: number;
+  payload: Record<string, unknown>;
+
+  constructor(message: string, status: number, payload: Record<string, unknown> = {}) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.payload = payload;
+  }
+}
+
 export interface RecipientMethod {
   id: string;
   name: string;
@@ -282,7 +294,7 @@ class ApiService {
           (typeof body.message === 'string' && body.message) ||
           (typeof body.error === 'string' && body.error) ||
           `HTTP ${response.status}`;
-        throw new Error(msg);
+        throw new ApiError(msg, response.status, body);
       }
 
       return {

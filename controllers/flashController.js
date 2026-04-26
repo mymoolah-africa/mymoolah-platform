@@ -1131,6 +1131,8 @@ class FlashController {
             const flashFeeTotalCents = flashFeeCents + flashFeeVatCents; // R5.75 (VAT Inclusive)
             
             const mmRevenueCents = customerFeeCents - flashFeeTotalCents; // R8.00 - R5.75 = R2.25
+            const mmRevenueVatCents = Math.round((mmRevenueCents / (1 + VAT_RATE)) * VAT_RATE);
+            const mmRevenueExVatCents = mmRevenueCents - mmRevenueVatCents;
             
             console.log(`💰 Flash Cash-Out Fee Breakdown:`);
             console.log(`   Face Value: R${(faceValueCents / 100).toFixed(2)}`);
@@ -1261,6 +1263,8 @@ class FlashController {
                     flashFee: flashFeeTotalCents,
                     flashFeeVAT: flashFeeVatCents,
                     mmRevenue: mmRevenueCents,
+                    mmRevenueExVat: mmRevenueExVatCents,
+                    mmRevenueVAT: mmRevenueVatCents,
                     useFlashAPI: useFlashAPI,
                     flashResponse: useFlashAPI ? flashResponse : null,
                     processedAt: new Date().toISOString()
@@ -1320,21 +1324,28 @@ class FlashController {
                 }
             });
 
-            // Post to ledger (Flash float account + VAT)
+            // Post to ledger. Flash provider fee is pass-through; VAT control is only on MMTP margin.
             try {
-                const { postCommissionVatAndLedger } = require('../services/commissionVatAndLedger');
+                const ledgerService = require('../services/ledgerService');
+                const LEDGER_ACCOUNT_CLIENT_FLOAT = process.env.LEDGER_ACCOUNT_CLIENT_FLOAT || '2100-01-01';
+                const LEDGER_ACCOUNT_FLASH_FLOAT = process.env.LEDGER_ACCOUNT_FLASH_FLOAT || '1200-10-04';
+                const LEDGER_ACCOUNT_FLASH_FEE_CLEARING = process.env.LEDGER_ACCOUNT_FLASH_CASHOUT_FEE_CLEARING || process.env.LEDGER_ACCOUNT_SUPPLIER_CLEARING || '2200-02-01';
+                const LEDGER_ACCOUNT_TRANSACTION_FEE_REVENUE = process.env.LEDGER_ACCOUNT_TRANSACTION_FEE_REVENUE || '4000-20-01';
+                const LEDGER_ACCOUNT_VAT_CONTROL = process.env.LEDGER_ACCOUNT_VAT_CONTROL || '2300-10-01';
                 
-                await postCommissionVatAndLedger({
-                    commissionCents: flashFeeCents, // R5.00 to Flash (VAT Excl)
-                    supplierCode: 'FLASH',
-                    serviceType: 'cash_out',
-                    walletTransactionId: mainTransactionId,
-                    sourceTransactionId: vasTransaction.transactionId,
-                    idempotencyKey: reference,
-                    purchaserUserId: req.user.id
+                await ledgerService.postJournalEntry({
+                    reference: `FLASH-CASHOUT-${reference}`,
+                    description: `Flash cash-out PIN purchase: ${reference}`,
+                    lines: [
+                        { accountCode: LEDGER_ACCOUNT_CLIENT_FLOAT, dc: 'debit', amount: totalCustomerChargeCents / 100, memo: 'User wallet debit (Flash cash-out face value + fee)' },
+                        { accountCode: LEDGER_ACCOUNT_FLASH_FLOAT, dc: 'credit', amount: faceValueCents / 100, memo: 'Flash cash-out float payable' },
+                        { accountCode: LEDGER_ACCOUNT_FLASH_FEE_CLEARING, dc: 'credit', amount: flashFeeTotalCents / 100, memo: 'Flash cash-out fee payable (pass-through)' },
+                        { accountCode: LEDGER_ACCOUNT_TRANSACTION_FEE_REVENUE, dc: 'credit', amount: mmRevenueExVatCents / 100, memo: 'MM revenue (Flash cash-out margin ex-VAT)' },
+                        { accountCode: LEDGER_ACCOUNT_VAT_CONTROL, dc: 'credit', amount: mmRevenueVatCents / 100, memo: 'VAT payable on MM Flash cash-out margin' },
+                    ],
                 });
                 
-                console.log(`📒 Ledger posted: Flash fee R${(flashFeeCents / 100).toFixed(2)} + VAT R${(flashFeeVatCents / 100).toFixed(2)}`);
+                console.log(`📒 Ledger posted: Flash pass-through fee R${(flashFeeTotalCents / 100).toFixed(2)} + MM VAT R${(mmRevenueVatCents / 100).toFixed(2)}`);
             } catch (ledgerError) {
                 console.error('⚠️ Ledger posting failed:', ledgerError.message);
                 // Continue - transaction already completed

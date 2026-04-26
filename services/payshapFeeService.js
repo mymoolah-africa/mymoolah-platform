@@ -21,16 +21,16 @@
  * Ledger accounting:
  *   RPP:
  *     DR  Client Float (wallet debit)        = sbsaFee + mmMarkup (total user charge)
- *     CR  Bank (outflow to SBSA)             = principal amount
- *     CR  PayShap SBSA Cost (cost of sale)   = sbsaFeeExVat  [net cost]
+ *     CR  Bank (beneficiary outflow)         = principal amount
+ *     CR  SBSA Fee Clearing / Payable        = sbsaFeeVatIncl [pass-through]
  *     CR  Transaction Fee Revenue            = mmMarkupExVat [net markup revenue]
- *     CR  VAT Control (output - input)       = netVatPayable
+ *     CR  VAT Control                        = mmMarkupVat
  *
  *   RTP (on Paid callback):
  *     DR  Bank (inflow from payer)           = principal
  *     CR  Client Float (wallet credit)       = principal - sbsaFee
- *     CR  PayShap SBSA Cost (cost of sale)   = sbsaFeeExVat  [pass-through cost]
- *     CR  VAT Control                        = 0 (output = input, net zero)
+ *     CR  SBSA Fee Clearing / Payable        = sbsaFeeVatIncl [pass-through]
+ *     No VAT Control / TaxTransaction because MMTP earns no RTP markup.
  *
  * @author MyMoolah Treasury Platform
  * @date 2026-02-24
@@ -102,16 +102,16 @@ function getSbsaFeeVatIncl(monthlyTxnCount, type) {
  *
  * @param {number} monthlyRppCount - RPP transactions processed this month (before this one)
  * @returns {{
- *   sbsaFeeVatIncl: number,    // SBSA charge to MM (VAT incl) — cost of sale
- *   sbsaFeeExVat: number,      // SBSA charge ex-VAT
- *   sbsaVat: number,           // VAT on SBSA fee (input VAT — reclaimable)
+ *   sbsaFeeVatIncl: number,    // SBSA pass-through fee (VAT incl)
+ *   sbsaFeeExVat: number,      // SBSA fee ex-VAT, informational only for RPP pass-through
+ *   sbsaVat: number,           // VAT in SBSA fee, informational only for RPP pass-through
  *   mmMarkupVatIncl: number,   // MM markup charged to user (VAT incl)
  *   mmMarkupExVat: number,     // MM markup ex-VAT (net revenue)
  *   mmMarkupVat: number,       // VAT on MM markup (output VAT)
  *   totalUserFeeVatIncl: number, // Total charged to user (VAT incl)
  *   totalUserFeeExVat: number,   // Total ex-VAT
- *   totalOutputVat: number,    // Total output VAT (on full user charge)
- *   netVatPayable: number,     // Output VAT - Input VAT (net to SARS)
+ *   totalOutputVat: number,    // VAT embedded in total user fee, including SBSA pass-through
+ *   netVatPayable: number,     // VAT payable on MMTP markup only
  *   mmNetRevenue: number,      // MM net revenue ex-VAT (markup only)
  * }}
  */
@@ -125,8 +125,8 @@ function calculateRppFee(monthlyRppCount) {
   const totalUserFeeVatIncl = Number((sbsaFeeVatIncl + mmMarkupVatIncl).toFixed(2));
   const { exVat: totalUserFeeExVat, vatAmount: totalOutputVat } = extractVat(totalUserFeeVatIncl);
 
-  // Net VAT payable to SARS = output VAT on full user charge minus input VAT on SBSA cost
-  const netVatPayable = Number((totalOutputVat - sbsaVat).toFixed(4));
+  // SBSA fee is pass-through; MMTP VAT payable is only VAT on its own markup.
+  const netVatPayable = Number(mmMarkupVat.toFixed(4));
 
   return {
     sbsaFeeVatIncl: Number(sbsaFeeVatIncl.toFixed(2)),
@@ -148,7 +148,7 @@ function calculateRppFee(monthlyRppCount) {
  *
  * RTP: user pays SBSA fee only (flat pass-through, no MM markup).
  * MM collects the fee and remits to SBSA — net revenue = R0.
- * VAT: output VAT = input VAT → net VAT payable = R0.
+ * VAT embedded in SBSA fee is informational only for MMTP; no MMTP VAT control entry.
  *
  * @param {number} monthlyRtpCount - RTP transactions processed this month (before this one)
  * @returns {{
@@ -171,7 +171,7 @@ function calculateRtpFee(monthlyRtpCount) {
     sbsaVat: Number(sbsaVat.toFixed(2)),
     totalUserFeeVatIncl: Number(sbsaFeeVatIncl.toFixed(2)),
     totalOutputVat: Number(sbsaVat.toFixed(2)),
-    netVatPayable: 0, // output VAT = input VAT (pure pass-through)
+    netVatPayable: 0, // pure pass-through; no MMTP VAT liability
     mmNetRevenue: 0,
   };
 }

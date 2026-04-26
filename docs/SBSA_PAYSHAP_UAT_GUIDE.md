@@ -67,9 +67,11 @@ SBSA_CREDITOR_NAME=MyMoolah Treasury
 
 # Ledger: Uses LEDGER_ACCOUNT_BANK (1100-01-01) - MM SBSA main account
 
-# PayShap fees (VAT incl) - VAT split to LEDGER_ACCOUNT_TRANSACTION_FEE_REVENUE + LEDGER_ACCOUNT_VAT_CONTROL
-PAYSHAP_FEE_MM_ZAR=4       # MM charges wallet user (RPP: principal+fee; RTP: principal-fee)
-PAYSHAP_FEE_SBSA_ZAR=3     # SBSA charges MM (recorded when settled)
+# PayShap RPP fee model (VAT incl)
+# SBSA RPP fee is pass-through clearing/payable; MMTP VAT control only records VAT on MMTP markup.
+PAYSHAP_SBSA_FEE_TIER_RPP_ZAR=5.75
+PAYSHAP_MM_RPP_MARKUP_ZAR=1.00
+LEDGER_ACCOUNT_PAYSHAP_SBSA_CLEARING=2200-02-01
 ```
 
 ---

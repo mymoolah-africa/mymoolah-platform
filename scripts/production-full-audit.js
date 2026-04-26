@@ -446,7 +446,8 @@ function journalRefLinksVas(refs, vasTransactionId, vasTsKey, walletTxnId, maxDr
       const expectedTax = Number((base * rate).toFixed(2));
       const diff = Math.abs(tax - expectedTax);
       if (diff > 0.01) {
-        // RTP fee VAT is a pass-through (output VAT = input VAT, net payable = R0)
+        // Legacy RTP fee TaxTransactions may exist from before the Apr 2026 VAT strategy.
+        // Current RTP pass-through fees do not create MMTP TaxTransaction rows.
         if ((t.taxTransactionId && t.taxTransactionId.includes('RTP-FEE')) ||
             (t.businessContext === 'wallet_user' && tax === 0 && total > base)) {
           pass(`${t.taxTransactionId}: base=${money(base)} VAT pass-through (input=output, net=R0, total=${money(total)})`, 'COMPLETENESS');
