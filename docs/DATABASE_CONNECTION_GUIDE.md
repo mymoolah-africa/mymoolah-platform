@@ -1,7 +1,7 @@
 # Database Connection Guide - UAT, Staging & Production
 
-**Last Updated**: April 25, 2026  
-**Latest Migration Note**: Wallet-bank EFT activation adds `20260425110000_create_wallet_bank_payments_and_fee_policies.js`; the migration has been hardened for partial reruns and confirmed successful in UAT + staging Codespaces runs.
+**Last Updated**: April 26, 2026  
+**Latest Migration Note**: Wallet-bank EFT activation adds `20260425110000_create_wallet_bank_payments_and_fee_policies.js`; the migration has been hardened for partial reruns and confirmed successful in UAT + staging Codespaces runs. VAT pass-through correction scripts use `scripts/db-connection-helper.js` and must be dry-run before any production apply.
 
 ## 🎯 **CRITICAL: NEVER STRUGGLE WITH PASSWORDS AGAIN**
 
@@ -71,6 +71,12 @@ This guide ensures **100% reliable** database connections for UAT, Staging, and 
 **Note (Mar 2026):** The repo's `cloud-sql-proxy` binary is Linux x86-64. On Mac ARM64, it will fail with "cannot execute binary file". **Run migrations in Codespaces** (Linux) for Staging/Production. Local Mac: use UAT with direct connection if configured, or run migrations from Codespaces.
 
 **Wallet-bank EFT note (Apr 2026):** Before testing wallet-to-bank EFT in Codespaces/UAT, apply `20260425110000_create_wallet_bank_payments_and_fee_policies.js`. It creates `transaction_fee_policies`, `wallet_bank_payments`, and seeds the UAT EFT fee policy `WALLET_BANK_EFT_UAT_FLAT_R2` (`R2.00`). The migration was hardened after an `idx_fee_policies_lookup` partial-run conflict: it checks existing tables/indexes, uses conflict-safe fee-policy seed logic, and has defensive rollback checks. André confirmed UAT and staging migration runs completed successfully after pulling the fix.
+
+**VAT correction note (Apr 2026):** Production RPP/RTP pass-through corrections were applied with non-destructive journal scripts:
+- `scripts/correct-production-rpp-pass-through-ledger.js`
+- `scripts/correct-production-rtp-pass-through-ledger.js`
+
+Both use `scripts/db-connection-helper.js`, require the production Cloud SQL proxy, and are idempotent. Always run `--dry-run` first; after Apr 26, 2026 the RTP dry-run should report 0 eligible corrections.
 
 ---
 

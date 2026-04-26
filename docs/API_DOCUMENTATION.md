@@ -1,6 +1,6 @@
-**Last Updated**: April 25, 2026
-**Version**: 3.0.0 - Wallet-to-bank EFT H2H API
-**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **WALLET-BANK EFT UAT API** ✅ **PAYSHAP RPP INSTANT PAYMENT** ✅ **EEZIAIRTIME PIN & COPY** ✅ **EASYPAY** ✅ **RECONCILIATION LIVE** ✅ **REFERRAL SYSTEM LIVE** ✅ **OTP SYSTEM LIVE** ✅ **MOBILEMART INTEGRATED** ✅ **ELECTRICITY SUPPLIER COMPARISON**
+**Last Updated**: April 26, 2026
+**Version**: 3.0.1 - VAT pass-through accounting API notes
+**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **VAT PASS-THROUGH POLICY FORMALISED** ✅ **WALLET-BANK EFT UAT API** ✅ **PAYSHAP RPP INSTANT PAYMENT** ✅ **EEZIAIRTIME PIN & COPY** ✅ **EASYPAY** ✅ **RECONCILIATION LIVE** ✅ **REFERRAL SYSTEM LIVE** ✅ **OTP SYSTEM LIVE** ✅ **MOBILEMART INTEGRATED** ✅ **ELECTRICITY SUPPLIER COMPARISON**
 
 ---
 
@@ -10,6 +10,9 @@
 
 ### v3.0.0 — Wallet-to-bank EFT H2H API (April 25, 2026)
 New `/api/v1/wallet-bank-payments` endpoints quote and submit consumer wallet-to-bank payments. EFT is the default rail; PayShap RPP is available through the Instant Payment option. Requires migration `20260425110000_create_wallet_bank_payments_and_fee_policies.js` before UAT testing. The migration is now hardened for partial reruns and was confirmed successful for UAT and staging in Codespaces.
+
+### v3.0.1 — VAT pass-through accounting policy (April 26, 2026)
+API-facing payment flows now follow the canonical policy in `docs/VAT_ACCOUNTING_STRATEGY.md`: supplier, bank, client, and merchant pass-through fees are not MMTP revenue and must not create MMTP VAT control or TaxTransaction records. API responses may expose fee breakdowns for transparency, but accounting writes split pass-through amounts to clearing/payable accounts and MMTP-owned revenue to revenue + VAT control.
 
 ### Website / MMAP integration boundary (April 25, 2026)
 `www.mymoolah.africa` SEO, public content, FAQs, and website AI support should be managed in the separate website project/Claude Code. MMTP APIs documented here remain the source of truth for secure wallet, MMAP, auth, audit, and payment integration contracts consumed by that website.

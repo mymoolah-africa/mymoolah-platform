@@ -1,7 +1,7 @@
 # SBSA PayShap UAT Activation Plan
 
-**Date**: 2026-02-23  
-**Status**: Ready for activation – credentials received  
+**Date**: 2026-02-23 (updated 2026-04-26)  
+**Status**: Ready for activation – credentials received; fee/VAT policy superseded by `docs/VAT_ACCOUNTING_STRATEGY.md`  
 **Purpose**: Activate PayShap servers in UAT (backend + frontend) and seed 7 test payer accounts for RTP
 
 > ⚠️ **Security**: Credentials below must be stored in `.env` or Codespaces Secrets. Do NOT commit real values to git. Remove or redact before pushing if this file is tracked.
@@ -11,10 +11,10 @@
 ## 1. Implementation Plan Summary (Memorized)
 
 ### Architecture
-- **RPP (Send Money)**: Wallet → third-party bank account. User debits principal + R4 fee.
-- **RTP (Request Money)**: Request sent to payer's bank. When Paid, wallet credits principal − R4 fee.
+- **RPP (Send Money)**: Wallet → third-party bank account. User debits principal + SBSA pass-through fee + MMTP markup.
+- **RTP (Request Money)**: Request sent to payer's bank. When Paid, wallet credits principal − SBSA pass-through fee.
 - **Deposit Notification**: SBSA POSTs to `/notification` when deposit hits MM SBSA main account; reference = MSISDN → wallet to credit.
-- **Ledger**: Uses `LEDGER_ACCOUNT_BANK` (1100-01-01); no prefunded float.
+- **Ledger**: Uses `LEDGER_ACCOUNT_BANK` (1100-01-01); no prefunded float. SBSA pass-through fees post VAT-inclusive to clearing/payable accounts; MMTP VAT control records only MMTP markup/revenue.
 
 ### Backend
 - **Routes**: `/api/v1/standardbank/payshap/rpp`, `/payshap/rtp`, `/notification`, callbacks

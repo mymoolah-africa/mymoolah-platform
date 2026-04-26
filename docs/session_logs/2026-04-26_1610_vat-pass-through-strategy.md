@@ -25,6 +25,7 @@ Historical production cleanup was also completed for PayShap RTP: 6 legacy RTP j
 - [x] Fixed Flash cash-out ledger posting so provider fee is pass-through and only MMTP margin VAT hits VAT control.
 - [x] Added production RTP correction script and applied it successfully.
 - [x] Updated major docs and agent handover.
+- [x] Committed and pushed VAT strategy work to `main`.
 
 ---
 
@@ -93,7 +94,6 @@ Historical production cleanup was also completed for PayShap RTP: 6 legacy RTP j
 
 ## Next Steps
 
-- [ ] Commit the VAT strategy/code/docs changes when André confirms or requests commit.
 - [ ] Deploy backend so forward-code VAT treatment is active in runtime environments.
 - [ ] Keep historical correction scripts for audit evidence; do not rerun apply unless dry-run shows eligible corrections.
 
@@ -111,7 +111,7 @@ Historical production cleanup was also completed for PayShap RTP: 6 legacy RTP j
 ## Questions/Unresolved Items
 
 - Full deployment was not performed in this turn.
-- No git commit was created in this turn unless André requests it next.
+- Git commits pushed to `main`: `e4c89c5c` (session log/handover) and `1b279e25` (VAT/code/docs).
 
 ---
 

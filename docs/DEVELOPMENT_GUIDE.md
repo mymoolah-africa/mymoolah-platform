@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Development Guide
 
-**Last Updated**: April 25, 2026  
-**Version**: 3.0.0 - Wallet-to-bank EFT H2H activation  
-**Status**: ✅ **CLOUD BUILD DEPLOYS** ✅ **SBSA H2H EFT UAT ACTIVATION** ✅ **PAYSHAP RPP INSTANT PAYMENT** ✅ **EEZIAIRTIME REDEMPTION UI** ✅ **EEZIPAY KB** ✅ **INTERNATIONAL AIRTIME PINLESS (AWAITING FLASH)** ✅ **EASYPAY STANDALONE VOUCHER** ✅ **RECONCILIATION LIVE** ✅ **REFERRAL SYSTEM LIVE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY** ✅ **CHART OF ACCOUNTS** ✅ **LEDGER AUDIT** ✅ **ELECTRICITY SUPPLIER COMPARISON** ✅ **CLOUD SCHEDULER**
+**Last Updated**: April 26, 2026  
+**Version**: 3.0.1 - VAT pass-through accounting strategy  
+**Status**: ✅ **CLOUD BUILD DEPLOYS** ✅ **VAT PASS-THROUGH POLICY FORMALISED** ✅ **SBSA H2H EFT UAT ACTIVATION** ✅ **PAYSHAP RPP INSTANT PAYMENT** ✅ **EEZIAIRTIME REDEMPTION UI** ✅ **EEZIPAY KB** ✅ **INTERNATIONAL AIRTIME PINLESS (AWAITING FLASH)** ✅ **EASYPAY STANDALONE VOUCHER** ✅ **RECONCILIATION LIVE** ✅ **REFERRAL SYSTEM LIVE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY** ✅ **CHART OF ACCOUNTS** ✅ **LEDGER AUDIT** ✅ **ELECTRICITY SUPPLIER COMPARISON** ✅ **CLOUD SCHEDULER**
 
 ---
 
@@ -42,6 +42,13 @@ Welcome to the MyMoolah Treasury Platform development guide! This platform is bu
 - **Migration status**: The EFT migration was hardened for partial reruns after an `idx_fee_policies_lookup` already-exists conflict. André confirmed UAT and staging master migration scripts completed successfully in Codespaces.
 - **Testing**: After pulling in Codespaces, restart backend/frontend, then test default EFT and Instant Payment toggle with a real saved bank beneficiary.
 - **Website boundary**: Public website SEO, page optimisation, FAQs, and website AI support belong in the separate website project/Claude Code. Keep this repo focused on MMTP backend/wallet services, MMAP-facing APIs, auth, audit, and integration contracts.
+
+### **VAT pass-through development notes (v3.0.1)**
+- **Canonical policy**: Read `docs/VAT_ACCOUNTING_STRATEGY.md` before changing any fee, TaxTransaction, or journal-entry path.
+- **MMTP revenue only**: `LEDGER_ACCOUNT_VAT_CONTROL` and output TaxTransaction rows are for MMTP-owned revenue, markup, commission, and SMS/customer fees only.
+- **Pass-through fees**: Supplier, bank, client, and merchant throughput charges must post VAT-inclusive to clearing/payable accounts. Do not create artificial input/output VAT rows to net pass-through flows to zero.
+- **Current aligned paths**: PayShap RPP/RTP, Zapper QR, EasyPay cash-out, Flash cash-out, wallet-bank EFT, and VAS commission.
+- **Historical corrections**: Production RPP and RTP pass-through corrections were posted using immutable `CORR-RPP-PASS-*` and `CORR-RTP-PASS-*` journals. Never mutate old journal rows.
 
 ---
 

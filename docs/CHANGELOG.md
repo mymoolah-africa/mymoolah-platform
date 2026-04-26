@@ -1211,6 +1211,7 @@ node scripts/production-full-audit.js --production
   - CR `5000-10-01` (SBSA Cost) R5.00
   - CR `2300-10-01` (VAT Control) R0.75
 - **Tax transaction**: Pass-through VAT (output = input, net R0). `TAX-0c0f13eb`.
+- **Current policy note (Apr 26, 2026)**: This historical entry was superseded by `docs/VAT_ACCOUNTING_STRATEGY.md` and corrected non-destructively with a `CORR-RTP-PASS-*` journal. Current RTP pass-through fees post VAT-inclusive to supplier clearing and do not create MMTP VAT-control/TaxTransaction rows.
 - **Notification**: `txn_wallet_credit` with `reason: "balance_refresh"` and `subtype: "payshap_rtp_paid"`.
 - **RTP Request ID 1** — Same amount, declined by payer. No amounts posted, correct rejection notification sent.
 
@@ -2425,7 +2426,7 @@ Extended database scripts and connection helper for Production environment. Prod
 ## 2026-02-12 - 🏦 SBSA PayShap Integration (Complete) ✅
 
 ### **Session Overview**
-Complete Standard Bank PayShap integration: UAT implementation, business model correction (main bank account, no float), deposit notification endpoint, R4 fee (principal+fee RPP, principal−fee RTP), VAT split to revenue/VAT control, TaxTransaction audit. Awaiting OneHub credentials for UAT.
+Complete Standard Bank PayShap integration: UAT implementation, business model correction (main bank account, no float), deposit notification endpoint, original R4 fee plan (principal+fee RPP, principal−fee RTP), VAT split to revenue/VAT control, TaxTransaction audit. **Current policy note (Apr 26, 2026):** the original R4/VAT split was superseded by `docs/VAT_ACCOUNTING_STRATEGY.md`; current RPP/RTP SBSA fees are pass-through clearing amounts and MMTP VAT control records only MMTP-owned markup/revenue. Awaiting OneHub credentials for UAT.
 
 ### **Session Logs**
 - `docs/session_logs/2026-02-12_1200_sbsa-payshap-uat-implementation.md`

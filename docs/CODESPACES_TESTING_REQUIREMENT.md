@@ -1,8 +1,8 @@
 # Codespaces Testing Requirement - MyMoolah Platform
 
 **Status**: ✅ **MANDATORY** - All testing must be performed in Codespaces  
-**Last Updated**: April 25, 2026  
-**Version**: 1.2.0 - Wallet-bank EFT UAT testing
+**Last Updated**: April 26, 2026  
+**Version**: 1.3.0 - VAT pass-through regression testing
 
 ---
 
@@ -65,6 +65,40 @@ After pulling commit `f288790f` and the follow-up migration-hardening/docs commi
    - Insufficient balance returns a safe validation error.
    - Duplicate submit with same idempotency key does not double debit.
    - Pain.002 NACK/rejection test should reverse/refund the payment.
+
+---
+
+## 🧾 **VAT PASS-THROUGH REGRESSION TESTING (APRIL 2026)**
+
+After pulling commits `e4c89c5c` and `1b279e25` or later:
+
+1. **Read the policy first**
+   - `docs/VAT_ACCOUNTING_STRATEGY.md`
+   - `docs/CHART_OF_ACCOUNTS.md`
+
+2. **Run targeted tests**
+   ```bash
+   npm test -- --runTestsByPath tests/standardbankRppService.insufficient-balance.test.js
+   ```
+   Expected: 3 tests pass, including RPP pass-through ledger lines and RTP pass-through clearing without VAT-control lines.
+
+3. **Syntax-check correction scripts before any use**
+   ```bash
+   node --check scripts/correct-production-rpp-pass-through-ledger.js
+   node --check scripts/correct-production-rtp-pass-through-ledger.js
+   ```
+
+4. **Do not rerun production corrections unless dry-run shows eligible entries**
+   ```bash
+   node scripts/correct-production-rtp-pass-through-ledger.js --production --dry-run
+   ```
+   Expected after Apr 26 correction: 0 eligible RTP corrections.
+
+5. **Forward-flow checks**
+   - PayShap RPP: SBSA fee credits supplier clearing; MMTP markup splits to revenue + VAT control.
+   - PayShap RTP: SBSA fee credits supplier clearing; no MMTP VAT-control or TaxTransaction row.
+   - Zapper QR: supplier VAT is informational; MMTP QR fee VAT posts to VAT control.
+   - EasyPay/Flash cash-out: provider fee posts to clearing; only MMTP margin VAT posts to VAT control.
 
 ---
 

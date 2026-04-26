@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform
 
-**Last Updated**: April 25, 2026  
-**Version**: 3.0.0 - Wallet-to-bank EFT H2H activation  
-**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **SBSA H2H EFT UAT ACTIVATION** ✅ **PAYSHAP RPP INSTANT PAYMENT** ✅ **CHART OF ACCOUNTS** ✅ **ELECTRICITY SUPPLIER COMPARISON** ✅ **LEDGER AUDIT** ✅ **CLOUD SCHEDULER** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **POPIA ID ENCRYPTION** ✅ **LANGCHAIN RAG AI** ✅ **PASA T-PPP BADGE**
+**Last Updated**: April 26, 2026  
+**Version**: 3.0.1 - VAT pass-through accounting strategy  
+**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **VAT PASS-THROUGH POLICY FORMALISED** ✅ **PRODUCTION DB MIGRATED** ✅ **SBSA H2H EFT UAT ACTIVATION** ✅ **PAYSHAP RPP INSTANT PAYMENT** ✅ **CHART OF ACCOUNTS** ✅ **ELECTRICITY SUPPLIER COMPARISON** ✅ **LEDGER AUDIT** ✅ **CLOUD SCHEDULER** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **POPIA ID ENCRYPTION** ✅ **LANGCHAIN RAG AI** ✅ **PASA T-PPP BADGE**
 
 **Recent work**: **Apr 26, 2026** — Formalised MMTP VAT accounting strategy: VAT control records are only for MMTP-owned revenue/markup/commission, not supplier/bank/client/merchant pass-through fees. Aligned PayShap RTP, Zapper QR, EasyPay cash-out, and Flash cash-out fee posting with the policy in `docs/VAT_ACCOUNTING_STRATEGY.md`. **Apr 25** — Wallet-to-bank payments activated for UAT: bank payments default to **SBSA H2H EFT**, with an **Instant Payment** toggle for PayShap RPP. Added DB-backed effective-dated transaction fee policies for future MMAP management, seeded UAT EFT fee `R2.00`, added quote/submit APIs, wallet-bank payment tracking, Pain.002 rejection reversal/refund handling, and EFT receiver timing estimates using `15:00 SAST` cutoff + Saturday intake + SA public holidays. The EFT migration was hardened after a partial-run index conflict; André confirmed UAT and staging migrations completed successfully in Codespaces. Website SEO/content/FAQ/AI support belongs in the separate website project/Claude Code; this repo owns MMTP APIs, MMAP integration, audit, auth, and wallet/backend services. Commit `f288790f`. **Apr 24** — SBSA H2H PROD Penny #2 ACK + INTAUD succeeded in 22 seconds; FINAUD expected 2026-04-29 due to Freedom Day roll. **Apr 20** — POL-020 Cash Withdrawal & Ring-Fencing of Own Funds policy and related compliance docs. See `docs/CHANGELOG.md`.
 
@@ -271,7 +271,7 @@ See `docs/session_logs/2025-12-02_1220_msisdn-phonenumber-audit.md` for comprehe
 - **H2H SFTP (payments)**: **Pain.001 v3** (`pain.001.001.03`) **SSVS validated** (2026-03-30). **SFTP channel enablement in progress** (requested from Melanie Block). Debit account for profile: **272406481** (branch **002154**). Template: `docs/templates/pain001_payment_template.csv`; guide: `docs/SBSA_H2H_SETUP_GUIDE.md`
 - **H2H statements**: **MT940/MT942 parsers ready** — **awaiting SFTP statement channel** (production path per SBSA; no statement UAT)
 - **Business model**: SBSA sponsor bank; MM SBSA main account (no prefunded float)
-- **Fees**: R4.00 VAT incl charged to user (RPP: principal+fee; RTP: principal−fee); R3.00 SBSA cost (recorded when settled)
+- **Fees**: RPP debits principal + SBSA pass-through fee + MMTP markup; RTP credits principal less SBSA pass-through fee. VAT control records only MMTP-owned markup/revenue. See `docs/VAT_ACCOUNTING_STRATEGY.md`.
 - **Request Money proxy**: When Peach archived and `STANDARDBANK_PAYSHAP_ENABLED=true`, frontend `/api/v1/peach/request-money` delegates to Standard Bank
 - **Docs**: `docs/SBSA_PAYSHAP_UAT_GUIDE.md`, `docs/integrations/StandardBankPayShap.md`, `docs/SBSA_H2H_SETUP_GUIDE.md`
 

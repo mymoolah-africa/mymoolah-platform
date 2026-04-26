@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Performance Documentation
 
-**Last Updated**: April 25, 2026
-**Version**: 3.0.0 - Wallet-to-bank EFT H2H performance notes
-**Status**: ✅ **WALLET-BANK EFT INDEXED TRACKING** ✅ **USDC LIMIT CHECKS DB-AGGREGATION ONLY** ✅ **EASYPAY STANDALONE VOUCHER UI OPTIMIZED** ✅ **RECONCILIATION OPTIMIZED** ✅ **FLASH + MOBILEMART** ✅ **REFERRAL SYSTEM OPTIMIZED** ✅ **PEACH PAYMENTS COMPLETE** ✅ **ZAPPER REVIEWED** ✅ **PRODUCTION READY**
+**Last Updated**: April 26, 2026
+**Version**: 3.0.1 - VAT pass-through performance notes
+**Status**: ✅ **VAT PASS-THROUGH WRITES SIMPLIFIED** ✅ **WALLET-BANK EFT INDEXED TRACKING** ✅ **USDC LIMIT CHECKS DB-AGGREGATION ONLY** ✅ **EASYPAY STANDALONE VOUCHER UI OPTIMIZED** ✅ **RECONCILIATION OPTIMIZED** ✅ **FLASH + MOBILEMART** ✅ **REFERRAL SYSTEM OPTIMIZED** ✅ **PEACH PAYMENTS COMPLETE** ✅ **ZAPPER REVIEWED** ✅ **PRODUCTION READY**
 
 ---
 
@@ -11,6 +11,7 @@
 The MyMoolah Treasury Platform is optimized for **high-performance financial transactions** with **TLS 1.3** and **banking-grade security**. The platform is designed to handle **millions of transactions** with sub-second response times while maintaining enterprise-grade security and reliability.
 
 ### **🏆 Performance Achievements**
+- ✅ **VAT pass-through accounting simplification**: PayShap RTP and pass-through supplier fee flows no longer write artificial VAT-control/TaxTransaction rows for throughput-only fees.
 - ✅ **Wallet-bank EFT quote/submit path**: Fee lookup uses indexed effective-dated DB policy; EFT settlement estimate is local deterministic logic; submit reuses existing H2H and PayShap services.
 - ✅ **Sub-Second Response Times**: <200ms average API response times
 - ✅ **TLS 1.3 Optimization**: Optimized TLS 1.3 for maximum performance
@@ -31,6 +32,13 @@ The MyMoolah Treasury Platform is optimized for **high-performance financial tra
 - **Frontend UX**: Quote calls are debounced in `SendMoneyPage.tsx` to avoid excessive quote requests while the amount is being typed.
 - **Migration resilience**: The launch migration is hardened for partial reruns by checking existing tables/indexes before creation and using conflict-safe fee-policy seed logic.
 - **Website separation**: Public website SEO/content/FAQ/AI support should stay in the separate website project so MMTP performance work remains focused on APIs, MMAP integration, wallet services, and payment rails.
+
+## 🧾 **VAT PASS-THROUGH PERFORMANCE NOTES**
+
+- **Reduced writes**: PayShap RTP pass-through fees no longer create TaxTransaction rows or VAT-control journal lines.
+- **Cleaner reconciliation**: Supplier/bank pass-through fees are single VAT-inclusive clearing/payable lines, reducing journal complexity and audit query noise.
+- **Correction scripts**: Historical RPP/RTP correction scripts are idempotent and use indexed journal references (`CORR-RPP-PASS-*`, `CORR-RTP-PASS-*`) to skip already-corrected entries quickly.
+- **Audit checks**: Follow-up production checks are scoped by reference/account patterns and should remain read-only unless an approved correction script is being applied.
 
 ---
 

@@ -1,10 +1,10 @@
 # MyMoolah Treasury Platform - Documentation Index
 
-**Last Updated**: April 25, 2026  
+**Last Updated**: April 26, 2026  
 **Project Status**: 🚀 **PRODUCTION LIVE - api-mm.mymoolah.africa, wallet.mymoolah.africa**  
-**Version**: 3.0.0 - Wallet-to-bank EFT H2H activation  
+**Version**: 3.0.1 - VAT pass-through accounting strategy  
 
-For recent work, see [CHANGELOG.md](./CHANGELOG.md) and [AGENT_HANDOVER.md](./AGENT_HANDOVER.md). **Apr 25, 2026:** Wallet-to-bank payments activated for UAT. Bank payments default to **SBSA H2H EFT** with an **Instant Payment** toggle for existing PayShap RPP rails. New docs/session log: [2026-04-25 wallet-bank EFT H2H activation](./session_logs/2026-04-25_1121_wallet-bank-eft-h2h-activation.md). New API: `POST /api/v1/wallet-bank-payments/quote` and `POST /api/v1/wallet-bank-payments/submit`. Migration `20260425110000_create_wallet_bank_payments_and_fee_policies.js` (fee policies + wallet-bank payment tracking + R2 EFT UAT fee) was hardened for partial reruns and confirmed successful in Codespaces for UAT and staging. Website SEO/content/FAQ/AI support belongs in the separate website project/Claude Code; MMTP docs here remain the source for secure APIs, MMAP integration, auth, audit, and backend/wallet services. **Apr 20:** [20-Cash-Withdrawal-Policy.md](./policies/20-Cash-Withdrawal-Policy.md) (POL-020 — Cash Withdrawal & Ring-Fencing of Own Funds). **Apr 16:** [WITHDRAWALS_COMPLIANCE_AND_KB.md](./WITHDRAWALS_COMPLIANCE_AND_KB.md). **Apr 5:** Chart of Accounts visual, electricity supplier comparison, ledger audit — [CHART_OF_ACCOUNTS.md](./CHART_OF_ACCOUNTS.md).
+For recent work, see [CHANGELOG.md](./CHANGELOG.md) and [AGENT_HANDOVER.md](./AGENT_HANDOVER.md). **Apr 26, 2026:** VAT pass-through accounting strategy formalised in [VAT_ACCOUNTING_STRATEGY.md](./VAT_ACCOUNTING_STRATEGY.md). MMTP records VAT control only on MMTP-owned revenue, markup, and commission; supplier, bank, client, and merchant pass-through fees post VAT-inclusive to clearing/payable accounts. Session log: [2026-04-26 VAT pass-through strategy](./session_logs/2026-04-26_1610_vat-pass-through-strategy.md). **Apr 25:** Wallet-to-bank payments activated for UAT. Bank payments default to **SBSA H2H EFT** with an **Instant Payment** toggle for existing PayShap RPP rails. New API: `POST /api/v1/wallet-bank-payments/quote` and `POST /api/v1/wallet-bank-payments/submit`. Migration `20260425110000_create_wallet_bank_payments_and_fee_policies.js` (fee policies + wallet-bank payment tracking + R2 EFT UAT fee) was hardened for partial reruns and confirmed successful in Codespaces for UAT and staging. Website SEO/content/FAQ/AI support belongs in the separate website project/Claude Code; MMTP docs here remain the source for secure APIs, MMAP integration, auth, audit, and backend/wallet services. **Apr 20:** [20-Cash-Withdrawal-Policy.md](./policies/20-Cash-Withdrawal-Policy.md) (POL-020 — Cash Withdrawal & Ring-Fencing of Own Funds). **Apr 16:** [WITHDRAWALS_COMPLIANCE_AND_KB.md](./WITHDRAWALS_COMPLIANCE_AND_KB.md). **Apr 5:** Chart of Accounts visual, electricity supplier comparison, ledger audit — [CHART_OF_ACCOUNTS.md](./CHART_OF_ACCOUNTS.md).
 
 ---
 
@@ -13,6 +13,7 @@ For recent work, see [CHANGELOG.md](./CHANGELOG.md) and [AGENT_HANDOVER.md](./AG
 MyMoolah is a **full Treasury Platform** (wallet + general ledger + integrations) built on **Mojaloop standards** and **ISO 20022 banking standards**. The platform is designed to handle **millions of transactions** with banking-grade security and performance.
 
 ### **🏆 ACHIEVEMENTS COMPLETED**
+- ✅ **VAT pass-through accounting strategy** formalised and production RPP/RTP corrections applied
 - ✅ **Wallet-to-bank EFT H2H UAT activation** with Instant Payment PayShap toggle
 - ✅ **Wallet-bank EFT migration hardening** confirmed through UAT and staging Codespaces migration scripts
 - ✅ **Banking-Grade Support Engine** with AI-powered assistance
@@ -40,6 +41,7 @@ MyMoolah is a **full Treasury Platform** (wallet + general ledger + integrations
 - [**DOMAIN_MODEL.md**](./DOMAIN_MODEL.md) - Business domain model
 - [**FIGMA_INTEGRATION_COMPLETE.md**](./FIGMA_INTEGRATION_COMPLETE.md) - Frontend integration workflow
 - [**CHART_OF_ACCOUNTS.md**](./CHART_OF_ACCOUNTS.md) - Canonical Chart of Accounts (28 accounts, 15 journal templates, solvency rules)
+- [**VAT_ACCOUNTING_STRATEGY.md**](./VAT_ACCOUNTING_STRATEGY.md) - Canonical VAT policy for MMTP revenue vs pass-through fees
 - [**CHART_OF_ACCOUNTS_VISUAL.html**](./CHART_OF_ACCOUNTS_VISUAL.html) - Print-ready PDF/HTML Chart of Accounts
 - [**SETTLEMENTS.md**](./SETTLEMENTS.md) - Float model and settlement architecture
 

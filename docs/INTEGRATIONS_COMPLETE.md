@@ -1,9 +1,9 @@
 # 🌐 INTEGRATIONS COMPLETE - MyMoolah Treasury Platform
 
-**Date**: March 24, 2026 (Updated)
-**Version**: 2.6.5 - EasyPay NPS/TPPP legal positioning documented
-**Status**: ✅ **EASYPAY REGULATORY NARRATIVE (MAR 2026)** ✅ **EASYPAY STANDALONE VOUCHER UI ENHANCED** ✅ **PDF CONVERTER AVAILABLE** ✅ **EASYPAY SIMULATION FIXED** ✅ **SMS/MYMOBILEAPI WORKING** ✅ **MOBILEMART FULCRUM** ✅ **FLASH RECONCILIATION** ✅ **PEACH PAYMENTS ARCHIVED** ✅ **ZAPPER INTEGRATION REVIEWED**
-**Achievement**: Complete integration with all major financial service providers plus EasyPay standalone voucher UI improvements, PDF converter, and EasyPay simulation fixes. SMS Integration with MyMobileAPI verified working 2025-12-30. Flash reconciliation system integrated January 14, 2026. PDF converter and EasyPay simulation fixes January 16, 2026. EasyPay standalone voucher UI improvements January 17, 2026. **March 24, 2026**: Documented EasyPay **NPS/TPPP** positioning (single-creditor collection vs post-settlement wallet) in `integrations/EasyPay_API_Integration_Guide.md` §1.4; session log `docs/session_logs/2026-03-24_1530_easypay-tppp-legal-response-draft.md`.  
+**Date**: April 26, 2026 (Updated)
+**Version**: 3.0.1 - VAT pass-through integration accounting alignment
+**Status**: ✅ **VAT PASS-THROUGH POLICY FORMALISED** ✅ **PAYSHAP RPP/RTP ACCOUNTING ALIGNED** ✅ **ZAPPER/EASYPAY/FLASH PASS-THROUGH FEES ALIGNED** ✅ **EASYPAY REGULATORY NARRATIVE (MAR 2026)** ✅ **EASYPAY STANDALONE VOUCHER UI ENHANCED** ✅ **PDF CONVERTER AVAILABLE** ✅ **EASYPAY SIMULATION FIXED** ✅ **SMS/MYMOBILEAPI WORKING** ✅ **MOBILEMART FULCRUM** ✅ **FLASH RECONCILIATION** ✅ **PEACH PAYMENTS ARCHIVED** ✅ **ZAPPER INTEGRATION REVIEWED**
+**Achievement**: Complete integration with all major financial service providers plus formal VAT/pass-through accounting rules. As of April 26, 2026, integration fee accounting follows `docs/VAT_ACCOUNTING_STRATEGY.md`: supplier, bank, client, and merchant throughput fees are not MMTP revenue and post VAT-inclusive to clearing/payable accounts; MMTP-owned markup/commission posts to revenue + VAT control. SMS Integration with MyMobileAPI verified working 2025-12-30. Flash reconciliation system integrated January 14, 2026. PDF converter and EasyPay simulation fixes January 16, 2026. EasyPay standalone voucher UI improvements January 17, 2026. **March 24, 2026**: Documented EasyPay **NPS/TPPP** positioning (single-creditor collection vs post-settlement wallet) in `integrations/EasyPay_API_Integration_Guide.md` §1.4; session log `docs/session_logs/2026-03-24_1530_easypay-tppp-legal-response-draft.md`.  
 
 ---
 
@@ -40,13 +40,13 @@
 - **Catalog Sync**: Script created to sync both pinned and pinless products
 - **Status**: ✅ Product listing working, ✅ 4/7 purchase types working, ⚠️ Awaiting valid UAT test mobile numbers
 
-**3. STANDARD BANK PAYSHAP (SBSA) INTEGRATION** ✅ **UAT READY** (2026-02-12)
-- **Status**: Implementation complete – awaiting OneHub credentials for UAT
+**3. STANDARD BANK PAYSHAP (SBSA) INTEGRATION** ✅ **LIVE / ACCOUNTING ALIGNED** (updated 2026-04-26)
+- **Status**: RPP/RTP integration live; wallet-bank Instant Payment reuses RPP rails
 - **Scope**: RPP (Send Money), RTP (Request Money), Deposit notification
 - **Business model**: SBSA sponsor bank; MM SBSA main account (no prefunded float)
-- **Fees**: R4.00 VAT incl user fee; R3.00 SBSA cost (recorded when settled)
+- **Fees**: RPP debits principal + SBSA pass-through fee + MMTP markup. RTP credits principal less SBSA pass-through fee. VAT control records only MMTP-owned markup/revenue, not SBSA pass-through fees.
 - **Request Money proxy**: ✅ Fixed (2026-03-21) — frontend now calls Standard Bank directly (Peach decommissioned)
-- **Docs**: `docs/SBSA_PAYSHAP_UAT_GUIDE.md`, `docs/integrations/StandardBankPayShap.md`
+- **Docs**: `docs/SBSA_PAYSHAP_UAT_GUIDE.md`, `docs/integrations/StandardBankPayShap.md`, `docs/VAT_ACCOUNTING_STRATEGY.md`
 
 **3b. STANDARD BANK H2H (SFTP + SOAP)** ✅ **IMPLEMENTATION COMPLETE** (2026-03-24)
 - **Status**: SOAP handler live, MT940/MT942 parser live, environment isolation implemented. Awaiting SBSA test traffic before freeze (Thu Mar 27 → Apr 8)

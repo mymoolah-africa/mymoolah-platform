@@ -2,10 +2,39 @@
 
 ## **🧪 Testing Strategy Overview**
 
-**Last Updated**: February 09, 2026
-**Version**: 2.9.1 - USDC Fixes & Banking-Grade Sweep
-**Testing Phase**: Production Ready - USDC Send (validation/limits/idempotency sweep) + EasyPay Standalone Voucher UI + Reconciliation + SMS + Referral Tested
-**Next Phase**: USDC UAT with VALR credentials; Production Deployment & Monitoring
+**Last Updated**: April 26, 2026
+**Version**: 3.0.1 - VAT pass-through regression testing
+**Testing Phase**: Production Ready - VAT pass-through policy + wallet-bank EFT UAT + USDC Send + EasyPay Standalone Voucher UI + Reconciliation + SMS + Referral Tested
+**Next Phase**: Codespaces wallet-bank EFT E2E and continued production ledger audit monitoring
+
+---
+
+## **🧾 VAT Pass-Through Accounting Tests (April 2026)** ✅ **TARGETED TESTS PASSING**
+
+- **Policy**: `docs/VAT_ACCOUNTING_STRATEGY.md`.
+- **Test file**: `tests/standardbankRppService.insufficient-balance.test.js`.
+- **Coverage**:
+  - RPP insufficient-balance metadata includes instant fee and maximum payment amount.
+  - RPP ledger lines post SBSA fee as pass-through clearing and MMTP markup VAT only.
+  - RTP ledger lines post SBSA fee as pass-through clearing with no VAT-control line.
+
+### Running VAT Pass-Through Tests
+
+```bash
+npm test -- --runTestsByPath tests/standardbankRppService.insufficient-balance.test.js
+```
+
+Expected result: 1 suite passed, 3 tests passed.
+
+### Production Correction Script Checks
+
+```bash
+node --check scripts/correct-production-rpp-pass-through-ledger.js
+node --check scripts/correct-production-rtp-pass-through-ledger.js
+node scripts/correct-production-rtp-pass-through-ledger.js --production --dry-run
+```
+
+Expected after Apr 26, 2026: RTP dry-run reports 0 eligible corrections. Do not run `--apply` unless dry-run identifies eligible rows and Finance/André approve the correction.
 
 ---
 

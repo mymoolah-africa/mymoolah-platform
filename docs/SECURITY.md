@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Security Documentation
 
-**Last Updated**: April 25, 2026
-**Version**: 3.0.0 - Wallet-to-bank EFT H2H security notes
-**Status**: ✅ **WALLET-BANK EFT AUTH/KYC/RATE LIMITS** ✅ **USDC API VALIDATION AT BOUNDARY** ✅ **USDC IDEMPOTENCY & VALR GUARDS** ✅ **EASYPAY STANDALONE VOUCHER UI SECURE** ✅ **RECONCILIATION SECURITY IMPLEMENTED** ⚠️ **CRITICAL PII EXPOSURE IDENTIFIED** 🔴 **ENCRYPTION AT REST REQUIRED** ✅ **STAGING/PRODUCTION DATABASES SECURED** ✅ **REFERRAL SYSTEM FRAUD PREVENTION ACTIVE** ✅ **RULE 12A DOCUMENTED** ✅ **DB CONNECTION HELPER PATTERN ESTABLISHED** ✅ **LEDGER AUDIT LIVE** ✅ **RATE LIMITERS UNIFIED** ✅ **KYC RAW SQL**
+**Last Updated**: April 26, 2026
+**Version**: 3.0.1 - VAT pass-through accounting control notes
+**Status**: ✅ **VAT PASS-THROUGH POLICY FORMALISED** ✅ **WALLET-BANK EFT AUTH/KYC/RATE LIMITS** ✅ **USDC API VALIDATION AT BOUNDARY** ✅ **USDC IDEMPOTENCY & VALR GUARDS** ✅ **EASYPAY STANDALONE VOUCHER UI SECURE** ✅ **RECONCILIATION SECURITY IMPLEMENTED** ⚠️ **CRITICAL PII EXPOSURE IDENTIFIED** 🔴 **ENCRYPTION AT REST REQUIRED** ✅ **STAGING/PRODUCTION DATABASES SECURED** ✅ **REFERRAL SYSTEM FRAUD PREVENTION ACTIVE** ✅ **RULE 12A DOCUMENTED** ✅ **DB CONNECTION HELPER PATTERN ESTABLISHED** ✅ **LEDGER AUDIT LIVE** ✅ **RATE LIMITERS UNIFIED** ✅ **KYC RAW SQL**
 
 ---
 
@@ -21,6 +21,12 @@ Notes for AI-assisted development:
 - `www.mymoolah.africa` SEO, public content, FAQs, and website AI support should be managed in the separate website project/Claude Code.
 - This MMTP repo remains responsible for secure API contracts, MMAP integration, auth, RBAC, audit trails, wallet ledgers, payment orchestration, and PII-safe backend services.
 - Website integrations must consume MMTP through authenticated, rate-limited APIs rather than direct database access.
+
+### VAT / Accounting Control Boundary (April 2026)
+- VAT control and TaxTransaction writes are financial-control surfaces. They must only represent MMTP-owned revenue, markup, or commission.
+- Pass-through supplier, bank, client, and merchant fees must stay in clearing/payable accounts and must not be represented as MMTP VAT payable.
+- Historical accounting corrections must use immutable correction journals (`CORR-*`) rather than editing posted journal rows.
+- See `docs/VAT_ACCOUNTING_STRATEGY.md` and `docs/CHART_OF_ACCOUNTS.md` before changing any fee or ledger code path.
 
 ### **🔴 CRITICAL SECURITY ISSUES - PRODUCTION BLOCKERS**
 
