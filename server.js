@@ -157,6 +157,7 @@ const catalogSyncRoutes = require('./routes/catalogSync.js');
 const userFavoritesRoutes = require('./routes/userFavorites.js');
 const referralRoutes = require('./routes/referrals.js');
 const reconciliationRoutes = require('./routes/reconciliation.js');
+const agentGovernanceRoutes = require('./routes/agentGovernance.js');
 const adRoutes = require('./routes/ads.js'); // Watch to Earn
 const usdcRoutes = require('./routes/usdc.js'); // USDC Send
 const nfcRoutes = require('./routes/nfc.js'); // NFC Deposit
@@ -511,6 +512,7 @@ app.use('/api/v1/user-favorites', userFavoritesRoutes);
 app.use('/api/v1/ads', adRoutes); // Watch to Earn
 app.use('/api/v1/referrals', referralRoutes);
 app.use('/api/v1/reconciliation', reconciliationRoutes);
+app.use('/api/v1/agent-governance', agentGovernanceRoutes);
 app.use('/api/v1/usdc', usdcRoutes); // USDC Send
 app.use('/api/v1/nfc', nfcRoutes); // NFC Deposit
 

@@ -10,6 +10,7 @@ set -euo pipefail
 #   3. sbsa-statement-poll-{env}   — every 2 min (MT940/MT942 bank statements)
 #   4. sbsa-pain002-poll-{env}     — every 5 min (Pain.002 disbursement responses)
 #   5. sftp-recon-sweep-{env}      — every 2 min (supplier recon file sweep)
+#   6. agent-governance-optimizer-{env} — Sunday 03:30 SAST (draft-only skills/rules review)
 #
 # Usage:
 #   ./scripts/setup-cloud-scheduler.sh --staging
@@ -124,6 +125,21 @@ create_all_jobs_for_env() {
     "${service_url}" \
     "Supplier recon file SFTP sweep for ${env} — feeds ReconciliationOrchestrator" \
     "600s"
+
+  # 6. Agent governance optimizer — weekly, draft-only, staging-first rollout.
+  # Production scheduler is intentionally gated until André approves staging output.
+  if [ "${env}" = "staging" ] || [ "${AGENT_GOVERNANCE_CREATE_PRODUCTION_SCHEDULER:-false}" = "true" ]; then
+    create_http_job \
+      "agent-governance-optimizer-${env}" \
+      "${service_url}/api/v1/agent-governance/scheduled-skills-rules-optimizer" \
+      "30 3 * * 0" \
+      "${sa}" \
+      "${service_url}" \
+      "Weekly agent skills/rules optimizer for ${env} — scans governance docs and drafts changes for André review only" \
+      "900s"
+  else
+    log "Skipping agent-governance-optimizer-${env}; set AGENT_GOVERNANCE_CREATE_PRODUCTION_SCHEDULER=true after staging approval"
+  fi
 }
 
 ENVIRONMENT=""
@@ -161,7 +177,11 @@ echo ""
 log "Test a job manually:"
 echo "  gcloud scheduler jobs run catalog-sweep-staging --location=${SCHEDULER_LOCATION} --project=${PROJECT_ID}"
 echo "  gcloud scheduler jobs run referral-payout-staging --location=${SCHEDULER_LOCATION} --project=${PROJECT_ID}"
+echo "  gcloud scheduler jobs run agent-governance-optimizer-staging --location=${SCHEDULER_LOCATION} --project=${PROJECT_ID}"
 echo "  gcloud scheduler jobs run catalog-sweep-production --location=${SCHEDULER_LOCATION} --project=${PROJECT_ID}"
 echo "  gcloud scheduler jobs run referral-payout-production --location=${SCHEDULER_LOCATION} --project=${PROJECT_ID}"
+echo "  # after staging approval only:"
+echo "  AGENT_GOVERNANCE_CREATE_PRODUCTION_SCHEDULER=true ./scripts/setup-cloud-scheduler.sh --production"
+echo "  gcloud scheduler jobs run agent-governance-optimizer-production --location=${SCHEDULER_LOCATION} --project=${PROJECT_ID}"
 echo "========================================"
 echo ""

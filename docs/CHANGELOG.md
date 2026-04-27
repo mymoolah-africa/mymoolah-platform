@@ -1,5 +1,31 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-27 - Weekly Agent Governance Optimizer
+
+### Summary
+Added the first implementation of a weekly, Cloud Scheduler-driven Agent Governance Optimizer for MMTP Cursor rules and agent skills. The service is approval-gated and draft-only: it scans rules/skills/docs, validates safety and drift, records an auditable run, and can publish draft PRs for André review without ever merging to `main`.
+
+### Backend
+- Added `agent_optimizer_runs` migration and `AgentOptimizerRun` model for idempotent weekly run logging.
+- Added `services/agentGovernance/*` modules for inventory scanning, official-doc source checks, validators, proposal building, safety gating, and GitHub draft PR publishing.
+- Added `POST /api/v1/agent-governance/scheduled-skills-rules-optimizer` with existing Cloud Scheduler OIDC authentication.
+- Mounted the new agent governance router in `server.js`.
+
+### Scheduler
+- Extended `scripts/setup-cloud-scheduler.sh` with a weekly Sunday 03:30 SAST staging-first optimizer job.
+- Production scheduler creation is gated with `AGENT_GOVERNANCE_CREATE_PRODUCTION_SCHEDULER=true` after staging output has been reviewed.
+- Added disabled/dry-run optimizer defaults to `scripts/deploy-backend.sh` so Cloud Run redeploys do not accidentally enable automation.
+
+### Safety
+- Defaults are disabled/dry-run unless explicitly configured with `AGENT_GOVERNANCE_OPTIMIZER_ENABLED=true`.
+- Draft PR publishing requires safe allowed paths and configured GitHub credentials.
+- Safety gate blocks out-of-scope paths and potential secrets.
+
+### Tests
+- Added focused Jest/Supertest coverage for endpoint behavior, scheduler auth rejection, service idempotency, safety gate blocking, and mocked draft-PR publishing.
+
+---
+
 ## 2026-04-27 - Cursor rules optimization
 
 ### Summary
