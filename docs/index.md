@@ -72,7 +72,7 @@ MyMoolah is a **full Treasury Platform** (wallet + general ledger + integrations
 ### **🔌 API & Integration**
 - [**API_DOCUMENTATION.md**](./API_DOCUMENTATION.md) - Complete API reference
 - [**MMTP_PARTNER_API_IMPLEMENTATION_PLAN.md**](./MMTP_PARTNER_API_IMPLEMENTATION_PLAN.md) - Partner API plan (sandbox: staging.mymoolah.africa)
-- [**FIGMA_INTEGRATION_COMPLETE.md**](./FIGMA_INTEGRATION_COMPLETE.md) - Frontend integration; [FIGMA_API_WIRING](./archive/figma/FIGMA_API_WIRING.md) in archive
+- [**FIGMA_INTEGRATION_COMPLETE.md**](./FIGMA_INTEGRATION_COMPLETE.md) - Historical Figma note; current frontend work is code-first
 - [**mojaloop-integration.md**](./mojaloop-integration.md) - Mojaloop compliance details
 
 ---

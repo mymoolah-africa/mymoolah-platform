@@ -14,9 +14,9 @@ low literacy, low vision, and those using budget Android devices with TalkBack.
 > with TalkBack (Android screen reader) for all critical flows: checking balance,
 > sending money, purchasing airtime, and viewing transaction history.
 >
-> **Constraint**: Figma-managed pages (`pages/*.tsx`) are read-only. Accessibility
-> improvements must be made in overlay components, shared UI components, and the
-> design system — not in Figma page files.
+> **Constraint**: Code is the source of truth. Apply accessibility fixes in the
+> routed page, overlay component, shared UI primitive, or design token layer that
+> actually renders the experience.
 
 ## When This Skill Activates
 

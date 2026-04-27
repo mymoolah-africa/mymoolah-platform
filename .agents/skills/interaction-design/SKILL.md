@@ -19,6 +19,9 @@ motion that feels fast and reliable on budget Android devices.
 > The wallet uses `framer-motion` for complex animations and CSS transitions for
 > simple interactions. Prefer CSS transitions where possible for lower bundle impact.
 
+> Samples in this skill are patterns, not drop-in snippets. Verify referenced
+> handlers, reduced-motion behavior, and current component APIs before copying code.
+
 ## When This Skill Activates
 
 - Adding loading/success/error feedback to overlay purchase flows

@@ -885,7 +885,7 @@ curl -H "Authorization: Bearer <token>" \
 - **✅ Font Size Inconsistency**: Fixed EasyPay voucher code display
 
 ### **Current Limitations**
-- **Frontend Testing**: Limited to manual testing due to Figma-generated components
+- **Frontend Testing**: Expand automated coverage for coded wallet and portal components
 - **Automated Testing**: No CI/CD pipeline yet (planned for next phase)
 - **Load Testing**: Not yet implemented (planned for production)
 

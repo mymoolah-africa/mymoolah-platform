@@ -195,13 +195,13 @@ API: https://api-mm.mymoolah.africa, Wallet: https://wallet.mymoolah.africa. SSL
 #### **MMAP (MyMoolah Admin Portal) Foundation** ✅ **COMPLETED**
 - **Portal Architecture**: Complete portal directory structure with backend and frontend
 - **Backend Foundation**: Portal backend with models, controllers, routes, and middleware
-- **Frontend Foundation**: Portal frontend with React/TypeScript and Figma design integration
+- **Frontend Foundation**: Portal frontend with React/TypeScript and code-first MyMoolah design-system implementation
 - **Database Schema**: Complete portal database schema with migrations and seeds
 - **Authentication System**: Portal-specific authentication with JWT and localStorage
 
-#### **Figma Design System Integration** ✅ **COMPLETED**
-- **Login Page**: Complete Figma design integration with wallet design system
-- **Dashboard Page**: Figma design integration with comprehensive admin dashboard
+#### **Code-First Design System Integration** ✅ **COMPLETED**
+- **Login Page**: Complete MyMoolah design-system integration
+- **Dashboard Page**: Code-first design-system integration with comprehensive admin dashboard
 - **Shared CSS System**: Centralized design system for all portal components
 - **UI Components**: Complete UI component library with wallet design system
 - **Brand Consistency**: MyMoolah brand colors and typography throughout
@@ -410,7 +410,7 @@ Comprehensive UAT test suite executed with 92.3% success rate. All critical paym
 - **Testing Suite**: Create comprehensive Zapper testing framework
 
 ### **Phase 2.4.3 - Portal Development Continuation** 🔄 **PLANNED**
-- **Dashboard Refinements**: Complete dashboard formatting to match Figma design exactly
+- **Dashboard Refinements**: Complete dashboard formatting to match the coded MyMoolah design system
 - **Additional Portals**: Implement supplier, client, merchant, and reseller portals
 - **Advanced Features**: Add real-time notifications and advanced analytics
 - **Multi-tenant Architecture**: Implement multi-tenant portal architecture

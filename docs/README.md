@@ -391,7 +391,7 @@ The platform now includes **enhanced QR code scanning** with:
 
 ### **🏢 MyMoolah Admin Portal (MMAP)**
 
-The platform includes the **MyMoolah Admin Portal (MMAP)** - a comprehensive administrative interface with **banking-grade architecture** and **Figma design integration**.
+The platform includes the **MyMoolah Admin Portal (MMAP)** - a comprehensive administrative interface with **banking-grade architecture** and a code-first MyMoolah design system.
 
 ### **🏆 MISSION ACCOMPLISHED - KEY ACHIEVEMENTS**
 
@@ -416,10 +416,10 @@ The platform includes the **MyMoolah Admin Portal (MMAP)** - a comprehensive adm
 #### **MMAP (MyMoolah Admin Portal) Foundation** ✅ **COMPLETED**
 - **Portal Architecture**: Complete portal directory structure with backend and frontend
 - **Backend Foundation**: Portal backend with models, controllers, routes, and middleware
-- **Frontend Foundation**: Portal frontend with React/TypeScript and Figma design integration
+- **Frontend Foundation**: Portal frontend with React/TypeScript and code-first MyMoolah design-system implementation
 - **Database Schema**: Complete portal database schema with migrations and seeds
 - **Authentication System**: Portal-specific authentication with JWT and localStorage
-- **Figma Design Integration**: Complete Figma design system integration with wallet design system
+- **Design System Integration**: Complete code-first design-system integration with wallet and portal patterns
 
 #### **Complete Flash Commercial Terms Implementation** ✅ **COMPLETED**
 - **All 167 Flash Commercial Products**: Successfully implemented with exact commission rates
@@ -524,12 +524,12 @@ Comprehensive UAT test suite executed with 92.3% success rate. All critical paym
 - **Portal Frontend**: Port 3003 (New MMAP)
 
 ### **MMAP Features**
-- **Professional Login**: Figma-designed login with MyMoolah branding
+- **Professional Login**: Code-first login with MyMoolah branding
 - **Admin Dashboard**: Comprehensive admin interface with system metrics
 - **Real-time Data**: Live data from PostgreSQL database (no hardcoded data)
 - **Banking-Grade Security**: JWT authentication, rate limiting, audit logging
 - **Responsive Design**: Mobile-first design with wallet design system
-- **Figma Integration**: Complete Figma design system integration
+- **Design System**: Complete MyMoolah design-system integration
 
 ### **Test Credentials**
 ```
@@ -799,7 +799,7 @@ npm run dev
 - **Testing Suite**: Create comprehensive Zapper testing framework
 
 ### **Phase 2.4.3 - Portal Development Continuation** 🔄 **PLANNED**
-- **Dashboard Refinements**: Complete dashboard formatting to match Figma design exactly
+- **Dashboard Refinements**: Complete dashboard formatting to match the coded MyMoolah design system
 - **Additional Portals**: Implement supplier, client, merchant, and reseller portals
 - **Advanced Features**: Add real-time notifications and advanced analytics
 - **Multi-tenant Architecture**: Implement multi-tenant portal architecture

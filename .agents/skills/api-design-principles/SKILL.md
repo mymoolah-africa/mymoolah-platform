@@ -14,6 +14,8 @@ and compliant with Mojaloop FSPIOP patterns where applicable.
 > frontend (React/Vite on mobile) and the admin portal. Webhook endpoints receive
 > callbacks from EasyPay, Flash, and Peach payment providers.
 
+> **Routing guard**: Verify real mounts in `server.js` and existing files under `routes/` before inventing a new URL tree. Reuse existing middleware for auth, validation, rate limits, and idempotency.
+
 ## When This Skill Activates
 
 - Designing new API routes (routes/*.js)
@@ -328,6 +330,7 @@ const walletController = {
 
   // POST /api/wallets/:walletId/send
   async sendMoney(req, res) {
+    // Use the existing app transaction helper/model connection; do not create a new DB pool.
     const t = await sequelize.transaction();
     try {
       const { recipientId, amount, reference } = req.validatedBody;

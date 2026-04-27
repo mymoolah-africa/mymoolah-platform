@@ -44,7 +44,7 @@ alwaysApply: true
 | LangChain RAG replaces pattern-matching AI | Mar 2026 | 4,649 → 481 lines; semantic search; self-learning |
 | `gpt-4o-mini` for all non-KYC OpenAI calls | Mar 2026 | Cost: ~$30k/month → ~$150-360/month at 3M users |
 | KYC stays on `gpt-4o` | Mar 2026 | POPIA accuracy requirement |
-| Figma restriction removed | Feb 2026 | Code is source of truth; agents edit `.tsx` freely |
+| Figma retired as active workflow | Apr 2026 | Figma was only an early design/prototyping aid. Code is the frontend source of truth; agents edit `.tsx` directly. |
 | Agent commits AND pushes to main | Feb 2026 | Streamlined workflow |
 | Cloud Build for deployments (not local Docker) | Mar 2026 | No Docker Desktop needed; faster build times |
 | MT940+MT942 for SBSA H2H statements | Mar 2026 | SWIFT ISO standard — banking/Mojaloop grade |

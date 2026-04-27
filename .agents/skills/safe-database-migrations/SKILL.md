@@ -74,33 +74,23 @@ module.exports = {
 
 ## 3. Safe Concurrent Index Creation
 
-Sequelize's default `addIndex` locks the table. We must drop down to raw queries using `CREATE INDEX CONCURRENTLY` and disable Sequelize's migration transaction block.
+`CREATE INDEX CONCURRENTLY` cannot run inside a transaction block. Do not create a Sequelize transaction object for this migration. Use raw SQL with `transaction: null`, and ensure the migration runner does not wrap the statement in a transaction.
 
 ```javascript
-// ✅ CORRECT: Zero-Downtime Indexing
+// ✅ CORRECT: zero-downtime indexing
 'use strict';
 
 module.exports = {
-  // CRITICAL: Disable transactions or CONCURRENTLY will fail
-  // PostgreSQL cannot run CREATE INDEX CONCURRENTLY inside a transaction block
-  up: async (queryInterface, Sequelize) => {
-    const transaction = await queryInterface.sequelize.transaction();
-    
-    try {
-      // Execute as a raw query, strictly ensuring CONCURRENTLY is used
-      await queryInterface.sequelize.query(
-        `CREATE INDEX CONCURRENTLY IF NOT EXISTS 
-         idx_transactions_status_createdat 
-         ON mymoolah_transactions (status, "createdAt" DESC);`,
-        { transaction: null } // Explicitly bypass transaction
-      );
-    } catch (error) {
-       console.error("Index creation failed", error);
-       throw error;
-    }
+  up: async (queryInterface) => {
+    await queryInterface.sequelize.query(
+      `CREATE INDEX CONCURRENTLY IF NOT EXISTS
+       idx_transactions_status_createdat
+       ON mymoolah_transactions (status, "createdAt" DESC);`,
+      { transaction: null }
+    );
   },
 
-  down: async (queryInterface, Sequelize) => {
+  down: async (queryInterface) => {
     await queryInterface.sequelize.query(
       `DROP INDEX CONCURRENTLY IF EXISTS idx_transactions_status_createdat;`,
       { transaction: null }
@@ -108,6 +98,8 @@ module.exports = {
   }
 };
 ```
+
+Run migrations only through `./scripts/run-migrations-master.sh [uat|staging|production]`, never direct `npx sequelize-cli`.
 
 ---
 

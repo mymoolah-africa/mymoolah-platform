@@ -203,19 +203,19 @@ The MMAP uses a **shared design system** that extends the existing wallet design
 }
 ```
 
-### **Figma Integration Process**
-1. **Figma Design Generation**: Designs created in Figma using AAI agent
-2. **Code Generation**: Figma designs converted to React/TypeScript code
-3. **Design System Integration**: Figma code integrated with wallet design system
+### **Current Code-First Design Process**
+1. **Requirement Review**: Confirm the portal workflow, permissions, and data needs
+2. **Existing Pattern Sweep**: Reuse existing portal overlays, shared components, and CSS variables
+3. **Code Implementation**: Build directly in React/TypeScript/Tailwind using the MyMoolah design system
 4. **Component Library**: Reusable UI components with consistent styling
-5. **Responsive Design**: Mobile-first responsive design implementation
+5. **Responsive Design**: Desktop-first portal layout with graceful smaller-screen support
 
 ---
 
 ## 📱 **FRONTEND IMPLEMENTATION**
 
 ### **Login Page Features**
-- **Professional Design**: Figma-generated design with MyMoolah branding
+- **Professional Design**: Code-first design with MyMoolah branding
 - **Form Validation**: Client-side and server-side validation
 - **Remember Me**: Persistent login option
 - **Forgot Password**: Password reset functionality (placeholder)
@@ -329,7 +329,7 @@ DB_PASSWORD=your_db_password
 - Frontend foundation with React/TypeScript
 - Database schema with migrations and seeds
 - Authentication system with JWT
-- Figma design integration
+- MyMoolah design-system implementation
 - Login page with wallet design system
 - Dashboard page with comprehensive admin interface
 - Shared CSS system
@@ -366,7 +366,7 @@ DB_PASSWORD=your_db_password
 - **Testing Suite**: Create comprehensive Zapper testing framework
 
 ### **Phase 2.4.3 - Dashboard Refinements** 🔄 **PLANNED**
-- Complete dashboard formatting to match Figma design exactly
+- Complete dashboard formatting to match the coded MyMoolah design system
 - Enhanced responsive design
 - Additional dashboard widgets
 - Real-time data updates

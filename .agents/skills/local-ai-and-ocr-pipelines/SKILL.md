@@ -16,8 +16,7 @@ event loop and memory management best practices.
 > significant RAM for large images. The `sharp` preprocessing recommendation below
 > is the highest-impact improvement — it reduces memory and speeds up OCR accuracy.
 >
-> `@xenova/transformers` is used for semantic embedding in `SemanticEmbeddingService`
-> (AI support knowledge base). It is already loaded as a singleton.
+> Embedding/RAG code may have moved over time. Before editing embeddings or AI support, verify current imports around `services/ragService.js`, legacy AI services, and any active semantic embedding service. Keep model loading singleton-based.
 
 ## When This Skill Activates
 
@@ -145,7 +144,7 @@ if (isMainThread) {
   };
 } else {
   // Worker Thread (Heavy lifting happens here)
-  const PipelineSingleton = require('./PipelineSingleton');
+  const PipelineSingleton = require('./pipeline'); // align path with the singleton module you created
   
   async function processML() {
     const pipe = await PipelineSingleton.getInstance();

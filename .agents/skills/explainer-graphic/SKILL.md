@@ -1,6 +1,6 @@
 ---
 name: explainer-graphic
-description: Create stunning visual infographics and explainer graphics using real-world analogies. Produces live HTML canvases, SVG files, or AI-generated images directly in Cursor. Use when asked to explain something visually, create an infographic, make a diagram, or produce educational graphics.
+description: Create stunning visual infographics and explainer graphics using real-world analogies. Produces live HTML canvases, SVG files, or AI-generated images directly in Cursor. Use when asked for an analogy-led infographic, visual explainer, or educational graphic. Use workflow-visualizer instead for architecture/workflow/system diagrams.
 triggers:
   - explainer graphic
   - make an infographic
@@ -8,12 +8,15 @@ triggers:
   - create a graphic
   - visual explainer
   - infographic
-  - diagram
+  - analogy infographic
 ---
 
 # Explainer Graphic — Visual Infographic Builder
 
 Create stunning infographics that explain complex topics using real-world analogies anyone can understand. The agent finds the killer analogy, maps every piece, then BUILDS the graphic directly — no handoff to a designer.
+
+> Shared guidance: read `../_shared/visual-output-reference.md` for tool routing,
+> MyMoolah brand defaults, PII-safe examples, and cross-skill routing.
 
 > **Core principle**: Analogy first, design second. The analogy makes or breaks the graphic. Get it right before touching a single pixel.
 
@@ -25,11 +28,11 @@ Choose the best format for the request:
 
 | Format | Tool | Best For | Quality |
 |--------|------|----------|---------|
-| **HTML Canvas** | `canvas` (browser MCP) | Interactive, animated, presentation-grade | Highest |
+| **Cursor Canvas / HTML** | Cursor Canvas or self-contained `.html` | Interactive, animated, presentation-grade | Highest |
 | **SVG File** | Write tool → `.svg` | Scalable diagrams, clean vector art, embeddable | High |
 | **Raster Image** | `GenerateImage` tool | Social media posts, quick visuals, photo-realistic | Medium |
 
-**Default to HTML Canvas** unless the user specifically requests an image file or SVG. Canvas produces the most impressive results — live in the browser, interactive, animated, and pixel-perfect.
+**Default to Cursor Canvas / self-contained HTML** unless the user specifically requests an image file or SVG. Canvas produces the most impressive results — live in the browser, interactive, animated, and pixel-perfect.
 
 ---
 
@@ -178,7 +181,7 @@ Patterns to use:
 
 ### Option A: HTML Canvas (Default — Best Quality)
 
-Use the browser MCP's `canvas` tool. The canvas creates a live `.html` file that auto-reloads.
+Use Cursor Canvas when available, or create a self-contained `.html` file. Canvas creates a live artefact that auto-reloads.
 
 Structure:
 

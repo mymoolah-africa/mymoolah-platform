@@ -15,13 +15,16 @@ triggers:
 
 Turn any system description into a beautiful, interactive diagram with animated data flow, zoom/pan navigation, and click-to-explore detail. One self-contained HTML file, open in any browser.
 
+> Shared guidance: read `../_shared/visual-output-reference.md` for tool routing,
+> MyMoolah brand defaults, PII-safe examples, and cross-skill routing.
+
 > **Core principle**: A diagram should reveal how a system thinks, not just what it contains. Show the flow, the decisions, and the data transformations.
 
 ---
 
 ## Output Method
 
-Use the browser MCP's `canvas` tool to create a live HTML file. For complex diagrams with many nodes, use **D3.js** for automatic force-directed or hierarchical layout. For simpler flows (under 10 nodes), pure CSS grid/flexbox with SVG arrows works well.
+Use Cursor Canvas when available to create a live HTML artefact. For complex diagrams with many nodes, use **D3.js** for automatic force-directed or hierarchical layout. For simpler flows (under 10 nodes), pure CSS grid/flexbox with SVG arrows works well.
 
 | Complexity | Approach | Library |
 |-----------|----------|---------|

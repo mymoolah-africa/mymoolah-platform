@@ -34,7 +34,7 @@
 - ✅ **Security**: JWT authentication and rate limiting working
 - ✅ **Authentication**: Multi-input auth with complex password system
 - ✅ **KYC System**: Document upload with camera support
-- ✅ **Frontend**: React 18 with Figma AI integration
+- ✅ **Frontend**: React 18 with code-first MyMoolah design system
 - ✅ **Transaction Display**: Clean, no duplicate references, professional formatting
 - ✅ **QR Code Scanning**: Cross-browser camera support (iOS Safari, Android Chrome, Opera Mini)
 - ✅ **QR Upload**: Enhanced detection with 6 strategies for logos and overlays

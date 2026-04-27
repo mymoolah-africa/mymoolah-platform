@@ -213,10 +213,11 @@ return base;
 
 ### **Frontend Architecture Decisions**
 
-#### **Figma AI Integration**
-- **Decision**: Use Figma AI Agent as source of truth for all frontend components
-- **Implementation**: Never manually edit Figma-generated .tsx files
-- **Benefits**: Consistent design, reduced development time, professional UI/UX
+#### **Frontend Source of Truth**
+- **Historical note**: Figma was used early as a design/prototyping aid.
+- **Current decision**: The codebase is the only frontend source of truth.
+- **Implementation**: Edit React/TypeScript/Tailwind files directly; do not treat any `.tsx` file as Figma-owned or read-only.
+- **Benefits**: Faster iteration, fewer stale design constraints, and clearer production ownership.
 
 #### **Component Architecture**
 - **Decision**: React 18 with TypeScript and Tailwind CSS

@@ -14,13 +14,16 @@ triggers:
 
 Generate beautiful, animated HTML slide decks with rich visual components, presenter mode, and smooth transitions. No PowerPoint, no Google Slides, no subscriptions. One HTML file, open in any browser, present anywhere.
 
+> Shared guidance: read `../_shared/visual-output-reference.md` for tool routing,
+> MyMoolah brand defaults, PII-safe examples, and cross-skill routing.
+
 > **Core principle**: Every slide tells one story with one visual. If a slide needs two ideas, it needs two slides.
 
 ---
 
 ## Output Method
 
-Use the browser MCP's `canvas` tool to create a live HTML file. The canvas auto-reloads on edit, making iteration fast. The resulting `.html` file is fully portable — works offline, no internet needed to present.
+Use Cursor Canvas when available to create a live HTML artefact. The canvas auto-reloads on edit, making iteration fast. The resulting `.html` file is fully portable — works offline, no internet needed to present.
 
 For slide backgrounds or hero images, use `GenerateImage` and embed as base64 or reference the file path.
 

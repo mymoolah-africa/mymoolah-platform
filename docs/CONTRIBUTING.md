@@ -13,7 +13,7 @@
 
 ### **✅ Current Status:**
 - **Backend:** Fully operational with enterprise-grade security
-- **Frontend:** React-based with Figma AI Agent integration
+- **Frontend:** React-based; code is the source of truth
 - **Transaction Display:** Clean, no duplicate references, professional formatting
 - **All Integrations:** EasyPay, Flash, MobileMart, dtMercury, Peach Payments
 - **AI Supplier Comparison:** Real-time deal analysis and recommendations
@@ -69,9 +69,9 @@
 ## 🎨 **FRONTEND DEVELOPMENT GUIDELINES**
 
 ### **🎯 Development Approach**
-- **Design Platform:** Use Figma for UI/UX development
-- **AI Integration:** Figma AI Agent provides enhanced design capabilities
-- **Workflow:** Figma AI Agent → Code Generation → Cursor AI Agent Implementation
+- **Design Platform:** Use the codebase and MyMoolah design system; Figma is historical only
+- **AI Integration:** Cursor agents implement directly in code using active design-system guidance
+- **Workflow:** Product requirement → Code implementation → Review/build/test
 - **Technology Stack:** React 18 + TypeScript + Tailwind CSS + Vite
 
 ### **📱 Frontend Requirements**
@@ -83,7 +83,7 @@
 - **Multi-Input Authentication:** Phone numbers, account numbers, usernames
 - **Complex Password System:** 8+ chars, uppercase, lowercase, number, special char
 - **KYC Integration:** Document upload with camera support
-- **Figma AI Integration:** Enhanced UI/UX with AI-powered design
+- **Design-System Implementation:** UI/UX implemented directly in React/Tailwind with MyMoolah brand tokens
 - **Logo System:** Professional MyMoolah branding with fallback support
 
 ### **🎨 Design Standards**
@@ -113,7 +113,7 @@ mymoolah/
 │   │   ├── App.tsx              # Main application
 │   │   ├── components/          # UI components
 │   │   │   ├── ui/             # shadcn/ui components
-│   │   │   ├── figma/          # Figma AI components
+│   │   │   ├── common/         # Shared reusable components
 │   │   │   └── auth/           # Authentication components
 │   │   ├── pages/               # Application pages
 │   │   │   ├── LoginPage.tsx   # Multi-input authentication
@@ -200,9 +200,9 @@ curl http://localhost:3000
 4. **Deployment:** Secure production deployment
 
 #### **Frontend Development:**
-1. **Design Phase:** Figma AI Agent creates/updates designs
-2. **Enhancement:** Figma AI Agent provides code and improvements
-3. **Integration:** Cursor AI Agent implements changes
+1. **Design Phase:** Define the requirement and review existing coded patterns
+2. **Implementation:** Cursor AI Agent updates React/Tailwind components directly
+3. **Integration:** Wire APIs, state, validation, and accessibility in code
 4. **Testing:** Security and functionality verification
 5. **Deployment:** Production-ready updates
 
@@ -336,7 +336,7 @@ curl -s -X POST http://localhost:5050/api/v1/auth/register -H "Content-Type: app
 
 ### **📈 Long-term Goals:**
 1. **Maintain Security Standards** - Keep security score at 100/100
-2. **Enhance Frontend Development** - Use Figma AI Agent for improvements
+2. **Enhance Frontend Development** - Use code-first React/Tailwind improvements guided by the MyMoolah design system
 3. **Expand Features** - Add new financial services
 4. **Optimize Performance** - Maintain < 5% security overhead
 

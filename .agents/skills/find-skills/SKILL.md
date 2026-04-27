@@ -36,6 +36,8 @@ Before `npx skills find` or browsing skills.sh:
 1. Read **`docs/CURSOR_SKILLS.md`** — canonical table of installed skills and MMTP alignment.
 2. List **`.agents/skills/`** — source of truth on disk (`ls .agents/skills/` from repo root).
 
+If `docs/CURSOR_SKILLS.md` and `.agents/skills/` disagree, trust the live `.agents/skills/*/SKILL.md` inventory and update the docs as part of the cleanup.
+
 If a listed skill already matches the domain, **tell the user the path** and follow that skill’s `SKILL.md` instead of installing duplicates.
 
 ### Quick domain → existing MMTP skill map

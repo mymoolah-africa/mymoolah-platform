@@ -172,5 +172,5 @@ or initiating processes. They communicate interactivity and should have clear, a
   * Usage : For actions that should be available but not emphasized
 -->
 
-- [2025-07-23] RegisterPage.tsx reverted to last working Figma-generated version for stability.
+- [2025-07-23] RegisterPage.tsx reverted to the last working prototype version for stability.
 - All refactor attempts (custom hooks, validation extraction) should be incremental and tested after each change.

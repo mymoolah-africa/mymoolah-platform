@@ -36,7 +36,7 @@ key operations.
 
 1. **Safety First**: Redis should fail gracefully. If Redis is down, idempotent endpoints should reject traffic rather than process unsafely without locks.
 2. **TTL Everywhere**: Every key inserted into Redis MUST have an explicit Time-To-Live (TTL). No infinite keys.
-3. **Redlock Algorithm**: When locking a resource (like a specific Wallet ID), use an algorithm robust against Node.js event loop lags (e.g., locking via Lua scripts or established libraries).
+3. **Explicit Lock Policy**: For one Redis primary, use atomic `SET NX PX` plus token-checked Lua release. For multi-primary Redis, document and use a real Redlock implementation.
 
 ---
 
@@ -44,8 +44,8 @@ key operations.
 
 Before starting a Sequelize transaction that touches a wallet balance, acquire a Redis lock on that specific `walletId`.
 
-### Redlock Implementation Pattern
-Using `ioredis` and optionally `redlock` or a custom Lua script lock.
+### Single-Redis Lock Implementation Pattern
+Using `ioredis` with `SET NX PX` and a Lua release guard. Do not call this Redlock unless multiple Redis masters are configured.
 
 ```javascript
 // utils/redisLock.js

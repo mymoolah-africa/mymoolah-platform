@@ -35,6 +35,9 @@ We use Jest for unit/integration testing and Supertest for HTTP endpoint testing
 
 ## 1. Core Fintech Testing Principles
 
+> Test data must stay inside isolated test databases or mocks. Never run destructive test setup, truncation, or provider mocks against UAT, staging, or production data.
+
+
 1. **Test for Idempotency**: Always send the same request twice in tests to verify the second call returns the cached response and does NOT mutate the database.
 2. **Test for Concurrency (Race Conditions)**: Always send concurrent requests to endpoints that mutate balances using `Promise.all()` to verify locks or database constraints prevent double-spends.
 3. **Double-Entry Validation**: Tests that move money must verify that total debits ALWAYS equal total credits across the system before and after the test.

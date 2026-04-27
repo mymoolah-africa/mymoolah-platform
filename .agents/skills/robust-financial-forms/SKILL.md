@@ -11,12 +11,11 @@ on unreliable mobile networks, and provide accessible error feedback.
 
 > **Architecture Note**: MyMoolah's wallet frontend uses **overlay-based step flows**
 > (e.g., `AirtimeDataOverlay`, `ElectricityOverlay`, `SendMoneyOverlay`), not
-> traditional form pages. Many overlays are in **Figma-managed `pages/*.tsx` files**
-> that are read-only. This skill scopes accordingly:
+> traditional form pages. Some routed flows live in `pages/*.tsx`; code is the source of truth and may be edited when needed. This skill scopes accordingly:
 > - **Existing overlays**: Apply idempotency key injection and submit-disable patterns
 >   via `apiService.ts` — do NOT rewrite working overlays.
 > - **New forms/overlays**: Use `react-hook-form` + Zod from scratch.
-> - **Portal admin forms**: Use `react-hook-form` + Zod (no Figma constraint).
+> - **Portal admin forms**: Use `react-hook-form` + Zod. Figma is historical only and is not a constraint.
 
 ## When This Skill Activates
 
@@ -332,4 +331,4 @@ keyboard with decimal point on mobile, avoiding the full keyboard.
 - [ ] Confirm/submit button disabled during API call
 - [ ] Key is preserved on failure, reset on success
 - [ ] Any new inputs added to overlays have Zod validation
-- [ ] Figma-managed `pages/*.tsx` files NOT modified
+- [ ] Routed page/component duplicates checked and kept in sync where needed

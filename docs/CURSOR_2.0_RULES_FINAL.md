@@ -91,8 +91,8 @@ cd mymoolah-wallet-frontend && npm run build && cd ..
 
 - ONLY `/mymoolah/` and subdirectories
 - NEVER git worktrees
-- **Frontend**: Codebase is source of truth. Agents may edit any UI/frontend files including `mymoolah-wallet-frontend/pages/*.tsx`. Figma may hold reference designs; code takes precedence for ongoing development.
-- **Figma**: `/Figma/` sources may exist for reference; backend adapts to frontend needs.
+- **Frontend**: Codebase is source of truth. Agents may edit any UI/frontend files including `mymoolah-wallet-frontend/pages/*.tsx`.
+- **Figma**: Historical only. Do not use Figma as a current design platform, source of truth, approval gate, or read-only constraint.
 - Settings: `/portal/` only
 
 ---
@@ -196,7 +196,7 @@ This section must be maintained by every agent. Flag issues here so future agent
 | LangChain RAG replaces pattern-matching AI | Mar 2026 | 4,649 → 481 lines; semantic search; self-learning |
 | `gpt-4o-mini` for all non-KYC OpenAI calls | Mar 2026 | Cost: ~$30k/month → ~$150-360/month at 3M users |
 | KYC stays on `gpt-4o` | Mar 2026 | POPIA accuracy requirement |
-| Figma restriction removed | Feb 2026 | Code is source of truth; agents edit `.tsx` freely |
+| Figma retired as active workflow | Apr 2026 | Figma was only an early design/prototyping aid. Code is the frontend source of truth; agents edit `.tsx` directly. |
 | Agent commits AND pushes to main | Feb 2026 | Streamlined workflow |
 | Cloud Build for deployments (not local Docker) | Mar 2026 | No Docker Desktop needed; faster build times |
 | TPPP withdrawal documentation pack (eeziCash legal fix) | Apr 2026 | Sponsor/PASA/regulator comms use wallet cash-out characterisation; hub `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md` + HTML flows |

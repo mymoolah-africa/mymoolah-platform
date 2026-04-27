@@ -9,11 +9,13 @@ Banking-grade security for the MyMoolah digital wallet platform. This skill enfo
 OWASP Top 10, PCI-DSS, POPIA (South Africa), and fintech-specific security standards
 across all backend (Node.js/Express/Sequelize) and frontend (React) code.
 
+> **Project law wins**: If this skill conflicts with `docs/CURSOR_2.0_RULES_FINAL.md`, follow the rules file. Current auth standard is JWT HS512; all SQL must be parameterized; direct DB scripts use `scripts/db-connection-helper.js`.
+
 > **Environment Security Architecture**:
 > - **Secrets**: Google Cloud Secret Manager (Staging/Production), `.env.codespaces` (UAT)
 > - **Database**: Cloud SQL with Auth Proxy (ports: UAT 6543, Staging 6544, Prod 6545)
 > - **API Keys**: Flash, EasyPay, Peach, Mercury stored in Secret Manager
-> - **JWT**: HS256 access tokens (15min), refresh tokens (7 days) with rotation
+> - **JWT**: HS512 access tokens (short expiry), refresh tokens with rotation
 > - **Idempotency**: `middleware/idempotency.js` with PostgreSQL-backed key storage
 > - **NEVER** store production secrets in `.env` files — always use Secret Manager
 
@@ -105,7 +107,7 @@ const transactionLimiter = rateLimit({
   max: 30,
   message: { error: 'Transaction rate limit exceeded.' }
 });
-app.use('/api/wallets/*/send', transactionLimiter);
+app.use('/api/v1/wallets', transactionLimiter); // or mount limiter on the specific router write routes
 app.use('/api/airtime/purchase', transactionLimiter);
 app.use('/api/flash/purchase', transactionLimiter);
 
@@ -195,7 +197,7 @@ const jwt = require('jsonwebtoken');
 const accessToken = jwt.sign(
   { userId, role, walletId },
   process.env.JWT_ACCESS_SECRET,
-  { expiresIn: '15m', algorithm: 'HS256' }
+  { expiresIn: '15m', algorithm: 'HS512' }
 );
 
 // Refresh Token: 7 days, stored in DB, rotated on each use

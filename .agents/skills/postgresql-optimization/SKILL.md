@@ -238,25 +238,26 @@ const [trialBalance] = await sequelize.query(`
 `, { type: QueryTypes.SELECT });
 ```
 
-### Connection Pooling Configuration
+### MyMoolah DB Connection Standard
 ```javascript
-// config/database.js — MyMoolah production settings
-const sequelize = new Sequelize(process.env.DATABASE_URL, {
-  dialect: 'postgres',
-  pool: {
-    max: 20,        // Max connections (adjust per server)
-    min: 5,         // Keep 5 warm connections
-    acquire: 30000, // Wait 30s for connection before error
-    idle: 10000     // Release idle connections after 10s
-  },
-  dialectOptions: {
-    ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false,
-    statement_timeout: 30000,  // Kill queries running > 30s
-    idle_in_transaction_session_timeout: 60000 // Kill idle transactions > 60s
-  },
-  logging: process.env.NODE_ENV === 'production' ? false : console.log
-});
+// Direct scripts and ad hoc DB utilities MUST use the shared helper.
+const { getUATClient } = require('./scripts/db-connection-helper');
+
+async function runQuery() {
+  const client = await getUATClient();
+  try {
+    const result = await client.query(
+      'SELECT code, name FROM ledger_accounts WHERE code = $1',
+      ['2100-01-01']
+    );
+    return result.rows;
+  } finally {
+    client.release();
+  }
+}
 ```
+
+Do not create a new Sequelize instance or raw `pg.Pool` in new scripts. Existing app models may use the established app connection, but new standalone DB access goes through `db-connection-helper.js`.
 
 ---
 

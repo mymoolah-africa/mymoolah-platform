@@ -12,8 +12,7 @@ responsive patterns, and MyMoolah brand implementation.
 > **Architecture Notes**:
 > - The wallet frontend (`mymoolah-wallet-frontend/`) uses React + Vite + Tailwind.
 > - UI primitives are in `components/ui/` (Button, Card, Dialog, etc.) using CVA.
-> - Figma-managed pages in `pages/*.tsx` are **read-only** — adapt styling via
->   the design token layer, not by editing page files directly.
+> - Code is the source of truth. Edit routed `.tsx` pages, overlay components, or design tokens as appropriate for the task.
 > - The admin portal (`portal/`) shares the same design system.
 >
 > **Note**: This skill targets Tailwind CSS v4. For v3 projects, refer to the
@@ -38,19 +37,17 @@ responsive patterns, and MyMoolah brand implementation.
 @theme {
   /* === MyMoolah Brand Colors (OKLCH for superior perception) === */
 
-  /* Primary — Trust Blue */
-  --color-primary: oklch(45% 0.12 220);
-  --color-primary-hover: oklch(40% 0.12 220);
-  --color-primary-foreground: oklch(98% 0 0);
+  /* MyMoolah Brand */
+  --color-primary: #86BE41;
+  --color-primary-hover: #6fa334;
+  --color-primary-foreground: #ffffff;
 
-  /* Secondary — Soft Blue-Gray */
-  --color-secondary: oklch(92% 0.02 220);
-  --color-secondary-hover: oklch(88% 0.02 220);
-  --color-secondary-foreground: oklch(20% 0.02 220);
+  --color-secondary: #2D8CCA;
+  --color-secondary-hover: #2474a8;
+  --color-secondary-foreground: #ffffff;
 
-  /* Accent — Teal */
-  --color-accent: oklch(60% 0.15 180);
-  --color-accent-foreground: oklch(98% 0 0);
+  --color-accent: #2D8CCA;
+  --color-accent-foreground: #ffffff;
 
   /* Semantic — Financial Status */
   --color-success: oklch(65% 0.2 145);           /* Credits, deposits */
@@ -77,8 +74,8 @@ responsive patterns, and MyMoolah brand implementation.
   --color-card-foreground: oklch(15% 0.02 264);
 
   /* === Typography === */
-  --font-heading: 'Plus Jakarta Sans', 'DM Sans', system-ui, sans-serif;
-  --font-body: 'Inter', 'Nunito Sans', system-ui, sans-serif;
+  --font-heading: 'Montserrat', system-ui, sans-serif;
+  --font-body: 'Montserrat', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
 
   /* === Border Radius === */

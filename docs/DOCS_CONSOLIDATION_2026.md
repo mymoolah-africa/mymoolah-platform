@@ -30,7 +30,7 @@ Consolidated and archived ~75 docs to reduce file count. Session logs (~103 file
 | `archive/referral/` | REFERRAL_* |
 | `archive/easypay/` | EASYPAY_* |
 | `archive/zapper/` | ZAPPER_* (except integration docs in integrations/) |
-| `archive/figma/` | FIGMA_API_WIRING, FIGMA_DIGITAL_VOUCHERS (FIGMA_INTEGRATION_COMPLETE kept) |
+| `archive/figma/` | Historical early-design docs. `FIGMA_INTEGRATION_COMPLETE.md` now exists only as a short historical compatibility note. |
 
 ---
 
@@ -42,7 +42,7 @@ Consolidated and archived ~75 docs to reduce file count. Session logs (~103 file
 - **2FA**: `2FA_IMPLEMENTATION.md`
 - **Security**: `SECURITY.md` (includes badge, certificate, token summaries)
 - **Partner API**: `MMTP_PARTNER_API_IMPLEMENTATION_PLAN.md`
-- **Figma**: `FIGMA_INTEGRATION_COMPLETE.md`
+- **Frontend source of truth**: `FIGMA_INTEGRATION_COMPLETE.md` explains that Figma is historical only; active UI work is code-first.
 
 ---
 

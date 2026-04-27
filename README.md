@@ -175,7 +175,7 @@ Supplier Tables
 - [**Project Status**](docs/PROJECT_STATUS.md) - Current system status and roadmap
 
 ### **Integration Guides**
-- [**Figma API Wiring**](docs/FIGMA_API_WIRING.md) - Frontend-backend integration details
+- [**Frontend Source of Truth**](docs/FIGMA_INTEGRATION_COMPLETE.md) - Historical Figma note and current frontend ownership guidance
 - [**Testing Guide**](docs/TESTING_GUIDE.md) - Testing procedures and examples
 - [**Quick Fixes**](docs/QUICK_FIXES.md) - Common issues and solutions
 
@@ -268,7 +268,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🎉 **Acknowledgments**
 
 - **Development Team**: Full-stack development and system architecture
-- **Figma Integration**: AI-powered frontend design and integration
+- **Frontend Ownership**: Codebase is the source of truth; Figma is historical only
 - **Supplier Partners**: EasyPay, Flash, and MobileMart for service integrations
 - **Open Source Community**: For the excellent tools and libraries used
 

@@ -12,33 +12,50 @@ Skills extend Cursor Agent with specialized knowledge for banking-grade, Mojaloo
 
 **Note:** Skills are not a substitute for rules. Critical non‑negotiables (e.g. `db-connection-helper.js` only, parameterized SQL) must stay in rules so they are never skipped.
 
+
+## 2026-04-27 Skills Upgrade Notes
+
+The live inventory is `.agents/skills/*/SKILL.md`. If this document and the folder disagree, trust the folder and update this document.
+
+Upgrade principles now applied:
+- Oversized skills should keep `SKILL.md` concise and move depth to companion reference files.
+- Project rules override third-party skill text, especially `db-connection-helper.js`, JWT HS512, Codespaces testing, and code-as-frontend-source-of-truth.
+- Visual skills share `../_shared/visual-output-reference.md` for tool routing, MyMoolah brand defaults, and PII-safe examples.
+- Skill routing should prefer the narrowest applicable skill before loading broad audit/security guidance.
+
 ## Installed Skills
+
+Total installed: 21 project skills. The live folder inventory remains the source of truth.
 
 | Skill | Source | Purpose |
 |-------|--------|---------|
+| **accessibility-compliance** | wshobson/agents + MMTP-tuned | WCAG 2.2, ARIA patterns, TalkBack/mobile accessibility, inclusive wallet and portal UI |
+| **admin-portal-builder** | .agents/skills/ (project) | MMTP Admin Portal (MMAP): RBAC, maker-checker, admin audit logging, dashboard/data-table/overlay patterns |
 | **api-design-principles** | wshobson/agents | REST/GraphQL API design, scalability, developer experience |
-| **postgresql-optimization** | github/awesome-copilot | PostgreSQL JSONB, indexing, query optimization |
-| **sql-optimization-patterns** | wshobson/agents | SQL tuning, EXPLAIN analysis, performance |
-| **tailwind-design-system** | wshobson/agents | Tailwind v4, design tokens, component libraries |
-| **accessibility-compliance** | wshobson/agents | WCAG 2.2, ARIA patterns, screen readers |
-| **interaction-design** | wshobson/agents | Microinteractions, motion design, UX polish |
-| **security-best-practices** | supercent-io/skills-template | Security patterns for applications |
+| **auditing** | .agents/skills/ (project) | Concise banking-grade ledger/VAT/reconciliation/compliance router; deep reference preserved in `reference-full.md` |
+| **background-jobs-and-cron** | .agents/skills/ (project) | Cloud Scheduler endpoints, node-cron fallbacks, idempotent scheduled jobs, large backfills |
+| **explainer-graphic** | .agents/skills/ (project) | Analogy-led infographics and educational graphics |
+| **find-skills** | vercel-labs/skills + MMTP-tuned | Discover/install skills after checking in-repo inventory first |
+| **fintech-test-driven-development** | .agents/skills/ (project) | Jest/Supertest TDD for financial endpoints, idempotency, race conditions, ledger invariants |
 | **frontend-design** | .agents/skills/ (project) | Distinctive UI, typography, aesthetics |
-| **auditing** | .agents/skills/ (project) | Banking-grade ledger auditing v2.1.0, FICA/POPIA/SARB compliance, SHA-256 hash-chained audit trails, double-entry reconciliation, SOX-grade internal controls, IFRS presentation, Cloud Scheduler integration, Opus 4.6 optimization |
-| **admin-portal-builder** | .agents/skills/ (project) | MMTP Admin Portal (MMAP) — RBAC, dashboard architecture, data tables, maker-checker workflows, admin audit logging, overlay patterns, API design for admin endpoints |
-| **fintech-test-driven-development** | .agents/skills/ (project) | Jest/Supertest TDD for financial endpoints, idempotency, race conditions |
-| **safe-database-migrations** | .agents/skills/ (project) | Zero-downtime PostgreSQL/Sequelize migrations |
+| **interaction-design** | wshobson/agents + MMTP-tuned | Microinteractions, motion design, loading states, reduced-motion-safe feedback |
+| **local-ai-and-ocr-pipelines** | .agents/skills/ (project) | OCR/ML pipelines, Tesseract fallback, Transformers.js singleton model loading |
+| **postgresql-optimization** | github/awesome-copilot + MMTP-tuned | PostgreSQL JSONB, indexing, query optimization, db-helper-safe direct query patterns |
 | **redis-caching-and-locks** | .agents/skills/ (project) | Distributed locks, rate limiting, idempotency caching |
 | **robust-financial-forms** | .agents/skills/ (project) | Type-safe financial data entry, KYC forms |
-| **background-jobs-and-cron** | .agents/skills/ (project) | Idempotent Node.js cron jobs for reconciliation |
-| **local-ai-and-ocr-pipelines** | .agents/skills/ (project) | ML/OCR pipelines for KYC document processing |
-| **find-skills** | vercel-labs/skills | Discover/install skills from the open registry; **MMTP-tuned** copy prefers `docs/CURSOR_SKILLS.md` + `.agents/skills/` before external search; use `npx skills add ... --agent cursor -y` |
+| **safe-database-migrations** | .agents/skills/ (project) | Zero-downtime PostgreSQL/Sequelize migrations and safe concurrent indexing |
+| **security-best-practices** | supercent-io/skills-template + MMTP-tuned | OWASP, POPIA, JWT HS512, secrets, rate limiting, PII-safe logging |
+| **slide-deck-builder** | .agents/skills/ (project) | Self-contained HTML slide decks, presenter mode, keyboard navigation |
+| **sql-optimization-patterns** | wshobson/agents | SQL tuning, EXPLAIN analysis, performance anti-patterns |
+| **tailwind-design-system** | wshobson/agents + MMTP-tuned | Tailwind v4, design tokens, MyMoolah brand colours, component libraries |
+| **visual-page-builder** | .agents/skills/ (project) | Self-contained HTML explainers, landing pages, documentation pages, reports |
+| **workflow-visualizer** | .agents/skills/ (project) | Interactive workflow, architecture, system, swimlane, and data-flow diagrams |
 
 ## Installation Location
 
 - **All skills**: `.agents/skills/` (single parent directory)
-- **CLI-managed**: 8 skills via `npx skills add` (api-design-principles, postgresql-optimization, find-skills, etc.)
-- **Project skill**: `frontend-design` in `.agents/skills/` (custom, not in registry)
+- **CLI-managed**: tracked in `skills-lock.json` and MMTP-tuned where needed.
+- **Project skills**: custom skills live beside CLI-managed skills in `.agents/skills/`.
 - **Lock file**: `skills-lock.json` (tracks CLI-installed skills)
 
 ## Update Skills
@@ -72,8 +89,8 @@ npx skills add <owner/repo> --skill <name> --agent cursor -y   # Always pass --a
 
 | Skill | Primary Sources | License |
 |-------|----------------|---------|
-| **auditing** v2.1.0 | openclaw/skills Agent Audit Trail (MIT-0), odinlayer SOX Compliance (LobeHub), CFO Stack /cfo-audit, MMTP project-specific | MIT-0 / Custom |
-| **admin-portal-builder** v1.0.0 | MMTP project-specific (portal codebase patterns) | Custom |
+| **auditing** v2.2.0 | openclaw/skills Agent Audit Trail (MIT-0), odinlayer SOX Compliance (LobeHub), CFO Stack /cfo-audit, MMTP project-specific; full previous reference preserved in `reference-full.md` | MIT-0 / Custom |
+| **admin-portal-builder** v1.1.0 | MMTP project-specific (portal codebase patterns); full previous reference preserved in `reference-full.md` | Custom |
 
 ## Skills Sweep Protocol
 

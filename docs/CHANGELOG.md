@@ -1,5 +1,48 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-27 - Figma retired from active frontend workflow
+
+### Summary
+Swept active code and documentation to position Figma correctly as historical only. MyMoolah frontend work is now explicitly code-first: React/TypeScript/Tailwind files and the MyMoolah design system are the source of truth.
+
+### Updates
+- Removed active Figma workflow language from contributor, deployment, README, project status, MMAP, and agent docs.
+- Replaced the old active Figma integration guide with a short historical compatibility note.
+- Moved `ImageWithFallback` out of `components/figma/` into `components/common/` and updated imports.
+- Removed the obsolete frontend Figma integration script.
+- Updated ATM Cash Send placeholders to refer to direct code/design-system implementation.
+
+### Validation
+- Active guidance now states that Figma is not a current design platform, source of truth, approval gate, or read-only constraint.
+- Archived/session-log references remain historical records only.
+
+---
+
+## 2026-04-27 - Agent skills accuracy and performance upgrade
+
+### Summary
+Upgraded the `.agents/skills/` library for better agent accuracy, lower token load, and fewer stale instructions. The two largest skills now load quickly while preserving their previous long-form content in reference files.
+
+### Skill upgrades
+- Slimmed `auditing` from a long reference skill into a concise v2.2.0 operational router focused on ledger, VAT/pass-through, reconciliation, production audit, and correction-journal decisions; preserved prior full content in `auditing/reference-full.md`.
+- Slimmed `admin-portal-builder` into v1.1.0 with core portal architecture, RBAC, maker-checker, DB helper, audit logging, and UI rules; preserved prior full content in `admin-portal-builder/reference-full.md`.
+- Fixed stale or risky guidance across skills:
+  - JWT guidance now uses HS512.
+  - Frontend skills now reflect code-as-source-of-truth rather than Figma read-only pages.
+  - MyMoolah brand defaults now use `#86BE41`, `#2D8CCA`, and Montserrat where applicable.
+  - PostgreSQL guidance no longer recommends creating new Sequelize pools for direct scripts.
+  - Safe migration concurrent-index example no longer creates an unused transaction.
+  - Background job guidance now prefers Cloud Scheduler for Cloud Run production work.
+  - Redis lock wording now distinguishes single Redis `SET NX PX` + Lua release from true Redlock.
+- Added shared visual output guidance at `.agents/skills/_shared/visual-output-reference.md`.
+- Updated `docs/CURSOR_SKILLS.md` to list all 21 project skills and document the upgrade principles.
+
+### Validation
+- Markdown/frontmatter validation pending in this session.
+- No runtime application code changed.
+
+---
+
 ## 2026-04-27 - Production audit logic update and TXN#33 ledger correction
 
 ### Summary
@@ -3105,7 +3148,7 @@ Implemented complete Watch to Earn video advertising platform with banking-grade
 - [x] Models created with associations
 - [x] Services implement banking-grade patterns
 - [x] API endpoints with proper error handling
-- [x] Frontend components follow Figma style
+- [x] Frontend components follow the coded MyMoolah design system
 - [x] Seed data created (dummy merchant + 10 ads)
 - [ ] End-to-end UAT testing (pending)
 
@@ -4694,10 +4737,10 @@ Complete overhaul of banking-grade support system (RAG) with 9 critical bug fixe
 ### **🏢 MAJOR: MMAP (MyMoolah Admin Portal) Foundation**
 - ✅ **Portal Architecture**: Complete portal directory structure with backend and frontend
 - ✅ **Backend Foundation**: Portal backend with models, controllers, routes, and middleware
-- ✅ **Frontend Foundation**: Portal frontend with React/TypeScript and Figma design integration
+- ✅ **Frontend Foundation**: Portal frontend with React/TypeScript and early design-system integration (historical Figma input now retired)
 - ✅ **Database Schema**: Complete portal database schema with migrations and seeds
 - ✅ **Authentication System**: Portal-specific authentication with JWT and localStorage
-- ✅ **Figma Design Integration**: Complete Figma design system integration with wallet design system
+- ✅ **Design System Integration**: Early design-system integration with wallet patterns; current workflow is code-first
 
 #### **Portal Architecture Features**
 - **Directory Structure**: Complete `/mymoolah/portal/` directory with admin, suppliers, clients, merchants, resellers
@@ -5144,7 +5187,7 @@ Complete overhaul of banking-grade support system (RAG) with 9 critical bug fixe
 - 🔄 **Testing Suite**: Create comprehensive Zapper testing framework
 
 ### **Version 2.4.3 - Portal Development Continuation** (Planned)
-- 🔄 **Dashboard Refinements**: Complete dashboard formatting to match Figma design exactly
+- 🔄 **Dashboard Refinements**: Complete dashboard formatting to match the coded MyMoolah design system
 - 🔄 **Additional Portals**: Implement supplier, client, merchant, and reseller portals
 - 🔄 **Advanced Features**: Add real-time notifications and advanced analytics
 - 🔄 **Multi-tenant Architecture**: Implement multi-tenant portal architecture

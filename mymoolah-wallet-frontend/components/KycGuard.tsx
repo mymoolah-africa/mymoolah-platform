@@ -17,7 +17,7 @@ export function ensureKycForAction(opts: { kycStatus: KycStatus | string | undef
 
 /**
  * KycGate: wraps interactive children; intercepts onClick to enforce KYC.
- * Keeps styles untouched. Usage example within a Figma page:
+ * Keeps styles untouched. Usage example within a routed wallet page or overlay:
  * <KycGate kycStatus={user.kycStatus} intent="instant_payment" onProceed={doPay}>
  *   <button className="...">Instant Payment</button>
  * </KycGate>

@@ -12,7 +12,7 @@ across all income levels. All components built with React + Tailwind CSS.
 > **Architecture Constraint**: The wallet frontend uses an **overlay-based flow**
 > pattern. Product purchases, send money, top-up, and cashout all happen inside
 > step-based overlays (e.g., `AirtimeDataOverlay`, `ElectricityOverlay`), not
-> separate pages. Pages in `pages/*.tsx` are Figma-managed and read-only.
+> separate pages. Code is the source of truth; `pages/*.tsx` may be edited when that is the routed implementation.
 >
 > New UI should be built as **overlay components** in `components/overlays/` or
 > **shared components** in `components/ui/`. Never create standalone page files.
@@ -21,7 +21,7 @@ across all income levels. All components built with React + Tailwind CSS.
 
 - Building wallet dashboard, transaction history, or balance views
 - Creating product purchase overlays (airtime, data, electricity, vouchers)
-- Designing portal/admin interfaces
+- Designing portal/admin interfaces (also read `admin-portal-builder`)
 - Building merchant-facing screens
 - Creating new overlay flows in `components/overlays/`
 
@@ -37,13 +37,13 @@ across all income levels. All components built with React + Tailwind CSS.
 
 ### Color System (MyMoolah Brand)
 ```css
-/* Primary — Deep trust blue / teal */
---color-primary: oklch(45% 0.12 220);          /* Main actions, CTAs */
---color-primary-hover: oklch(40% 0.12 220);
---color-primary-foreground: oklch(98% 0 0);
+/* MyMoolah Brand */
+--color-primary: #86BE41;          /* Brand green: main actions, CTAs */
+--color-secondary: #2D8CCA;        /* Brand blue: links, info, secondary actions */
+--color-primary-foreground: #ffffff;
 
-/* Accent — Vibrant green for success/money */
---color-success: oklch(65% 0.2 145);           /* Deposits, positive balance */
+/* Semantic — distinct from brand */
+--color-success: #16a34a;          /* Deposits, positive balance */
 --color-warning: oklch(75% 0.15 80);           /* Pending states */
 --color-error: oklch(55% 0.2 25);              /* Failed transactions, errors */
 
@@ -57,8 +57,8 @@ across all income levels. All components built with React + Tailwind CSS.
 ### Typography
 ```css
 /* Use a modern, highly legible sans-serif */
---font-heading: 'Plus Jakarta Sans', 'DM Sans', system-ui;
---font-body: 'Inter', 'Nunito Sans', system-ui;
+--font-heading: 'Montserrat', system-ui, sans-serif;
+--font-body: 'Montserrat', system-ui, sans-serif;
 --font-mono: 'JetBrains Mono', 'Fira Code', monospace; /* Amounts, references */
 ```
 

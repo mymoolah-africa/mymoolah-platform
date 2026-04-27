@@ -1,6 +1,6 @@
 ---
 name: background-jobs-and-cron
-description: Implement robust Node.js cron jobs for reconciliation and reporting. Use this skill when building automated processes that run on a schedule, ensuring they are idempotent, trackable, and safe for horizontal scaling.
+description: Implement robust scheduled jobs for reconciliation and reporting. Use this skill for Cloud Scheduler endpoints, node-cron local fallbacks, idempotent background jobs, large backfills, and horizontally safe automation.
 ---
 
 # MyMoolah Background Jobs & Cron
@@ -10,14 +10,11 @@ checks, end-of-day EasyPay reconciliations, weekly commission calculations). If 
 scripts run multiple times, crash halfway, or consume the entire Node.js event loop, 
 the main MyMoolah API will fail.
 
-> **Current State**: MyMoolah runs cron schedules directly inside `server.js` (lines
-> ~683, ~722) for monthly tier review and daily referral payouts. These have no
-> distributed lock and no audit table logging. This is acceptable while running a
-> **single Cloud Run instance** but MUST be refactored before horizontal scaling.
+> **Current State**: Cloud Run scheduled production work should prefer Google Cloud Scheduler hitting authenticated HTTP endpoints. `node-cron` remains acceptable for local/dev fallback or explicitly mode-gated jobs. Avoid brittle `server.js` line references; verify the current scheduler inventory before changing jobs.
 
 ## When This Skill Activates
 
-- Adding a new scheduled task using `node-cron`.
+- Adding a new scheduled task, preferably as a Cloud Scheduler HTTP endpoint with node-cron only as a local fallback.
 - Building reconciliation engines (`ReconRun`, `JournalEntry` verification).
 - Generating massive CSV/Excel reports via `exceljs` or `csv-parse`.
 - Backfilling database data across millions of rows.
@@ -33,9 +30,9 @@ the main MyMoolah API will fail.
 
 ---
 
-## 2. Idempotent Node-Cron Pattern
+## 2. Idempotent Scheduled Job Pattern
 
-When defining a cron job, always check a persistent store (PostgreSQL or Redis) to ensure this specific schedule hasn't already been processed by another server instance.
+When defining a Cloud Scheduler endpoint or node-cron fallback, always check a persistent store (PostgreSQL or Redis) to ensure this specific schedule has not already been processed by another instance.
 
 ```javascript
 // scripts/jobs/dailyReconciliation.js
@@ -50,7 +47,7 @@ cron.schedule('0 1 * * *', async () => {
   const jobIdentifier = 'midnight-recon';
   const lockKey = `cronlock:${jobIdentifier}:${new Date().toISOString().split('T')[0]}`;
   
-  // 1. Dsitributed Lock: Prevent duplicate runs if running 3 Node API servers
+  // 1. Distributed Lock: Prevent duplicate runs if running 3 Node API servers
   const lock = await acquireLock(lockKey, 3600000); // 1-hour lock
   if (!lock) {
     logger.info(`Cron ${jobIdentifier} already acquired by another instance. Skipping.`);
@@ -120,7 +117,7 @@ async function runDoubleEntryValidationInChunks(runId) {
       order: [['id', 'ASC']],
       limit: chunkSize,
       raw: true, 
-      attributes: ['id', 'journalEntryId', 'accountId', 'credit', 'debit']
+      attributes: ['id', 'journalEntryId', 'accountId', 'dc', 'amount']
     });
 
     if (lines.length === 0) {
@@ -146,7 +143,7 @@ async function runDoubleEntryValidationInChunks(runId) {
 
 ## 4. Cursor Compatibility Checklist
 
-- [ ] Does the `node-cron` schedule specify the correct timezone (`Africa/Johannesburg`)?
+- [ ] Does the job use Cloud Scheduler for Cloud Run production, or a clearly mode-gated node-cron fallback with `Africa/Johannesburg` timezone?
 - [ ] Is the cron job in a **separate file** under `scripts/jobs/`, NOT inside `server.js`?
 - [ ] Are distributed locks implemented if the app is scaled horizontally?
 - [ ] Does the script query the database first to ensure the job hasn't run today (Idempotency)?

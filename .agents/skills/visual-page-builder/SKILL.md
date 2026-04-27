@@ -15,13 +15,16 @@ triggers:
 
 Generate polished, animated, self-contained HTML pages that explain any concept using rich visual components. No frameworks, no build step. One file that looks like a real product page — open it in any browser.
 
+> Shared guidance: read `../_shared/visual-output-reference.md` for tool routing,
+> MyMoolah brand defaults, PII-safe examples, and cross-skill routing.
+
 > **Core principle**: Every section tells its story visually. Text introduces, visuals deliver. If a section has no visual component, it does not belong on the page.
 
 ---
 
 ## Output Method
 
-Use the browser MCP's `canvas` tool to create a live HTML file. Canvas auto-reloads on edit, making iteration fast. The resulting `.html` file is fully portable.
+Use Cursor Canvas when available to create a live HTML artefact. Canvas auto-reloads on edit, making iteration fast. The resulting `.html` file is fully portable.
 
 For hero images, illustrations, or photo backgrounds, use `GenerateImage` and embed as base64 `<img>` or reference the file path.
 

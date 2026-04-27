@@ -50,7 +50,7 @@ Deliver a secure, compliant, high‑performance Treasury Platform that spans wal
 - Author and run custom tests; do not rely on outdated scripts.
 - Follow Mojaloop and banking-grade security best practices at all times.
 - Users authenticate with mobile number (also account number) + password.
-- Figma may hold reference designs; `/Figma/` sources are optional reference only.
+- Figma is historical only and is not an active design platform, source of truth, or approval gate.
 - Prefer cloud-hosted DB/Docker for testing when relevant; guide runs accordingly.
 - Always pull before work and push after; GitHub as source of truth; prefer Codespaces for cloud dev.
 - Keep all `.md` documentation current and persisted after each change.
