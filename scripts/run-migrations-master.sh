@@ -93,21 +93,89 @@ check_proxies() {
     production) port=6545 ;;
   esac
 
+  local script_dir
+  script_dir="$(cd "$(dirname "$0")" && pwd)"
+  local root_dir
+  root_dir="$(cd "${script_dir}/.." && pwd)"
+
+  probe_proxy_connection() {
+    MIGRATION_ENV="${ENVIRONMENT}" MIGRATION_ROOT="${root_dir}" NODE_PATH="${root_dir}/node_modules" node <<'EOF' >/dev/null 2>&1
+const path = require('path');
+
+const rootDir = process.env.MIGRATION_ROOT;
+const environment = process.env.MIGRATION_ENV;
+
+require('dotenv').config({ path: path.join(rootDir, '.env') });
+
+const helper = require(path.join(rootDir, 'scripts', 'db-connection-helper'));
+
+(async () => {
+  let client;
+  try {
+    if (environment === 'uat') {
+      client = await helper.getUATClient();
+    } else if (environment === 'staging') {
+      client = await helper.getStagingClient();
+    } else if (environment === 'production') {
+      client = await helper.getProductionClient();
+    } else {
+      throw new Error(`Invalid environment: ${environment}`);
+    }
+
+    await client.query('SELECT 1');
+    process.exit(0);
+  } catch (error) {
+    process.exit(1);
+  } finally {
+    if (client) client.release();
+    await helper.closeAll().catch(() => {});
+  }
+})();
+EOF
+  }
+
+  restart_proxy() {
+    local pids
+    pids=$(lsof -ti:${port} 2>/dev/null || true)
+    if [ -n "${pids}" ]; then
+      warning "${ENVIRONMENT} proxy on port ${port} is not accepting DB connections; restarting stale process(es): ${pids}"
+      kill ${pids} 2>/dev/null || true
+      sleep 2
+    fi
+
+    log "Starting ${ENVIRONMENT} proxy..."
+    "${script_dir}/ensure-proxies-running.sh" "${ENVIRONMENT}" || {
+      error "Failed to start proxy. Run manually: ./scripts/ensure-proxies-running.sh ${ENVIRONMENT}"
+      exit 1
+    }
+  }
+
   if lsof -ti:${port} >/dev/null 2>&1; then
-    success "Required proxy is running on port ${port}"
-    return 0
+    if probe_proxy_connection; then
+      success "Required proxy is running and healthy on port ${port}"
+      return 0
+    fi
+
+    restart_proxy
+    if probe_proxy_connection; then
+      success "Required proxy is running and healthy on port ${port}"
+      return 0
+    fi
+
+    error "${ENVIRONMENT} proxy restarted but DB probe still failed"
+    exit 1
   fi
 
   warning "${ENVIRONMENT} proxy not running on port ${port}"
-  log "Starting ${ENVIRONMENT} proxy..."
-  local script_dir
-  script_dir="$(cd "$(dirname "$0")" && pwd)"
-  "${script_dir}/ensure-proxies-running.sh" "${ENVIRONMENT}" || {
-    error "Failed to start proxy. Run manually: ./scripts/ensure-proxies-running.sh ${ENVIRONMENT}"
-    exit 1
-  }
+  restart_proxy
 
-  success "Required proxy is running on port ${port}"
+  if probe_proxy_connection; then
+    success "Required proxy is running and healthy on port ${port}"
+    return 0
+  fi
+
+  error "${ENVIRONMENT} proxy started but DB probe failed"
+  exit 1
 }
 
 # Run migrations using Node.js helper

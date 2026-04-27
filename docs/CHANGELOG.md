@@ -1,5 +1,21 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-27 - Migration proxy health check fix
+
+### Summary
+Hardened `scripts/run-migrations-master.sh` after staging migration failed with `Connection terminated unexpectedly` while port `6544` was occupied by a stale Cloud SQL Auth Proxy.
+
+### Fix
+- The master migration script now runs a real `SELECT 1` probe through `scripts/db-connection-helper.js` before trusting an existing proxy port.
+- If the probe fails, it kills only the stale process on the target environment port, restarts the correct proxy with `ensure-proxies-running.sh`, probes again, and only then runs Sequelize migrations.
+- This prevents stale UAT/staging/production proxy processes from passing a simple `lsof` port check.
+
+### Validation
+- `bash -n scripts/run-migrations-master.sh`
+- `git diff --check`
+
+---
+
 ## 2026-04-27 - Weekly Agent Governance Optimizer
 
 ### Summary
