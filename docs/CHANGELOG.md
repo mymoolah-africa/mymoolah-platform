@@ -1,5 +1,23 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-27 - Cursor rules optimization
+
+### Summary
+Optimized `.cursor/rules/*.mdc` for lower always-on context load, clearer routing, and stronger alignment with the current code-first/frontend and skill-driven workflow.
+
+### Rule changes
+- Rewrote always-on rules to be concise and actionable; every active `.mdc` file is now under 50 lines.
+- Added `skill-routing.mdc` so agents load the narrowest relevant `.agents/skills/` file before specialized work.
+- Added file-scoped `frontend-standards.mdc` for wallet/portal frontend guidance instead of loading detailed frontend rules on every task.
+- Slimmed `tech-debt.mdc` from a long duplicated register into a concise rule that points agents to canonical docs for recording risks.
+- Removed stale model/tool drift from active rules and kept current standards explicit: code-first frontend, Figma historical only, DB helper usage, approved restart scripts, and safe git behavior.
+
+### Validation
+- Validated all `.cursor/rules/*.mdc` files have frontmatter, `description`, and `alwaysApply`.
+- Confirmed all rule files are under 50 lines.
+
+---
+
 ## 2026-04-27 - Figma retired from active frontend workflow
 
 ### Summary

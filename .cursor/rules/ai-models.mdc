@@ -1,36 +1,28 @@
 ---
 description: AI model selection for MyMoolah services and RAG system architecture
+globs: ["**/services/**/*.{js,ts}", "**/*rag*.js", "**/*kyc*.js"]
 alwaysApply: false
-globs: ["**/services/**/*.js", "**/ragService.js", "**/kycService.js"]
 ---
 
 # AI Model Selection
 
-## OpenAI Model Assignments
+Do not change model assignments without explicit André approval.
 
-| Service | Model | Reason |
-|---------|-------|--------|
-| `ragService.js` (support chat) | `gpt-4o-mini` | High volume — cost critical |
-| `feedbackService.js` | `gpt-4o-mini` | Sentiment analysis — mini sufficient |
-| `googleReviewService.js` | `gpt-4o-mini` | Review generation — mini sufficient |
-| `codebaseSweepService.js` | `gpt-4o-mini` | Background job — mini sufficient |
-| `kycService.js` | `gpt-4o` | Identity verification — **accuracy critical, do NOT downgrade** |
+## Current Assignments
 
-**Do NOT change model assignments without explicit approval from André.**
+- `ragService.js`: `gpt-4o-mini` for support chat cost control.
+- `feedbackService.js`: `gpt-4o-mini`.
+- `googleReviewService.js`: `gpt-4o-mini`.
+- `codebaseSweepService.js`: `gpt-4o-mini`.
+- KYC/OCR identity verification: keep `gpt-4o` unless André approves a change.
 
-## AI Support System (LangChain RAG v3)
+## RAG Rules
 
-- **File**: `services/ragService.js` — 481-line replacement for 4,649-line legacy system
-- **Phase 1**: Semantic KB search (64 embedded entries via `npm run embed:kb`)
-- **Phase 2**: Transactional AI (live balance + last 10 transactions per user)
-- **Cost layers**: Redis cache → Direct KB (≥92% confidence) → GPT-4o-mini → Self-learning
-- **POPIA**: Personal responses NEVER cached
-- **Self-learning**: Unknown questions auto-saved to KB as `isActive=false` for admin review
-- **Embed KB**: Run `npm run embed:kb` after adding new KB entries
+- Personal responses are never cached (POPIA).
+- Cost path: Redis cache -> direct KB hit -> `gpt-4o-mini` -> self-learning.
+- Run `npm run embed:kb` after adding active KB entries.
+- Unknown questions may be saved inactive for admin review.
 
-## Legacy AI Services (DO NOT USE)
+## Legacy AI
 
-These files exist but are NOT in the request path — do not call or modify:
-- `services/bankingGradeSupportService.js` (4,649 lines — archived)
-- `services/aiSupportService.js` (references `gpt-5` — will crash if called)
-- `services/semanticEmbeddingService.js`
+Do not call legacy AI services unless explicitly reviving them. Prefer current RAG flow and check `docs/AGENT_HANDOVER.md` for latest status.

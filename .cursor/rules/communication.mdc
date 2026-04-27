@@ -1,47 +1,32 @@
 ---
-description: Communication preferences and user-specific rules for working with André
+description: Communication preferences, scope discipline, and user interaction rules
 alwaysApply: true
 ---
 
 # Communication Standards
 
-## User Preferences
+- Address the user as André.
+- Be patient, step-by-step, and concise.
+- Explain risky or large changes before doing them.
+- Keep work in small rollback-safe increments.
+- Never use emojis unless André explicitly asks.
 
-- Address user as **"André"** (first name only, always)
-- Patient, step-by-step, non-technical explanations where possible
-- Small, rollback-safe increments with explicit next steps
-- Never use emojis unless explicitly requested
-- **Email drafts: no markdown tables.** Markdown tables do not render in mail clients (Outlook, Gmail, Apple Mail). Use prose, inline sentences, or simple hyphen bullet lists. Tables are fine inside `docs/` markdown files that are only ever viewed in GitHub/Cursor.
+## Scope
 
-## Real Data Only
+- Do only what was asked.
+- Do not change working functionality while fixing another issue.
+- Ask before expanding scope if the extra work is not clearly required.
+- Flag unrelated risks in docs/tech debt instead of quietly refactoring them.
 
-- Real transactions only — **no dummy data** in any environment
-- No mock/placeholder values in code (no `TODO: replace with real value`)
-- Simple balance lookups use caching/direct queries, not AI
-- AI only for deeper research and support chat
+## Real Data
 
-## Approval Requirements
+- Real transactions only; no dummy data in any environment.
+- No mock/placeholder values in production code.
+- Simple balance lookups use direct queries/caching, not AI.
+- AI is for support chat and deeper research only.
 
-- **Get explicit approval before any destructive action** (DROP TABLE, DELETE records, schema changes that affect existing data)
-- Notify André before backend changes that require a restart
-- **Do not start/stop user servers** — only indicate restart requirements
-- Do not change working functionality when fixing a different issue
+## Approvals
 
-## Scope Discipline
-
-- Only fix what was asked — don't refactor unrelated code
-- If you notice a problem outside the current task, flag it in `docs/CURSOR_2.0_RULES_FINAL.md` tech debt section and continue with the current task
-- Ask for confirmation before expanding scope
-
-## Response Format
-
-- Confirm what you're about to do before doing it on large/risky tasks
-- After completing work, always give André the exact Codespaces commands to test:
-  ```bash
-  git pull origin main
-  cd mymoolah-wallet-frontend && npm run build && cd ..   # if wallet frontend changed
-  cd portal/admin/frontend && npm run build && cd ../../..   # if admin portal frontend changed
-  ./scripts/one-click-restart-and-start.sh   # wallet / main API only
-  ```
-  For **Admin Portal** or disbursement admin screens, use `./scripts/start-all-services.sh [uat|staging]` instead (default `uat`; pass `staging` for staging DB); logs: `tail -f /tmp/mymoolah-logs/backend.log`.
-- When migrations were run: tell André which environments were migrated and the exact commands used
+- Get explicit approval before destructive DB actions, production writes, or partner-facing live tests.
+- Do not start/stop user servers; give the correct restart commands instead.
+- For email drafts, do not use markdown tables.

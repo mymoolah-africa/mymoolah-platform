@@ -1,0 +1,29 @@
+---
+description: Wallet and portal frontend standards, code-first design, and navigation requirements
+globs: ["mymoolah-wallet-frontend/**/*.{ts,tsx,css,md}", "portal/admin/frontend/**/*.{ts,tsx,css,md}"]
+alwaysApply: false
+---
+
+# Frontend Standards
+
+## Source Of Truth
+
+The codebase is the frontend source of truth. Figma is historical only and is not a design platform, approval gate, or read-only constraint.
+
+## Brand And UX
+
+- Use Montserrat and MyMoolah brand green `#86BE41`; use blue `#2D8CCA` as secondary.
+- Mobile wallet is mobile-first; portal is desktop-first.
+- Prefer existing components, overlays, CSS variables, and design-system tokens.
+- Keep UI accessible: labels, focus states, keyboard support, contrast, and screen-reader text.
+
+## Wallet Navigation
+
+For new wallet overlays/pages, verify:
+- `TopBanner` inclusion where appropriate.
+- Scrollable body and sticky `BottomNavigation`.
+- Relevant route allowlists in `App.tsx` and `BottomNavigation.tsx`.
+
+## Duplicate Files
+
+Some wallet pages have `pages/` and `components/` copies. If you touch one, search for the duplicate and keep routed behavior consistent.

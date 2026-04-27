@@ -1,79 +1,44 @@
 ---
-description: Database connection standards, migration commands, and query patterns — NON-NEGOTIABLE
+description: Database access, migrations, SQL safety, and financial query standards
 alwaysApply: true
 ---
 
-# Database Standards — NON-NEGOTIABLE
+# Database Standards
 
-## The Golden Rule: ALWAYS use db-connection-helper.js
+## Golden Rule
 
-**NEVER write custom DB connection code.** Every query must go through `scripts/db-connection-helper.js`.
+All direct DB scripts and ad hoc queries must use `scripts/db-connection-helper.js`.
 
 ```js
-// ✅ CORRECT — the ONLY way to query the database
 const { getUATClient } = require('./scripts/db-connection-helper');
 const client = await getUATClient();
-const result = await client.query('SELECT ...', [params]);
-client.release();
+try {
+  const result = await client.query('SELECT ... WHERE id = $1', [id]);
+} finally {
+  client.release();
+}
 ```
 
-```js
-// ❌ WRONG — never do this
-const { Sequelize } = require('sequelize');
-const seq = new Sequelize(process.env.DATABASE_URL, ...);
+Never create new `Sequelize(...)`, `pg.Pool`, or custom connection logic for scripts.
 
-// ❌ ALSO WRONG
-const { Pool } = require('pg');
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-```
+## Environment Helpers
 
-## Connection Ports by Environment
+- UAT: `getUATClient()` / `getUATAdminClient()` on port `6543`.
+- Staging: `getStagingClient()` / `getStagingAdminClient()` on port `6544`.
+- Production: `getProductionClient()` / `getProductionAdminClient()` on port `6545`.
+- Admin helpers are required for DDL.
 
-| Environment | Function | Port | Password Source |
-|------------|---------|------|----------------|
-| UAT | `getUATClient()` / `getUATAdminClient()` | 6543 | `.env` DB_PASSWORD / DB_ADMIN_PASSWORD |
-| Staging | `getStagingClient()` / `getStagingAdminClient()` | 6544 | GCP Secret Manager |
-| Production | `getProductionClient()` / `getProductionAdminClient()` | 6545 | GCP Secret Manager |
+## Migrations
 
-**Admin vs App user:**
-- `getUATClient()` / `getStagingClient()` / `getProductionClient()` → `mymoolah_app` (SELECT/INSERT/UPDATE/DELETE only)
-- `getUATAdminClient()` / `getStagingAdminClient()` / `getProductionAdminClient()` → `postgres` superuser (required for DDL: CREATE TABLE, ALTER TABLE)
-- **Migrations always use admin client**
+- Read `docs/DATABASE_CONNECTION_GUIDE.md` before DB work.
+- Use `./scripts/run-migrations-master.sh [uat|staging|production]`.
+- Never run `npx sequelize-cli` directly.
+- Every migration needs safe `up()` and `down()` paths.
+- Use idempotent guards and zero-downtime patterns for large tables.
 
-## Running Migrations
+## Query Rules
 
-```bash
-# ALWAYS use the master script — never npx sequelize-cli directly
-./scripts/run-migrations-master.sh uat
-./scripts/run-migrations-master.sh staging
-./scripts/run-migrations-master.sh production
-```
-
-Migration naming: `YYYYMMDD_NN_description.js` (e.g. `20260319_create_sbsa_statement_runs.js`)
-
-Every migration must have both `up()` and `down()` (rollback).
-
-## Query Patterns
-
-```js
-// ✅ Parameterized queries — mandatory for all user input
-await client.query('SELECT * FROM users WHERE id = $1', [userId]);
-
-// ✅ Database aggregation — NEVER sum in JavaScript
-await client.query('SELECT SUM(amount) as total FROM transactions WHERE user_id = $1', [userId]);
-
-// ❌ NEVER calculate sums in JavaScript
-const total = transactions.reduce((sum, t) => sum + t.amount, 0);
-```
-
-## Performance Targets
-
-- API responses: < 200ms
-- DB queries: < 50ms
-- Use indexes on all foreign keys and frequently-queried columns
-- Use database views for complex aggregations
-- Connection pooling is handled by `db-connection-helper.js` — do not create additional pools
-
-## Read Before DB Work
-
-Always read `docs/DATABASE_CONNECTION_GUIDE.md` before any database work. It contains the full guide for Cloud SQL Auth Proxy, Sequelize config, and environment-specific connection details.
+- Parameterized SQL only.
+- Use DB aggregation (`SUM`, `COUNT`, views), not JavaScript reductions for financial totals.
+- Use indexes for foreign keys and frequently queried columns.
+- Redact PII in logs and query output.

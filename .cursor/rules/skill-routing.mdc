@@ -1,0 +1,24 @@
+---
+description: When to load project skills from .agents/skills for higher accuracy
+alwaysApply: true
+---
+
+# Skill Routing
+
+Before specialized work, check `.agents/skills/` and read the matching `SKILL.md`. Use the narrowest applicable skill first.
+
+## Common Routes
+
+- Ledger, VAT, reconciliation, audit: `auditing`
+- Migrations/schema/indexes: `safe-database-migrations`
+- SQL performance: `sql-optimization-patterns` or `postgresql-optimization`
+- Financial tests: `fintech-test-driven-development`
+- Redis locks/idempotency cache: `redis-caching-and-locks`
+- API/webhooks: `api-design-principles`
+- Security/PII/auth: `security-best-practices`
+- Wallet UI: `frontend-design`, `tailwind-design-system`, `accessibility-compliance`
+- Admin portal: `admin-portal-builder`
+- Scheduled jobs: `background-jobs-and-cron`
+- OCR/ML: `local-ai-and-ocr-pipelines`
+
+Skills add depth; rules remain project law. If a skill conflicts with rules, follow the rules and update the skill/docs.

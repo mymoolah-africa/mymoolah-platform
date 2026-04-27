@@ -1,94 +1,30 @@
 ---
-description: Active tech debt register and architectural decisions log — every agent must maintain this
+description: How agents should record tech debt and architectural decisions
 alwaysApply: true
 ---
 
-# Tech Debt Register
+# Tech Debt Discipline
 
-**Every agent must flag issues here.** Do NOT leave architectural concerns undocumented for the next agent.
+Every agent must document meaningful architectural risk instead of leaving it implicit.
 
-## Active Tech Debt
+## When To Add Tech Debt
 
-| Item | File(s) | Risk | Suggested Action |
-|------|---------|------|-----------------|
-| Agent must always cross-reference `docs/SBSA_H2H_SETUP_GUIDE.md` before running test commands against live partner systems | `docs/SBSA_H2H_SETUP_GUIDE.md` Section 1 | High — on 2026-04-17 the agent used `MYMOOLAH@` (filename prefix/BIC) as the SFTP login username for multiple rounds of live testing against SBSA TEST + PROD, producing misleading `USERAUTH_FAILURE` reports that were forwarded to the bank. The correct username `mymoolahuser` was clearly documented in the setup guide the whole time. Follow-up reviews of failing logs did not catch the mismatch. | Before running ANY live SFTP, API, or credential-sensitive test against a partner system, agent MUST (1) open the relevant setup/integration doc in `docs/`, (2) quote the exact credential/endpoint/username line from the doc, (3) only then run the command. Applies to SBSA, Flash, MobileMart, EasyPay, Peach, Yellow Card, RTC, TCIB, and any future partner. Treat partner-facing test output as production-equivalent evidence — no assumptions, no pattern-matching from earlier logs. |
-| Test framework inconsistency: Chai + Jest | `tests/reconciliation.test.js` (Chai + DB), new Jest unit tests under `tests/` | Low — only surfaces when running `npm test` wholesale | Standardise on Jest. Either delete `tests/reconciliation.test.js` (superseded by `tests/reconciliation/SFTPWatcherService.test.js`) or port it to Jest. Chai is not in `package.json` `devDependencies` — the old file only runs outside the main suite. |
-| SBSA statement poller currently node-cron only | `server.js` statement poller block | Low — now mode-aware (`SBSA_STATEMENT_POLLER_MODE`); Cloud Scheduler path available after `scripts/setup-cloud-scheduler.sh` runs | Flip staging + production to `MODE=scheduler` once UAT validates `POST /api/v1/standardbank/scheduled-statement-poll` end-to-end. Keep node-cron as local-dev fallback. |
-| `STANDARDBANK_ENVIRONMENT=production` hardcoded in deploy-backend.sh for all envs | `scripts/deploy-backend.sh` line ~167 | Low — `sbsaSftpClientService.js` falls back to `MM_DEPLOYMENT_ENV` which is set correctly per environment, so outbox paths resolve OK | Replace hardcoded `STANDARDBANK_ENVIRONMENT=production` with `STANDARDBANK_ENVIRONMENT=${ENVIRONMENT}` to eliminate the implicit MM_DEPLOYMENT_ENV fallback |
-| Legacy AI services (4,649 lines, unused) | `services/bankingGradeSupportService.js`, `services/aiSupportService.js`, `services/semanticEmbeddingService.js` | Low — not in request path | Archive after confirming ragService stable in production |
-| `aiSupportService.js` references `gpt-5` | `services/aiSupportService.js:1187,1558` | Medium — will crash if called | Archive the file |
-| Conversation history in-memory only | `services/ragService.js` | Medium — lost on restart, not scalable | Migrate to Redis for horizontal scaling (Phase 3) |
-| npm audit: 25 vulnerabilities (2 critical) | `package.json` | Medium | Run `npm audit fix` when stable |
-| `check-proxies-cs.sh` missing | `scripts/ensure-proxies-running.sh` | Low — bash error only, proxies work | Either create the script or remove the call |
-| USSD sessions use in-memory fallback on Cloud Run (no Redis) | `services/ussdSessionService.js` | Medium — sessions not shared across instances; lost on cold-start | Provision GCP Memorystore (managed Redis ~$30/month) and set `REDIS_URL` on Cloud Run |
-| Frontend: airtime success modal shows redundant price suffix | `mymoolah-wallet-frontend` (success modal component) | Low — cosmetic only | Success modal shows "Vodacom Airtime - R2" where "- R2" is appended by UI logic. Remove the amount suffix from the product name display. |
-| Frontend: VAS purchases show "Money Sent" transaction type | `mymoolah-wallet-frontend` (transaction history) | Low — cosmetic, functionally correct | VAS purchases appear as "Money Sent" instead of "Purchase" or product-specific type. Update transaction type mapping for VAS transactions. |
-| SVG network logos (MTN, CellC, Telkom) are approximate | `components/ui/NetworkIcons.tsx` | Low — cosmetic only | Replace with real PNG brand assets (same approach as Vodacom) |
-| Airtime/Electricity/Biller purchase logic inline in route handler (~1,200 lines) | `routes/overlayServices.js` (lines ~471-900, ~2310-2506, ~3070-3560) | Medium — violates separation of concerns; no ACID wrapper; harder to test; duplicated patterns across 3 overlays | Extract into dedicated purchase service classes following `productPurchaseService.js` pattern (the voucher overlay already uses the correct architecture). Effort: ~9-13 hours across 1-2 sessions. **Partial progress (v2.97.0):** Electricity and bills handlers now use `vasSupplierExecutor.js` + `executeWithFailover()`. Airtime handler still inline but failover broadened to all non-terminal errors. |
-| 5 deprecated VAS catalog files (kept as fallback) | `bestOfferService.js`, `catalogDisplayPolicy.js`, `productComparisonService.js`, `refresh-vas-best-offers.js`, `mark-featured-data-products.js` | Low — deprecated, not called by new code | Delete after production deployment validated and stable |
-| `supplierPricingService.js` still actively used | `services/supplierPricingService.js` | Low — NOT deprecated despite prior listing; actively imported by `productPurchaseService.js`, `commissionVatService.js`, `flashController.js`, `validate-mobilemart-products.js` | Keep as active service; do NOT delete |
-| KYC success UX: auto-navigation REMOVED, TopBanner visible on KYC pages | `KYCStatusPage.tsx`, `KYCDocumentsPage.tsx`, `App.tsx` | Low — resolved: Auto-navigate removed (was preventing POA upload); users click "Continue to Dashboard" manually. KYC pages in `pagesWithTopBanner`. | RESOLVED Apr 2026 |
-| Sequelize `user.update()` unsafe in KYC controller due to idNumber encryption hooks | `controllers/kycController.js`, `models/User.js` | High — resolved: `afterFind` decrypts idNumber marking it "changed"; `user.update()` re-validates encrypted ciphertext against `len:[5,20]`. All user updates converted to raw SQL with bind params. **NEVER use `user.update()` in kycController.** | RESOLVED Apr 2026 |
-| KYC `pages/` and `components/` duplicate files must be kept in sync | `pages/KYCStatusPage.tsx`, `components/KYCStatusPage.tsx` | Medium — both files are near-identical copies. Changes must be applied to both. Consider consolidating to a single source. | Consolidate when refactoring frontend |
-| RTP balance auto-refresh can miss a polling cycle | `mymoolah-wallet-frontend/contexts/MoolahContext.tsx` | Low — cosmetic delay only, no data loss | The `window.__processedTxnNotifIds` deduplication Set can cause a refresh skip if the notification is fetched during a poll cycle but the balance API call is debounced (`isLoading` guard). Add a forced balance re-fetch after notification read/acknowledge, or a small retry. |
-| Referral earnings rows without matching `REFERRAL-%` journal entries | `referralEarningsService` / callers | Medium — ledger vs `referral_earnings` drift; manual JE backfill required | Post idempotent referral commission JEs whenever `referral_earnings` is created (same pattern as other commission flows). Full recon: `node scripts/production-full-audit.js --production`. |
-| 4 ledger accounts used in code but missing idempotent migrations | `2200-03-01`, `2600-01-01`, `5100-02-01`, `1100-02-01` | Medium — RESOLVED: Migration `20260405_01_seed_missing_ledger_accounts.js` created. Run on UAT → staging → production. | RESOLVED Apr 2026 |
-| `internationalPaymentService.js` uses wrong column name and non-canonical accounts | `services/internationalPaymentService.js` | Medium — `account_code` should be `code`; `2300-01-01` should be `2300-10-01`; `1200-10-07` used for Yellow Card but is PayShap Outbound | Fix when MoolahMove Phase 2 begins. See `docs/CHART_OF_ACCOUNTS.md` Section 9.1 misalignment table. |
-| `adService.js` references `2100-05-001` (extra digit) instead of `2100-05-01` | `services/adService.js`, `scripts/seed-watch-to-earn.js` | Low — RESOLVED: All references fixed to `2100-05-01` in `adService.js`, `seed-watch-to-earn.js`, `seeders/20260120_seed_watch_to_earn.js`, `WATCH_TO_EARN.md` | RESOLVED Apr 2026 |
-| `tax_transactions` FK constraint violation on electricity commission | `services/commissionVatService.js`, `routes/overlayServices.js` | Low — commission JEs still posted correctly; only the `tax_transactions` audit record fails to persist | Investigate timing: `tax_transactions.originalTransactionId` references a `transactions` row that may not be committed yet when the tax record is inserted. Ensure the parent transaction is committed before inserting the tax record, or defer tax persistence. |
+Add an entry when you discover:
+- Duplication or complexity that should be refactored later.
+- A bug you cannot fix in the current scope.
+- A pattern that conflicts with project standards.
+- A financial/security/compliance risk needing future attention.
+- A new architectural decision future agents must understand.
 
-## Architectural Decisions Log
+## Where To Record
 
-| Decision | Date | Reason |
-|----------|------|--------|
-| LangChain RAG replaces pattern-matching AI | Mar 2026 | 4,649 → 481 lines; semantic search; self-learning |
-| `gpt-4o-mini` for all non-KYC OpenAI calls | Mar 2026 | Cost: ~$30k/month → ~$150-360/month at 3M users |
-| KYC stays on `gpt-4o` | Mar 2026 | POPIA accuracy requirement |
-| Figma retired as active workflow | Apr 2026 | Figma was only an early design/prototyping aid. Code is the frontend source of truth; agents edit `.tsx` directly. |
-| Agent commits AND pushes to main | Feb 2026 | Streamlined workflow |
-| Cloud Build for deployments (not local Docker) | Mar 2026 | No Docker Desktop needed; faster build times |
-| MT940+MT942 for SBSA H2H statements | Mar 2026 | SWIFT ISO standard — banking/Mojaloop grade |
-| Sub-folders in GCS for SBSA files | Mar 2026 | statements/ and payments/ separation prevents file mixing |
-| Admin user for all DDL migrations | Mar 2026 | mymoolah_app is DML only; postgres superuser required for ALTER/CREATE |
-| USSD eeziCash fixed to use Wallet.debit() + SELECT FOR UPDATE | Mar 2026 | Previous impl bypassed double-entry ledger with direct SQL; now uses Wallet model with row-level locking |
-| In-memory supplier circuit breaker (not Redis) | Mar 2026 | Acceptable for single-instance; migrate to Redis for horizontal scaling on Cloud Run |
-| Supplier failover via composite key matching (not product names) | Mar 2026 | Product names inconsistent across suppliers; deterministic keys (vasType+provider+priceType/amount) used instead |
-| Overlay route still has inline MobileMart failover alongside new CB | Mar 2026 | Old SupplierComparisonService failover in overlayServices.js coexists with new circuit breaker pre-check; consolidate in future refactor |
-| MM_DEPLOYMENT_ENV baked into deploy scripts | Mar 2026 | Cloud Run `--set-env-vars` replaces ALL env vars; manually-set vars lost on redeploy. Now permanent in staging + production scripts |
-| Real PNG brand assets for network logos | Mar 2026 | Hand-drawn SVG cannot accurately reproduce brand marks; import PNGs as Vite modules from `assets/` |
-| Voucher catalog wired to `v_best_offers` materialized view | Apr 2026 | All VAS types (airtime, data, electricity, voucher) now use single source of truth for commission-based supplier selection. View + brand-regex grouping for UI metadata. Circuit breaker checks winning supplier. |
-| `product_variants.provider` not case-normalized on write | Apr 2026 | Provider names stored as-is from Flash/MobileMart APIs. `v_best_offers` partitions by raw `pv.provider`. Runtime code normalizes to lowercase for lookups. Future: normalize on write in `catalogSynchronizationService.js` for DB-level consistency. |
-| Voucher overlay uses productPurchaseService (not inline route) | Mar 2026 | Banking-grade architecture: service layer handles ACID transactions, idempotency, circuit breaker, commission. Overlay route is thin catalog query only. Other overlays should follow this pattern (flagged as tech debt). |
-| Cloud Scheduler replaces node-cron for catalog sync | Apr 2026 | Cloud Run kills idle instances mid-sweep (~16 min in). Cloud Scheduler sends HTTP POST that keeps instance alive. OIDC auth, 1800s timeout, 3 retries. Node-cron kept as fallback for local dev. |
-| SBSA statement poller: .keep file filter + GCS permissions fixed | Mar 2026 | Poller accepted all files (including .keep placeholder) — now only accepts FINSTMT/PROVSTMT patterns. Both staging+production SAs granted objectAdmin on sftp-inbound bucket. |
-| RTP CdtrRefInf.Ref uses creditor MSISDN from DB (not user input) | Apr 2026 | User-provided description in remittance info would break deposit notification service wallet auto-matching. Phone sourced from `users.phoneNumber`, converted to local `0`-prefixed format. User description preserved in metadata as `userDescription`. |
-| v_best_offers materialized view replaces 6 files + 3 tables | Apr 2026 | 8+ tables/6 services/3,400+ lines replaced by one SQL view + one service. Selection rules in DB table (`product_selection_rules`). Commission config externalized to JSON. Applied to both staging and production. |
-| eeziPower correctly distinguished from eeziAirtime | Apr 2026 | Backend `flashController.js` hardcoded "eeziAirtime" for both eezi products. Now uses `isEeziPower` flag — correct vasType (`electricity`), supplierProductId, labels, and metadata flags. Frontend detects and renders accordingly. |
-| Telecoms biller keyword `telcos` added | Apr 2026 | MobileMart API uses `mobilemart_content_creator: "telcos"` but `BILLER_CATEGORY_MAP` only had `telecoms`/`telecom`. 35 telecoms billers were uncategorised. |
-| Commission config externalized to JSON | Apr 2026 | 150 lines of hardcoded if/else commission maps replaced by `config/supplier-commissions.json`. Config changes no longer require code changes. |
-| Rate limiters identical for staging and production | Apr 2026 | All `STAGING === 'true'` skip clauses removed from rate limiters. Same banking-grade thresholds in both environments (ISO 27001 / Mojaloop best practice). Staging no longer bypasses rate limiting. |
-| Referral payout migrated to Cloud Scheduler | Apr 2026 | node-cron can't fire on Cloud Run min-instances=0. Added `/api/v1/referrals/scheduled-payout` endpoint with OIDC auth. Cloud Scheduler fires at 02:15 SAST daily (staggered after catalog sweep at 02:00). node-cron kept as fallback for local dev. |
-| ProductVariant findOrCreate uses unique index fields | Apr 2026 | `findOrCreate` was searching by `(productId, supplierId, supplierProductId)` but unique index is on `(productId, supplierId)`. Changed merchantProductId caused unique constraint violations (Hollywood Bets). Fixed to match on unique index fields only. |
-| Raw SQL for User updates in KYC controller (not Sequelize ORM) | Apr 2026 | `User.afterFind` decrypts `idNumber` → marks as changed → `user.update()` re-validates encrypted ciphertext against `len:[5,20]` → crash. All 7 `user.update()` calls in `kycController.js` converted to parameterized raw SQL. Same pattern as the final status update that already used raw SQL. Banking-grade security maintained via bind variables. |
-| KYC reset scripts preserve audit trail | Apr 2026 | `DELETE FROM kyc` replaced with `UPDATE kyc SET status = 'reset'`. Registration data (idNumber, idType, names, phone) never modified. Wallet limits reset to Tier 0 defaults. |
-| `docs/CHART_OF_ACCOUNTS.md` is canonical CoA reference | Apr 2026 | Single authoritative document for all ledger accounts, journal templates, solvency rules, reserved ranges, env var map, and future product verticals. All new financial products MUST register accounts here before code is written. Cross-references auditing skill, migrations, and SETTLEMENTS.md. |
-| Electricity uses commission-based supplier selection via `v_best_offers` | Apr 2026 | Same pattern as airtime/data. Frontend sends winning `productId` (ProductVariant ID) from catalog; backend resolves supplier, applies circuit breaker + failover. Backward compatible: omitting `productId` falls back to env-var routing. MobileMart min R30, Flash min R10. |
-| Auditing skill v2.1.0 — 8 enhancements including IFRS, Cloud Scheduler, Opus 4.6 | Apr 2026 | Internet research confirmed existing auditing skill is best-in-class; no superior open-source alternative. Enhanced with CoA cross-reference, Mojaloop-to-MMTP code mapping, commission config reference, Cloud Scheduler patterns, IFRS presentation, and Opus 4.6 optimization hints. Sources: openclaw/skills (MIT-0), odinlayer SOX (LobeHub), CFO Stack. |
-| Admin Portal Builder skill v1.0.0 created | Apr 2026 | New SKILL.md for MMTP Portal (MMAP) development. Covers RBAC, dashboard architecture, data tables, maker-checker workflows, admin audit logging, overlay patterns. 15-screen priority list. No suitable open-source portal skill found — custom-built from existing portal codebase patterns. |
-| Portal primary color corrected to brand green `#86BE41` | Apr 2026 | `#00B894` (teal) was never an official MyMoolah brand color. Corrected to `#86BE41` (brand green, R134 G190 B65). Blue `#2D8CCA` (R45 G140 B202) confirmed as secondary. All CSS tokens, SKILL.md, Portal Dev Guide updated. Official PNG logos imported as Vite modules. |
-| Flash voucher deposit ringfencing — dual-layer AML control | Apr 2026 | Ledger sub-account `2100-01-02` (Client Float Restricted) + wallet `restricted_balance` column. Flash voucher deposits (1Voucher, FNB, Flash Pay) are ringfenced: cannot be cashed out (eeziCash, EasyPay cash-out) but can be spent on VAS, QR, P2P, PayShap, MoolahMove, H2H EFT, future RTC/TCIB. FIFO release on allowed spend. Recon: `SUM(restricted_balance) = 2100-01-02 net`. Undertaking letter sent to Flash. |
-| Flash voucher deposit JE was missing (now fixed) | Apr 2026 | `redeemVoucherTopup` previously only posted commission/fee JE via `postCommissionVatAndLedger`. Main deposit JE (DR `1200-10-04` / CR `2100-01-01`) was never posted. Fixed: now posts deposit JE + restriction JE via `restrictedFundsService`. Flow also wrapped in Sequelize transaction for atomicity. |
-| Flash voucher fee was 4% flat — should be 4% + VAT (fixed) | Apr 2026 | Deal sheet says 4% **excl VAT**. Code deducted 4% flat (R4 on R100) but Flash deducts 4.6% incl VAT (R4.60). MMTP was short R0.60/R100 voucher. Fixed: fee = 4% + 15% VAT = 4.6%. Also removed `commissionVatService` call — MMTP earns zero markup on voucher top-ups, so no commission revenue and no output VAT. |
-| Flash voucher top-up uses 3-JE gross/fee/restrict pattern (v2.93.1) | Apr 2026 | Previous net-only JE pattern (2 JEs) had no fee journal entry — audit FAIL. Now posts 3 balanced JEs: gross deposit, fee deduction, restriction. Two Transaction records (face + fee) matching eeziCash/EasyPay/QR pattern. Wallet: `credit(faceValue)` + `debit(fee)`. Dashboard groups into net row; Transaction History shows both. |
-| Universal VAS supplier failover via `vasSupplierExecutor` + `executeWithFailover` | Apr 2026 | Registry-based dispatcher (`services/vasSupplierExecutor.js`) maps `(supplierCode, vasType)` to API handler. New suppliers = one `register()` call. Electricity + bills use `executeWithFailover()`. Airtime enhanced inline (full refactor pending). Circuit breaker now records from overlay routes. All non-terminal errors trigger failover. |
-| Airtime failover queries `product_variants` directly (not `v_best_offers`) | Apr 2026 | `v_best_offers` uses `ROW_NUMBER()=1` per provider — only returns winning supplier. When MobileMart wins and fails, no Flash alternative was found. Failover now queries `product_variants` directly with `Op.notIn` for already-tried variants. v2.97.1. |
-| Electricity prevend `minimumPurchaseAmount` validation | Apr 2026 | MobileMart prevend returns meter-specific minimum. `vasSupplierExecutor.js` checks before calling `/utility/purchase`. Prevents `1001 AmountInvalid` upstream errors. Returns `400 METER_MIN_AMOUNT`. |
-| PII redaction in all VAS electricity logs | Apr 2026 | Consumer names, addresses redacted. Meter numbers masked to last 4 digits. Covers MobileMart prevend/purchase and Flash meter lookup. POPIA compliance. |
+- Primary always-on summary: `docs/CURSOR_2.0_RULES_FINAL.md` tech debt section.
+- Current status/next-agent context: `docs/AGENT_HANDOVER.md`.
+- Detailed session context: `docs/session_logs/YYYY-MM-DD_HHMM_*.md`.
+- Domain docs when the decision changes a stable contract.
 
-## Rule: When to Add Here
+## Quality Bar
 
-Add an entry whenever you:
-- Identify code complexity or duplication that should be refactored
-- Make an architectural decision that future agents should understand
-- Find a bug you can't fix in the current session
-- Notice a pattern that differs from the project standards
+Each entry should include: issue, file(s), risk, and suggested action.
+
+Do not use tech debt as an excuse to expand scope. Document it, then return to the requested task unless André approves the extra work.

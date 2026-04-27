@@ -1,52 +1,30 @@
 ---
-description: Mandatory session start and session end checklist for every agent
+description: Mandatory session start/end workflow and continuity requirements
 alwaysApply: true
 ---
 
-# Session Workflow — Start and End
+# Session Workflow
 
-## SESSION START (DO IN THIS ORDER — NO WORK UNTIL COMPLETE)
+## Start Of Every New Chat
 
-### Step 1: Rules Confirmation (MANDATORY)
-- Use `read_file` tool to actually read `docs/CURSOR_2.0_RULES_FINAL.md`
-- Summarize 3–5 key rules as proof of reading
-- State: "✅ Rules reading completed — I have read `docs/CURSOR_2.0_RULES_FINAL.md` and will follow all rules"
-- **NO WORK UNTIL THIS IS CONFIRMED**
+1. Read `docs/CURSOR_2.0_RULES_FINAL.md` with the read-file tool.
+2. Summarize 3-5 key rules and state: `✅ Rules reading completed - I have read docs/CURSOR_2.0_RULES_FINAL.md and will follow all rules`.
+3. Read `docs/AGENT_HANDOVER.md` and the 2-3 most recent `docs/session_logs/*.md`.
+4. Read `docs/CHANGELOG.md` for recent changes.
+5. Run `git status --short --branch` before pull, edits, commits, or pushes.
+6. Run `git log --oneline -10` to understand recent work.
 
-### Step 2: Context Reading
-1. Read `docs/AGENT_HANDOVER.md` — onboarding checklist, current status, next priorities
-2. Read 2–3 most recent `docs/session_logs/*.md` — chat history continuity
-3. Read `docs/CHANGELOG.md` last 2 weeks — recent changes
-4. Read `docs/DATABASE_CONNECTION_GUIDE.md` — if any DB work is planned
-5. Run `git log --oneline -10` — review recent commits
+Do not start substantive work before the rules confirmation is done.
 
-### Step 3: Git Status Check
-```bash
-git status   # ALWAYS check first
-```
-- Uncommitted changes → commit or stash, then pull
-- Local commits not pushed → push first, then pull
-- Clean and up to date → safe to pull: `git pull origin main`
+## During Work
 
----
+- Preserve user changes. Never revert or overwrite unrelated work.
+- Ask before destructive actions or production writes.
+- Keep changes scoped to the request; document important risks.
 
-## SESSION END — When Work Is Complete (DO PROACTIVELY, don't wait for user to close chat)
+## End Of Completed Work
 
-1. **Create session log**: `docs/session_logs/YYYY-MM-DD_HHMM_[description].md`
-   - Fill in ALL sections: summary, tasks, decisions, files modified, issues, next steps, context for next agent
-   - Use template: `docs/session_logs/TEMPLATE.md`
-
-2. **Update `docs/AGENT_HANDOVER.md`**: Latest feature, version bump, session log reference
-
-3. **Commit and push**:
-```bash
-git add docs/session_logs/YYYY-MM-DD_HHMM_*.md docs/AGENT_HANDOVER.md
-git commit -m "docs: session log and handover update - [description]"
-git add .
-git commit -m "[descriptive message for code changes]"
-git push origin main
-```
-
-4. **Inform user**: "✅ Changes committed and pushed. Pull in Codespaces: `git pull origin main`"
-
-> Session logs are mandatory — each new chat is a new agent with no memory. Session logs are the only continuity mechanism.
+- Create a session log from `docs/session_logs/TEMPLATE.md`.
+- Update `docs/AGENT_HANDOVER.md` and relevant docs.
+- Validate changed files with targeted tests/lints where practical.
+- Commit and push only when allowed by the active agent/git instructions and user request.

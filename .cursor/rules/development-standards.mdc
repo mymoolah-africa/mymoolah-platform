@@ -1,63 +1,39 @@
 ---
-description: Development standards, no-shortcuts policy, security requirements, and definition of done
+description: No-shortcuts engineering, security, tests, docs, and working directory standards
 alwaysApply: true
 ---
 
 # Development Standards
 
-## No Shortcuts Policy (NON-NEGOTIABLE)
+## No Shortcuts
 
-- NEVER use workarounds (wrong enums, skipped migrations, hardcoded values, mock data)
-- ALWAYS use proper migrations, correct enums, Mojaloop/ISO 20022 standards
-- NEVER hardcode credentials, amounts, or IDs — use environment variables and DB
-- Real transactions only — no dummy data in any environment
-- See `docs/ZERO_SHORTCUTS_POLICY.md` for full policy
+- No wrong enums, skipped migrations, hardcoded IDs, hardcoded amounts, or fake data.
+- Use existing services/helpers before creating new ones.
+- Sweep `scripts/` before adding scripts; many already exist.
+- Work only inside `/Users/andremacbookpro/mymoolah` and subdirectories.
+- Never use git worktrees.
 
-## Definition of Done (EVERY task must have ALL of these)
+## Security
 
-1. ✅ Clean code with zero linter errors
-2. ✅ Documentation updated in `docs/`
-3. ✅ Tests authored (unit/integration) with run instructions
-4. ✅ Migrations written with rollbacks
-5. ✅ Security review completed
-6. ✅ Changes committed and pushed
-7. ✅ Session log created
-8. ✅ Agent handover updated
+- JWT HS512 with short expiry.
+- Parameterized SQL only.
+- AES-256-GCM for sensitive data.
+- RBAC on privileged actions.
+- Structured logs with PII redaction.
+- Safe user-facing errors; no stack traces, secrets, SQL, or provider internals.
 
-## Security Requirements (Banking-Grade — NON-NEGOTIABLE)
+## Financial Integrity
 
-- Input validation and sanitization at every API boundary
-- JWT HS512 with short expiry
-- Parameterized queries only — no string interpolation in SQL
-- AES-256-GCM encryption for sensitive data
-- TLS 1.3 enforced
-- RBAC access control
-- Structured logging with PII redaction (no phone numbers, names, or IDs in logs)
-- Mojaloop FSPIOP standards
-- ISO 27001 ready
-- POPIA compliance (no personal data caching)
+- ACID transactions for multi-step financial writes.
+- Double-entry journals must balance to the cent.
+- Use immutable correction journals for historical ledger fixes.
+- Get explicit André approval before production writes or destructive changes.
 
-## Error Handling
+## Definition Of Done
 
-- Structured error responses with consistent format and HTTP status codes
-- Safe user messaging — never expose internal errors, stack traces, or DB details
-- Transaction rollback on error — ACID compliance
-- Validate all inputs at API boundary
-
-## Frontend Standards
-
-- Codebase is source of truth for frontend — agents may edit any UI/frontend files
-- Global design system: CSS variables, Montserrat font, brand green accents, white headers
-- Mobile-first, responsive design
-- All new overlays/pages must have: TopBanner, scrollable body, sticky BottomNavigation
-- Add new paths to `pagesWithTopBanner` in `App.tsx` and both allowlists in `BottomNavigation.tsx`
-
-## Scripts — Sweep First
-
-**Always** run `ls scripts/` before creating any new script. Over 200 scripts exist. Creating duplicates wastes context and causes confusion.
-
-## Working Directory
-
-- ONLY work in `/mymoolah/` and subdirectories
-- Settings changes: `/portal/` directories only
-- Never use git worktrees
+- Clean code and no new linter errors.
+- Relevant docs updated.
+- Tests added/run proportional to risk.
+- Migrations include rollback when applicable.
+- Security impact considered.
+- Session log and handover updated when work is complete.
