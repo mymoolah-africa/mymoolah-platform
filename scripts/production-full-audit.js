@@ -75,6 +75,8 @@ function warn(msg, cat) { warnCount++; if (cat && sectionResults[cat]) sectionRe
 function header(title) { console.log(`\n${BOLD}${CYAN}${'═'.repeat(70)}${RESET}`); console.log(`${BOLD}${CYAN}  ${title}${RESET}`); console.log(`${CYAN}${'═'.repeat(70)}${RESET}`); }
 function section(title) { console.log(`\n  ${BOLD}${title}${RESET}`); console.log(`  ${'─'.repeat(60)}`); }
 function money(v) { return `R ${Number(v || 0).toFixed(2)}`; }
+function roundMoney(v) { return Number(Number(v || 0).toFixed(2)); }
+function moneyDiff(a, b) { return Math.abs(roundMoney(a) - roundMoney(b)); }
 
 /** TXN-1775202940860-i573h1 -> 1775202940860 */
 function walletTxnTimestampFromId(transactionId) {
@@ -434,7 +436,7 @@ function journalRefLinksVas(refs, vasTransactionId, vasTsKey, walletTxnId, maxDr
 
     const taxTxns = await c.query(`
       SELECT "taxTransactionId", "baseAmount", "taxAmount", "totalAmount", "taxRate",
-             "businessContext", vat_direction, supplier_code
+             "calculationMethod", "businessContext", vat_direction, supplier_code
       FROM tax_transactions ORDER BY "createdAt"
     `);
     let taxOk = true;
@@ -443,16 +445,21 @@ function journalRefLinksVas(refs, vasTransactionId, vasTsKey, walletTxnId, maxDr
       const tax = parseFloat(t.taxAmount);
       const total = parseFloat(t.totalAmount);
       const rate = parseFloat(t.taxRate);
-      const expectedTax = Number((base * rate).toFixed(2));
-      const diff = Math.abs(tax - expectedTax);
-      if (diff > 0.01) {
+      const method = t.calculationMethod || 'exclusive';
+      const expectedExclusiveTax = roundMoney(base * rate);
+      const expectedInclusiveTax = roundMoney((total / (1 + rate)) * rate);
+      const expectedTax = method === 'inclusive' ? expectedInclusiveTax : expectedExclusiveTax;
+      const diff = moneyDiff(tax, expectedTax);
+      const basePlusTaxDiff = moneyDiff(base + tax, total);
+
+      if (diff > 0.01 || basePlusTaxDiff > 0.01) {
         // Legacy RTP fee TaxTransactions may exist from before the Apr 2026 VAT strategy.
         // Current RTP pass-through fees do not create MMTP TaxTransaction rows.
         if ((t.taxTransactionId && t.taxTransactionId.includes('RTP-FEE')) ||
             (t.businessContext === 'wallet_user' && tax === 0 && total > base)) {
           pass(`${t.taxTransactionId}: base=${money(base)} VAT pass-through (input=output, net=R0, total=${money(total)})`, 'COMPLETENESS');
         } else {
-          warn(`${t.taxTransactionId}: base=${money(base)} rate=${rate} tax=${money(tax)} expected=${money(expectedTax)}`, 'COMPLETENESS');
+          warn(`${t.taxTransactionId}: base=${money(base)} total=${money(total)} method=${method} rate=${rate} tax=${money(tax)} expected=${money(expectedTax)}`, 'COMPLETENESS');
           taxOk = false;
         }
       }
@@ -536,39 +543,105 @@ function journalRefLinksVas(refs, vasTransactionId, vasTsKey, walletTxnId, maxDr
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // 8. RTP / DEPOSIT AUDIT
+    // 8. PAYSHAP RTP / RPP AUDIT
     // ═══════════════════════════════════════════════════════════════
-    header('8. RTP / DEPOSIT AUDIT');
+    header('8. PAYSHAP RTP / RPP AUDIT');
 
     const rtpJE = await c.query(`
-      SELECT je.reference, je.description,
-             SUM(CASE WHEN la.code = '1100-01-01' THEN jl.amount ELSE 0 END) as bank_inflow,
-             SUM(CASE WHEN la.code = '2100-01-01' THEN jl.amount ELSE 0 END) as wallet_credit,
-             SUM(CASE WHEN la.code = '5000-10-01' THEN jl.amount ELSE 0 END) as sbsa_fee,
-             SUM(CASE WHEN la.code = '2300-10-01' THEN jl.amount ELSE 0 END) as fee_vat
-      FROM journal_entries je
-      JOIN journal_lines jl ON jl."entryId" = je.id
-      JOIN ledger_accounts la ON la.id = jl."accountId"
-      WHERE je.reference LIKE 'SBSA-%'
-      GROUP BY je.reference, je.description
-      ORDER BY je.reference
+      WITH base_entries AS (
+        SELECT id, reference, description
+        FROM journal_entries
+        WHERE reference LIKE 'SBSA-RTP-%'
+      ),
+      event_lines AS (
+        SELECT b.id, b.reference, b.description, la.code, jl.dc, jl.amount
+        FROM base_entries b
+        JOIN journal_lines jl ON jl."entryId" = b.id
+        JOIN ledger_accounts la ON la.id = jl."accountId"
+        UNION ALL
+        SELECT b.id, b.reference, b.description, la.code, jl.dc, jl.amount
+        FROM base_entries b
+        JOIN journal_entries corr ON corr.reference = CONCAT('CORR-RTP-PASS-', b.id)
+        JOIN journal_lines jl ON jl."entryId" = corr.id
+        JOIN ledger_accounts la ON la.id = jl."accountId"
+      )
+      SELECT reference, description,
+             SUM(CASE WHEN code = '1100-01-01' AND dc = 'debit' THEN amount WHEN code = '1100-01-01' AND dc = 'credit' THEN -amount ELSE 0 END) as bank_inflow,
+             SUM(CASE WHEN code = '2100-01-01' AND dc = 'credit' THEN amount WHEN code = '2100-01-01' AND dc = 'debit' THEN -amount ELSE 0 END) as wallet_credit,
+             SUM(CASE WHEN code = '2200-02-01' AND dc = 'credit' THEN amount WHEN code = '2200-02-01' AND dc = 'debit' THEN -amount ELSE 0 END) as sbsa_clearing,
+             SUM(CASE WHEN code = '5000-10-01' AND dc = 'credit' THEN amount WHEN code = '5000-10-01' AND dc = 'debit' THEN -amount ELSE 0 END) as legacy_sbsa_cost,
+             SUM(CASE WHEN code = '2300-10-01' AND dc = 'credit' THEN amount WHEN code = '2300-10-01' AND dc = 'debit' THEN -amount ELSE 0 END) as legacy_vat
+      FROM event_lines
+      GROUP BY reference, description
+      ORDER BY reference
     `);
 
     rtpJE.rows.forEach(r => {
       const inflow = parseFloat(r.bank_inflow);
       const wallet = parseFloat(r.wallet_credit);
-      const fee = parseFloat(r.sbsa_fee);
-      const vat = parseFloat(r.fee_vat);
-      const total = wallet + fee + vat;
-      const feePassThrough = fee + vat;
-      const diff = Math.abs(inflow - total);
+      const clearing = parseFloat(r.sbsa_clearing);
+      const legacyCost = parseFloat(r.legacy_sbsa_cost);
+      const legacyVat = parseFloat(r.legacy_vat);
+      const passThrough = clearing + legacyCost + legacyVat;
+      const total = wallet + passThrough;
+      const diff = moneyDiff(inflow, total);
       if (diff > 0.01) {
-        fail(`${r.reference}: inflow=${money(inflow)} != wallet(${money(wallet)}) + fee(${money(fee)}) + vat(${money(vat)}) = ${money(total)}`, 'COMPLETENESS');
+        fail(`${r.reference}: inflow=${money(inflow)} != wallet(${money(wallet)}) + SBSA pass-through(${money(passThrough)}) = ${money(total)}`, 'COMPLETENESS');
       } else {
-        pass(`${r.reference}: inflow=${money(inflow)} = wallet(${money(wallet)}) + SBSA(${money(fee)}) + VAT(${money(vat)}) — RTP fee ${money(feePassThrough)} full pass-through (no platform margin)`, 'COMPLETENESS');
+        const legacyNote = Math.abs(legacyCost + legacyVat) > 0.01 ? ' (legacy expense/VAT still netting after corrections)' : '';
+        pass(`${r.reference}: inflow=${money(inflow)} = wallet(${money(wallet)}) + SBSA clearing/pass-through(${money(passThrough)}) — RTP fee full pass-through, no MMTP margin${legacyNote}`, 'COMPLETENESS');
       }
     });
-    console.log(`\n  ${DIM}RTP: principal stays in TA; only the fee leg leaves as pass-through to SBSA. User sees R5.75 incl. VAT per RTP.${RESET}`);
+    console.log(`\n  ${DIM}RTP: principal stays in TA; SBSA fee posts to clearing/payable as VAT-inclusive pass-through. No MMTP VAT control is created for RTP.${RESET}`);
+
+    section('PayShap RPP outbound');
+    const rppJE = await c.query(`
+      WITH base_entries AS (
+        SELECT id, reference, description
+        FROM journal_entries
+        WHERE reference LIKE 'SBSA-RPP-%'
+      ),
+      event_lines AS (
+        SELECT b.id, b.reference, b.description, la.code, jl.dc, jl.amount
+        FROM base_entries b
+        JOIN journal_lines jl ON jl."entryId" = b.id
+        JOIN ledger_accounts la ON la.id = jl."accountId"
+        UNION ALL
+        SELECT b.id, b.reference, b.description, la.code, jl.dc, jl.amount
+        FROM base_entries b
+        JOIN journal_entries corr ON corr.reference = CONCAT('CORR-RPP-PASS-', b.id)
+        JOIN journal_lines jl ON jl."entryId" = corr.id
+        JOIN ledger_accounts la ON la.id = jl."accountId"
+      )
+      SELECT reference, description,
+             SUM(CASE WHEN code = '2100-01-01' AND dc = 'debit' THEN amount WHEN code = '2100-01-01' AND dc = 'credit' THEN -amount ELSE 0 END) as wallet_debit,
+             SUM(CASE WHEN code = '1100-01-01' AND dc = 'credit' THEN amount WHEN code = '1100-01-01' AND dc = 'debit' THEN -amount ELSE 0 END) as bank_outflow,
+             SUM(CASE WHEN code = '2200-02-01' AND dc = 'credit' THEN amount WHEN code = '2200-02-01' AND dc = 'debit' THEN -amount ELSE 0 END) as sbsa_clearing,
+             SUM(CASE WHEN code = '4000-20-01' AND dc = 'credit' THEN amount WHEN code = '4000-20-01' AND dc = 'debit' THEN -amount ELSE 0 END) as mm_revenue,
+             SUM(CASE WHEN code = '2300-10-01' AND dc = 'credit' THEN amount WHEN code = '2300-10-01' AND dc = 'debit' THEN -amount ELSE 0 END) as mm_vat,
+             SUM(CASE WHEN code = '5000-10-01' AND dc = 'credit' THEN amount WHEN code = '5000-10-01' AND dc = 'debit' THEN -amount ELSE 0 END) as legacy_sbsa_cost
+      FROM event_lines
+      GROUP BY reference, description
+      ORDER BY reference
+    `);
+
+    rppJE.rows.forEach(r => {
+      const walletDebit = parseFloat(r.wallet_debit);
+      const bankOutflow = parseFloat(r.bank_outflow);
+      const clearing = parseFloat(r.sbsa_clearing);
+      const revenue = parseFloat(r.mm_revenue);
+      const vat = parseFloat(r.mm_vat);
+      const legacyCost = parseFloat(r.legacy_sbsa_cost);
+      const totalCredits = bankOutflow + clearing + revenue + vat + legacyCost;
+      const diff = moneyDiff(walletDebit, totalCredits);
+      if (diff > 0.01) {
+        fail(`${r.reference}: wallet debit=${money(walletDebit)} != bank(${money(bankOutflow)}) + SBSA clearing(${money(clearing)}) + MM revenue(${money(revenue)}) + MM VAT(${money(vat)}) + legacy SBSA cost(${money(legacyCost)}) = ${money(totalCredits)}`, 'COMPLETENESS');
+      } else {
+        const legacyNote = Math.abs(legacyCost) > 0.01 ? ' (legacy SBSA cost remains; review pass-through correction)' : '';
+        pass(`${r.reference}: wallet debit=${money(walletDebit)} = bank(${money(bankOutflow)}) + SBSA pass-through(${money(clearing)}) + MM revenue(${money(revenue)}) + MM VAT(${money(vat)})${legacyNote}`, 'COMPLETENESS');
+      }
+    });
+    console.log(`\n  ${DIM}RPP: SBSA fee is VAT-inclusive pass-through; only MMTP markup splits to fee revenue and VAT control.${RESET}`);
 
     // ═══════════════════════════════════════════════════════════════
     // 9. VAS TRANSACTION COMPLETENESS

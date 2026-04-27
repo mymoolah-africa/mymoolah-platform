@@ -1,5 +1,36 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-27 - Production audit logic update and TXN#33 ledger correction
+
+### Summary
+Updated the production full audit script for the Apr 2026 VAT/pass-through accounting model and corrected one historical production ledger gap for TXN#33. The correction was non-destructive: one balanced journal entry was inserted for the missing VAS face-value movement; no existing production records were updated or deleted.
+
+### Audit script alignment
+- Updated `scripts/production-full-audit.js` tax transaction checks to handle inclusive VAT rounding.
+- Split PayShap audit logic into RTP and RPP checks:
+  - RTP now validates principal against wallet credit plus SBSA clearing/pass-through.
+  - RPP now validates wallet debit against bank principal, SBSA clearing/pass-through, MMTP fee revenue, and MMTP VAT.
+- Included historical `CORR-RPP-PASS-*` and `CORR-RTP-PASS-*` journals in the PayShap business-event checks.
+
+### Production correction
+- Added `scripts/correct-production-missing-vas-face-txn33.js`.
+- Dry-run confirmed TXN#33 (`TXN-1775385125460-oiwqno`) and VAS `VAS-1775385125439-bd3wsh` were completed, the commission journal existed, and the R50 face-value journal was missing.
+- Applied one balanced production journal:
+  - DR `2100-01-01` Client Float Liability `R50.00`
+  - CR `1200-10-05` MobileMart Float Account `R50.00`
+  - Reference: `VAS-FACE-TXN-1775385125460-oiwqno`
+- Post-apply idempotency check confirmed the script refuses duplicate correction.
+
+### Validation
+- `node --check scripts/production-full-audit.js`
+- `node --check scripts/correct-production-missing-vas-face-txn33.js`
+- `node scripts/correct-production-missing-vas-face-txn33.js --production --dry-run`
+- `node scripts/correct-production-missing-vas-face-txn33.js --production --apply`
+- `node scripts/production-full-audit.js --production`
+- Final production audit result: `STRUCTURAL PASS`, `COMPLETENESS PASS`, `ACCURACY PASS`, `COMPLIANCE PASS`, `0 failures`, `2 warnings` (large R400 statistical anomaly; empty audit hash-chain table).
+
+---
+
 ## 2026-04-26 - VAT strategy formalisation and pass-through fee alignment
 
 ### Summary
