@@ -1,5 +1,23 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-28 - OTT Mobile integration framework
+
+### Summary
+Created the banking-grade OTT Mobile integration framework for future implementation planning across OTT voucher resale, OTT cash withdrawal, bank ATM/cash-send payout, OTT voucher wallet top-up, loyalty, and future OTT/CliqueFin services.
+
+### Documentation
+- Added `docs/integrations/OTT_MOBILE_INTEGRATION_FRAMEWORK.md`.
+- Confirmed the password-protected Zoho OTT Payout API documentation is readable through browser authentication without storing credentials in the repo.
+- Swept existing MMTP supplier/VAS/cash-out/reconciliation patterns and documented reuse candidates that must be verified before code is copied.
+- Captured agreement commercial inputs, API endpoints, hash/auth model, ledger/VAT principles, compliance controls, rollout phases, and open partner questions.
+
+### Validation
+- `git diff --check -- docs/integrations/OTT_MOBILE_INTEGRATION_FRAMEWORK.md`
+- Cursor lints: no errors on the new framework document.
+- Read-only sub-agent review completed for factual, ledger/VAT, compliance, and secret-leakage risks.
+
+---
+
 ## 2026-04-27 - Migration proxy health check fix
 
 ### Summary
