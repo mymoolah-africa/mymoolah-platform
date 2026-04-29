@@ -8,7 +8,7 @@
 ---
 
 ## Session Summary
-Hardened the EasyPay V5 `transactions.reference` migration after UAT failed with `ERROR: must be owner of table transactions`. Confirmed the reference column is still part of the active V5 cash-in path and documented the separate legacy EasyPay cash-out code risk for a future cleanup pass. UAT confirmed the column is missing and `public.transactions` is owned by `postgres`, so a UAT-only admin repair script was added using the approved `db-connection-helper.js`.
+Hardened the EasyPay V5 `transactions.reference` migration after UAT failed with `ERROR: must be owner of table transactions`. Confirmed the reference column is still part of the active V5 cash-in path and documented the separate legacy EasyPay cash-out code risk for a future cleanup pass. UAT confirmed the column was missing and `public.transactions` was owned by `postgres`, so a UAT-only admin repair script was added using the approved `db-connection-helper.js`; André ran the repair and UAT migrations completed successfully.
 
 ---
 
@@ -19,6 +19,8 @@ Hardened the EasyPay V5 `transactions.reference` migration after UAT failed with
 - [x] Added current-user/table-owner diagnostics after UAT still failed post-pull.
 - [x] Changed the migration to skip optional index creation when the column exists but the migration role does not own `public.transactions`.
 - [x] Added `scripts/repair-uat-transactions-reference.js` for the UAT owner/admin schema repair.
+- [x] Loaded `.env.codespaces` in the repair script before the DB helper so Codespaces admin credentials can be supplied safely.
+- [x] Confirmed UAT migrations completed successfully after the repair.
 - [x] Documented legacy EasyPay cash-out voucher code as tech debt instead of mixing that cleanup into the migration repair.
 - [x] Updated changelog and handover documentation.
 
@@ -60,18 +62,12 @@ The migration now checks `information_schema.columns` for `transactions.referenc
 - [x] Whitespace check: `git diff --check -- migrations/20260429_01_add_reference_to_transactions.js`
 - [x] Follow-up syntax/whitespace check after ownership-aware changes.
 - [x] Cursor lints: no errors on the edited migration file.
-- [ ] Codespaces UAT migration rerun still required: `./scripts/run-migrations-master.sh uat`
+- [x] Codespaces UAT repair and migration rerun completed successfully.
 - [ ] Codespaces staging migration rerun still required if not already applied: `./scripts/run-migrations-master.sh staging`
 
 ---
 
 ## Next Steps
-- [ ] Pull latest in Codespaces.
-- [ ] Run `node scripts/repair-uat-transactions-reference.js` in Codespaces to confirm dry-run state.
-- [ ] Run `node scripts/repair-uat-transactions-reference.js --apply` in Codespaces to add the missing UAT column/index with the admin helper.
-- [ ] Run `./scripts/run-migrations-master.sh uat`.
-- [ ] If UAT now reports `transactions.reference is missing, but current migration role does not own public.transactions`, repair table ownership/admin DDL explicitly before retrying.
-- [ ] If UAT logs that the column exists and index is skipped, the migration should complete; add the index later with the owner/admin role if query performance requires it.
 - [ ] After UAT succeeds, run staging migration and complete EasyPay V5 disposable full-flow verification.
 - [ ] Schedule a dedicated EasyPay cleanup pass for legacy cash-out voucher code.
 

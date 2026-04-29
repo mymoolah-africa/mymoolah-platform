@@ -13,6 +13,12 @@
  * intentionally limited to UAT.
  */
 
+const path = require('path');
+
+require('dotenv').config({
+  path: path.resolve(__dirname, '..', '.env.codespaces'),
+});
+
 const { getUATAdminClient, closeAll } = require('./db-connection-helper');
 
 const apply = process.argv.includes('--apply');
