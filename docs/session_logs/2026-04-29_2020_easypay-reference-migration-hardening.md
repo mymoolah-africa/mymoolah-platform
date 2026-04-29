@@ -21,6 +21,8 @@ Hardened the EasyPay V5 `transactions.reference` migration after UAT failed with
 - [x] Added `scripts/repair-uat-transactions-reference.js` for the UAT owner/admin schema repair.
 - [x] Loaded `.env.codespaces` in the repair script before the DB helper so Codespaces admin credentials can be supplied safely.
 - [x] Confirmed UAT migrations completed successfully after the repair.
+- [x] Added `scripts/repair-table-ownership.js` as the permanent dry-run-first ownership audit/repair tool for future owner-only migration failures.
+- [x] Clarified `scripts/grant-migration-privileges.js` because grants do not satisfy PostgreSQL table ownership requirements.
 - [x] Documented legacy EasyPay cash-out voucher code as tech debt instead of mixing that cleanup into the migration repair.
 - [x] Updated changelog and handover documentation.
 
@@ -31,14 +33,18 @@ Hardened the EasyPay V5 `transactions.reference` migration after UAT failed with
 - **Scope migration only**: Legacy cash-out code remains a separate cleanup concern because changing voucher behavior during a DB repair could affect old rows and user refunds.
 - **Fail clearly if schema is genuinely missing**: The migration skips the optional index only when the column exists but ownership blocks index creation; if the column itself is missing, UAT needs an owner/admin repair rather than a silent workaround.
 - **Repair through helper only**: The owner-level UAT repair uses `getUATAdminClient()` from `scripts/db-connection-helper.js`, not shell-pasted SQL or custom connection logic.
+- **Permanent ownership workflow**: Use `node scripts/repair-table-ownership.js [env]` to audit legacy ownership drift, then rerun with `--apply` only after review. Production also requires `--confirm-production`.
 
 ---
 
 ## Files Modified
 - `migrations/20260429_01_add_reference_to_transactions.js` - Added catalog prechecks before `ALTER TABLE`, `COMMENT`, and `CREATE INDEX CONCURRENTLY`, plus ownership-aware diagnostics and optional index skip behavior.
 - `scripts/repair-uat-transactions-reference.js` - Added UAT-only admin repair script with dry-run default and explicit `--apply`.
+- `scripts/repair-table-ownership.js` - Added reusable dry-run-first ownership audit/repair script.
+- `scripts/grant-migration-privileges.js` - Clarified that grants do not make `mymoolah_app` the owner of existing objects.
 - `docs/CHANGELOG.md` - Added the migration hardening entry.
 - `docs/AGENT_HANDOVER.md` - Updated latest status and next-agent context.
+- `docs/DATABASE_CONNECTION_GUIDE.md` - Documented ownership repair commands.
 - `docs/CURSOR_2.0_RULES_FINAL.md` - Added tech debt note for legacy EasyPay cash-out voucher code.
 - `docs/session_logs/2026-04-29_2020_easypay-reference-migration-hardening.md` - This session log.
 
@@ -59,6 +65,8 @@ The migration now checks `information_schema.columns` for `transactions.referenc
 ## Testing Performed
 - [x] Syntax check: `node --check migrations/20260429_01_add_reference_to_transactions.js`
 - [x] Syntax check: `node --check scripts/repair-uat-transactions-reference.js`
+- [x] Syntax check: `node --check scripts/repair-table-ownership.js`
+- [x] Syntax check: `node --check scripts/grant-migration-privileges.js`
 - [x] Whitespace check: `git diff --check -- migrations/20260429_01_add_reference_to_transactions.js`
 - [x] Follow-up syntax/whitespace check after ownership-aware changes.
 - [x] Cursor lints: no errors on the edited migration file.
@@ -69,6 +77,8 @@ The migration now checks `information_schema.columns` for `transactions.referenc
 
 ## Next Steps
 - [ ] After UAT succeeds, run staging migration and complete EasyPay V5 disposable full-flow verification.
+- [ ] Run `node scripts/repair-table-ownership.js uat` in Codespaces to audit whether any other UAT public objects still have ownership drift.
+- [ ] If the UAT ownership audit is clean or repaired, consider the same dry-run audit for staging before future DDL work.
 - [ ] Schedule a dedicated EasyPay cleanup pass for legacy cash-out voucher code.
 
 ---

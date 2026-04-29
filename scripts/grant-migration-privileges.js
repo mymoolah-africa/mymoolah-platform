@@ -2,13 +2,15 @@
 'use strict';
 
 /**
- * One-time setup: Grant mymoolah_app DDL privileges
- * ==================================================
+ * One-time setup: Grant mymoolah_app schema privileges
+ * ====================================================
  * Connects as postgres (admin) and grants mymoolah_app the ability to
- * ALTER TABLE, CREATE INDEX, ADD COLUMN etc. on all existing and future tables.
+ * read/write existing objects and create future objects in the public schema.
  *
- * This is required because mymoolah_app is a data user (SELECT/INSERT/UPDATE/DELETE)
- * but Sequelize CLI migrations need DDL rights to modify the schema.
+ * Important: PostgreSQL ALTER TABLE on an existing table still requires object
+ * ownership. If migrations fail with "must be owner of table", use:
+ *   node scripts/repair-table-ownership.js [uat|staging|production]
+ *   node scripts/repair-table-ownership.js [uat|staging|production] --apply
  *
  * Run ONCE per environment:
  *   node scripts/grant-migration-privileges.js uat
@@ -58,8 +60,8 @@ async function run() {
     }
 
     console.log('');
-    console.log(`✅ Done. ${APP_USER} now has full DDL rights on ${environment.toUpperCase()}.`);
-    console.log('   Migrations can now run as mymoolah_app as normal.');
+    console.log(`✅ Done. ${APP_USER} now has public schema privileges on ${environment.toUpperCase()}.`);
+    console.log('   Note: ALTER TABLE on existing objects still requires ownership.');
     console.log('');
   } finally {
     if (client) client.release();

@@ -72,6 +72,28 @@ This guide ensures **100% reliable** database connections for UAT, Staging, and 
 
 **Wallet-bank EFT note (Apr 2026):** Before testing wallet-to-bank EFT in Codespaces/UAT, apply `20260425110000_create_wallet_bank_payments_and_fee_policies.js`. It creates `transaction_fee_policies`, `wallet_bank_payments`, and seeds the UAT EFT fee policy `WALLET_BANK_EFT_UAT_FLAT_R2` (`R2.00`). The migration was hardened after an `idx_fee_policies_lookup` partial-run conflict: it checks existing tables/indexes, uses conflict-safe fee-policy seed logic, and has defensive rollback checks. André confirmed UAT and staging migration runs completed successfully after pulling the fix.
 
+**Ownership repair note (Apr 2026):** `./scripts/run-migrations-master.sh` intentionally runs migrations as `mymoolah_app`. If a migration fails with `must be owner of table`, first audit ownership with:
+
+```bash
+node scripts/repair-table-ownership.js uat
+node scripts/repair-table-ownership.js staging
+```
+
+After reviewing the dry-run output, repair only the intended environment:
+
+```bash
+node scripts/repair-table-ownership.js uat --apply
+node scripts/repair-table-ownership.js staging --apply
+```
+
+Production ownership repair requires explicit approval and an additional flag:
+
+```bash
+node scripts/repair-table-ownership.js production --apply --confirm-production
+```
+
+Use this ownership repair for owner-only DDL failures. `GRANT ALL PRIVILEGES` is not sufficient for PostgreSQL `ALTER TABLE` on objects owned by another role.
+
 **VAT correction note (Apr 2026):** Production RPP/RTP pass-through corrections were applied with non-destructive journal scripts:
 - `scripts/correct-production-rpp-pass-through-ledger.js`
 - `scripts/correct-production-rtp-pass-through-ledger.js`

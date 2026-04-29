@@ -1,5 +1,22 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-29 - Migration ownership repair tool
+
+### Summary
+Added a permanent dry-run-first ownership audit/repair tool so future migrations can continue using the standard `mymoolah_app` migration connection without failing on legacy objects owned by `postgres` or older roles.
+
+### Changes
+- Added `scripts/repair-table-ownership.js` to audit `public` tables, partitioned tables, sequences, views, materialized views, and foreign tables not owned by `mymoolah_app`.
+- The ownership repair script uses `db-connection-helper.js` admin clients, is dry-run by default, and requires `--apply` before changing ownership.
+- Production ownership repair is gated behind both `--apply` and `--confirm-production`.
+- Clarified `scripts/grant-migration-privileges.js`: grants do not make a role the table owner, so owner-only `ALTER TABLE` failures must use the ownership repair workflow.
+
+### Validation
+- `node --check scripts/repair-table-ownership.js`
+- `node --check scripts/grant-migration-privileges.js`
+- `git diff --check -- scripts/repair-table-ownership.js scripts/grant-migration-privileges.js`
+- Cursor lints: no errors on edited scripts.
+
 ## 2026-04-29 - EasyPay V5 transaction reference migration hardening
 
 ### Summary
