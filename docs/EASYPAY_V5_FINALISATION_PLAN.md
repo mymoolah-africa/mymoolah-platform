@@ -195,10 +195,11 @@ Create a script `scripts/generate-easypay-test-pins.js` that:
 | Amount mismatch test | 5 | `pending` | 10000 (min=max=10000) | `authorisationRequest` with wrong amount → ResponseCode 2 |
 | USSD-issued | 3 | `pending` | 10000, 20000, 50000 | metadata.channel = 'ussd' |
 | No userId (orphan) | 3 | `pending`, userId=null | 10000 | `paymentNotification` → logs error, returns EchoData |
-| **Invalid PIN format** | 5 | N/A (not in DB) | N/A | EasyPay sends bad PINs; `infoRequest` → ResponseCode 1 |
+| **Unknown valid PIN (not in DB)** | 5 | N/A (not in DB) | N/A | 14-digit Luhn-valid PINs not inserted into `bills`; `infoRequest`/`authorisationRequest` → ResponseCode 1 |
 
 4. Output **CSV and XLSX** files at `docs/integrations/easypay_test_pins.*` with columns: `Environment, Endpoint, PIN, AccountNumber, Amount_Cents, Amount_Rands, Scenario, Expected_InfoResponse, Expected_AuthResponse, Expected_PaymentResponse, Bill_Status, User_ID`. Send the XLSX for manual partner testing so spreadsheet software preserves the 14-digit PINs as text.
 5. Resolve active wallet users from the target environment before inserting rows. Do not hardcode user IDs; staging control users may not have IDs 1 and 2.
+6. Before sending the file to EasyPay, run `EASYPAY_API_KEY='...' node scripts/verify-easypay-test-pins.js --staging`. This performs read-safe `infoRequest` checks for all rows and only non-mutating `authorisationRequest` checks by default. Do not run `--allow-mutating-auth` on the final Theodore batch; use it only on a disposable batch because successful authorisations create `Payment` rows and move bills to `processing`.
 
 **Important**: Use `generateEasyPayNumber()` from `utils/easyPayUtils.js` for PIN generation. All Bills need `userId` set (except orphan scenario).
 

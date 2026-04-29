@@ -19,6 +19,8 @@ Investigated why Lesaka/EasyPay reported that all test PINs were invalid. The ro
 - [x] Added environment and endpoint columns, proper CSV escaping, and XLSX output to prevent spreadsheet scientific-notation issues.
 - [x] Corrected EasyPay docs/email wording so `staging.mymoolah.africa` is described as deployed staging partner testing, not local/Codespaces UAT.
 - [x] Fixed staging generation failure caused by hardcoded `userId=2`; generator now selects real active wallet users in the target environment.
+- [x] Replaced malformed negative test PINs with valid-format unknown PINs so V5 returns `ResponseCode=1` instead of HTTP 400.
+- [x] Added `scripts/verify-easypay-test-pins.js` to validate all generated rows against staging before sending them to Theodore.
 - [x] Updated EasyPay docs, email drafts, changelog, and handover context.
 
 ---
@@ -29,11 +31,13 @@ Investigated why Lesaka/EasyPay reported that all test PINs were invalid. The ro
 - **Staging credential model**: Deployed staging partner testing uses production EasyPay API credentials managed in GCP Secret Manager, with staging data/control test users. It does not use local/Codespaces `.env`.
 - **No production seeding support**: The test PIN generator intentionally supports only `uat` and `staging`.
 - **No hardcoded staging user IDs**: The generator resolves active users with active wallets before inserting bills. If only one active wallet user exists, it reuses that user for the "Different user" rows and prints a warning.
+- **Do not consume Theodore's final batch**: `infoRequest` is safe/read-only. Successful `authorisationRequest` calls create `Payment` rows and move bills to `processing`, so the verifier skips those by default. Run mutating auth tests only on a disposable batch.
 
 ---
 
 ## Files Modified
-- `scripts/generate-easypay-test-pins.js` - Requires explicit target environment, supports staging DB, adds CSV/XLSX environment/endpoint fields, escapes CSV values, and preserves PINs as text in XLSX.
+- `scripts/generate-easypay-test-pins.js` - Requires explicit target environment, supports staging DB, adds CSV/XLSX environment/endpoint fields, escapes CSV values, preserves PINs as text in XLSX, and uses valid-format unknown PINs for InvalidAccount tests.
+- `scripts/verify-easypay-test-pins.js` - Verifies every generated PIN row against the V5 API before partner sharing, with safe default authorisation behavior.
 - `services/ussdMenuService.js` - Updated EasyPay USSD on-screen and SMS copy to "Valid 30 days".
 - `utils/errorHandler.js` - Updated `PIN_EXPIRED` default message to 30 days.
 - `mymoolah-wallet-frontend/components/overlays/cashout-easypay/CashoutEasyPayOverlay.tsx` - Updated cash-out voucher expiry instruction to 30 days.
@@ -44,7 +48,7 @@ Investigated why Lesaka/EasyPay reported that all test PINs were invalid. The ro
 ---
 
 ## Code Changes Summary
-The EasyPay test PIN generator now refuses ambiguous runs and forces an explicit environment. This prevents a repeat of generating PINs into UAT while EasyPay tests against the staging Cloud Run backend. It also emits XLSX for manual testing so spreadsheet software does not convert 14-digit PINs into scientific notation. User-facing and partner-facing expiry language now matches the runtime default of 30 days.
+The EasyPay test PIN generator now refuses ambiguous runs and forces an explicit environment. This prevents a repeat of generating PINs into UAT while EasyPay tests against the staging Cloud Run backend. It also emits XLSX for manual testing so spreadsheet software does not convert 14-digit PINs into scientific notation. User-facing and partner-facing expiry language now matches the runtime default of 30 days. The verification script gives André a repeatable pre-send check for all rows without consuming the final partner batch.
 
 ---
 
@@ -53,27 +57,30 @@ The EasyPay test PIN generator now refuses ambiguous runs and forces an explicit
 - The previous CSV rows included unescaped comma-containing values, which could shift columns in spreadsheet tools.
 - The attachment from EasyPay shows PINs converted to scientific notation in spreadsheet output; the generator now emits XLSX to preserve text PINs.
 - Staging did not contain `users.id = 2`, causing the first rerun of `--staging` to fail on `bills_userId_fkey`. The generator now selects existing active wallet users at runtime.
+- The earlier "invalid PIN format" rows would trigger HTTP 400 because the receiver validates format before database lookup. They are now "Unknown valid PIN" rows, which correctly exercise V5 `ResponseCode=1`.
 
 ---
 
 ## Testing Performed
 - [x] `node --check scripts/generate-easypay-test-pins.js && node --check services/ussdMenuService.js && node --check utils/errorHandler.js`
+- [x] `node --check scripts/verify-easypay-test-pins.js`
 - [x] Cursor lints: no errors on edited JS/TS files.
 - [x] Repo sweep confirmed no active legacy EasyPay expiry references remain.
-- [ ] Live DB seeding not run in this session.
+- [ ] Live staging API verification not run locally because the deployed `SessionToken` is secret-managed; run from Codespaces with `EASYPAY_API_KEY` before sending the XLSX.
 
 ---
 
 ## Next Steps
-- [ ] In Codespaces, run `node scripts/generate-easypay-test-pins.js --staging` before resending a fresh CSV to EasyPay.
-- [ ] Send Lesaka/EasyPay a fresh CSV generated from staging plus a short note explaining the previous environment mismatch.
+- [ ] In Codespaces, regenerate the final file with `node scripts/generate-easypay-test-pins.js --staging`.
+- [ ] Run `EASYPAY_API_KEY='...' node scripts/verify-easypay-test-pins.js --staging` and confirm zero failures before sending Theodore the XLSX.
+- [ ] Send Lesaka/EasyPay a fresh XLSX generated from staging plus a short note explaining the previous environment mismatch.
 - [ ] Ask Theodore for one raw request/response pair if any PIN still fails after the staging-seeded CSV is sent.
 
 ---
 
 ## Important Context for Next Agent
 - `ResponseCode: "1"` from V5 lookup means the exact compact 14-digit `EasyPayNumber` was not found in `bills` for that environment.
-- The five invalid-format CSV rows are intentionally not inserted into the database and should still fail.
+- The five unknown-valid PIN rows are intentionally not inserted into the database and should return `ResponseCode: "1"`.
 - Do not run the test PIN generator against production.
 
 ---

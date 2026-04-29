@@ -25,9 +25,9 @@ Apologies for the delay on the test data. Please find attached:
 | Amount mismatch (fixed R100) | 5 | 0 (AllowPayment) | 2 (InvalidAmount) if amount != R100 |
 | USSD-issued | 3 | 0 (AllowPayment) | 0 (Allow) |
 | No user (orphan) | 3 | 0 (AllowPayment) | 0 (Allow) |
-| Invalid PIN formats | 5 | 1 (InvalidAccount) | N/A |
+| Unknown valid PINs (not in DB) | 5 | 1 (InvalidAccount) | 1 (InvalidAccount) |
 
-All valid PINs use receiver ID **5063**, are 14-digit Luhn-valid, are loaded in the same staging database used by `https://staging.mymoolah.africa/billpayment/v1/`, and expire after **30 days**.
+All listed PINs use receiver ID **5063** and are 14-digit Luhn-valid. The positive/expired/paid/cancelled test rows are loaded in the same staging database used by `https://staging.mymoolah.africa/billpayment/v1/`; the five "Unknown valid PIN" rows are deliberately not loaded so the receiver returns `ResponseCode=1`. MyMoolah PINs expire after **30 days**.
 
 **2. Staging partner-test SessionToken** — I will share this separately via secure channel (Signal or encrypted message) to comply with our security policy. This is the production EasyPay API credential configured on the deployed staging service via GCP Secret Manager. The token is used in the `Authorization` header:
 

@@ -11,11 +11,14 @@ Standardised EasyPay PIN/voucher expiry to 30 days across active code and docume
 - Removed the deprecated expiry-hours variable from `env.template`; `EASYPAY_PIN_EXPIRY_DAYS=30` remains the single runtime control.
 - Hardened `scripts/generate-easypay-test-pins.js` to require `--uat` or `--staging`, use the matching DB helper, add `Environment`/`Endpoint` columns, escape CSV values correctly, and emit XLSX so manual testers do not lose PIN precision in spreadsheets.
 - The EasyPay test PIN generator now resolves active wallet users from the target environment before inserting rows, instead of assuming `users.id` 1 and 2 exist in staging.
+- Added `scripts/verify-easypay-test-pins.js` so every generated row can be checked against the V5 staging API before sharing with EasyPay. The verifier runs safe `infoRequest` checks for all rows and avoids mutating successful authorisations by default.
+- Changed the five negative-account test rows from malformed PINs to valid-format unknown PINs, so the receiver returns V5 `ResponseCode=1` instead of HTTP 400 format errors.
 - Updated EasyPay handover, finalisation plan, email drafts, and prior session context to instruct `node scripts/generate-easypay-test-pins.js --staging` for `https://staging.mymoolah.africa/billpayment/v1/`.
 - Clarified EasyPay environment wording: local/Codespaces UAT uses UAT credentials and `.env`; deployed staging partner testing uses the production EasyPay API credential model via GCP Secret Manager with staging data/control test users.
 
 ### Validation
 - `node --check scripts/generate-easypay-test-pins.js && node --check services/ussdMenuService.js && node --check utils/errorHandler.js`
+- `node --check scripts/verify-easypay-test-pins.js`
 - Cursor lints: no errors on edited JS/TS files.
 - Repo sweep: no active legacy EasyPay expiry references remain.
 

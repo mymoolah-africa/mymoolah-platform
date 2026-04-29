@@ -75,6 +75,16 @@ function generateEasyPayNumber() {
   return { pin: `9${RECEIVER_ID}${accountNumber}${checkDigit}`, accountNumber };
 }
 
+function generateUniqueEasyPayNumber(usedPins) {
+  let generated;
+  do {
+    generated = generateEasyPayNumber();
+  } while (usedPins.has(generated.pin));
+
+  usedPins.add(generated.pin);
+  return generated;
+}
+
 function csvCell(value) {
   const str = value == null ? '' : String(value);
   return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
@@ -267,10 +277,11 @@ async function main() {
 
   try {
     const testUsers = await resolveTestUsers(client);
+    const usedPins = new Set();
     console.log(`Using primary test user ID ${testUsers.primary} and secondary test user ID ${testUsers.secondary}.`);
 
     for (const s of scenarios) {
-      const { pin, accountNumber } = generateEasyPayNumber();
+      const { pin, accountNumber } = generateUniqueEasyPayNumber(usedPins);
       const dueDate = new Date();
       dueDate.setDate(dueDate.getDate() + s.daysUntilExpiry);
       const dueDateStr = dueDate.toISOString().split('T')[0];
@@ -309,18 +320,13 @@ async function main() {
       console.log(`  [${s.scenario}] ${pin} — R${(s.amount / 100).toFixed(2)} — ${s.status}`);
     }
 
-    // Add 5 invalid PINs to the CSV (not in DB)
-    const invalidPins = [
-      '00000000000000',
-      '91111111111111',
-      '95063XXXXXXXX',
-      'abc12345678901',
-      '9506300000000'
-    ];
-    for (const badPin of invalidPins) {
+    // Add 5 valid-format unknown PINs to the files (not inserted into DB).
+    // These should return V5 ResponseCode 1 rather than HTTP 400 format errors.
+    const unknownPins = Array.from({ length: 5 }, () => generateUniqueEasyPayNumber(usedPins));
+    for (const unknown of unknownPins) {
       rows.push([
-        envConfig.label, envConfig.endpoint, badPin, 'N/A', 'N/A', 'N/A', 'Invalid PIN format',
-        '1 (InvalidAccount)', 'N/A', 'N/A', 'N/A (not in DB)', 'N/A'
+        envConfig.label, envConfig.endpoint, unknown.pin, unknown.accountNumber, 'N/A', 'N/A', 'Unknown valid PIN (not in DB)',
+        '1 (InvalidAccount)', '1 (InvalidAccount)', 'N/A', 'N/A (not in DB)', 'N/A'
       ]);
     }
 
@@ -349,7 +355,7 @@ async function main() {
 
     console.log(`\nCSV written to: ${csvPath}`);
     console.log(`XLSX written to: ${xlsxPath}`);
-    console.log(`Total: ${scenarios.length} DB rows + ${invalidPins.length} invalid PINs = ${scenarios.length + invalidPins.length} CSV rows`);
+    console.log(`Total: ${scenarios.length} DB rows + ${unknownPins.length} unknown valid PINs = ${scenarios.length + unknownPins.length} CSV rows`);
   } finally {
     client.release();
   }
