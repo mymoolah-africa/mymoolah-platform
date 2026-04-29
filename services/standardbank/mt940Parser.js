@@ -82,13 +82,23 @@ function parseMT940File(fileContent, filename = 'unknown') {
  * @returns {string[]}
  */
 function splitIntoBlocks(content) {
+  const firstStatementIndex = content.search(/^:20:/m);
+  const statementContent = firstStatementIndex >= 0
+    ? content.slice(firstStatementIndex)
+    : content;
+
+  const cleaned = statementContent
+    .replace(/\n-}\s*$/g, '')
+    .replace(/\n-\s*$/g, '')
+    .trim();
+
   // Split on lines that start a new transaction reference (:20:)
   // Keep the :20: line with its block
-  const parts = content.split(/(?=^:20:)/m).filter(b => b.trim().length > 0);
+  const parts = cleaned.split(/(?=^:20:)/m).filter(b => b.trim().length > 0);
   if (parts.length > 0) return parts;
 
   // Fallback: entire file is one block
-  return [content];
+  return [cleaned];
 }
 
 /**
@@ -106,25 +116,39 @@ function parseStatementBlock(block) {
 
   // Opening balance — :60F: (final) or :60M: (midday/MT942)
   const openingBalRaw   = fields[':60F:'] || fields[':60M:'] || null;
-  const statementType   = fields[':60F:'] ? 'MT940' : 'MT942';
+  const statementType   = fields[':60F:'] || fields[':62F:'] ? 'MT940' : 'MT942';
 
   // Closing balance — :62F: (final) or :62M: (midday)
   const closingBalRaw   = fields[':62F:'] || fields[':62M:'] || null;
 
   // Optional balances
-  const availableBalRaw = fields[':64:']  || null;
+  const availableBalRaw = fields[':64:'] || fields[':34F:'] || null;
   const forwardBalRaw   = fields[':65:']  || null;
 
-  if (!openingBalRaw) {
+  const transactions = parseTransactionLines(block);
+  const statementDate = parseStatementDate(fields, transactions);
+
+  if (statementType === 'MT940' && !openingBalRaw) {
     throw new Error('Missing opening balance field (:60F: or :60M:)');
   }
-  if (!closingBalRaw) {
+  if (statementType === 'MT940' && !closingBalRaw) {
     throw new Error('Missing closing balance field (:62F: or :62M:)');
   }
 
-  const openingBalance = parseBalance(openingBalRaw);
-  const closingBalance = parseBalance(closingBalRaw);
-  const availableBalance = availableBalRaw ? parseBalance(availableBalRaw) : null;
+  const intradayBalance = !openingBalRaw && availableBalRaw
+    ? parseIntradayBalance(availableBalRaw, statementDate)
+    : null;
+  const openingBalance = openingBalRaw ? parseBalance(openingBalRaw) : intradayBalance;
+  const closingBalance = closingBalRaw ? parseBalance(closingBalRaw) : intradayBalance;
+  const availableBalance = availableBalRaw
+    ? (availableBalRaw.startsWith('C') || availableBalRaw.startsWith('D')
+      ? parseBalance(availableBalRaw)
+      : parseIntradayBalance(availableBalRaw, statementDate))
+    : null;
+
+  if (!openingBalance || !closingBalance) {
+    throw new Error('Missing statement balance fields');
+  }
 
   // Parse account identifier  — "BANKCODE/ACCOUNTNUMBER" or just account number
   const accountParts = (accountRaw || '').split('/');
@@ -133,15 +157,13 @@ function parseStatementBlock(block) {
     ? accountParts[accountParts.length - 1].trim()
     : (accountRaw || '').trim();
 
-  // Parse transactions (pairs of :61: + optional :86:)
-  const transactions = parseTransactionLines(block);
-
-  // Validate double-entry: opening + net credits - net debits = closing
+  // Validate double-entry where SBSA provided opening and closing balances.
   const netMovement = transactions.reduce((sum, t) => {
     return sum + (t.direction === 'credit' ? t.amountCents : -t.amountCents);
   }, 0);
-  const expectedClosing = openingBalance.amountCents + netMovement;
-  const closingMatch = expectedClosing === closingBalance.amountCents;
+  const canReconcile = Boolean(openingBalRaw && closingBalRaw);
+  const expectedClosing = canReconcile ? openingBalance.amountCents + netMovement : null;
+  const closingMatch = canReconcile ? expectedClosing === closingBalance.amountCents : null;
 
   return {
     statementType,                    // 'MT940' | 'MT942'
@@ -162,7 +184,8 @@ function parseStatementBlock(block) {
       netMovementCents: netMovement,
       expectedClosingCents: expectedClosing,
       actualClosingCents: closingBalance.amountCents,
-      discrepancyCents: closingBalance.amountCents - expectedClosing,
+      discrepancyCents: canReconcile ? closingBalance.amountCents - expectedClosing : null,
+      reason: canReconcile ? null : 'intraday_statement_without_opening_closing_balance',
     },
   };
 }
@@ -242,6 +265,51 @@ function parseBalance(raw) {
 }
 
 /**
+ * Parse SBSA MT942 :34F: balance, e.g. "ZARC2526,58".
+ *
+ * @param {string} raw
+ * @param {string} date
+ * @returns {BalanceField}
+ */
+function parseIntradayBalance(raw, date) {
+  if (!raw) throw new Error('Intraday balance field is empty');
+
+  const clean = raw.trim();
+  const match = clean.match(/^([A-Z]{3})([CD])([\d,]+)$/);
+  if (!match) {
+    throw new Error(`Cannot parse intraday balance field: "${clean}"`);
+  }
+
+  const [, currency, indicator, amountStr] = match;
+  const amountCents = swiftAmountToCents(amountStr);
+  return {
+    direction: indicator === 'C' ? 'credit' : 'debit',
+    date,
+    currency,
+    amountCents,
+    amount: amountCents / 100,
+  };
+}
+
+/**
+ * Resolve the best available statement date for MT942 balance fields.
+ *
+ * @param {Object} fields
+ * @param {MT940Transaction[]} transactions
+ * @returns {string}
+ */
+function parseStatementDate(fields, transactions) {
+  const dateTimeRaw = fields[':13D:'];
+  if (dateTimeRaw && /^\d{6}/.test(dateTimeRaw.trim())) {
+    return parseSwiftDate(dateTimeRaw.trim().slice(0, 6));
+  }
+  if (transactions.length > 0) {
+    return transactions[transactions.length - 1].valueDate;
+  }
+  return new Date().toISOString().slice(0, 10);
+}
+
+/**
  * Parse all :61: transaction lines (with associated :86: narratives).
  *
  * @param {string} block
@@ -251,10 +319,27 @@ function parseTransactionLines(block) {
   const fields = extractFields(block);
   const lines61  = Array.isArray(fields[':61:']) ? fields[':61:'] : [];
   const lines86  = Array.isArray(fields[':86:']) ? fields[':86:'] : [];
+  const occurrenceCounts = new Map();
 
   return lines61.map((line61, idx) => {
     const narrative = lines86[idx] || null;
-    return parseTransactionLine(line61, narrative, idx + 1);
+    const txn = parseTransactionLine(line61, narrative, idx + 1);
+    const occurrenceKey = [
+      txn.valueDate,
+      txn.direction,
+      txn.swiftTypeCode || '',
+      txn.amountCents,
+      txn.clientReference || '',
+      txn.bankReference || '',
+      txn.rawNarrative || '',
+    ].join('|');
+    const occurrence = (occurrenceCounts.get(occurrenceKey) || 0) + 1;
+    occurrenceCounts.set(occurrenceKey, occurrence);
+
+    return {
+      ...txn,
+      statementOccurrence: occurrence,
+    };
   });
 }
 
@@ -521,6 +606,7 @@ module.exports = {
   parseMT940File,
   parseStatementBlock,
   parseBalance,
+  parseIntradayBalance,
   parseTransactionLine,
   parseNarrative,
   parseSwiftDate,
@@ -570,6 +656,7 @@ module.exports = {
  * @property {string|null} swiftTypeCode
  * @property {string} clientReference
  * @property {string|null} bankReference
+ * @property {number} statementOccurrence Stable duplicate index within a statement
  * @property {Object|null} narrative
  * @property {string|null} rawNarrative
  */

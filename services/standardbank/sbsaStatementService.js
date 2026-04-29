@@ -330,6 +330,16 @@ class SBSAStatementService {
       swiftType: txn.swiftTypeCode,
     });
 
+    if (txn.swiftTypeCode !== 'DEP') {
+      logger.info('Skipping non-EFT statement credit to avoid double-crediting realtime rails', {
+        seq: txn.seq,
+        ref,
+        amountCents: txn.amountCents,
+        swiftType: txn.swiftTypeCode,
+      });
+      return true;
+    }
+
     // ── Try known reference matching ───────────────────────────
     // Check if this reference matches a known internal transaction
     // (e.g., a disbursement return, PayShap credit, manual EFT top-up)
@@ -351,7 +361,7 @@ class SBSAStatementService {
     //   - processDepositNotification expects `amount` in RANDS (not cents)
     //   - requires `transactionId` for idempotency
     //   - requires `referenceNumber` for MSISDN/float lookup
-    const syntheticTxnId = `STMT-${runId}-${txn.seq}-${txn.valueDate}-${txn.amountCents}`;
+    const syntheticTxnId = this._buildStatementTransactionId(txn, statement);
     const amountRands = txn.amountCents / 100;
 
     try {
@@ -388,6 +398,32 @@ class SBSAStatementService {
     }
 
     return false; // Unmatched — handled by deposit notification service
+  }
+
+  /**
+   * Build a stable bank-line idempotency key. The same SBSA transaction appears
+   * in multiple intraday/final statements, so this must not include runId.
+   * Entry date can also differ between PROVSTMT and FINSTMT for the same bank
+   * line, so use value date plus occurrence among equal statement lines instead.
+   *
+   * @param {MT940Transaction} txn
+   * @param {MT940Statement} statement
+   * @returns {string}
+   */
+  _buildStatementTransactionId(txn, statement) {
+    const identity = [
+      statement.accountNumber || '',
+      txn.valueDate || '',
+      txn.direction || '',
+      txn.swiftTypeCode || '',
+      txn.amountCents,
+      txn.clientReference || '',
+      txn.bankReference || '',
+      txn.rawNarrative || '',
+      txn.statementOccurrence || 1,
+    ].join('|');
+
+    return `STMT-${crypto.createHash('sha256').update(identity).digest('hex').slice(0, 32)}`;
   }
 
   /**

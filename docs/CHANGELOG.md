@@ -1,5 +1,38 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-29 - SBSA H2H FSTP parser and gateway hardening
+
+### Summary
+Closed the main blockers found during the final SBSA H2H/FSTP production investigation. Penny #2 FINAUD was present in SBSA `/Inbox` and accepted, but production Cloud Run still had all H2H app pollers off, no production SBSA scheduler jobs existed, no SBSA statement files had reached GCS, and production DB had no SBSA statement/deposit rows for the R10 EFT reference.
+
+### Changes
+- Fixed `services/standardbank/mt940Parser.js` to parse real SBSA wrapped MT940/MT942 files:
+  - Ignores the SWIFT envelope before `:20:` instead of treating it as a bad statement block.
+  - Supports SBSA MT942 `PROVSTMT` files that provide `:34F:`/`:90C:`/`:90D:` without `:60M:`/`:62M:`.
+- Hardened `services/standardbank/sbsaStatementService.js` statement-credit safety:
+  - Only `DEP` statement credits are delegated to deposit notification auto-crediting.
+  - `TRF` statement credits are skipped to avoid double-crediting PayShap/realtime rails already handled elsewhere.
+  - Statement deposit idempotency now uses a stable hash of the bank line identity instead of `runId`, so the same R10 line across multiple PROVSTMT/FINSTMT files credits at most once.
+- Added `scripts/sbsa-h2h-gateway-sync.sh`, a dry-run-first VM script for `sftp-1-vm` to copy SBSA external `/Inbox` files into the correct GCS `standardbank/inbox/payments/` and `standardbank/inbox/statements/` prefixes. Outbound support exists but must only be used after explicit production approval because it can move real money.
+- Added focused Jest coverage for real SBSA statement shapes and statement-credit double-credit prevention.
+
+### Evidence
+- Production Cloud Run revision `mymoolah-backend-production-00147-vp7` still had `SBSA_SFTP_UPLOAD_ENABLED=false`, `SBSA_STATEMENT_POLLER_MODE=off`, `SBSA_PAIN002_POLLER_MODE=off`, and `RECON_SFTP_WATCHER_MODE=off`.
+- Production DB read-only checks found no `sbsa_statement_runs`, no `standard_bank_transactions` deposits, and no wallet `transactions` for the R10/ref `0825571055` since 2026-04-20.
+- SBSA `/Inbox` contained Penny #2 FINAUD `MYMOOLAH_OWN11_FINAUD_PRD_20260428054554375_242265281.xml`; parsed as `ACSP`, status code `0000`, EndToEndId `PROD-PENNY-1777015029717-01`.
+- Real SBSA MT940/MT942 files contained the R10 line as `CR10,00NDEP0825571055`.
+
+### Validation
+- `npx jest tests/standardbank/mt940Parser.sbsa-real-shape.test.js tests/standardbank/sbsaStatementService.statementCreditSafety.test.js --runInBand`
+- `node --check services/standardbank/mt940Parser.js && node --check services/standardbank/sbsaStatementService.js && node --check tests/standardbank/mt940Parser.sbsa-real-shape.test.js && node --check tests/standardbank/sbsaStatementService.statementCreditSafety.test.js`
+- `bash -n scripts/sbsa-h2h-gateway-sync.sh`
+- Dry-run on `sftp-1-vm`: `SBSA_H2H_MAX_FILES=12 bash -s -- --inbound < scripts/sbsa-h2h-gateway-sync.sh`
+- Cursor lints: no errors on edited files.
+
+### Remaining Approval Gate
+- Do not deploy or run `--apply` sync until André explicitly approves the production write sequence.
+- Recommended sequence after approval: deploy backend with `SBSA_H2H_GO_LIVE=true`, create production SBSA scheduler jobs, run inbound gateway sync in limited/observed batches, then verify the R10 wallet credit and DB/ledger evidence.
+
 ## 2026-04-29 - Migration ownership repair tool
 
 ### Summary

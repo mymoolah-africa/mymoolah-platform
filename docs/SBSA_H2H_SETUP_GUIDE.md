@@ -413,11 +413,33 @@ Recommended signing: **SHA256**
 
 ### Statement Processing Pipeline
 
-- **Parser**: `services/standardbank/mt940Parser.js` — Parses MT940/MT942 SWIFT files into structured transactions (576 lines, production-quality)
-- **Service**: `services/standardbank/sbsaStatementService.js` — Orchestrates: poll GCS → parse → match known references → credit wallets via deposit notification service → archive
+- **Gateway sync**: `scripts/sbsa-h2h-gateway-sync.sh` — Dry-run-first helper for `sftp-1-vm` to copy SBSA external `/Inbox` files into GCS. It skips zero-byte inbound files and routes `FINSTMT`/`PROVSTMT` to `standardbank/inbox/statements/`, and `ACK`/`NACK`/`INTAUD`/`FINAUD`/`UNP_DATA`/`VET_DATA` to `standardbank/inbox/payments/`.
+- **Parser**: `services/standardbank/mt940Parser.js` — Parses real SBSA MT940/MT942 SWIFT files, including wrapped SWIFT envelopes and MT942 `:34F:` intraday balances without `:60M:`/`:62M:`.
+- **Service**: `services/standardbank/sbsaStatementService.js` — Orchestrates: poll GCS → parse → match known references → credit wallet EFT deposits via deposit notification service → archive
 - **Poller cron**: `server.js` — Runs every 2 minutes (configurable via `SBSA_STATEMENT_POLL_SCHEDULE`)
 - **Deposit crediting**: `services/standardbankDepositNotificationService.js` — Resolves MSISDN reference → wallet credit, or parks in suspense for ops review
-- **Idempotency**: Files tracked by MD5 hash in `SBSAStatementRun` table; deposits tracked by synthetic transaction ID in `StandardBankTransaction` table
+- **Idempotency**: Files tracked by MD5 hash in `SBSAStatementRun` table; statement deposits tracked by a stable bank-line hash in `StandardBankTransaction.transactionId`, not by statement run ID. This prevents the same bank line appearing in multiple PROVSTMT/FINSTMT files from crediting twice.
+- **Credit safety**: Statement auto-crediting is limited to `DEP` lines such as `IB PAYMENT FROM`. `TRF` credits are skipped in the statement path to avoid double-crediting realtime PayShap/RPP rails.
+
+### Gateway Sync Operations
+
+Run from `sftp-1-vm` or pipe the script over IAP. The script is dry-run by default:
+
+```bash
+SBSA_H2H_MAX_FILES=20 bash scripts/sbsa-h2h-gateway-sync.sh --inbound
+```
+
+Apply mode copies files from SBSA `/Inbox` to GCS and records processed filenames in `/var/lib/mymoolah-sbsa-h2h/production-inbox-processed.txt`:
+
+```bash
+SBSA_H2H_MAX_FILES=20 bash scripts/sbsa-h2h-gateway-sync.sh --inbound --apply
+```
+
+Outbound mode uploads files from GCS outbox to SBSA `/Outbox`; use only after explicit production approval because outbound Pain.001 files move real money:
+
+```bash
+bash scripts/sbsa-h2h-gateway-sync.sh --outbound --apply
+```
 
 ### Wallet Crediting Flow (MT942 → wallet credit in < 5 minutes)
 
@@ -428,10 +450,11 @@ SBSA delivers MT942 to our SFTP (every 15 min)
       → MT940 parser extracts credit transactions
         → For each credit:
           1. Try match against pending Transaction (by reference)
-          2. If no match → depositNotificationService:
+          2. If no match and SWIFT type is DEP → depositNotificationService:
              a. Resolve reference (MSISDN → wallet, float prefix, fuzzy match)
              b. Credit wallet (locked row + ledger journal entry)
              c. Or park in suspense (ops alert email)
+          3. Skip non-DEP credits so PayShap/realtime rails are not credited twice
         → Archive file to processed/ folder
 ```
 
@@ -448,8 +471,8 @@ Each environment processes statements from its own isolated GCS folder. This pre
 | Production | `production` | `standardbank/inbox/statements/` | Production (real users, live APIs) |
 
 **How it works:**
-- SBSA delivers files to our SFTP flat `/Inbox`
-- An SFTP trigger script (or manual placement for testing) routes files to the correct environment sub-folder in GCS
+- SBSA places files in its external SFTP `/Inbox`.
+- `scripts/sbsa-h2h-gateway-sync.sh` runs on `sftp-1-vm` to copy files to the correct environment sub-folder in GCS.
 - Each environment's poller only reads from its own path
 - Archived files go to `processed/standardbank/{env}/statements/`
 

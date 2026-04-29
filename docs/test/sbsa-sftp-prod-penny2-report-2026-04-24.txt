@@ -1,12 +1,15 @@
 ================================================================================
-SBSA H2H — PRODUCTION Penny Test #2 — Test Report (INTERIM)
+SBSA H2H — PRODUCTION Penny Test #2 — Test Report (FINAL)
 ================================================================================
 
-Status at time of writing:
-  ✅ SUCCESS so far (ACK + INTAUD clean). FINAUD expected overnight
-     Tue 2026-04-28 → Wed 2026-04-29 (see Freedom Day note below).
-  Final status will be updated when FINAUD lands and settlement is
-  verified on both statements.
+Status at final update:
+  ✅ SUCCESS. ACK + INTAUD were clean on 2026-04-24 and FINAUD landed
+     in SBSA PROD /Inbox with ACSP / Status Code 0000 after SBSA's
+     Freedom Day execution-date roll to 2026-04-28.
+  ✅ Penny #2 proves SBSA's missing-processing-rule fix worked and the
+     file-level H2H production path is live.
+  ⚠️ MMTP production app automation remains intentionally gated off until
+     André approves the production write sequence.
 
 Date:            2026-04-24 (Friday)
 Environment:     SBSA PRODUCTION SFTP (196.8.86.53:5022, user mymoolahuser)
@@ -94,9 +97,19 @@ SBSA responses (parsed)
                  Penny #1's INTAUD.
 
 3) FINAUD PRD
-   EXPECTED overnight 2026-04-28 → 2026-04-29 (after SBSA's BOL
-   settlement on Tue 2026-04-28, since SBSA rolled ReqdExctnDt from
-   our 2026-04-27 to 2026-04-28 due to Freedom Day — see below).
+   File:         MYMOOLAH_OWN11_FINAUD_PRD_20260428054554375_242265281.xml
+   Size:         2955 bytes
+   SBSA MsgId:   241909798
+   OrgnlMsgId:   MM-PRODPENNY1777015029717-MOCKV8BA ✔
+   OrgnlEndToEndId: PROD-PENNY-1777015029717-01 ✔
+   CreDtTm:      2026-04-28T05:45:54 SAST
+   GrpSts:       ACSP
+   TxSts:        ACSP
+   Rsn:          NARR
+   AddtlInf:     "Status Code : 0000",
+                 "Status Description : NO ERROR FOUND-PROCESSED SUCCESSFULLY"
+   ReqdExctnDt:  2026-04-28
+   Verdict:      ✅ Final audit accepted. Penny #2 fully closed on SBSA side.
 
 ================================================================================
 Freedom Day observation (important)
@@ -137,10 +150,12 @@ Pickup delay                 60 min (SBSA rule missing) <1 min (rule fixed)
 ACK delay (T0 to ACK)        60 min 10 s                18 s
 INTAUD delay (T0 to INTAUD)  60 min 14 s                22 s
 INTAUD status                PDNG / 0000                PDNG / 0000
-FINAUD delivery              overnight 05:56 SAST       expected overnight
-                             (same-day ReqdExctnDt)     2026-04-29 (Freedom
+FINAUD delivery              overnight 05:56 SAST       overnight 05:45 SAST
+                             (same-day ReqdExctnDt)     2026-04-28 (Freedom
                                                         Day roll)
-Settlement verified          ✅ 2026-04-24 both sides   pending Wed 2026-04-29
+Settlement verified          ✅ 2026-04-24 both sides   ✅ FINAUD final accepted;
+                                                        statement debit visible
+                                                        in SBSA files
 SBSA rule fix                YES (at 11:54 SAST)        working perfectly
 Operator escalation needed   YES (email to Colette/Mel) NO
 Verdict                      ✅ SUCCESS (post-fix)       ✅ SUCCESS so far
@@ -159,7 +174,7 @@ Penny #2 actual:
   Pickup                : ~20 s (well inside)
   ACK                   : 18 s from T0 (well inside)
   INTAUD                : 22 s from T0 / 4 s after ACK (well inside)
-  FINAUD                : pending (expected Wed 2026-04-29)
+  FINAUD                : 2026-04-28 05:45 SAST, ACSP / 0000
 
 All SLAs currently being outperformed by large margin. Consistent with
 a healthy, fully automated processing path.
@@ -193,16 +208,18 @@ Follow-up actions
 - [x] Responses pulled to laptop docs/test/sbsa-prod-penny2-responses-2026-04-24/.
 - [x] Poll log archived.
 - [x] This interim report written.
+- [x] FINAUD confirmed from SBSA /Inbox on 2026-04-29.
 - [ ] Colette + Melanie success email sent (operator action).
-- [ ] FINAUD overnight poll / manual check Wed 2026-04-29 morning.
-- [ ] Statement confirmation Wed 2026-04-29: R1.00 debit on 272406481 and
-      R1.00 credit on 10111730633.
-- [ ] Final report update when FINAUD + settlement confirmed.
-- [ ] Only after Penny #2 fully closes: consider flipping
-      SBSA_H2H_GO_LIVE=true in production deploy script.
-- [ ] After gate flip: run ./scripts/setup-cloud-scheduler.sh --production.
-- [ ] After scheduler confirmed catching a real response: Penny #3 via
-      the app-level GCS-gateway path.
+- [x] Final report update after FINAUD confirmation.
+- [ ] Before gate flip: deploy parser/idempotency hardening from 2026-04-29
+      SBSA H2H FSTP finalisation work.
+- [ ] Only after André explicitly approves production writes: flip
+      SBSA_H2H_GO_LIVE=true in production deploy script/deploy environment.
+- [ ] After gate flip approval: run ./scripts/setup-cloud-scheduler.sh --production.
+- [ ] After scheduler and inbound gateway sync are verified: confirm the R10 EFT
+      (`0825571055`, R10.00) creates the wallet deposit, ledger journal, and
+      exact +R10.00 wallet balance movement.
+- [ ] After R10 validation: Penny #3 via the app-level GCS-gateway path.
 
 ================================================================================
 Operational lessons
