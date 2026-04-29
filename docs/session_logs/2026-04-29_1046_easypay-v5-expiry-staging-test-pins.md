@@ -21,6 +21,7 @@ Investigated why Lesaka/EasyPay reported that all test PINs were invalid. The ro
 - [x] Fixed staging generation failure caused by hardcoded `userId=2`; generator now selects real active wallet users in the target environment.
 - [x] Replaced malformed negative test PINs with valid-format unknown PINs so V5 returns `ResponseCode=1` instead of HTTP 400.
 - [x] Added `scripts/verify-easypay-test-pins.js` to validate all generated rows against staging before sending them to Theodore.
+- [x] Tightened the verifier to fail fast on placeholder tokens or HTTP 401 authentication failures.
 - [x] Updated EasyPay docs, email drafts, changelog, and handover context.
 
 ---
@@ -58,6 +59,7 @@ The EasyPay test PIN generator now refuses ambiguous runs and forces an explicit
 - The attachment from EasyPay shows PINs converted to scientific notation in spreadsheet output; the generator now emits XLSX to preserve text PINs.
 - Staging did not contain `users.id = 2`, causing the first rerun of `--staging` to fail on `bills_userId_fkey`. The generator now selects existing active wallet users at runtime.
 - The earlier "invalid PIN format" rows would trigger HTTP 400 because the receiver validates format before database lookup. They are now "Unknown valid PIN" rows, which correctly exercise V5 `ResponseCode=1`.
+- A verifier run using the literal placeholder `STAGING_SESSION_TOKEN` will fail with HTTP 401 for every row. This is an auth setup issue, not a PIN/database issue.
 
 ---
 

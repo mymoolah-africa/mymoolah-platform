@@ -69,6 +69,12 @@ function parseArgs(argv = process.argv.slice(2)) {
     throw new Error('EASYPAY_API_KEY is required. Export it or pass --token=...');
   }
 
+  if (isPlaceholderToken(options.token)) {
+    throw new Error(
+      'EASYPAY_API_KEY is still a placeholder. Use the real staging SessionToken from Secret Manager; do not use STAGING_SESSION_TOKEN.'
+    );
+  }
+
   if (!options.file) {
     options.file = fs.existsSync(DEFAULT_FILES.xlsx) ? DEFAULT_FILES.xlsx : DEFAULT_FILES.csv;
   }
@@ -78,6 +84,16 @@ function parseArgs(argv = process.argv.slice(2)) {
   }
 
   return options;
+}
+
+function isPlaceholderToken(token) {
+  return [
+    'STAGING_SESSION_TOKEN',
+    'PRODUCTION_SESSION_TOKEN',
+    'EASYPAY_API_KEY',
+    'YOUR_TOKEN',
+    'YOUR_SESSION_TOKEN',
+  ].includes(String(token || '').trim());
 }
 
 function readRows(filePath) {
@@ -227,6 +243,13 @@ async function main() {
 
   for (const row of rows) {
     const info = await post(client, '/infoRequest', infoPayload(row));
+
+    if (info.httpStatus === 401) {
+      throw new Error(
+        'Staging rejected the SessionToken with HTTP 401. Fetch the real EasyPay token from Secret Manager and rerun the verifier.'
+      );
+    }
+
     recordResult(results, 'infoRequest', row, row.expectedInfoCode, responseCode(info), info.httpStatus);
 
     if (row.expectedAuthCode && shouldRunAuthorisation(row, options.allowMutatingAuth)) {
