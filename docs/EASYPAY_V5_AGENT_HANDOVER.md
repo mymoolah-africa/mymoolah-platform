@@ -89,6 +89,7 @@ Full details in `docs/EASYPAY_V5_FINALISATION_PLAN.md`. Summary:
 - Output CSV and XLSX to `docs/integrations/easypay_test_pins.*`; send the XLSX for manual partner testing so PINs remain text.
 - Scenarios: happy path, already paid, expired, cancelled, boundary, amount mismatch, USSD, orphan, unknown valid PINs not in DB.
 - Verify before sending with `EASYPAY_API_KEY='...' node scripts/verify-easypay-test-pins.js --staging`. The verifier tests every row through `infoRequest` and only non-mutating `authorisationRequest` cases by default. Do not use mutating authorisation tests on the final batch being sent to Theodore.
+- After staging deploys callback changes, prove one disposable full flow with `EASYPAY_API_KEY='...' node scripts/verify-easypay-test-pins.js --staging --allow-payment-notification --payment-notification-limit=1` before asking EasyPay to retest.
 
 ### Task 5: Draft SFTP credentials email for EasyPay
 - Save as `docs/integrations/EASYPAY_UAT_CREDENTIALS_EMAIL_DRAFT.md`

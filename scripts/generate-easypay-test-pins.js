@@ -335,6 +335,16 @@ async function main() {
 
     const workbook = XLSX.utils.book_new();
     const worksheet = XLSX.utils.aoa_to_sheet(rows);
+    for (let rowIndex = 1; rowIndex <= rows.length; rowIndex++) {
+      for (const column of ['C', 'D']) {
+        const address = `${column}${rowIndex}`;
+        if (worksheet[address]) {
+          worksheet[address].t = 's';
+          worksheet[address].v = String(worksheet[address].v);
+          worksheet[address].z = '@';
+        }
+      }
+    }
     worksheet['!cols'] = [
       { wch: 12 },
       { wch: 52 },

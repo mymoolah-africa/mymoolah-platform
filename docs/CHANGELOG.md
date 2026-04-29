@@ -14,8 +14,11 @@ Standardised EasyPay PIN/voucher expiry to 30 days across active code and docume
 - Added `scripts/verify-easypay-test-pins.js` so every generated row can be checked against the V5 staging API before sharing with EasyPay. The verifier runs safe `infoRequest` checks for all rows and avoids mutating successful authorisations by default.
 - The verifier now fails fast if a placeholder token is used or staging returns HTTP 401, so authentication issues are not mistaken for PIN failures.
 - Changed the five negative-account test rows from malformed PINs to valid-format unknown PINs, so the receiver returns V5 `ResponseCode=1` instead of HTTP 400 format errors.
-- Fixed the EasyPay `paymentNotification` wallet transaction write to use the canonical string `wallet.walletId`, preventing 500 errors from `transactions.walletId` foreign-key validation.
-- Updated the EasyPay staging test PIN generator so successful cash-in rows are exact-amount (`minAmount=maxAmount=amount`), matching real app/USSD issued top-up PINs.
+- Fixed the EasyPay `paymentNotification` wallet transaction write to use the canonical string `wallet.walletId`, preventing 500 errors from `transactions.walletId` foreign-key validation; added row locks so duplicate callbacks cannot double-credit the same PIN.
+- Changed EasyPay authorisation storage to use an internal composite reference (`EasyPayNumber + POS Reference`) and made repeated authorisations idempotent so reused POS references cannot trip the unique `payments.reference` index.
+- Updated the EasyPay staging test PIN generator so successful cash-in rows are exact-amount (`minAmount=maxAmount=amount`), matching real app/USSD issued top-up PINs, and forced PIN/account cells to text in the XLSX output.
+- Extended the verifier with an explicit disposable `--allow-payment-notification` mode for post-deploy full-flow staging checks before partner retesting.
+- Added focused Jest coverage for EasyPay V5 authorisation idempotency, payment notification wallet ID handling, and duplicate paid notification behavior.
 - Updated EasyPay handover, finalisation plan, email drafts, and prior session context to instruct `node scripts/generate-easypay-test-pins.js --staging` for `https://staging.mymoolah.africa/billpayment/v1/`.
 - Clarified EasyPay environment wording: local/Codespaces UAT uses UAT credentials and `.env`; deployed staging partner testing uses the production EasyPay API credential model via GCP Secret Manager with staging data/control test users.
 
@@ -23,6 +26,7 @@ Standardised EasyPay PIN/voucher expiry to 30 days across active code and docume
 - `node --check scripts/generate-easypay-test-pins.js && node --check services/ussdMenuService.js && node --check utils/errorHandler.js`
 - `node --check scripts/verify-easypay-test-pins.js`
 - `node --check controllers/easyPayController.js`
+- `npx jest tests/easypay-v5-controller.test.js --runInBand`
 - Cursor lints: no errors on edited JS/TS files.
 - Repo sweep: no active legacy EasyPay expiry references remain.
 

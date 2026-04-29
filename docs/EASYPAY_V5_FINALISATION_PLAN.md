@@ -200,6 +200,7 @@ Create a script `scripts/generate-easypay-test-pins.js` that:
 4. Output **CSV and XLSX** files at `docs/integrations/easypay_test_pins.*` with columns: `Environment, Endpoint, PIN, AccountNumber, Amount_Cents, Amount_Rands, Scenario, Expected_InfoResponse, Expected_AuthResponse, Expected_PaymentResponse, Bill_Status, User_ID`. Send the XLSX for manual partner testing so spreadsheet software preserves the 14-digit PINs as text.
 5. Resolve active wallet users from the target environment before inserting rows. Do not hardcode user IDs; staging control users may not have IDs 1 and 2.
 6. Before sending the file to EasyPay, run `EASYPAY_API_KEY='...' node scripts/verify-easypay-test-pins.js --staging`. This performs read-safe `infoRequest` checks for all rows and only non-mutating `authorisationRequest` checks by default. Do not run `--allow-mutating-auth` on the final Theodore batch; use it only on a disposable batch because successful authorisations create `Payment` rows and move bills to `processing`.
+7. After deploying EasyPay callback changes to staging, run one disposable full-flow check before partner retesting: `EASYPAY_API_KEY='...' node scripts/verify-easypay-test-pins.js --staging --allow-payment-notification --payment-notification-limit=1`.
 
 **Important**: Use `generateEasyPayNumber()` from `utils/easyPayUtils.js` for PIN generation. All Bills need `userId` set (except orphan scenario).
 

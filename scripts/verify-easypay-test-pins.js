@@ -15,6 +15,7 @@
  * Usage:
  *   EASYPAY_API_KEY='...' node scripts/verify-easypay-test-pins.js --staging
  *   EASYPAY_API_KEY='...' node scripts/verify-easypay-test-pins.js --staging --allow-mutating-auth
+ *   EASYPAY_API_KEY='...' node scripts/verify-easypay-test-pins.js --staging --allow-payment-notification --payment-notification-limit=1
  */
 
 const fs = require('fs');
@@ -39,16 +40,22 @@ function parseArgs(argv = process.argv.slice(2)) {
     file: null,
     token: process.env.EASYPAY_API_KEY || '',
     allowMutatingAuth: false,
+    allowPaymentNotification: false,
+    paymentNotificationLimit: 1,
   };
 
   for (const arg of argv) {
     if (arg === '--staging') options.env = 'staging';
     else if (arg === '--uat') options.env = 'uat';
     else if (arg === '--allow-mutating-auth') options.allowMutatingAuth = true;
+    else if (arg === '--allow-payment-notification') options.allowPaymentNotification = true;
     else if (arg.startsWith('--env=')) options.env = arg.split('=')[1];
     else if (arg.startsWith('--base-url=')) options.baseUrl = arg.split('=')[1];
     else if (arg.startsWith('--file=')) options.file = arg.split('=')[1];
     else if (arg.startsWith('--token=')) options.token = arg.split('=')[1];
+    else if (arg.startsWith('--payment-notification-limit=')) {
+      options.paymentNotificationLimit = Number(arg.split('=')[1]);
+    }
   }
 
   if (!options.env && !options.baseUrl) {
@@ -64,6 +71,10 @@ function parseArgs(argv = process.argv.slice(2)) {
   }
 
   options.baseUrl = options.baseUrl.replace(/\/+$/, '');
+
+  if (!Number.isInteger(options.paymentNotificationLimit) || options.paymentNotificationLimit < 1) {
+    throw new Error('--payment-notification-limit must be a positive integer.');
+  }
 
   if (!options.token) {
     throw new Error('EASYPAY_API_KEY is required. Export it or pass --token=...');
@@ -149,6 +160,19 @@ function authPayload(row) {
   };
 }
 
+function paymentNotificationPayload(row, authRequest) {
+  return {
+    MerchantId: authRequest.MerchantId,
+    TerminalId: authRequest.TerminalId,
+    PaymentDate: new Date().toISOString().replace('T', ' ').slice(0, 19),
+    Reference: authRequest.Reference,
+    EasyPayNumber: row.pin,
+    AccountNumber: row.accountNumber,
+    Amount: authRequest.Amount,
+    EchoData: `${row.pin}-${row.index}-PAYMENT`,
+  };
+}
+
 function authAmount(row) {
   if (row.scenario === 'Amount mismatch test') {
     return row.amountCents + 1;
@@ -159,6 +183,12 @@ function authAmount(row) {
 function shouldRunAuthorisation(row, allowMutatingAuth) {
   if (allowMutatingAuth) return true;
   return ['1', '2', '3', '5'].includes(row.expectedAuthCode);
+}
+
+function shouldRunPaymentNotification(row, options, paymentNotificationsRun) {
+  return options.allowPaymentNotification &&
+    row.expectedAuthCode === '0' &&
+    paymentNotificationsRun < options.paymentNotificationLimit;
 }
 
 async function post(client, endpoint, payload) {
@@ -187,6 +217,21 @@ function recordResult(results, testName, row, expected, actual, httpStatus, deta
     scenario: row.scenario,
     expected,
     actual,
+    httpStatus,
+    details,
+  });
+}
+
+function recordEchoResult(results, testName, row, expectedEchoData, actualEchoData, httpStatus, details = '') {
+  const ok = httpStatus === 200 && actualEchoData === expectedEchoData;
+  results.push({
+    ok,
+    testName,
+    row: row.index,
+    pin: row.pin,
+    scenario: row.scenario,
+    expected: expectedEchoData,
+    actual: actualEchoData,
     httpStatus,
     details,
   });
@@ -237,9 +282,13 @@ async function main() {
   console.log(options.allowMutatingAuth
     ? 'Authorisation mode: mutating authorisation tests enabled'
     : 'Authorisation mode: safe only; successful auth rows will be skipped');
+  console.log(options.allowPaymentNotification
+    ? `PaymentNotification mode: enabled for up to ${options.paymentNotificationLimit} disposable successful row(s)`
+    : 'PaymentNotification mode: disabled');
 
   const results = [];
   const skippedAuth = [];
+  let paymentNotificationsRun = 0;
 
   for (const row of rows) {
     const info = await post(client, '/infoRequest', infoPayload(row));
@@ -252,9 +301,21 @@ async function main() {
 
     recordResult(results, 'infoRequest', row, row.expectedInfoCode, responseCode(info), info.httpStatus);
 
-    if (row.expectedAuthCode && shouldRunAuthorisation(row, options.allowMutatingAuth)) {
-      const auth = await post(client, '/authorisationRequest', authPayload(row));
+    const runPaymentNotification = shouldRunPaymentNotification(row, options, paymentNotificationsRun);
+    const runAuthorisation = row.expectedAuthCode &&
+      (shouldRunAuthorisation(row, options.allowMutatingAuth) || runPaymentNotification);
+
+    if (runAuthorisation) {
+      const authRequest = authPayload(row);
+      const auth = await post(client, '/authorisationRequest', authRequest);
       recordResult(results, 'authorisationRequest', row, row.expectedAuthCode, responseCode(auth), auth.httpStatus);
+
+      if (runPaymentNotification && auth.httpStatus === 200 && responseCode(auth) === '0') {
+        const paymentRequest = paymentNotificationPayload(row, authRequest);
+        const payment = await post(client, '/paymentNotification', paymentRequest);
+        recordEchoResult(results, 'paymentNotification', row, paymentRequest.EchoData, payment.body?.EchoData, payment.httpStatus);
+        paymentNotificationsRun += 1;
+      }
     } else if (row.expectedAuthCode === '0') {
       skippedAuth.push(row);
     }

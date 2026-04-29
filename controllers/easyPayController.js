@@ -1,6 +1,13 @@
 const { Bill, Payment, sequelize } = require('../models');
 const { validateEasyPayNumber, extractReceiverId } = require('../utils/easyPayUtils');
 
+function buildEasyPayPaymentReference(easyPayNumber, reference) {
+  const safeReference = reference != null && String(reference).trim()
+    ? String(reference).trim()
+    : 'NOREF';
+  return `EPV5-${easyPayNumber}-${safeReference}`.slice(0, 255);
+}
+
 /**
  * EasyPay Bill Payment Receiver API Controller
  * Implements the complete EasyPay integration for MyMoolah
@@ -216,19 +223,34 @@ class EasyPayController {
       }
 
       // Create payment record and update bill in a transaction (ACID)
+      const paymentReference = buildEasyPayPaymentReference(EasyPayNumber, Reference);
       const t = await sequelize.transaction();
       try {
-        await Payment.create({
-          reference: Reference,
-          easyPayNumber: EasyPayNumber,
-          accountNumber: String(AccountNumber || '').slice(0, 13),
-          amount,
-          billId: bill.id,
-          paymentType: 'bill_payment',
-          paymentMethod: 'easypay',
-          status: 'pending',
-          echoData: EchoData != null ? String(EchoData) : null
-        }, { transaction: t });
+        const existingPayment = await Payment.findOne({
+          where: { reference: paymentReference },
+          transaction: t
+        });
+
+        if (!existingPayment) {
+          await Payment.create({
+            reference: paymentReference,
+            easyPayNumber: EasyPayNumber,
+            accountNumber: String(AccountNumber || '').slice(0, 13),
+            amount,
+            billId: bill.id,
+            paymentType: 'bill_payment',
+            paymentMethod: 'easypay',
+            status: 'pending',
+            echoData: EchoData != null ? String(EchoData) : null,
+            transactionId: Reference != null ? String(Reference) : null,
+            metadata: {
+              source: 'easypay_v5',
+              posReference: Reference != null ? String(Reference) : null,
+              merchantId: req.body.MerchantId || null,
+              terminalId: req.body.TerminalId || null
+            }
+          }, { transaction: t });
+        }
 
         await bill.update({ status: 'processing' }, { transaction: t });
         await t.commit();
@@ -294,8 +316,8 @@ class EasyPayController {
         return res.status(200).json({ EchoData });
       }
 
-      const wallet = await Wallet.findOne({ where: { userId: bill.userId } });
-      if (!wallet) {
+      const existingWallet = await Wallet.findOne({ where: { userId: bill.userId } });
+      if (!existingWallet) {
         console.error(`[EasyPay] paymentNotification: no wallet for userId ${bill.userId}`);
         return res.status(200).json({ EchoData });
       }
@@ -307,8 +329,28 @@ class EasyPayController {
 
       const transactionRef = `EP-${bill.id}-${Date.now()}`;
 
+      let wallet = existingWallet;
       const t = await sequelize.transaction();
       try {
+        await bill.reload({ transaction: t, lock: t.LOCK.UPDATE });
+        if (bill.status === 'paid') {
+          await t.commit();
+          console.warn(`[EasyPay] paymentNotification: duplicate after lock — Bill ${bill.id} already paid`);
+          return res.status(200).json({ EchoData });
+        }
+
+        wallet = await Wallet.findOne({
+          where: { userId: bill.userId },
+          transaction: t,
+          lock: t.LOCK.UPDATE
+        });
+
+        if (!wallet) {
+          await t.commit();
+          console.error(`[EasyPay] paymentNotification: no locked wallet for userId ${bill.userId}`);
+          return res.status(200).json({ EchoData });
+        }
+
         await wallet.credit(grossAmountRand, 'credit', { transaction: t });
         await wallet.debit(totalFee, 'debit', { transaction: t });
 
@@ -359,8 +401,9 @@ class EasyPayController {
         }, { transaction: t });
 
         if (Reference) {
+          const paymentReference = buildEasyPayPaymentReference(EasyPayNumber, Reference);
           const payment = await Payment.findOne({
-            where: { reference: Reference },
+            where: { reference: paymentReference },
             transaction: t
           });
           if (payment) {

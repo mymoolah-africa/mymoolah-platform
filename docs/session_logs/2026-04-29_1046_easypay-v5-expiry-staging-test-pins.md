@@ -24,6 +24,10 @@ Investigated why Lesaka/EasyPay reported that all test PINs were invalid. The ro
 - [x] Tightened the verifier to fail fast on placeholder tokens or HTTP 401 authentication failures.
 - [x] Investigated Theodore's `paymentNotification` HTTP 500 report and fixed the likely callback failure: `Transaction.walletId` now receives `wallet.walletId` instead of the numeric wallet primary key.
 - [x] Updated the staging test PIN generator so positive cash-in rows are exact-amount, matching real app/USSD issued bills and avoiding the misleading "R100 PIN accepts R400" test result.
+- [x] Added internal composite EasyPay payment references and idempotent repeated authorisation handling to avoid unique-index failures if POS references are reused.
+- [x] Added bill/wallet row locks during `paymentNotification` processing to prevent duplicate callback races from double-crediting a PIN.
+- [x] Extended the verifier with a disposable `--allow-payment-notification` full-flow mode so MMTP can prove the callback before asking EasyPay to retest.
+- [x] Added focused Jest tests for EasyPay V5 controller authorisation/payment notification behavior.
 - [x] Updated EasyPay docs, email drafts, changelog, and handover context.
 
 ---
@@ -36,13 +40,15 @@ Investigated why Lesaka/EasyPay reported that all test PINs were invalid. The ro
 - **No hardcoded staging user IDs**: The generator resolves active users with active wallets before inserting bills. If only one active wallet user exists, it reuses that user for the "Different user" rows and prints a warning.
 - **Do not consume Theodore's final batch**: `infoRequest` is safe/read-only. Successful `authorisationRequest` calls create `Payment` rows and move bills to `processing`, so the verifier skips those by default. Run mutating auth tests only on a disposable batch.
 - **Exact cash-in amounts**: Real EasyPay top-up PINs created by `issueEasyPayVoucher` set `minAmount=maxAmount=amount`. Partner test happy-path rows must follow the same pattern; broad R50-R4,000 ranges are only appropriate for a generic bill-pay range product, not MyMoolah wallet cash-in.
+- **Pre-partner gate**: After staging deploy, MMTP must run one disposable full-flow `infoRequest -> authorisationRequest -> paymentNotification` verification before sending EasyPay another file.
 
 ---
 
 ## Files Modified
 - `scripts/generate-easypay-test-pins.js` - Requires explicit target environment, supports staging DB, adds CSV/XLSX environment/endpoint fields, escapes CSV values, preserves PINs as text in XLSX, and uses valid-format unknown PINs for InvalidAccount tests.
-- `scripts/verify-easypay-test-pins.js` - Verifies every generated PIN row against the V5 API before partner sharing, with safe default authorisation behavior.
-- `controllers/easyPayController.js` - Fixed EasyPay payment notification transaction creation to use the wallet string ID expected by the `transactions.walletId` foreign key.
+- `scripts/verify-easypay-test-pins.js` - Verifies every generated PIN row against the V5 API before partner sharing, with safe default authorisation behavior and an explicit disposable payment-notification mode.
+- `controllers/easyPayController.js` - Fixed EasyPay payment notification transaction creation to use the wallet string ID expected by the `transactions.walletId` foreign key, added row locking for callback idempotency, and changed stored Payment references to internal EasyPay composite references.
+- `tests/easypay-v5-controller.test.js` - Added focused regression coverage for the authorisation/paymentNotification issues found during partner testing.
 - `services/ussdMenuService.js` - Updated EasyPay USSD on-screen and SMS copy to "Valid 30 days".
 - `utils/errorHandler.js` - Updated `PIN_EXPIRED` default message to 30 days.
 - `mymoolah-wallet-frontend/components/overlays/cashout-easypay/CashoutEasyPayOverlay.tsx` - Updated cash-out voucher expiry instruction to 30 days.
@@ -66,6 +72,7 @@ The EasyPay test PIN generator now refuses ambiguous runs and forces an explicit
 - A verifier run using the literal placeholder `STAGING_SESSION_TOKEN` will fail with HTTP 401 for every row. This is an auth setup issue, not a PIN/database issue.
 - Theodore's Test2 workbook shows the first payment notification failed with HTTP 500. Code review found the callback inserted numeric `wallet.id` into `Transaction.walletId`, while the model references `wallets.walletId`; this explains a transaction-time 500 and rollback.
 - Theodore's second concern, paying R400 against an R100 happy-path PIN, was caused by the test generator's broad min/max range. Real generated top-up PINs are exact amount, so the generator was corrected.
+- Additional audit found `Payment.reference` used EasyPay's POS `Reference` directly despite a unique DB index. This is now an internal composite reference based on `EasyPayNumber + Reference`.
 
 ---
 
@@ -73,6 +80,7 @@ The EasyPay test PIN generator now refuses ambiguous runs and forces an explicit
 - [x] `node --check scripts/generate-easypay-test-pins.js && node --check services/ussdMenuService.js && node --check utils/errorHandler.js`
 - [x] `node --check scripts/verify-easypay-test-pins.js`
 - [x] `node --check controllers/easyPayController.js`
+- [x] `npx jest tests/easypay-v5-controller.test.js --runInBand` (passes; existing Jest config warning about `setupFilesAfterSetup` remains)
 - [x] Cursor lints: no errors on edited JS/TS files.
 - [x] Repo sweep confirmed no active legacy EasyPay expiry references remain.
 - [ ] Live staging API verification not run locally because the deployed `SessionToken` is secret-managed; run from Codespaces with `EASYPAY_API_KEY` before sending the XLSX.
@@ -82,7 +90,7 @@ The EasyPay test PIN generator now refuses ambiguous runs and forces an explicit
 ## Next Steps
 - [ ] In Codespaces, regenerate the final file with `node scripts/generate-easypay-test-pins.js --staging`.
 - [ ] Run `EASYPAY_API_KEY='...' node scripts/verify-easypay-test-pins.js --staging` and confirm zero failures before sending Theodore the XLSX.
-- [ ] After deploy to staging, create/use one disposable happy-path PIN to test full `infoRequest` -> `authorisationRequest` -> `paymentNotification` before asking EasyPay to retry.
+- [ ] After deploy to staging, run `EASYPAY_API_KEY='...' node scripts/verify-easypay-test-pins.js --staging --allow-payment-notification --payment-notification-limit=1` on a disposable fresh batch before asking EasyPay to retry.
 - [ ] Send Lesaka/EasyPay a fresh XLSX generated from staging plus a short note explaining the previous environment mismatch.
 - [ ] Ask Theodore for one raw request/response pair if any PIN still fails after the staging-seeded CSV is sent.
 
