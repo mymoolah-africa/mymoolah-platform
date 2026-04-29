@@ -76,6 +76,7 @@ and receivables. Normal side: **debit** (increases on debit, decreases on credit
 | `1200-10-07` | PayShap Outbound Float | debit | `20260224_03` | `standardbankRppService.js` | PayShap RPP outbound; **do NOT use for Yellow Card** (see Section 9.1) |
 | `1200-10-08` | OTT Payout Float Account | debit | `20260429_02` | `ottPayoutService.js` | OTT Payout / cash-send principal plus provider pass-through fee clearing; disabled by default until OTT UAT approval |
 | `1200-10-10` | NFC Deposit Float Account | debit | `20260224_03`, `20260210_03` | `nfcDepositService.js` | NFC acquiring float (Halo Dot Phase 1) |
+| `1300-20-01` | VAT Input Recoverable | debit | **NEEDS MIGRATION** | planned bank/supplier fee accounting | Dedicated input VAT asset for claimable VAT on supplier/bank tax invoices; do not mix with output VAT payable in `2300-10-01` |
 
 ### 2.2 Liabilities (2xxx-xx-xx)
 
@@ -124,6 +125,9 @@ Expense accounts track costs incurred. Normal side: **debit**
 |------|------|--------|-----------|---------|-------|
 | `5000-10-01` | Cost of Sales: PayShap SBSA Fee | debit | `20260224_03`, `20260224_02` | `standardbankRtpService.js` | SBSA fee cost account for flows where MMTP absorbs the fee. RPP customer fees use pass-through clearing instead. |
 | `5000-10-02` | Cost of Sales: EasyPay Cash Handling Fee | debit | `20260410_01` | `easyPayDepositService.js` (batch recon job) | Variable per-merchant cash handling cost; MMTP absorbs; posted from SFTP recon file |
+| `5000-10-03` | Cost of Sales: SBSA PayShap RPP/RTP Fees | debit | **NEEDS MIGRATION** | planned PayShap fee reconciliation | Use only where MMTP absorbs SBSA RPP/RTP fees. If customer pays the SBSA fee as pass-through, use clearing/payable instead. |
+| `5000-10-04` | Cost of Sales: EFT Supplier Payment Fees | debit | **NEEDS MIGRATION** | planned H2H statement fee reconciliation | EFT/payment fees directly tied to supplier settlement or supplier-float top-ups, e.g. MobileMart EFT bank charge, split from input VAT where tax invoice support exists. |
+| `5100-01-01` | Bank Charges Expense | debit | **NEEDS MIGRATION** | planned bank statement reconciliation | General banking/admin fees not directly tied to a supplier/rail transaction, e.g. monthly account fees or Business Online charges, split from input VAT where tax invoice support exists. |
 | `5100-02-01` | Referral Expense | debit | `20260405_01` | `production-full-audit.js` | Referral commission expense; currently referenced only in audit reconciliation — accrual posting path TBD |
 | `5100-03-01` | Ad Reward Expense | debit | `20260224_03` | `adService.js` | Watch-to-Earn user reward payout (R2–R3 per view) |
 
@@ -235,6 +239,44 @@ CR  2200-02-01  Supplier Clearing Account        R5.75   (SBSA fee payable/pass-
 CR  4000-20-01  Transaction Fee Revenue          R0.87   (MMTP markup ex-VAT)
 CR  2300-10-01  VAT Control Account              R0.13   (VAT on MMTP markup only)
 ```
+
+### 3.3.1 SBSA / Bank Fees and Input VAT Classification
+
+Bank and payment fees must be classified by economic purpose, not only by the
+bank statement narrative:
+
+- **Payment rail cost of sales**: fees directly tied to PayShap RPP/RTP,
+  supplier settlement, or supplier-float top-up transactions.
+- **General bank operating expense**: account fees, Business Online charges,
+  monthly admin fees, or bank charges not directly tied to a revenue-generating
+  product/payment flow.
+- **Pass-through fees**: fees recovered from a customer/client without MMTP
+  earning margin; these are VAT-inclusive clearing/payable movements, not MMTP
+  revenue.
+
+Where SBSA or another supplier provides valid VAT/tax invoice support, claimable
+VAT must be split to the dedicated input VAT account. Do **not** mix claimable
+input VAT with `2300-10-01` output VAT payable.
+
+**Example — EFT supplier top-up fee paid by MMTP (R9.30 VAT incl):**
+
+```
+DR  5000-10-04  CoS: EFT Supplier Payment Fees    R8.09
+DR  1300-20-01  VAT Input Recoverable             R1.21
+CR  1100-01-01  Standard Bank Current Account     R9.30
+```
+
+**Example — general monthly bank charge (R182.42 VAT incl):**
+
+```
+DR  5100-01-01  Bank Charges Expense              R158.63
+DR  1300-20-01  VAT Input Recoverable             R23.79
+CR  1100-01-01  Standard Bank Current Account     R182.42
+```
+
+If tax invoice support is not available yet, post VAT-inclusive to the relevant
+expense/cost account and flag for Finance review rather than guessing the VAT
+split from the statement alone.
 
 ### 3.4 VAS Purchase (Airtime / Data / Electricity / Bills)
 
@@ -670,6 +712,10 @@ sensible defaults. This allows per-environment overrides without code changes.
 | `LEDGER_ACCOUNT_REFERRAL_PAYABLE` | `2200-03-01` | Referral Commission Payable | referralPayoutService |
 | `LEDGER_ACCOUNT_PAYSHAP_SBSA_CLEARING` | `2200-02-01` | Supplier Clearing Account | standardbankRppService and standardbankRtpService pass-through SBSA fee payable |
 | `LEDGER_ACCOUNT_PAYSHAP_SBSA_COST` | `5000-10-01` | Cost of Sales: PayShap SBSA Fee | Only use when MMTP absorbs SBSA fee; not for customer-collected pass-through fees |
+| `LEDGER_ACCOUNT_VAT_INPUT_RECOVERABLE` | `1300-20-01` | VAT Input Recoverable | planned bank/supplier fee reconciliation |
+| `LEDGER_ACCOUNT_PAYSHAP_SBSA_FEE_COS` | `5000-10-03` | Cost of Sales: SBSA PayShap RPP/RTP Fees | planned split of absorbed SBSA RPP/RTP fees and VAT input |
+| `LEDGER_ACCOUNT_EFT_SUPPLIER_PAYMENT_FEE_COS` | `5000-10-04` | Cost of Sales: EFT Supplier Payment Fees | planned split of supplier EFT/payment fees and VAT input |
+| `LEDGER_ACCOUNT_BANK_CHARGES_EXPENSE` | `5100-01-01` | Bank Charges Expense | planned general bank/admin fee reconciliation |
 | `LEDGER_ACCOUNT_TRANSACTION_FEE_REVENUE` | *(none)* | Transaction Fee Revenue | standardbankRppService, voucherController, flashController |
 | `LEDGER_ACCOUNT_VAT_CONTROL` | *(none)* | VAT Control Account | MMTP revenue VAT only: standardbankRppService markup, voucherController margin, flashController margin, commissionVatService |
 | `LEDGER_ACCOUNT_MM_COMMISSION_CLEARING` | *(none)* | MM Commission Clearing | commissionVatService, qrPaymentController |

@@ -27,6 +27,8 @@ Investigated André's missing R10 EFT deposit with reference `0825571055` and co
 - [x] Fixed real production statement filename recognition and redeployed.
 - [x] Verified R10 production credit, wallet transaction, and balanced journal.
 - [x] Fixed the Pain.002 scheduler Cloud Run packaging issue by removing runtime dependency on `scripts/db-connection-helper.js`.
+- [x] Continued SBSA `/Inbox` backlog sync in controlled batches and installed recurring inbound VM sync.
+- [x] Documented tomorrow's COA follow-up for input VAT, PayShap/RPP/RTP fees, supplier EFT fees, and general bank charges.
 
 ---
 
@@ -35,6 +37,9 @@ Investigated André's missing R10 EFT deposit with reference `0825571055` and co
 - **Statement path only auto-credits `DEP` lines**: Real SBSA files show the R10 EFT as `NDEP` / `IB PAYMENT FROM`; older PayShap deposits appear as `NTRF` and must not be credited again by statement processing.
 - **Idempotency must not include statement run ID**: The same R10 appears in multiple PROVSTMT/FINSTMT files. The new `STMT-<sha256>` id uses bank-line identity so repeated appearances do not credit twice.
 - **Gateway sync belongs on `sftp-1-vm`**: SBSA only allows the VM's public IP to access their SFTP, so Cloud Run cannot directly pull `/Inbox` files without a separate networking change.
+- **PayShap TRF fallback is future tech debt, not current behaviour**: If PayShap credit notifications fail, H2H statement `TRF` lines should only become a delayed controlled fallback through a separate safety layer with database-enforced unique bank-event fingerprints, ACID wallet/journal posting, notification-to-statement matching, suspense for ambiguity, and reconciliation reporting. Never remove the current blanket `TRF` auto-credit skip without that layer.
+- **Gateway sync recurrence uses systemd, not crontab**: User crontab is blocked by `/etc/cron.allow` on `sftp-1-vm`. Installed `mymoolah-sbsa-h2h-gateway-sync.timer` and `mymoolah-sbsa-h2h-gateway-sync.service` under systemd instead. The service runs as `andremacbookpro`, inbound-only, with `flock`, `SBSA_H2H_MAX_FILES=25`, and the existing user-writable state dir.
+- **Fee/VAT COA work deferred to tomorrow**: Add migrations/code only after review. Proposed accounts are documented as **NEEDS MIGRATION**: `1300-20-01` VAT Input Recoverable, `5000-10-03` SBSA PayShap RPP/RTP Fee CoS, `5000-10-04` EFT Supplier Payment Fee CoS, and `5100-01-01` Bank Charges Expense. Use CoS for payment/supplier fees, general expense for admin bank charges, and clearing/pass-through for fees recovered without MMTP margin.
 
 ---
 
@@ -67,6 +72,9 @@ Investigated André's missing R10 EFT deposit with reference `0825571055` and co
 - **No persistent SBSA `/Inbox` to GCS transport**: VM has no cron/systemd sync. Added a dry-run-first script; apply/install still needs André approval.
 - **Real production filenames differed from docs**: SBSA production statement files use compact timestamps like `MYMOOLAH_OWN11_FINSTMT_20260425061519710_242046957.txt`; fixed the poller pattern and added a regression test.
 - **Pain.002 scheduler 500**: The poller failed to load because `notificationEngine` imported `scripts/db-connection-helper.js`, but `scripts/` is excluded from the Cloud Run image. Replaced with runtime Sequelize query support.
+- **PayShap missed-notification fallback gap**: Current statement processing intentionally skips `TRF` credits to prevent duplicate PayShap wallet credits. A missed PayShap notification will not be auto-recovered by H2H today; documented as tech debt for a separate duplicate-impossible fallback layer.
+- **Crontab install failed**: `/etc/cron.allow` blocks `andremacbookpro` from using `crontab`; systemd timer install succeeded.
+- **COA fee/VAT gap**: Current COA had output VAT payable but no dedicated input VAT recoverable account, and did not fully distinguish supplier/payment rail fees from general bank charges. Documented planned accounts; migration and automation are next-session work.
 
 ---
 
@@ -94,9 +102,12 @@ bash -n scripts/sbsa-h2h-gateway-sync.sh
 - [x] Run/confirm production Cloud Scheduler jobs.
 - [x] Run `scripts/sbsa-h2h-gateway-sync.sh --inbound --apply` on `sftp-1-vm` in a limited observed batch.
 - [x] Verify R10 credit: `standard_bank_transactions`, wallet `transactions`, ledger journal, and wallet balance increases by exactly R10.
-- [ ] Continue syncing remaining SBSA `/Inbox` files in limited batches, then install a controlled recurring sync on `sftp-1-vm` after operational review.
+- [x] Continue syncing remaining SBSA `/Inbox` files in limited batches, then install a controlled recurring sync on `sftp-1-vm` after operational review.
 - [ ] Rerun `sbsa-pain002-poll-production` after the `notificationEngine` packaging fix deploy and confirm the endpoint returns 200.
 - [ ] After R10 validation, plan app-level Penny #3 using GCS outbound path and explicit approval.
+- [ ] Design PayShap `TRF` statement fallback as a separate safety layer if André prioritises it; require DB unique constraints and suspense handling before any wallet auto-crediting.
+- [ ] Implement COA migration for input VAT, SBSA PayShap fee CoS, EFT supplier payment fee CoS, and general bank charges expense.
+- [ ] Add H2H statement fee classification logic only after Finance confirms VAT/tax invoice evidence source for SBSA fee lines.
 
 ---
 
@@ -107,6 +118,7 @@ bash -n scripts/sbsa-h2h-gateway-sync.sh
 - Production Cloud Scheduler location is `europe-west1`, not `africa-south1`.
 - `gcloud compute ssh sftp-1-vm` must use IAP and port 2222: `--tunnel-through-iap --ssh-flag='-p 2222'`.
 - The new gateway script is safe by default; `--apply` changes production GCS state and should only run with approval. First approved limited batch copied 12 candidate files, skipped zero-byte FINSTMT files, and processed 6 statement files.
+- Recurring gateway sync is installed: `sudo systemctl status mymoolah-sbsa-h2h-gateway-sync.timer --no-pager`. Logs append to `/home/andremacbookpro/mymoolah-sbsa-h2h/sbsa-h2h-gateway-sync.log`. It copies only inbound SBSA `/Inbox` files to GCS; outbound remains manual/approval-gated.
 
 ---
 

@@ -1,5 +1,23 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-29 - COA fee and input VAT classification documented
+
+### Summary
+Documented tomorrow's accounting follow-up for SBSA bank fees, supplier EFT/payment fees, PayShap RPP/RTP fees, and input VAT treatment. No ledger code or migrations were changed in this pass.
+
+### Changes
+- Updated `docs/CHART_OF_ACCOUNTS.md` with planned, **NEEDS MIGRATION** accounts:
+  - `1300-20-01` VAT Input Recoverable.
+  - `5000-10-03` Cost of Sales: SBSA PayShap RPP/RTP Fees.
+  - `5000-10-04` Cost of Sales: EFT Supplier Payment Fees.
+  - `5100-01-01` Bank Charges Expense.
+- Added journal guidance for VAT-inclusive supplier EFT fees and general bank charges.
+- Updated tech debt and session handover so the next session distinguishes payment rail cost of sales from general bank fees and does not mix input VAT with output VAT payable.
+
+### Validation
+- Documentation-only change; no tests required.
+- `git diff --check`
+
 ## 2026-04-29 - SBSA H2H FSTP parser and gateway hardening
 
 ### Summary
