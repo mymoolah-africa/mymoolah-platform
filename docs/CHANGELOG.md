@@ -16,7 +16,11 @@ Standardised EasyPay PIN/voucher expiry to 30 days across active code and docume
 - Changed the five negative-account test rows from malformed PINs to valid-format unknown PINs, so the receiver returns V5 `ResponseCode=1` instead of HTTP 400 format errors.
 - Fixed the EasyPay `paymentNotification` wallet transaction write to use the canonical string `wallet.walletId`, preventing 500 errors from `transactions.walletId` foreign-key validation; added row locks so duplicate callbacks cannot double-credit the same PIN.
 - Changed EasyPay authorisation storage to use an internal composite reference (`EasyPayNumber + POS Reference`) and made repeated authorisations idempotent so reused POS references cannot trip the unique `payments.reference` index.
+- Hardened V5 contract validation: `infoRequest` invalid-account responses now return a date-string `expiryDate`; `authorisationRequest` requires `EchoData`; `paymentNotification` requires `AccountNumber` and integer-cent `Amount`.
+- `paymentNotification` now validates the notified amount against the bill's allowed range, acknowledges inactive/no-wallet/orphan cases without throwing, and bypasses daily/monthly spend limits only for the post-deposit EasyPay fee sweep.
+- Added `Transaction.reference` to the Sequelize model so EasyPay deposit/fee transaction references are persisted for audit and reconciliation.
 - Updated the EasyPay staging test PIN generator so successful cash-in rows are exact-amount (`minAmount=maxAmount=amount`), matching real app/USSD issued top-up PINs, and forced PIN/account cells to text in the XLSX output.
+- The test PIN generator now aborts if an expected bill insert is skipped by conflict, preventing XLSX/DB divergence.
 - Extended the verifier with an explicit disposable `--allow-payment-notification` mode for post-deploy full-flow staging checks before partner retesting.
 - Added focused Jest coverage for EasyPay V5 authorisation idempotency, payment notification wallet ID handling, and duplicate paid notification behavior.
 - Updated EasyPay handover, finalisation plan, email drafts, and prior session context to instruct `node scripts/generate-easypay-test-pins.js --staging` for `https://staging.mymoolah.africa/billpayment/v1/`.

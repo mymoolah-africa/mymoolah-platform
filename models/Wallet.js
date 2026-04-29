@@ -230,20 +230,23 @@ module.exports = (sequelize, DataTypes) => {
       return { allowed: false, reason: 'Insufficient balance' };
     }
 
-    if (currentDailySpent + numericAmount > allowedDailyLimit) {
-      return { allowed: false, reason: 'Daily limit exceeded' };
-    }
+    if (!options.bypassDailyMonthlyLimits) {
+      if (currentDailySpent + numericAmount > allowedDailyLimit) {
+        return { allowed: false, reason: 'Daily limit exceeded' };
+      }
 
-    if (currentMonthlySpent + numericAmount > allowedMonthlyLimit) {
-      return { allowed: false, reason: 'Monthly limit exceeded' };
+      if (currentMonthlySpent + numericAmount > allowedMonthlyLimit) {
+        return { allowed: false, reason: 'Monthly limit exceeded' };
+      }
     }
 
     return { allowed: true };
   };
 
   Wallet.prototype.debit = async function(amount, transactionType = 'debit', options = {}) {
+    const { bypassDailyMonthlyLimits, ...saveOptions } = options;
     const numericAmount = parseFloat(amount);
-    const canDebit = this.canDebit(numericAmount);
+    const canDebit = this.canDebit(numericAmount, { bypassDailyMonthlyLimits });
     if (!canDebit.allowed) {
       throw new Error(canDebit.reason);
     }
@@ -254,7 +257,7 @@ module.exports = (sequelize, DataTypes) => {
     this.monthlySpent = parseFloat(this.monthlySpent) + numericAmount;
     this.lastTransactionAt = new Date();
     
-    await this.save(options);
+    await this.save(saveOptions);
     return this;
   };
 

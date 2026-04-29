@@ -8,6 +8,15 @@ function buildEasyPayPaymentReference(easyPayNumber, reference) {
   return `EPV5-${easyPayNumber}-${safeReference}`.slice(0, 255);
 }
 
+function todayDateString() {
+  return new Date().toISOString().split('T')[0];
+}
+
+function parseCents(value) {
+  const amount = Number(value);
+  return Number.isInteger(amount) && amount > 0 ? amount : null;
+}
+
 /**
  * EasyPay Bill Payment Receiver API Controller
  * Implements the complete EasyPay integration for MyMoolah
@@ -66,7 +75,7 @@ class EasyPayController {
           correctAmount: 0,
           minAmount: 0,
           maxAmount: 0,
-          expiryDate: null,
+          expiryDate: todayDateString(),
           echoData: EchoData
         });
       }
@@ -150,7 +159,7 @@ class EasyPayController {
       } = req.body;
       
       // Validate required fields
-      if (!EasyPayNumber || !AccountNumber || !Amount || !Reference) {
+      if (!EasyPayNumber || !AccountNumber || Amount == null || !Reference || !EchoData) {
         return res.status(400).json({ error: 'Missing required fields' });
       }
 
@@ -167,7 +176,7 @@ class EasyPayController {
           ResponseCode: '1',
           ResponseMessage: 'Invalid account',
           Amount: 0,
-          expiryDate: new Date().toISOString().split('T')[0],
+          expiryDate: todayDateString(),
           echoData: EchoData
         });
       }
@@ -178,7 +187,7 @@ class EasyPayController {
           ResponseCode: '5',
           ResponseMessage: 'Already paid',
           Amount: bill.amount,
-          expiryDate: bill.dueDate || new Date().toISOString().split('T')[0],
+          expiryDate: bill.dueDate || todayDateString(),
           echoData: EchoData
         });
       }
@@ -193,19 +202,19 @@ class EasyPayController {
           ResponseCode: '3',
           ResponseMessage: `Payment expired. This PIN expired on ${expiredOn}. PINs are valid for ${expiryDays} days from generation. The customer can generate a new PIN in the MyMoolah app.`,
           Amount: bill.amount,
-          expiryDate: bill.dueDate || new Date().toISOString().split('T')[0],
+          expiryDate: bill.dueDate || todayDateString(),
           echoData: EchoData
         });
       }
 
       // Validate amount (ensure integer for DB)
-      const amount = parseInt(Amount, 10);
-      if (isNaN(amount) || amount < 1) {
+      const amount = parseCents(Amount);
+      if (amount == null) {
         return res.status(200).json({
           ResponseCode: '2',
           ResponseMessage: `Incorrect amount. Due amount is R${(bill.amount / 100).toFixed(2)}`,
           Amount: bill.amount,
-          expiryDate: bill.dueDate || new Date().toISOString().split('T')[0],
+          expiryDate: bill.dueDate || todayDateString(),
           echoData: EchoData
         });
       }
@@ -217,7 +226,7 @@ class EasyPayController {
           ResponseCode: '2',
           ResponseMessage: `Incorrect amount. Due amount is R${(bill.amount / 100).toFixed(2)}`,
           Amount: bill.amount,
-          expiryDate: bill.dueDate || new Date().toISOString().split('T')[0],
+          expiryDate: bill.dueDate || todayDateString(),
           echoData: EchoData
         });
       }
@@ -293,8 +302,13 @@ class EasyPayController {
         EchoData
       } = req.body;
 
-      if (!EasyPayNumber || !EchoData) {
-        return res.status(400).json({ error: 'Missing required fields: EasyPayNumber, EchoData' });
+      if (!EasyPayNumber || !AccountNumber || !EchoData || Amount == null) {
+        return res.status(400).json({ error: 'Missing required fields: EasyPayNumber, AccountNumber, Amount, EchoData' });
+      }
+
+      const grossAmountCents = parseCents(Amount);
+      if (grossAmountCents == null) {
+        return res.status(400).json({ error: 'Invalid Amount. Amount must be integer cents.' });
       }
 
       const { Wallet, Transaction, User } = require('../models');
@@ -316,13 +330,19 @@ class EasyPayController {
         return res.status(200).json({ EchoData });
       }
 
+      const minAmount = bill.minAmount ?? bill.amount;
+      const maxAmount = bill.maxAmount ?? bill.amount;
+      if (grossAmountCents < minAmount || grossAmountCents > maxAmount) {
+        console.error(`[EasyPay] paymentNotification: amount ${grossAmountCents} outside allowed range ${minAmount}-${maxAmount} for Bill ${bill.id}`);
+        return res.status(200).json({ EchoData });
+      }
+
       const existingWallet = await Wallet.findOne({ where: { userId: bill.userId } });
       if (!existingWallet) {
         console.error(`[EasyPay] paymentNotification: no wallet for userId ${bill.userId}`);
         return res.status(200).json({ EchoData });
       }
 
-      const grossAmountCents = parseFloat(Amount) || bill.amount;
       const grossAmountRand = grossAmountCents / 100;
 
       const { totalFee, netAmount, feeExclVat, vat } = calculateEasyPayFee(grossAmountRand);
@@ -351,8 +371,17 @@ class EasyPayController {
           return res.status(200).json({ EchoData });
         }
 
+        if (wallet.status !== 'active') {
+          await t.commit();
+          console.error(`[EasyPay] paymentNotification: wallet ${wallet.walletId} is not active; payment acknowledged but not credited`);
+          return res.status(200).json({ EchoData });
+        }
+
         await wallet.credit(grossAmountRand, 'credit', { transaction: t });
-        await wallet.debit(totalFee, 'debit', { transaction: t });
+        await wallet.debit(totalFee, 'debit', {
+          transaction: t,
+          bypassDailyMonthlyLimits: true
+        });
 
         const depositTx = await Transaction.create({
           userId: bill.userId,

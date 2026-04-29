@@ -19,6 +19,7 @@ const mockBill = {
 const mockWallet = {
   id: 9,
   walletId: 'WAL-TEST-0007',
+  status: 'active',
   credit: jest.fn(),
   debit: jest.fn(),
 };
@@ -84,6 +85,7 @@ describe('EasyPay V5 controller', () => {
     mockWallet.credit.mockResolvedValue(mockWallet);
     mockWallet.debit.mockResolvedValue(mockWallet);
     mockPayment.update.mockResolvedValue(mockPayment);
+    mockWallet.status = 'active';
     mockModels.Bill.findOne.mockResolvedValue(mockBill);
     mockModels.Wallet.findOne.mockResolvedValue(mockWallet);
     mockModels.Payment.findOne.mockResolvedValue(null);
@@ -170,6 +172,10 @@ describe('EasyPay V5 controller', () => {
       }),
       { transaction: mockTransaction }
     );
+    expect(mockWallet.debit).toHaveBeenCalledWith(6.33, 'debit', {
+      transaction: mockTransaction,
+      bypassDailyMonthlyLimits: true,
+    });
     expect(mockPayment.update).toHaveBeenCalledWith(
       expect.objectContaining({
         status: 'completed',

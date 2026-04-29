@@ -77,6 +77,11 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.TEXT,
       allowNull: true,
     },
+    reference: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      comment: 'External reference number for payments',
+    },
     fee: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
@@ -147,6 +152,9 @@ module.exports = (sequelize, DataTypes) => {
       },
       {
         fields: ['paymentId'],
+      },
+      {
+        fields: ['reference'],
       },
       {
         fields: ['type'],

@@ -290,7 +290,7 @@ async function main() {
       const metadata = s.channel ? JSON.stringify({ channel: s.channel }) : null;
       const customerName = userId ? `MyMoolah Test User ${userId}` : null;
 
-      await client.query(`
+      const insertResult = await client.query(`
         INSERT INTO bills ("easyPayNumber", "accountNumber", "customerName", amount, "minAmount", "maxAmount",
                            "dueDate", status, "billType", description, "receiverId", metadata, "userId",
                            "createdAt", "updatedAt")
@@ -301,6 +301,10 @@ async function main() {
         dueDateStr, s.status, 'wallet_topup', `Test: ${s.scenario}`,
         RECEIVER_ID, metadata, userId
       ]);
+
+      if (insertResult.rowCount !== 1) {
+        throw new Error(`Failed to insert generated EasyPay PIN ${pin}; database row already exists or insert was skipped.`);
+      }
 
       rows.push([
         envConfig.label,
