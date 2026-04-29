@@ -31,6 +31,7 @@ Investigated why Lesaka/EasyPay reported that all test PINs were invalid. The ro
 - [x] Applied final audit hardening: required V5 fields, integer-cent amount parsing, amount range validation on payment notification, inactive-wallet acknowledgement, EasyPay fee spend-limit bypass, `Transaction.reference` model alignment, and generator insert-conflict aborts.
 - [x] Converted EasyPay gross deposit + user fee ledger posting to one balanced four-line journal entry so the two legs cannot half-post.
 - [x] Investigated staging full-flow verifier failure after deploy; Cloud Run logs showed `Transaction.transactionId cannot be null`. Added explicit deposit/fee `transactionId` values in `paymentNotification`.
+- [x] Investigated the next staging full-flow verifier failure after redeploy; Cloud Run logs showed `column "reference" of relation "transactions" does not exist`. Added migration `20260429_01_add_reference_to_transactions.js` to repair schema parity for the `Transaction.reference` audit field.
 - [x] Updated EasyPay docs, email drafts, changelog, and handover context.
 
 ---
@@ -54,6 +55,7 @@ Investigated why Lesaka/EasyPay reported that all test PINs were invalid. The ro
 - `controllers/easyPayController.js` - Fixed EasyPay payment notification transaction creation to use the wallet string ID expected by the `transactions.walletId` foreign key, added row locking for callback idempotency, and changed stored Payment references to internal EasyPay composite references.
 - `models/Wallet.js` - Added controlled bypass of daily/monthly spend limits for EasyPay fee debits after a successful cash deposit.
 - `models/Transaction.js` - Added the `reference` attribute to match the existing DB column used by EasyPay deposit/fee transaction references.
+- `migrations/20260429_01_add_reference_to_transactions.js` - Adds missing `transactions.reference` column and lookup index where older environments recorded the historical schema migration without the column being present.
 - `tests/easypay-v5-controller.test.js` - Added focused regression coverage for the authorisation/paymentNotification issues found during partner testing.
 - `services/ussdMenuService.js` - Updated EasyPay USSD on-screen and SMS copy to "Valid 30 days".
 - `utils/errorHandler.js` - Updated `PIN_EXPIRED` default message to 30 days.
@@ -82,6 +84,7 @@ The EasyPay test PIN generator now refuses ambiguous runs and forces an explicit
 - Additional audit found V5 contract and financial edge cases: missing required fields could serialize bad responses, notification amount parsing used `parseFloat`/truthiness, fee debits could hit user spend limits, and `Transaction.reference` was not in the model. These have been hardened.
 - Additional finance audit found gross and fee JEs posted separately. The posting now uses one balanced JE for both legs.
 - Post-deploy verifier surfaced one more callback validation error: `Transaction.transactionId` is required, so EasyPay-created Transaction rows must set it explicitly rather than relying on model hooks.
+- The follow-up staging verifier on revision `mymoolah-backend-staging-00493-fn7` reached `Transaction.create` but failed because the staging database does not yet have `transactions.reference`; the code/model now expects it. This is a schema parity issue, not a partner request issue.
 
 ---
 
@@ -89,6 +92,7 @@ The EasyPay test PIN generator now refuses ambiguous runs and forces an explicit
 - [x] `node --check scripts/generate-easypay-test-pins.js && node --check services/ussdMenuService.js && node --check utils/errorHandler.js`
 - [x] `node --check scripts/verify-easypay-test-pins.js`
 - [x] `node --check controllers/easyPayController.js`
+- [x] `node --check migrations/20260429_01_add_reference_to_transactions.js`
 - [x] `npx jest tests/easypay-v5-controller.test.js --runInBand` (passes; existing Jest config warning about `setupFilesAfterSetup` remains)
 - [x] Cursor lints: no errors on edited JS/TS files.
 - [x] Repo sweep confirmed no active legacy EasyPay expiry references remain.
@@ -97,9 +101,9 @@ The EasyPay test PIN generator now refuses ambiguous runs and forces an explicit
 ---
 
 ## Next Steps
-- [ ] In Codespaces, regenerate the final file with `node scripts/generate-easypay-test-pins.js --staging`.
-- [ ] Run `EASYPAY_API_KEY='...' node scripts/verify-easypay-test-pins.js --staging` and confirm zero failures before sending Theodore the XLSX.
-- [ ] After deploy to staging, run `EASYPAY_API_KEY='...' node scripts/verify-easypay-test-pins.js --staging --allow-payment-notification --payment-notification-limit=1` on a disposable fresh batch before asking EasyPay to retry.
+- [ ] Pull latest code in Codespaces and run `./scripts/run-migrations-master.sh staging` before another EasyPay callback test.
+- [ ] Generate a disposable batch with `node scripts/generate-easypay-test-pins.js --staging`, then run `EASYPAY_API_KEY='...' node scripts/verify-easypay-test-pins.js --staging --allow-payment-notification --payment-notification-limit=1`.
+- [ ] If the disposable full-flow verifier passes, regenerate the final file with `node scripts/generate-easypay-test-pins.js --staging`, then run safe verification only with `EASYPAY_API_KEY='...' node scripts/verify-easypay-test-pins.js --staging` and confirm zero failures before sending Theodore the XLSX.
 - [ ] Send Lesaka/EasyPay a fresh XLSX generated from staging plus a short note explaining the previous environment mismatch.
 - [ ] Ask Theodore for one raw request/response pair if any PIN still fails after the staging-seeded CSV is sent.
 
