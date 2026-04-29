@@ -10,11 +10,13 @@ Hardened the EasyPay V5 `transactions.reference` repair migration after UAT fail
 - The migration now skips `ALTER TABLE`, `COMMENT`, and `CREATE INDEX CONCURRENTLY` when the `transactions.reference` column/index already exist, allowing environments with schema parity to mark the migration applied.
 - Follow-up hardening detects the current role and table owner, logs column/index presence, and skips the optional reference index when `transactions.reference` already exists but the current migration role is not the table owner.
 - If `transactions.reference` is genuinely missing and the current role does not own `public.transactions`, the migration now fails with an explicit owner/admin repair message instead of the generic PostgreSQL error.
+- Added `scripts/repair-uat-transactions-reference.js`, a UAT-only admin helper script that uses `db-connection-helper.js` and requires `--apply` before performing the owner-level schema repair.
 - Confirmed the `Transaction.reference` field is still required by active V5 cash-in `paymentNotification` deposit/fee rows; it is not a legacy cash-out-only artifact.
 - Flagged remaining legacy EasyPay cash-out code in voucher paths as tech debt for a separate cleanup pass.
 
 ### Validation
 - `node --check migrations/20260429_01_add_reference_to_transactions.js`
+- `node --check scripts/repair-uat-transactions-reference.js`
 - `git diff --check -- migrations/20260429_01_add_reference_to_transactions.js`
 - Cursor lints: no errors on the migration file.
 
