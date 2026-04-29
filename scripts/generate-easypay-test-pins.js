@@ -84,6 +84,36 @@ function csvRow(values) {
   return values.map(csvCell).join(',');
 }
 
+async function resolveTestUsers(client) {
+  const result = await client.query(`
+    SELECT DISTINCT u.id
+    FROM users u
+    INNER JOIN wallets w ON w."userId" = u.id
+    WHERE u.status = 'active'
+      AND w.status = 'active'
+    ORDER BY u.id
+    LIMIT 2
+  `);
+
+  if (result.rows.length === 0) {
+    throw new Error('No active users with active wallets found in target environment. Create or migrate a controlled test user before generating EasyPay PINs.');
+  }
+
+  const primary = Number(result.rows[0].id);
+  const secondary = result.rows[1] ? Number(result.rows[1].id) : primary;
+
+  if (primary === secondary) {
+    console.warn('⚠️ Only one active wallet user found; "Different user" rows will use the same controlled test user.');
+  }
+
+  return { primary, secondary };
+}
+
+function scenarioUserId(scenario, testUsers) {
+  if (scenario.userId == null) return null;
+  return scenario.userId === 2 ? testUsers.secondary : testUsers.primary;
+}
+
 const scenarios = [
   // Happy path — various amounts (10 PINs)
   ...([5000, 10000, 15000, 20000, 25000, 30000, 50000, 100000, 200000, 400000].map((amt) => ({
@@ -236,14 +266,18 @@ async function main() {
   console.log(`Generating ${scenarios.length} test PINs in ${envConfig.label} for ${envConfig.endpoint}...`);
 
   try {
+    const testUsers = await resolveTestUsers(client);
+    console.log(`Using primary test user ID ${testUsers.primary} and secondary test user ID ${testUsers.secondary}.`);
+
     for (const s of scenarios) {
       const { pin, accountNumber } = generateEasyPayNumber();
       const dueDate = new Date();
       dueDate.setDate(dueDate.getDate() + s.daysUntilExpiry);
       const dueDateStr = dueDate.toISOString().split('T')[0];
+      const userId = scenarioUserId(s, testUsers);
 
       const metadata = s.channel ? JSON.stringify({ channel: s.channel }) : null;
-      const customerName = s.userId === 1 ? 'Andre Test' : s.userId === 2 ? 'User Two' : null;
+      const customerName = userId ? `MyMoolah Test User ${userId}` : null;
 
       await client.query(`
         INSERT INTO bills ("easyPayNumber", "accountNumber", "customerName", amount, "minAmount", "maxAmount",
@@ -254,7 +288,7 @@ async function main() {
       `, [
         pin, accountNumber, customerName, s.amount, s.minAmount, s.maxAmount,
         dueDateStr, s.status, 'wallet_topup', `Test: ${s.scenario}`,
-        RECEIVER_ID, metadata, s.userId
+        RECEIVER_ID, metadata, userId
       ]);
 
       rows.push([
@@ -269,7 +303,7 @@ async function main() {
         s.expectedAuth,
         s.expectedPayment,
         s.status,
-        s.userId || 'NULL'
+        userId || 'NULL'
       ]);
 
       console.log(`  [${s.scenario}] ${pin} — R${(s.amount / 100).toFixed(2)} — ${s.status}`);

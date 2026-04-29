@@ -10,6 +10,7 @@ Standardised EasyPay PIN/voucher expiry to 30 days across active code and docume
 - Updated shared `PIN_EXPIRED` messaging and EasyPay API/integration docs to 30 days.
 - Removed the deprecated expiry-hours variable from `env.template`; `EASYPAY_PIN_EXPIRY_DAYS=30` remains the single runtime control.
 - Hardened `scripts/generate-easypay-test-pins.js` to require `--uat` or `--staging`, use the matching DB helper, add `Environment`/`Endpoint` columns, escape CSV values correctly, and emit XLSX so manual testers do not lose PIN precision in spreadsheets.
+- The EasyPay test PIN generator now resolves active wallet users from the target environment before inserting rows, instead of assuming `users.id` 1 and 2 exist in staging.
 - Updated EasyPay handover, finalisation plan, email drafts, and prior session context to instruct `node scripts/generate-easypay-test-pins.js --staging` for `https://staging.mymoolah.africa/billpayment/v1/`.
 - Clarified EasyPay environment wording: local/Codespaces UAT uses UAT credentials and `.env`; deployed staging partner testing uses the production EasyPay API credential model via GCP Secret Manager with staging data/control test users.
 

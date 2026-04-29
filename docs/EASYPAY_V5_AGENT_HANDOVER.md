@@ -85,6 +85,7 @@ Full details in `docs/EASYPAY_V5_FINALISATION_PLAN.md`. Summary:
 ### Task 4: Generate ~50 test PINs for EasyPay staging partner testing
 - Create `scripts/generate-easypay-test-pins.js` using `db-connection-helper.js`
 - For partner testing against `https://staging.mymoolah.africa/billpayment/v1/`, generate with `node scripts/generate-easypay-test-pins.js --staging` so the `bills` rows exist in the same database the public endpoint uses.
+- The generator selects active wallet users from the target DB at runtime; do not hardcode `users.id` values for staging.
 - Output CSV and XLSX to `docs/integrations/easypay_test_pins.*`; send the XLSX for manual partner testing so PINs remain text.
 - Scenarios: happy path, already paid, expired, cancelled, boundary, amount mismatch, USSD, orphan, invalid PIN
 

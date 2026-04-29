@@ -18,6 +18,7 @@ Investigated why Lesaka/EasyPay reported that all test PINs were invalid. The ro
 - [x] Hardened `scripts/generate-easypay-test-pins.js` to require explicit `--uat` or `--staging`.
 - [x] Added environment and endpoint columns, proper CSV escaping, and XLSX output to prevent spreadsheet scientific-notation issues.
 - [x] Corrected EasyPay docs/email wording so `staging.mymoolah.africa` is described as deployed staging partner testing, not local/Codespaces UAT.
+- [x] Fixed staging generation failure caused by hardcoded `userId=2`; generator now selects real active wallet users in the target environment.
 - [x] Updated EasyPay docs, email drafts, changelog, and handover context.
 
 ---
@@ -27,6 +28,7 @@ Investigated why Lesaka/EasyPay reported that all test PINs were invalid. The ro
 - **Partner test data must target staging**: For Lesaka testing against `staging.mymoolah.africa`, generate PINs with `node scripts/generate-easypay-test-pins.js --staging`.
 - **Staging credential model**: Deployed staging partner testing uses production EasyPay API credentials managed in GCP Secret Manager, with staging data/control test users. It does not use local/Codespaces `.env`.
 - **No production seeding support**: The test PIN generator intentionally supports only `uat` and `staging`.
+- **No hardcoded staging user IDs**: The generator resolves active users with active wallets before inserting bills. If only one active wallet user exists, it reuses that user for the "Different user" rows and prints a warning.
 
 ---
 
@@ -50,6 +52,7 @@ The EasyPay test PIN generator now refuses ambiguous runs and forces an explicit
 - Prior docs mixed "UAT" terminology with a public staging endpoint, while the DB helper treats UAT and staging as separate databases.
 - The previous CSV rows included unescaped comma-containing values, which could shift columns in spreadsheet tools.
 - The attachment from EasyPay shows PINs converted to scientific notation in spreadsheet output; the generator now emits XLSX to preserve text PINs.
+- Staging did not contain `users.id = 2`, causing the first rerun of `--staging` to fail on `bills_userId_fkey`. The generator now selects existing active wallet users at runtime.
 
 ---
 

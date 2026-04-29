@@ -198,7 +198,7 @@ Create a script `scripts/generate-easypay-test-pins.js` that:
 | **Invalid PIN format** | 5 | N/A (not in DB) | N/A | EasyPay sends bad PINs; `infoRequest` → ResponseCode 1 |
 
 4. Output **CSV and XLSX** files at `docs/integrations/easypay_test_pins.*` with columns: `Environment, Endpoint, PIN, AccountNumber, Amount_Cents, Amount_Rands, Scenario, Expected_InfoResponse, Expected_AuthResponse, Expected_PaymentResponse, Bill_Status, User_ID`. Send the XLSX for manual partner testing so spreadsheet software preserves the 14-digit PINs as text.
-4. Assign test PINs to user ID 1 (André) except for the "different user" and "no userId" scenarios
+5. Resolve active wallet users from the target environment before inserting rows. Do not hardcode user IDs; staging control users may not have IDs 1 and 2.
 
 **Important**: Use `generateEasyPayNumber()` from `utils/easyPayUtils.js` for PIN generation. All Bills need `userId` set (except orphan scenario).
 
