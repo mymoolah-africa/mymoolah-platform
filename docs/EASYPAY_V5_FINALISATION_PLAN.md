@@ -185,13 +185,13 @@ Create a script `scripts/generate-easypay-test-pins.js` that:
 
 | Scenario | Count | Bill status | Amount (cents) | Notes |
 |----------|-------|-------------|----------------|-------|
-| Happy path — various amounts | 10 | `pending` | 5000, 10000, 15000, 20000, 25000, 30000, 50000, 100000, 200000, 400000 | Full V5 flow should succeed |
+| Happy path — various amounts | 10 | `pending` | 5000, 10000, 15000, 20000, 25000, 30000, 50000, 100000, 200000, 400000 | Full V5 flow should succeed for the exact listed amount (`minAmount=maxAmount=amount`) |
 | Already paid | 5 | `paid` | 10000 | `infoRequest` → ResponseCode 5 |
 | Expired (past dueDate) | 5 | `pending` | 10000 | `authorisationRequest` → ResponseCode 3 |
 | Cancelled | 3 | `cancelled` | 10000 | `infoRequest` → ResponseCode 3 (expired/cancelled) |
-| Different user (multiple PINs) | 5 | `pending` | 5000–50000 | Verify per-PIN wallet credit |
-| Boundary: min R50 | 3 | `pending` | 5000 | R50 minimum |
-| Boundary: max R4000 | 3 | `pending` | 400000 | R4000 maximum |
+| Different user (multiple PINs) | 5 | `pending` | 5000–50000 | Verify per-PIN wallet credit at exact amount |
+| Boundary: min R50 | 3 | `pending` | 5000 | R50 minimum, exact amount only |
+| Boundary: max R4000 | 3 | `pending` | 400000 | R4000 maximum, exact amount only |
 | Amount mismatch test | 5 | `pending` | 10000 (min=max=10000) | `authorisationRequest` with wrong amount → ResponseCode 2 |
 | USSD-issued | 3 | `pending` | 10000, 20000, 50000 | metadata.channel = 'ussd' |
 | No userId (orphan) | 3 | `pending`, userId=null | 10000 | `paymentNotification` → logs error, returns EchoData |

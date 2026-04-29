@@ -314,7 +314,7 @@ class EasyPayController {
 
         const depositTx = await Transaction.create({
           userId: bill.userId,
-          walletId: wallet.id,
+          walletId: wallet.walletId,
           type: 'deposit',
           amount: grossAmountRand,
           fee: 0,
@@ -338,7 +338,7 @@ class EasyPayController {
 
         await Transaction.create({
           userId: bill.userId,
-          walletId: wallet.id,
+          walletId: wallet.walletId,
           type: 'fee',
           amount: -totalFee,
           fee: totalFee,
@@ -368,7 +368,9 @@ class EasyPayController {
               status: 'completed',
               paymentDate: PaymentDate ? new Date(PaymentDate) : new Date(),
               merchantId: MerchantId || null,
-              terminalId: TerminalId || null
+              terminalId: TerminalId || null,
+              userId: bill.userId,
+              walletId: wallet.walletId
             }, { transaction: t });
           }
         }

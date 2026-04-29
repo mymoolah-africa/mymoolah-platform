@@ -15,13 +15,13 @@ Apologies for the delay on the test data. Please find attached:
 
 | Scenario | Count | Expected infoRequest | Expected authorisationRequest |
 |----------|-------|---------------------|-------------------------------|
-| Happy path (R50 - R4,000) | 10 | 0 (AllowPayment) | 0 (Allow) |
+| Happy path (R50 - R4,000) | 10 | 0 (AllowPayment) | 0 (Allow) for exact listed amount |
 | Already paid | 5 | 5 (AlreadyPaid) | 5 (AlreadyPaid) |
 | Expired | 5 | 3 (ExpiredPayment) | 3 (Expired) |
 | Cancelled | 3 | 3 (ExpiredPayment) | 3 (Expired) |
 | Different user | 5 | 0 (AllowPayment) | 0 (Allow) |
-| Boundary min R50 | 3 | 0 (AllowPayment) | 0 (Allow) |
-| Boundary max R4,000 | 3 | 0 (AllowPayment) | 0 (Allow) |
+| Boundary min R50 | 3 | 0 (AllowPayment) | 0 (Allow) for exact R50 |
+| Boundary max R4,000 | 3 | 0 (AllowPayment) | 0 (Allow) for exact R4,000 |
 | Amount mismatch (fixed R100) | 5 | 0 (AllowPayment) | 2 (InvalidAmount) if amount != R100 |
 | USSD-issued | 3 | 0 (AllowPayment) | 0 (Allow) |
 | No user (orphan) | 3 | 0 (AllowPayment) | 0 (Allow) |
