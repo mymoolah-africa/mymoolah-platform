@@ -1,15 +1,15 @@
-# EasyPay UAT Credentials Email Draft
+# EasyPay Staging Partner-Test Credentials Email Draft
 
 **To**: Malusi@easypay.co.za, Razeen@easypay.co.za  
 **CC**: Nkululeko@easypay.co.za  
 **From**: andre@mymoolah.africa  
-**Subject**: MyMoolah V5 Receiver - UAT Credentials and Test Data
+**Subject**: MyMoolah V5 Receiver - Staging Credentials and Test Data
 
 ---
 
 Hi Malusi and Razeen,
 
-Following our meeting on 10 April, here are the UAT credentials for testing the V5 BillPayment Receiver integration.
+Following our meeting on 10 April, here are the staging partner-test credentials for testing the V5 BillPayment Receiver integration.
 
 I will send the test PIN spreadsheet (`easypay_test_pins.csv`) in a **separate email** after this one.
 
@@ -17,7 +17,7 @@ I will send the test PIN spreadsheet (`easypay_test_pins.csv`) in a **separate e
 
 | Environment | Base URL |
 |-------------|----------|
-| **UAT** | `https://staging.mymoolah.africa/billpayment/v1/` |
+| **Staging partner-test** | `https://staging.mymoolah.africa/billpayment/v1/` |
 | **Production** | `https://api-mm.mymoolah.africa/billpayment/v1/` |
 
 **Endpoints**:
@@ -30,7 +30,7 @@ I will send the test PIN spreadsheet (`easypay_test_pins.csv`) in a **separate e
 
 **Header**: `Authorization: SessionToken {token}`
 
-The SessionToken for UAT will be shared via secure channel (Signal / encrypted email).
+The SessionToken for staging partner testing will be shared via secure channel (Signal / encrypted email). This is the production EasyPay API credential configured on the deployed staging service via GCP Secret Manager, not a local/Codespaces `.env` credential.
 
 ## 3. SFTP for Daily Reconciliation Files
 
@@ -62,9 +62,9 @@ All valid PINs use receiver ID `5063`, are 14-digit Luhn-valid, and expire after
 
 ## 5. What We Need From You
 
-1. **Egress IP CIDRs** (UAT + Production) — for our firewall allowlist on Cloud Run
+1. **Egress IP CIDRs** (staging partner-test + production) — for our firewall allowlist on Cloud Run
 2. **Sample daily SFTP reconciliation file** — column format, timezone, delimiter, and field mapping
-3. **Confirmation of go-live date** for UAT testing
+3. **Confirmation of go-live date** for staging partner testing
 
 Please let me know if you have any questions or need anything else to start testing.
 

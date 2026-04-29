@@ -11,6 +11,7 @@ Standardised EasyPay PIN/voucher expiry to 30 days across active code and docume
 - Removed the deprecated expiry-hours variable from `env.template`; `EASYPAY_PIN_EXPIRY_DAYS=30` remains the single runtime control.
 - Hardened `scripts/generate-easypay-test-pins.js` to require `--uat` or `--staging`, use the matching DB helper, add `Environment`/`Endpoint` columns, escape CSV values correctly, and emit XLSX so manual testers do not lose PIN precision in spreadsheets.
 - Updated EasyPay handover, finalisation plan, email drafts, and prior session context to instruct `node scripts/generate-easypay-test-pins.js --staging` for `https://staging.mymoolah.africa/billpayment/v1/`.
+- Clarified EasyPay environment wording: local/Codespaces UAT uses UAT credentials and `.env`; deployed staging partner testing uses the production EasyPay API credential model via GCP Secret Manager with staging data/control test users.
 
 ### Validation
 - `node --check scripts/generate-easypay-test-pins.js && node --check services/ussdMenuService.js && node --check utils/errorHandler.js`
@@ -643,7 +644,7 @@ Production R50 electricity purchase for user `0720213994` failed with MobileMart
 ## 2026-04-10 - EasyPay V5 finalisation implementation (v2.96.0)
 
 ### Summary
-Executed the 6-task EasyPay V5 Phase 1 Cash-In finalisation plan. Fee model changed to flat R6.33 (R5.50 + VAT) — cash handling % removed. New CoA account `5000-10-02` (Cost of Sales: EasyPay Cash Handling Fee) for MMTP-absorbed costs. Legacy settlement routes removed (security fix: unauthenticated endpoint). New `postCashHandlingCost()` function for batch recon. Test PIN generation script created (~50 PINs for EasyPay UAT). SFTP credentials email drafted. Full documentation sweep across CoA, Integration Guide, Partner QA, supplier-commissions, and env.template.
+Executed the 6-task EasyPay V5 Phase 1 Cash-In finalisation plan. Fee model changed to flat R6.33 (R5.50 + VAT) — cash handling % removed. New CoA account `5000-10-02` (Cost of Sales: EasyPay Cash Handling Fee) for MMTP-absorbed costs. Legacy settlement routes removed (security fix: unauthenticated endpoint). New `postCashHandlingCost()` function for batch recon. Test PIN generation script created (~50 PINs; use staging target for Lesaka partner testing against `staging.mymoolah.africa`). SFTP credentials email drafted. Full documentation sweep across CoA, Integration Guide, Partner QA, supplier-commissions, and env.template.
 
 ### Code changes
 - `services/easyPayDepositService.js` — removed `handlingPct` from fee calc (now flat R6.33); added `postCashHandlingCost()` for batch JE3; exported `ACCOUNT_EASYPAY_CASH_HANDLING`

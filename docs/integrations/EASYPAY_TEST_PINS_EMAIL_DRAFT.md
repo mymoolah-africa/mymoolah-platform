@@ -3,7 +3,7 @@
 **To**: Razeen@easypay.co.za  
 **CC**: Theodore (EasyPay QA), Christopher Bada, Malusi@easypay.co.za, Nkululeko@easypay.co.za  
 **From**: andre@mymoolah.africa  
-**Subject**: Re: MyMoolah V5 Receiver - Test PINs and SessionToken for UAT
+**Subject**: Re: MyMoolah V5 Receiver - Staging Test PINs and SessionToken
 
 ---
 
@@ -29,13 +29,13 @@ Apologies for the delay on the test data. Please find attached:
 
 All valid PINs use receiver ID **5063**, are 14-digit Luhn-valid, are loaded in the same staging database used by `https://staging.mymoolah.africa/billpayment/v1/`, and expire after **30 days**.
 
-**2. UAT SessionToken** — I will share this separately via secure channel (Signal or encrypted message) to comply with our security policy. The token is used in the `Authorization` header:
+**2. Staging partner-test SessionToken** — I will share this separately via secure channel (Signal or encrypted message) to comply with our security policy. This is the production EasyPay API credential configured on the deployed staging service via GCP Secret Manager. The token is used in the `Authorization` header:
 
 ```
 Authorization: SessionToken {token}
 ```
 
-**3. UAT Endpoints (confirmed)**:
+**3. Staging partner-test endpoints (confirmed)**:
 
 - Base URL: `https://staging.mymoolah.africa/billpayment/v1/`
 - `GET /ping` (no auth — live now, returns `{"Ping":"OK"}`)

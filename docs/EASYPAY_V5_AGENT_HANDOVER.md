@@ -82,7 +82,7 @@ Full details in `docs/EASYPAY_V5_FINALISATION_PLAN.md`. Summary:
 - Keep: `issueEasyPayVoucher` and `POST /easypay/topup/issue`
 - **SECURITY**: `POST /easypay/settlement` currently has NO auth middleware — must be removed
 
-### Task 4: Generate ~50 test PINs for EasyPay UAT
+### Task 4: Generate ~50 test PINs for EasyPay staging partner testing
 - Create `scripts/generate-easypay-test-pins.js` using `db-connection-helper.js`
 - For partner testing against `https://staging.mymoolah.africa/billpayment/v1/`, generate with `node scripts/generate-easypay-test-pins.js --staging` so the `bills` rows exist in the same database the public endpoint uses.
 - Output CSV and XLSX to `docs/integrations/easypay_test_pins.*`; send the XLSX for manual partner testing so PINs remain text.
@@ -117,16 +117,16 @@ Tasks 1 + 3 in parallel → Task 2 → Task 4 → Task 5 → Task 6 (last)
 
 ## 6. OUTSTANDING ITEMS TO SEND TO EASYPAY
 
-The following items must be sent to EasyPay to proceed with UAT testing. Andre will send these via email to `Malusi@easypay.co.za` and `Razeen@easypay.co.za`:
+The following items must be sent to EasyPay to proceed with staging partner testing. Andre will send these via email to `Malusi@easypay.co.za` and `Razeen@easypay.co.za`:
 
 ### A. MMTP must provide to EasyPay:
 
 | # | Item | Status | Notes |
 |---|------|--------|-------|
-| 1 | V5 Receiver URLs (UAT + Production) | Ready | UAT: `https://staging.mymoolah.africa/billpayment/v1/`, Prod: `https://api-mm.mymoolah.africa/billpayment/v1/` |
-| 2 | API key (SessionToken) for UAT | Needs creation | Generate and store in GCP Secret Manager; share via secure channel |
-| 3 | API key (SessionToken) for Production | Needs creation | Same process, different value |
-| 4 | ~50 test EasyPay PINs (CSV) | Needs Task 4 | Script generates Bills in an explicit `uat` or `staging` DB target and outputs CSV |
+| 1 | V5 Receiver URLs (Staging partner-test + Production) | Ready | Staging partner-test: `https://staging.mymoolah.africa/billpayment/v1/`, Prod: `https://api-mm.mymoolah.africa/billpayment/v1/` |
+| 2 | EasyPay API key / SessionToken for Staging partner-test | Needs creation | Production EasyPay API credential stored in GCP Secret Manager for the deployed staging service; share via secure channel |
+| 3 | EasyPay API key / SessionToken for Production | Needs creation | Same production EasyPay API credential model, stored in GCP Secret Manager |
+| 4 | ~50 test EasyPay PINs (CSV/XLSX) | Needs Task 4 | Script generates Bills in an explicit `uat` or `staging` DB target and outputs CSV/XLSX; use `--staging` for `staging.mymoolah.africa` |
 | 5 | SFTP credentials for daily recon upload | Needs setup | Create `easypay` user on SFTP VM (`34.35.137.166`), share SSH public key exchange |
 | 6 | Firewall allowlist for EP egress IPs | Waiting on EP | Need their egress IP CIDRs first |
 
@@ -135,11 +135,11 @@ The following items must be sent to EasyPay to proceed with UAT testing. Andre w
 | # | Item | Status | Notes |
 |---|------|--------|-------|
 | 1 | Sample daily SFTP reconciliation file | NOT YET REQUESTED | Andre to ask — need column format, timezone, delimiter |
-| 2 | Egress IP CIDRs (UAT + Production) | NOT YET REQUESTED | For Cloud Run / load balancer allowlisting |
+| 2 | Egress IP CIDRs (staging partner-test + production) | NOT YET REQUESTED | For Cloud Run / load balancer allowlisting |
 | 3 | Confirmation of min/max deposit amounts | ANSWERED (meeting) | R50 min, R4000 max — matches our config |
 | 4 | Cash handling fee confirmation | ANSWERED (meeting) | Variable per merchant; comes in SFTP recon file, not V5 payload |
 | 5 | V5 = only route confirmation | ANSWERED (meeting) | Yes — legacy routes to be removed |
-| 6 | Go-live date for UAT testing | NOT YET REQUESTED | Ask when sharing credentials |
+| 6 | Go-live date for staging partner testing | NOT YET REQUESTED | Ask when sharing credentials |
 
 ---
 

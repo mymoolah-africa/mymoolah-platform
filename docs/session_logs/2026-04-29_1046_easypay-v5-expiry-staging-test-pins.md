@@ -17,6 +17,7 @@ Investigated why Lesaka/EasyPay reported that all test PINs were invalid. The ro
 - [x] Standardised active EasyPay PIN/voucher expiry references to 30 days.
 - [x] Hardened `scripts/generate-easypay-test-pins.js` to require explicit `--uat` or `--staging`.
 - [x] Added environment and endpoint columns, proper CSV escaping, and XLSX output to prevent spreadsheet scientific-notation issues.
+- [x] Corrected EasyPay docs/email wording so `staging.mymoolah.africa` is described as deployed staging partner testing, not local/Codespaces UAT.
 - [x] Updated EasyPay docs, email drafts, changelog, and handover context.
 
 ---
@@ -24,6 +25,7 @@ Investigated why Lesaka/EasyPay reported that all test PINs were invalid. The ro
 ## Key Decisions
 - **30-day expiry is canonical**: `EASYPAY_PIN_EXPIRY_DAYS=30` is the single active control. The deprecated expiry-hours variable was removed from `env.template`.
 - **Partner test data must target staging**: For Lesaka testing against `staging.mymoolah.africa`, generate PINs with `node scripts/generate-easypay-test-pins.js --staging`.
+- **Staging credential model**: Deployed staging partner testing uses production EasyPay API credentials managed in GCP Secret Manager, with staging data/control test users. It does not use local/Codespaces `.env`.
 - **No production seeding support**: The test PIN generator intentionally supports only `uat` and `staging`.
 
 ---
@@ -34,7 +36,7 @@ Investigated why Lesaka/EasyPay reported that all test PINs were invalid. The ro
 - `utils/errorHandler.js` - Updated `PIN_EXPIRED` default message to 30 days.
 - `mymoolah-wallet-frontend/components/overlays/cashout-easypay/CashoutEasyPayOverlay.tsx` - Updated cash-out voucher expiry instruction to 30 days.
 - `env.template` - Removed deprecated expiry-hours variable.
-- EasyPay docs/email drafts - Updated expiry and staging test PIN generation instructions.
+- EasyPay docs/email drafts - Updated expiry, staging credential model, and staging test PIN generation instructions.
 - `docs/AGENT_HANDOVER.md` and `docs/CHANGELOG.md` - Updated continuity docs.
 
 ---

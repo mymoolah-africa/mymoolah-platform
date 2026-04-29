@@ -175,7 +175,7 @@ At `paymentNotification` time: only the R6.33 user fee is charged.
 
 ---
 
-## Task 4: Generate ~50 test PINs for EasyPay UAT
+## Task 4: Generate ~50 test PINs for EasyPay staging partner testing
 
 Create a script `scripts/generate-easypay-test-pins.js` that:
 
@@ -206,25 +206,25 @@ Create a script `scripts/generate-easypay-test-pins.js` that:
 
 ## Task 5: SFTP credentials delivery to EasyPay
 
-Draft an email (save as `docs/integrations/EASYPAY_UAT_CREDENTIALS_EMAIL_DRAFT.md`) containing:
+Draft an email (save as `docs/integrations/EASYPAY_UAT_CREDENTIALS_EMAIL_DRAFT.md`, legacy filename) containing:
 
 1. **V5 Receiver URLs**:
-   - UAT: `https://staging.mymoolah.africa/billpayment/v1/`
+   - Staging partner-test: `https://staging.mymoolah.africa/billpayment/v1/`
    - Production: `https://api-mm.mymoolah.africa/billpayment/v1/`
 
-2. **Authentication**: `Authorization: SessionToken {token}` — token value to be shared via secure channel (Signal / encrypted email)
+2. **Authentication**: `Authorization: SessionToken {token}` — token value to be shared via secure channel (Signal / encrypted email). For deployed staging and production, EasyPay uses the production API credential model configured through GCP Secret Manager, not local/Codespaces `.env`.
 
 3. **SFTP for daily recon files**:
    - Host: `34.35.137.166`, Port: 5022, User: `easypay`
    - Auth: SSH public key (ask EP for their public key)
    - Upload directory: `/home/easypay/` (mapped to GCS bucket)
 
-4. **Test data**: attached CSV of ~50 PINs with expected outcomes
+4. **Test data**: attached XLSX/CSV of ~50 PINs with expected outcomes; use `node scripts/generate-easypay-test-pins.js --staging` for `staging.mymoolah.africa`
 
 5. **Request from EasyPay**:
    - Their egress IP CIDRs for firewall allowlisting
    - A sample daily settlement/recon file (format, columns, timezone)
-   - Confirmation of go-live date for UAT testing
+   - Confirmation of go-live date for staging partner testing
 
 ---
 

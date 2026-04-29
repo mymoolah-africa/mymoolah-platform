@@ -7,8 +7,8 @@
  * Creates Bills in the selected database across multiple test scenarios so
  * EasyPay can exercise every V5 response code against MMTP's receiver.
  *
- * The public EasyPay UAT endpoint is https://staging.mymoolah.africa, so use
- * --staging when generating PINs for Lesaka/EasyPay partner testing.
+ * Lesaka/EasyPay partner testing uses the deployed staging endpoint
+ * https://staging.mymoolah.africa, so use --staging for those PINs.
  *
  * Usage:
  *   node scripts/generate-easypay-test-pins.js --staging
