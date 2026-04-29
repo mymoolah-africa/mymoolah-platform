@@ -520,7 +520,7 @@ X-Request-ID: {UUID} (optional)
 stateDiagram-v2
     [*] --> Pending: User creates top-up
     Pending --> Settled: EasyPay settlement callback
-    Pending --> Expired: 96 hours elapsed
+    Pending --> Expired: 30 days elapsed
     Settled --> [*]
     Expired --> [*]: Wallet not credited
 ```
@@ -528,7 +528,7 @@ stateDiagram-v2
 **States**:
 - `pending_payment`: Voucher created, waiting for payment at store
 - `redeemed`: Payment received, wallet credited
-- `expired`: Voucher expired (96 hours), no wallet credit
+- `expired`: Voucher expired (30 days), no wallet credit
 
 ### 5.2 Cash-out Voucher Lifecycle
 
@@ -537,7 +537,7 @@ stateDiagram-v2
     [*] --> Pending: User creates cash-out<br/>(wallet debited)
     Pending --> Redeemed: EasyPay settlement callback
     Pending --> Cancelled: User cancels<br/>(wallet refunded)
-    Pending --> Expired: 96 hours elapsed<br/>(wallet refunded)
+    Pending --> Expired: 30 days elapsed<br/>(wallet refunded)
     Redeemed --> [*]
     Cancelled --> [*]
     Expired --> [*]
@@ -596,7 +596,7 @@ stateDiagram-v2
     [*] --> Active: User creates voucher<br/>(wallet debited)
     Active --> Redeemed: EasyPay settlement callback<br/>(merchant payment)
     Active --> Cancelled: User cancels<br/>(wallet refunded)
-    Active --> Expired: 96 hours elapsed<br/>(wallet refunded)
+    Active --> Expired: 30 days elapsed<br/>(wallet refunded)
     Redeemed --> [*]
     Cancelled --> [*]
     Expired --> [*]
@@ -606,7 +606,7 @@ stateDiagram-v2
 - `active`: Voucher created, wallet debited, ready for use at EasyPay merchants
 - `redeemed`: Voucher used at merchant, consumed
 - `cancelled`: User cancelled, wallet refunded (voucher amount + transaction fee)
-- `expired`: Voucher expired (96 hours), wallet refunded (voucher amount + transaction fee)
+- `expired`: Voucher expired (30 days), wallet refunded (voucher amount + transaction fee)
 
 **Key Differences from Top-up/Cash-out**:
 - Created as `active` (not `pending_payment`)
@@ -642,7 +642,7 @@ All error responses follow this structured format:
 | `INVALID_PIN` | 400 | Validation | PIN format incorrect | Check PIN is 14 digits starting with '9' |
 | `PIN_NOT_FOUND` | 404 | Not Found | PIN doesn't exist or already settled | Verify PIN with user, check settlement status |
 | `AMOUNT_MISMATCH` | 400 | Validation | Settlement amount doesn't match voucher | Verify expected amount with user |
-| `PIN_EXPIRED` | 400 | Business Logic | PIN >96 hours old | User must create new top-up/cash-out request |
+| `PIN_EXPIRED` | 400 | Business Logic | PIN older than 30 days | User must create new top-up/cash-out request |
 | `ALREADY_SETTLED` | 409 | Idempotency | Duplicate request (idempotency) | Return original response (idempotent) |
 | `DUPLICATE_REQUEST` | 409 | Conflict | Idempotency key used with different request | Use unique idempotency key for each request |
 | `MISSING_API_KEY` | 401 | Security | X-API-Key header missing | Include X-API-Key header |
@@ -1440,7 +1440,7 @@ sequenceDiagram
 | `INVALID_PIN` | 400 | Validation | PIN format incorrect | Fix PIN format |
 | `PIN_NOT_FOUND` | 404 | Not Found | PIN doesn't exist | Verify with user |
 | `AMOUNT_MISMATCH` | 400 | Validation | Amount ≠ expected | Verify amount |
-| `PIN_EXPIRED` | 400 | Business Logic | PIN >96 hours old | User creates new PIN |
+| `PIN_EXPIRED` | 400 | Business Logic | PIN older than 30 days | User creates new PIN |
 | `ALREADY_SETTLED` | 409 | Idempotency | Duplicate request | Use original response |
 | `DUPLICATE_REQUEST` | 409 | Conflict | Key used with different request | Use unique key |
 | `MISSING_API_KEY` | 401 | Security | X-API-Key missing | Include header |

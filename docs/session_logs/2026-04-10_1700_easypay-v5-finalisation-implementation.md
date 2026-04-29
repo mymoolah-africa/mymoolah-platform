@@ -18,7 +18,7 @@ Executed the complete 6-task EasyPay V5 Phase 1 Cash-In finalisation plan (`docs
 - [x] **Task 1**: Created migration `20260410_01_create_easypay_cash_handling_account.js` to seed `5000-10-02` (Cost of Sales: EasyPay Cash Handling Fee)
 - [x] **Task 2**: Fixed fee model in `easyPayDepositService.js` — removed `handlingPct` variable fee, now flat R5.50 + 15% VAT = R6.33. Added `postCashHandlingCost()` for batch recon JE3. Updated `env.template`.
 - [x] **Task 3**: Removed legacy settlement routes from `routes/vouchers.js` (`/easypay/topup/settlement` and `/easypay/settlement`). The unauthenticated `/easypay/settlement` was a security risk. Removed unused `easypayAuthMiddleware` and `idempotencyMiddleware` imports.
-- [x] **Task 4**: Created `scripts/generate-easypay-test-pins.js` — generates ~50 Bills in UAT DB across 10 scenarios (happy path, already paid, expired, cancelled, different user, boundary min/max, amount mismatch, USSD, orphan, invalid PIN). Outputs CSV to `docs/integrations/easypay_test_pins.csv`.
+- [x] **Task 4**: Created `scripts/generate-easypay-test-pins.js` — generates ~50 Bills across 10 scenarios (happy path, already paid, expired, cancelled, different user, boundary min/max, amount mismatch, USSD, orphan, invalid PIN). The script now requires an explicit `--uat` or `--staging` target so partner PINs are seeded into the same database as the endpoint under test. Outputs CSV to `docs/integrations/easypay_test_pins.csv`.
 - [x] **Task 5**: Created `docs/integrations/EASYPAY_UAT_CREDENTIALS_EMAIL_DRAFT.md` with V5 URLs, auth, SFTP details, test data description, and requests from EasyPay (egress IPs, sample recon file, go-live date).
 - [x] **Task 6**: Documentation sweep — updated CHART_OF_ACCOUNTS.md (new account, 3-JE pattern, env vars), EasyPay_V5_PARTNER_QA_CHECKLIST.md (Section F marked done), EasyPay_API_Integration_Guide.md (legacy endpoints marked REMOVED), supplier-commissions.json (updated note), env.template (removed deprecated var, added new).
 - [x] Defensive `parseFloat(Amount)` in `easyPayController.js` paymentNotification (V5 spec says `type: number`)
@@ -79,7 +79,7 @@ For migrations:
 
 To generate test PINs (after migration):
 ```bash
-node scripts/generate-easypay-test-pins.js
+node scripts/generate-easypay-test-pins.js --staging
 ```
 
 ---
@@ -87,7 +87,7 @@ node scripts/generate-easypay-test-pins.js
 ## Next Steps
 
 - [ ] **Andre**: Run migration on UAT, staging, production
-- [ ] **Andre**: Run `node scripts/generate-easypay-test-pins.js` to create test data in UAT
+- [ ] **Andre**: Run `node scripts/generate-easypay-test-pins.js --staging` to create test data for `https://staging.mymoolah.africa/billpayment/v1/`
 - [ ] **Andre**: Send SFTP credentials email to EasyPay (use draft in `docs/integrations/EASYPAY_UAT_CREDENTIALS_EMAIL_DRAFT.md`)
 - [ ] **Andre**: Generate SessionToken for UAT + Production and store in GCP Secret Manager
 - [ ] **Andre**: Request egress IP CIDRs from EasyPay

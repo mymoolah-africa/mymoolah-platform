@@ -84,7 +84,8 @@ Full details in `docs/EASYPAY_V5_FINALISATION_PLAN.md`. Summary:
 
 ### Task 4: Generate ~50 test PINs for EasyPay UAT
 - Create `scripts/generate-easypay-test-pins.js` using `db-connection-helper.js`
-- Output CSV to `docs/integrations/easypay_test_pins.csv`
+- For partner testing against `https://staging.mymoolah.africa/billpayment/v1/`, generate with `node scripts/generate-easypay-test-pins.js --staging` so the `bills` rows exist in the same database the public endpoint uses.
+- Output CSV and XLSX to `docs/integrations/easypay_test_pins.*`; send the XLSX for manual partner testing so PINs remain text.
 - Scenarios: happy path, already paid, expired, cancelled, boundary, amount mismatch, USSD, orphan, invalid PIN
 
 ### Task 5: Draft SFTP credentials email for EasyPay
@@ -125,7 +126,7 @@ The following items must be sent to EasyPay to proceed with UAT testing. Andre w
 | 1 | V5 Receiver URLs (UAT + Production) | Ready | UAT: `https://staging.mymoolah.africa/billpayment/v1/`, Prod: `https://api-mm.mymoolah.africa/billpayment/v1/` |
 | 2 | API key (SessionToken) for UAT | Needs creation | Generate and store in GCP Secret Manager; share via secure channel |
 | 3 | API key (SessionToken) for Production | Needs creation | Same process, different value |
-| 4 | ~50 test EasyPay PINs (CSV) | Needs Task 4 | Script generates Bills + Vouchers in UAT DB, outputs CSV |
+| 4 | ~50 test EasyPay PINs (CSV) | Needs Task 4 | Script generates Bills in an explicit `uat` or `staging` DB target and outputs CSV |
 | 5 | SFTP credentials for daily recon upload | Needs setup | Create `easypay` user on SFTP VM (`34.35.137.166`), share SSH public key exchange |
 | 6 | Firewall allowlist for EP egress IPs | Waiting on EP | Need their egress IP CIDRs first |
 
@@ -241,9 +242,9 @@ Response: `{ "EchoData": "...exactly as received..." }` — **receiver cannot de
 | File | Purpose | Task |
 |------|---------|------|
 | `migrations/20260410_01_create_easypay_cash_handling_account.js` | Seed `5000-10-02` ledger account | Task 1 |
-| `scripts/generate-easypay-test-pins.js` | Generate 50 test Bills + Vouchers + CSV | Task 4 |
+| `scripts/generate-easypay-test-pins.js` | Generate 50 test Bills + CSV/XLSX for explicit `uat` or `staging` target | Task 4 |
 | `docs/integrations/EASYPAY_UAT_CREDENTIALS_EMAIL_DRAFT.md` | Email template for EP | Task 5 |
-| `docs/integrations/easypay_test_pins.csv` | Test data output | Task 4 |
+| `docs/integrations/easypay_test_pins.csv` / `.xlsx` | Test data output | Task 4 |
 
 ### Documentation to update
 | File | What to update | Task |

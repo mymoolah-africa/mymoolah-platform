@@ -18,7 +18,7 @@ EasyPay confirmed in the 10 April meeting:
 2. **Cash handling fee is variable** — depends on the merchant's acquiring bank and payment method. The exact rate per transaction will be in the **daily SFTP reconciliation file** EasyPay sends. It is NOT in the V5 payload.
 3. **MMTP absorbs the cash handling cost** as a cost of revenue initially. The user pays a flat **R5.50 excl VAT** fee only. After accumulating data on actual handling costs, André will decide whether to adjust the user-facing fee.
 4. **SFTP credentials**: MMTP gives EasyPay access to our existing SFTP (`34.35.137.166`). EasyPay uploads daily recon files. **Ask EasyPay for a sample file** to confirm column mapping.
-5. **Test data**: MMTP must pre-generate ~50 EasyPay PINs (Bills + Vouchers) covering all V5 response scenarios so EasyPay can test their switch against our receiver.
+5. **Test data**: MMTP must pre-generate ~50 EasyPay PINs (Bills) covering all V5 response scenarios so EasyPay can test their switch against our receiver. The PINs must be generated in the same database as the public endpoint EasyPay will call.
 
 ---
 
@@ -179,8 +179,9 @@ At `paymentNotification` time: only the R6.33 user fee is charged.
 
 Create a script `scripts/generate-easypay-test-pins.js` that:
 
-1. Uses `scripts/db-connection-helper.js` (`getUATClient()`)
-2. Generates 50 Bills + Vouchers across these scenarios:
+1. Uses `scripts/db-connection-helper.js` with an explicit target environment (`--uat` or `--staging`).
+2. For partner testing against `https://staging.mymoolah.africa/billpayment/v1/`, run `node scripts/generate-easypay-test-pins.js --staging`.
+3. Generates 50 Bills across these scenarios:
 
 | Scenario | Count | Bill status | Amount (cents) | Notes |
 |----------|-------|-------------|----------------|-------|
@@ -196,7 +197,7 @@ Create a script `scripts/generate-easypay-test-pins.js` that:
 | No userId (orphan) | 3 | `pending`, userId=null | 10000 | `paymentNotification` → logs error, returns EchoData |
 | **Invalid PIN format** | 5 | N/A (not in DB) | N/A | EasyPay sends bad PINs; `infoRequest` → ResponseCode 1 |
 
-3. Output a **CSV** file `docs/integrations/easypay_test_pins.csv` with columns: `PIN, Amount_Cents, Amount_Rands, Scenario, Expected_InfoResponse, Expected_AuthResponse, Expected_PaymentResponse, Bill_Status, User_ID`
+4. Output **CSV and XLSX** files at `docs/integrations/easypay_test_pins.*` with columns: `Environment, Endpoint, PIN, AccountNumber, Amount_Cents, Amount_Rands, Scenario, Expected_InfoResponse, Expected_AuthResponse, Expected_PaymentResponse, Bill_Status, User_ID`. Send the XLSX for manual partner testing so spreadsheet software preserves the 14-digit PINs as text.
 4. Assign test PINs to user ID 1 (André) except for the "different user" and "no userId" scenarios
 
 **Important**: Use `generateEasyPayNumber()` from `utils/easyPayUtils.js` for PIN generation. All Bills need `userId` set (except orphan scenario).

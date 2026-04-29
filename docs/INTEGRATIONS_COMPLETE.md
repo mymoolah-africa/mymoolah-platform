@@ -249,7 +249,7 @@
 {
   "codeLength": 14,
   "validation": "Luhn algorithm",
-  "expiry": "96 hours",
+  "expiry": "30 days",
   "settlement": "Network merchants",
   "statuses": ["pending_payment", "active", "redeemed", "expired"]
 }

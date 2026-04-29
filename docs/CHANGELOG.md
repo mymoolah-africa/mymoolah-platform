@@ -1,5 +1,24 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-29 - EasyPay V5 expiry and staging test PIN fix
+
+### Summary
+Standardised EasyPay PIN/voucher expiry to 30 days across active code and documentation, and fixed the V5 partner test PIN workflow so PINs are generated into the same database as the endpoint EasyPay calls.
+
+### Changes
+- Updated user-facing EasyPay expiry text in USSD/SMS copy and the wallet cash-out overlay to 30 days.
+- Updated shared `PIN_EXPIRED` messaging and EasyPay API/integration docs to 30 days.
+- Removed the deprecated expiry-hours variable from `env.template`; `EASYPAY_PIN_EXPIRY_DAYS=30` remains the single runtime control.
+- Hardened `scripts/generate-easypay-test-pins.js` to require `--uat` or `--staging`, use the matching DB helper, add `Environment`/`Endpoint` columns, escape CSV values correctly, and emit XLSX so manual testers do not lose PIN precision in spreadsheets.
+- Updated EasyPay handover, finalisation plan, email drafts, and prior session context to instruct `node scripts/generate-easypay-test-pins.js --staging` for `https://staging.mymoolah.africa/billpayment/v1/`.
+
+### Validation
+- `node --check scripts/generate-easypay-test-pins.js && node --check services/ussdMenuService.js && node --check utils/errorHandler.js`
+- Cursor lints: no errors on edited JS/TS files.
+- Repo sweep: no active legacy EasyPay expiry references remain.
+
+---
+
 ## 2026-04-28 - OTT Mobile integration framework
 
 ### Summary
@@ -631,7 +650,7 @@ Executed the 6-task EasyPay V5 Phase 1 Cash-In finalisation plan. Fee model chan
 - `controllers/easyPayController.js` — defensive `parseFloat(Amount)` on paymentNotification
 - `routes/vouchers.js` — removed legacy settlement routes (`/easypay/topup/settlement`, `/easypay/settlement`); removed unused middleware imports
 - `migrations/20260410_01_create_easypay_cash_handling_account.js` — seeds `5000-10-02` ledger account
-- `scripts/generate-easypay-test-pins.js` — generates ~50 test Bills in UAT DB + CSV output
+- `scripts/generate-easypay-test-pins.js` — generates ~50 test Bills for an explicit `uat` or `staging` DB target + CSV output
 - `env.template` — removed `EASYPAY_TOPUP_CASH_HANDLING_PCT`; added `LEDGER_ACCOUNT_EASYPAY_CASH_HANDLING=5000-10-02`
 
 ### Documentation updates

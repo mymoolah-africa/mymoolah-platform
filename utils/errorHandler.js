@@ -87,7 +87,7 @@ const ERROR_MESSAGES = {
   [ERROR_CODES.PIN_NOT_FOUND]: 'EasyPay PIN not found or already settled.',
   [ERROR_CODES.VOUCHER_NOT_FOUND]: 'Voucher not found.',
   [ERROR_CODES.WALLET_NOT_FOUND]: 'User wallet not found.',
-  [ERROR_CODES.PIN_EXPIRED]: 'EasyPay PIN has expired. PINs expire after 96 hours.',
+  [ERROR_CODES.PIN_EXPIRED]: 'EasyPay PIN has expired. PINs expire after 30 days.',
   [ERROR_CODES.VOUCHER_ALREADY_SETTLED]: 'Voucher has already been settled.',
   [ERROR_CODES.VOUCHER_ALREADY_REDEEMED]: 'Voucher has already been redeemed.',
   [ERROR_CODES.INSUFFICIENT_BALANCE]: 'Insufficient wallet balance.',

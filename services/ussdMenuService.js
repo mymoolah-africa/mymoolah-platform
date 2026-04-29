@@ -599,7 +599,7 @@ async function handleTopupRetailConfirm(session, input) {
     sendPinSmsAsync(session.msisdn, easyPayCode, amount, null, 'easypayTopup');
 
     const formatted = easyPayCode.replace(/(\d{1})(\d{4})(\d{4})(\d{4})(\d{1})/, '$1 $2 $3 $4 $5');
-    return endSession(`EasyPay PIN:\n${formatted}\nPay R${amount} at any\nEasyPay retailer.\nValid 4 days.\nPIN sent via SMS.`);
+    return endSession(`EasyPay PIN:\n${formatted}\nPay R${amount} at any\nEasyPay retailer.\nValid 30 days.\nPIN sent via SMS.`);
   } catch (err) {
     console.error('[USSD] EasyPay top-up error:', err.message);
     return endSession('Service error. Try again later.');
@@ -1339,7 +1339,7 @@ function sendPinSmsAsync(msisdn, pin, amount, recipient, productType, brandName)
         await smsService.sendUssdVoucherSms(e164, pin, amount, brandName || 'Voucher');
       } else if (productType === 'easypayTopup') {
         const formatted = pin.replace(/(\d{1})(\d{4})(\d{4})(\d{4})(\d{1})/, '$1 $2 $3 $4 $5');
-        const msg = `MyMoolah: Your EasyPay Top-up PIN: ${formatted}. Pay R${amount} at any EasyPay retailer. Valid 4 days. Dial *120*5616# for more.`;
+        const msg = `MyMoolah: Your EasyPay Top-up PIN: ${formatted}. Pay R${amount} at any EasyPay retailer. Valid 30 days. Dial *120*5616# for more.`;
         await smsService.sendSms(e164, msg.substring(0, 160), { type: 'ussd', reference: `USSD-EPTOP-${Date.now()}` });
       }
     } catch (smsErr) {

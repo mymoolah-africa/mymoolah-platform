@@ -46,7 +46,7 @@ Please share your SSH public key so we can add it to the server. Files uploaded 
 
 ## 4. Test Data
 
-I will send `easypay_test_pins.csv` in a **separate email** shortly after this one (same recipients).
+I will send `easypay_test_pins.xlsx` and `easypay_test_pins.csv` in a **separate email** shortly after this one (same recipients). The attached PINs must be generated with `node scripts/generate-easypay-test-pins.js --staging` so they exist in the same database used by the `staging.mymoolah.africa` endpoint. Please use the XLSX file for manual testing so the 14-digit PINs are not converted to scientific notation by spreadsheet software.
 
 The file contains ~50 test PIN rows covering:
 - Happy path (various amounts R50 - R4,000)
@@ -58,7 +58,7 @@ The file contains ~50 test PIN rows covering:
 - Orphan PINs (no user linked)
 - Invalid PIN formats (not in DB, expect ResponseCode 1)
 
-All PINs use receiver ID `5063` and are 14-digit Luhn-valid.
+All valid PINs use receiver ID `5063`, are 14-digit Luhn-valid, and expire after 30 days.
 
 ## 5. What We Need From You
 

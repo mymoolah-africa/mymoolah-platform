@@ -14,9 +14,9 @@ Razeen (EasyPay) requested the test PINs CSV that was promised on April 10 but n
 
 ## Tasks Completed
 - [x] Fixed `easyPayController.js` — replaced `smsService.sendSms()` with `notificationService.createNotification()` for EasyPay deposit confirmations (matches VAS notification pattern in `overlayServices.js`)
-- [x] Generated `easypay_test_pins.csv` — Andre ran `node scripts/generate-easypay-test-pins.js` in Codespaces, seeded 45 bills in UAT DB + 5 invalid PINs in CSV
+- [x] Generated `easypay_test_pins.csv` — Andre ran the earlier generator in Codespaces, which seeded 45 bills in UAT DB + 5 invalid PINs in CSV. Later fix: use `node scripts/generate-easypay-test-pins.js --staging` for `staging.mymoolah.africa` partner tests.
 - [x] Retrieved UAT SessionToken — `gcloud secrets versions access latest --secret=easypay-api-key-staging` confirmed key exists
-- [x] Drafted reply email to Razeen — test PIN summary, endpoint confirmation, 96-hour expiry question, SFTP SSH key reminder
+- [x] Drafted reply email to Razeen — test PIN summary, endpoint confirmation, PIN expiry question, SFTP SSH key reminder
 - [x] Drafted separate secure SessionToken email — using onetimesecret.com one-time link
 - [x] Added A5 (PIN expiry alignment) to `EasyPay_V5_PARTNER_QA_CHECKLIST.md`
 - [x] Andre sent both emails to Razeen and team
@@ -26,7 +26,7 @@ Razeen (EasyPay) requested the test PINs CSV that was promised on April 10 but n
 ## Key Decisions
 - **In-app notification, not SMS**: Andre confirmed EasyPay deposit notifications should use the notification engine (`notificationService.createNotification`) not SMS. Pattern matches all other VAS purchase notifications. Type: `txn_wallet_credit`, subtype: `easypay_deposit`.
 - **SessionToken delivery via onetimesecret.com**: One-time self-destructing link sent in a separate email from the main test data email. Complies with security policy (token never in email body).
-- **96-hour PIN expiry needs confirmation from EasyPay**: MMTP expires bills after 96 hours (hardcoded in `voucherController.js`). EasyPay may have their own expiry window. Added as Q&A item A5.
+- **PIN expiry needed confirmation from EasyPay**: MMTP expiry was later standardised to 30 days via `EASYPAY_PIN_EXPIRY_DAYS`. EasyPay confirmed expiry is enforced by MMTP during V5 authorisation.
 
 ---
 
@@ -43,7 +43,7 @@ Razeen (EasyPay) requested the test PINs CSV that was promised on April 10 but n
 ---
 
 ## Testing Performed
-- [x] `node scripts/generate-easypay-test-pins.js` ran successfully in Codespaces — 45 bills inserted into UAT, CSV generated
+- [x] Earlier generator ran successfully in Codespaces — 45 bills inserted into UAT, CSV generated. Later fix: regenerate with `--staging` when testing against `staging.mymoolah.africa`.
 - [x] `gcloud secrets versions access latest --secret=easypay-api-key-staging` — confirmed key exists and is accessible
 - [x] UAT `/ping` endpoint confirmed live: `https://staging.mymoolah.africa/billpayment/v1/ping` returns `{"Ping":"OK"}`
 - [ ] Backend restart pending — `./scripts/one-click-restart-and-start.sh` needed for notification fix
@@ -53,7 +53,7 @@ Razeen (EasyPay) requested the test PINs CSV that was promised on April 10 but n
 ## Next Steps
 - [ ] Andre to restart backend in Codespaces: `./scripts/one-click-restart-and-start.sh` (for notification fix)
 - [ ] Await Razeen/Christopher scheduling UAT testing sprint
-- [ ] Await EasyPay's answer on 96-hour PIN expiry alignment (A5)
+- [x] EasyPay answered PIN expiry alignment (A5): expiry is enforced by MMTP, currently 30 days.
 - [ ] Await EasyPay's SSH public key for SFTP SOF file uploads
 - [ ] Write unit tests for EasyPayAdapter (SOF parser) — from previous session
 
@@ -65,7 +65,7 @@ Razeen (EasyPay) requested the test PINs CSV that was promised on April 10 but n
 - The SessionToken has been shared with Razeen via a one-time link (already consumed)
 - EasyPay team: Razeen (technical), Christopher Bada (scrum master), Theodore (QA), Malusi, Nkululeko
 - The notification fix in `easyPayController.js` requires a backend restart to take effect
-- PIN expiry (96 hours) is hardcoded in `voucherController.js` — may need to be configurable via env var depending on EasyPay's answer
+- PIN expiry is configurable through `EASYPAY_PIN_EXPIRY_DAYS`; current standard is 30 days.
 
 ---
 

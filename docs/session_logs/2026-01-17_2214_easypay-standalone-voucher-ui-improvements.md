@@ -148,7 +148,7 @@ Improved EasyPay standalone voucher UI and messaging to accurately reflect busin
 1. **PIN Format**: 14 digits starting with 9, format: X XXXX XXXX XXXX X (9 + 4-digit MM code 5063 + 8 digits + 1 check digit)
 2. **Usage**: Can only be used at EasyPay merchants (online or in-store), NOT redeemable in wallet
 3. **Status Flow**: `active` → `redeemed` (when used at merchant, EasyPay sends settlement callback)
-4. **Expiry**: 4 days (96 hours) from creation
+4. **Expiry**: 30 days from creation
 5. **Cancellation**: Available while `active`, refunds voucher amount + transaction fee
 6. **Badge**: Blue "EPVoucher" badge (not "EasyPay" or "MMVoucher")
 

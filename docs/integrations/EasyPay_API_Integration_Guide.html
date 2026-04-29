@@ -692,7 +692,7 @@ X-Request-ID: {UUID} (optional)
 <pre><code class="language-mermaid">stateDiagram-v2
     [*] --&gt; Pending: User creates top-up
     Pending --&gt; Settled: EasyPay settlement callback
-    Pending --&gt; Expired: 96 hours elapsed
+    Pending --&gt; Expired: 30 days elapsed
     Settled --&gt; [*]
     Expired --&gt; [*]: Wallet not credited
 </code></pre>
@@ -700,14 +700,14 @@ X-Request-ID: {UUID} (optional)
 <ul>
 <li><code>pending_payment</code>: Voucher created, waiting for payment at store</li>
 <li><code>redeemed</code>: Payment received, wallet credited</li>
-<li><code>expired</code>: Voucher expired (96 hours), no wallet credit</li>
+<li><code>expired</code>: Voucher expired (30 days), no wallet credit</li>
 </ul>
 <h3>5.2 Cash-out Voucher Lifecycle</h3>
 <pre><code class="language-mermaid">stateDiagram-v2
     [*] --&gt; Pending: User creates cash-out&lt;br/&gt;(wallet debited)
     Pending --&gt; Redeemed: EasyPay settlement callback
     Pending --&gt; Cancelled: User cancels&lt;br/&gt;(wallet refunded)
-    Pending --&gt; Expired: 96 hours elapsed&lt;br/&gt;(wallet refunded)
+    Pending --&gt; Expired: 30 days elapsed&lt;br/&gt;(wallet refunded)
     Redeemed --&gt; [*]
     Cancelled --&gt; [*]
     Expired --&gt; [*]
@@ -795,7 +795,7 @@ X-Request-ID: {UUID} (optional)
 <td><code>PIN_EXPIRED</code></td>
 <td>400</td>
 <td>Business Logic</td>
-<td>PIN &gt;96 hours old</td>
+<td>PIN older than 30 days</td>
 <td>User must create new top-up/cash-out request</td>
 </tr>
 <tr>
@@ -1732,7 +1732,7 @@ fi
 <td><code>PIN_EXPIRED</code></td>
 <td>400</td>
 <td>Business Logic</td>
-<td>PIN &gt;96 hours old</td>
+<td>PIN older than 30 days</td>
 <td>User creates new PIN</td>
 </tr>
 <tr>

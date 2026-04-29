@@ -2,23 +2,56 @@
 'use strict';
 
 /**
- * Generate ~50 EasyPay test PINs (Bills) for UAT testing.
+ * Generate ~50 EasyPay test PINs (Bills) for EasyPay V5 testing.
  *
- * Creates Bills in the UAT database across multiple test scenarios so EasyPay
- * can exercise every V5 response code against MMTP's receiver.
+ * Creates Bills in the selected database across multiple test scenarios so
+ * EasyPay can exercise every V5 response code against MMTP's receiver.
+ *
+ * The public EasyPay UAT endpoint is https://staging.mymoolah.africa, so use
+ * --staging when generating PINs for Lesaka/EasyPay partner testing.
  *
  * Usage:
- *   node scripts/generate-easypay-test-pins.js
+ *   node scripts/generate-easypay-test-pins.js --staging
+ *   node scripts/generate-easypay-test-pins.js --uat
  *
  * Output:
  *   docs/integrations/easypay_test_pins.csv
+ *   docs/integrations/easypay_test_pins.xlsx
  */
 
 const path = require('path');
 const fs = require('fs');
-const { getUATClient } = require('./db-connection-helper');
+const XLSX = require('xlsx');
+const { getUATClient, getStagingClient } = require('./db-connection-helper');
 
 const RECEIVER_ID = '5063';
+const ENVIRONMENTS = {
+  uat: {
+    label: 'UAT',
+    clientFactory: getUATClient,
+    endpoint: 'local/Codespaces UAT receiver',
+  },
+  staging: {
+    label: 'STAGING',
+    clientFactory: getStagingClient,
+    endpoint: 'https://staging.mymoolah.africa/billpayment/v1/',
+  },
+};
+
+function parseTargetEnvironment(argv = process.argv.slice(2)) {
+  const explicit = argv.find(arg => ['uat', 'staging', '--uat', '--staging'].includes(arg));
+  const envArg = argv.find(arg => arg.startsWith('--env='));
+  const envValue = envArg ? envArg.split('=')[1] : null;
+  const rawTarget = (explicit || envValue || process.env.EASYPAY_TEST_PIN_ENV || '').replace(/^--/, '').toLowerCase();
+
+  if (ENVIRONMENTS[rawTarget]) {
+    return rawTarget;
+  }
+
+  throw new Error(
+    'Target environment required. Use --staging for Lesaka/EasyPay testing against staging.mymoolah.africa, or --uat for local UAT.'
+  );
+}
 
 function calculateLuhnCheckDigit(number) {
   let sum = 0;
@@ -42,9 +75,18 @@ function generateEasyPayNumber() {
   return { pin: `9${RECEIVER_ID}${accountNumber}${checkDigit}`, accountNumber };
 }
 
+function csvCell(value) {
+  const str = value == null ? '' : String(value);
+  return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+}
+
+function csvRow(values) {
+  return values.map(csvCell).join(',');
+}
+
 const scenarios = [
   // Happy path — various amounts (10 PINs)
-  ...([5000, 10000, 15000, 20000, 25000, 30000, 50000, 100000, 200000, 400000].map((amt, i) => ({
+  ...([5000, 10000, 15000, 20000, 25000, 30000, 50000, 100000, 200000, 400000].map((amt) => ({
     scenario: 'Happy path',
     amount: amt,
     status: 'pending',
@@ -186,10 +228,12 @@ const scenarios = [
 ];
 
 async function main() {
-  const client = await getUATClient();
-  const csvRows = ['PIN,Amount_Cents,Amount_Rands,Scenario,Expected_InfoResponse,Expected_AuthResponse,Expected_PaymentResponse,Bill_Status,User_ID'];
+  const targetEnv = parseTargetEnvironment();
+  const envConfig = ENVIRONMENTS[targetEnv];
+  const client = await envConfig.clientFactory();
+  const rows = [['Environment', 'Endpoint', 'PIN', 'AccountNumber', 'Amount_Cents', 'Amount_Rands', 'Scenario', 'Expected_InfoResponse', 'Expected_AuthResponse', 'Expected_PaymentResponse', 'Bill_Status', 'User_ID']];
 
-  console.log(`Generating ${scenarios.length} test PINs...`);
+  console.log(`Generating ${scenarios.length} test PINs in ${envConfig.label} for ${envConfig.endpoint}...`);
 
   try {
     for (const s of scenarios) {
@@ -213,8 +257,11 @@ async function main() {
         RECEIVER_ID, metadata, s.userId
       ]);
 
-      csvRows.push([
+      rows.push([
+        envConfig.label,
+        envConfig.endpoint,
         pin,
+        accountNumber,
         s.amount,
         (s.amount / 100).toFixed(2),
         s.scenario,
@@ -223,7 +270,7 @@ async function main() {
         s.expectedPayment,
         s.status,
         s.userId || 'NULL'
-      ].join(','));
+      ]);
 
       console.log(`  [${s.scenario}] ${pin} — R${(s.amount / 100).toFixed(2)} — ${s.status}`);
     }
@@ -237,15 +284,37 @@ async function main() {
       '9506300000000'
     ];
     for (const badPin of invalidPins) {
-      csvRows.push([
-        badPin, 'N/A', 'N/A', 'Invalid PIN format',
+      rows.push([
+        envConfig.label, envConfig.endpoint, badPin, 'N/A', 'N/A', 'N/A', 'Invalid PIN format',
         '1 (InvalidAccount)', 'N/A', 'N/A', 'N/A (not in DB)', 'N/A'
-      ].join(','));
+      ]);
     }
 
     const csvPath = path.join(__dirname, '..', 'docs', 'integrations', 'easypay_test_pins.csv');
-    fs.writeFileSync(csvPath, csvRows.join('\n') + '\n', 'utf-8');
+    fs.writeFileSync(csvPath, rows.map(csvRow).join('\n') + '\n', 'utf-8');
+
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.aoa_to_sheet(rows);
+    worksheet['!cols'] = [
+      { wch: 12 },
+      { wch: 52 },
+      { wch: 18 },
+      { wch: 14 },
+      { wch: 14 },
+      { wch: 14 },
+      { wch: 26 },
+      { wch: 24 },
+      { wch: 34 },
+      { wch: 42 },
+      { wch: 14 },
+      { wch: 10 },
+    ];
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'EasyPay Test PINs');
+    const xlsxPath = path.join(__dirname, '..', 'docs', 'integrations', 'easypay_test_pins.xlsx');
+    XLSX.writeFile(workbook, xlsxPath);
+
     console.log(`\nCSV written to: ${csvPath}`);
+    console.log(`XLSX written to: ${xlsxPath}`);
     console.log(`Total: ${scenarios.length} DB rows + ${invalidPins.length} invalid PINs = ${scenarios.length + invalidPins.length} CSV rows`);
   } finally {
     client.release();

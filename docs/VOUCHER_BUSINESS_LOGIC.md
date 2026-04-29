@@ -62,7 +62,7 @@ The Dashboard "Active Vouchers" balance must include:
 - **Cancellation**: **NOT ALLOWED**
 
 ### **EPVouchers (14-digit EP Code) - Traditional**
-- **Expiry**: Automatic after 96 hours if not settled
+- **Expiry**: Automatic after 30 days if not settled
 - **Status Change**: `pending_payment` → `expired`
 - **Balance Impact**:
   - Voucher becomes **R0.00**
@@ -93,7 +93,7 @@ The Dashboard "Active Vouchers" balance must include:
   - Wallet already debited on creation (no credit on settlement)
   - Voucher consumed (balance = 0)
 - **Fees**: Transaction fee (R2.50 default, configurable) charged on creation
-- **Expiry**: 4 days (96 hours) from creation
+- **Expiry**: 30 days from creation
 - **Cancellation**: Available while `active`, refunds voucher amount + transaction fee
 - **Asset Treatment**: Counted as active assets (user has paid upfront)
 - **Badge**: Shows "EPVoucher" (blue #2D8CCA) to distinguish from other EasyPay types

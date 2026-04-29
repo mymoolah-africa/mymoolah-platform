@@ -11,7 +11,7 @@ Hi Razeen,
 
 Apologies for the delay on the test data. Please find attached:
 
-**1. easypay_test_pins.csv** — 55 test rows covering all V5 response scenarios:
+**1. easypay_test_pins.xlsx / easypay_test_pins.csv** — 50 test rows covering all V5 response scenarios. Please use the XLSX file for manual testing so the 14-digit PINs remain text and are not converted to scientific notation by spreadsheet software.
 
 | Scenario | Count | Expected infoRequest | Expected authorisationRequest |
 |----------|-------|---------------------|-------------------------------|
@@ -27,7 +27,7 @@ Apologies for the delay on the test data. Please find attached:
 | No user (orphan) | 3 | 0 (AllowPayment) | 0 (Allow) |
 | Invalid PIN formats | 5 | 1 (InvalidAccount) | N/A |
 
-All valid PINs use receiver ID **5063** and are 14-digit Luhn-valid.
+All valid PINs use receiver ID **5063**, are 14-digit Luhn-valid, are loaded in the same staging database used by `https://staging.mymoolah.africa/billpayment/v1/`, and expire after **30 days**.
 
 **2. UAT SessionToken** — I will share this separately via secure channel (Signal or encrypted message) to comply with our security policy. The token is used in the `Authorization` header:
 
@@ -45,7 +45,7 @@ Authorization: SessionToken {token}
 
 **4. One question for your side**:
 
-Our system currently expires PINs after **96 hours (4 days)** from the time the user generates them. Does EasyPay's switch enforce its own PIN expiry on your side? We want to make sure both sides are aligned so a user doesn't get an "expired" response on our side while EasyPay still considers the PIN valid.
+Our system currently expires PINs after **30 days** from the time the user generates them. EasyPay confirmed that expiry is enforced by MyMoolah during the V5 authorisation request, so there is no EasyPay-side expiry to align.
 
 **5. SFTP reminder** (for production reconciliation files only, as discussed):
 

@@ -573,7 +573,7 @@ export function CashoutEasyPayOverlay() {
                 <li>Visit any EasyPay store</li>
                 <li>Show this 14-digit PIN</li>
                 <li>Receive R{pricing?.voucherAmount.toFixed(2)} in cash</li>
-                <li>Voucher expires in 4 days if not used</li>
+                <li>Voucher expires in 30 days if not used</li>
               </ol>
             </AlertDescription>
           </Alert>

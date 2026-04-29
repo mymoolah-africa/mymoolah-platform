@@ -60,7 +60,7 @@ All backend APIs, frontend components, database schema, reconciliation infrastru
 - Transaction History: Shows net amount (R97.50) + Fee (R2.50) separately
 
 **Voucher Lifecycle:**
-- Status: pending_payment (created) → redeemed (paid at store) → expired (96 hours)
+- Status: pending_payment (created) → redeemed (paid at store) → expired (30 days)
 - Wallet Behavior: NOT debited on creation, credited on settlement (gross - fees)
 
 **API Endpoint (for EasyPay to call):**
@@ -646,7 +646,7 @@ gcloud compute security-policies describe mymoolah-security-policy \
 - Amount range: R50-R4000
 - Fee: R2.50 (deducted from gross)
 - Status flow: pending_payment → redeemed
-- Expiry: 96 hours, NO wallet refund (wallet was never debited)
+- Expiry: 30 days, NO wallet refund (wallet was never debited)
 
 **Cash-out Voucher (14-digit PIN starting with 9)**:
 - Purpose: Cash OUT from wallet
@@ -655,7 +655,7 @@ gcloud compute security-policies describe mymoolah-security-policy \
 - Amount range: R50-R3000
 - Fee: R8.00 (charged upfront)
 - Status flow: pending_payment → redeemed
-- Expiry: 96 hours, wallet REFUNDED (amount + fee)
+- Expiry: 30 days, wallet REFUNDED (amount + fee)
 
 **Key Differences:**
 

@@ -854,7 +854,7 @@ POST /api/v1/vouchers/easypay/issue
   "data": {
     "easypay_code": "91234754101297",
     "amount": 100.00,
-    "expires_at": "2026-01-19T14:53:00.000Z",
+    "expires_at": "2026-02-15T14:53:00.000Z",
     "sms_sent": false,
     "wallet_balance": 500.00,
     "voucher_id": 123
@@ -864,7 +864,7 @@ POST /api/v1/vouchers/easypay/issue
 
 **Notes**:
 - Amount range: R50 - R4000
-- Voucher expires 4 days (96 hours) after creation
+- Voucher expires 30 days after creation
 - Wallet balance remains unchanged (no debit on creation)
 - Requires DB migration `20260409_01_add_userId_to_bills` (`bills.userId`)
 - User must pay at EasyPay store; **V5** completes the flow via **`/billpayment/v1/paymentNotification`**
