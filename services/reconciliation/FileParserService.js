@@ -23,6 +23,7 @@ const MobileMartAdapter = require('./adapters/MobileMartAdapter');
 const FlashAdapter = require('./adapters/FlashAdapter');
 const EasyPayAdapter = require('./adapters/EasyPayAdapter');
 const ZapperAdapter = require('./adapters/ZapperAdapter');
+const OttAdapter = require('./adapters/OttAdapter');
 
 class FileParserService {
   constructor() {
@@ -31,6 +32,7 @@ class FileParserService {
       FlashAdapter: new FlashAdapter(),
       EasyPayAdapter: new EasyPayAdapter(),
       ZapperAdapter: new ZapperAdapter(),
+      OttAdapter: new OttAdapter(),
     };
   }
   

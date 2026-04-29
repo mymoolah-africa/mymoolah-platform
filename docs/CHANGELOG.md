@@ -1,5 +1,30 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-29 - OTT Payout implementation scaffold
+
+### Summary
+Added a feature-gated OTT Mobile Payout scaffold covering credential-safe configuration, read-only connectivity, wallet-to-OTT payout orchestration, webhook/status handling, reconciliation parsing, and focused tests. The integration is disabled by default until OTT partner contract details, hash parameter order, provider codes, fees, and staging secrets are confirmed.
+
+### Changes
+- Added `services/ott/ottClient.js` for Basic Auth, SHA-256 request hashing, endpoint configuration, redaction, and read-only/payout API calls.
+- Added `services/ott/ottPayoutService.js` for payout quoting, unrestricted cash-out enforcement, idempotency reference generation, wallet debit, OTT `PerformPayout`, webhook status updates, reversal handling, and balanced ledger-line construction.
+- Added `routes/ott.js` and mounted it at `/api/v1/ott` with health, provider discovery, quote, submit, status, and webhook endpoints.
+- Added `models/OttPayout.js` and migration `20260429_02_create_ott_payouts.js`, including ledger account `1200-10-08` for OTT Payout Float.
+- Added `services/reconciliation/adapters/OttAdapter.js` and registered it in `FileParserService`.
+- Added `scripts/ott-readonly-check.js` for credentialed read-only checks once hash orders and credentials are configured.
+- Added OTT env placeholders to `env.template`, created local gitignored `.env.codespaces` placeholders, and mapped OTT Secret Manager names in `scripts/deploy-backend.sh`.
+- Updated OTT framework and Chart of Accounts docs with contract gates, webhook recommendation, implementation components, and account mapping.
+
+### Validation
+- `node --check services/ott/ottClient.js && node --check services/ott/ottPayoutService.js && node --check routes/ott.js && node --check models/OttPayout.js && node --check migrations/20260429_02_create_ott_payouts.js && node --check services/reconciliation/adapters/OttAdapter.js && node --check scripts/ott-readonly-check.js && node --check server.js`
+- `npx jest tests/ott-client.test.js tests/ott-payout-service.test.js tests/ott-adapter.test.js --runInBand`
+- Cursor lints: no errors on edited files.
+
+### Remaining Gates
+- Fill local `.env.codespaces` with the OTT API password/API key from André; do not commit.
+- Store staging/production OTT secrets in Secret Manager as `ott-api-username-staging`, `ott-api-password-staging`, `ott-api-key-staging`, `ott-webhook-secret-staging` and production equivalents.
+- Confirm OTT endpoint paths, hash parameter order, provider codes/limits, webhook schema, status/error matrix, and settlement/reconciliation format before enabling `OTT_PAYOUT_ENABLED=true`.
+
 ## 2026-04-29 - EasyPay V5 expiry and staging test PIN fix
 
 ### Summary

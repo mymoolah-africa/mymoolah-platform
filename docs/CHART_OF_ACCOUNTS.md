@@ -74,6 +74,7 @@ and receivables. Normal side: **debit** (increases on debit, decreases on credit
 | `1200-10-05` | MobileMart Float Account | debit | `20260224_03`, `20260115_create...` | `overlayServices.js`, `productPurchaseService.js` | MobileMart VAS (airtime, data, electricity, billers) |
 | `1200-10-06` | DT Mercury / VALR Float Account | debit | `20260224_03`, `20260207120001` | `usdcTransactionService.js`, `internationalPaymentService.js` | USDC/ZAR trades via VALR (FSCA FSP 53308) |
 | `1200-10-07` | PayShap Outbound Float | debit | `20260224_03` | `standardbankRppService.js` | PayShap RPP outbound; **do NOT use for Yellow Card** (see Section 9.1) |
+| `1200-10-08` | OTT Payout Float Account | debit | `20260429_02` | `ottPayoutService.js` | OTT Payout / cash-send principal plus provider pass-through fee clearing; disabled by default until OTT UAT approval |
 | `1200-10-10` | NFC Deposit Float Account | debit | `20260224_03`, `20260210_03` | `nfcDepositService.js` | NFC acquiring float (Halo Dot Phase 1) |
 
 ### 2.2 Liabilities (2xxx-xx-xx)
@@ -674,6 +675,7 @@ sensible defaults. This allows per-environment overrides without code changes.
 | `LEDGER_ACCOUNT_MM_COMMISSION_CLEARING` | *(none)* | MM Commission Clearing | commissionVatService, qrPaymentController |
 | `LEDGER_ACCOUNT_COMMISSION_REVENUE` | *(none)* | Commission Revenue | commissionVatService, qrPaymentController |
 | `LEDGER_ACCOUNT_NFC_FLOAT` | `1200-10-10` | NFC Deposit Float Account | nfcDepositService |
+| `LEDGER_ACCOUNT_OTT_FLOAT` | `1200-10-08` | OTT Payout Float Account | ottPayoutService |
 | `LEDGER_ACCOUNT_FLASH_FLOAT` | `1200-10-04` | Flash Float Account | flashController |
 | `LEDGER_ACCOUNT_ZAPPER_FLOAT` | `1200-10-01` | Zapper Float Account | qrPaymentController |
 | `LEDGER_ACCOUNT_EASYPAY_TOPUP_FLOAT` | `1200-10-02` | EasyPay Top-up Float | migration scripts |

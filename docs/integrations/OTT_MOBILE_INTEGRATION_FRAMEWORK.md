@@ -1,6 +1,6 @@
 # OTT Mobile Integration Framework
 
-**Status**: Framework draft for implementation planning  
+**Status**: Framework plus Phase 1/2 implementation scaffold
 **Created**: 2026-04-28  
 **Classification**: Internal - Banking-Grade Integration Planning  
 **Provider**: OTT Mobile Technologies (Pty) Ltd  
@@ -65,6 +65,24 @@ No API credentials, portal passwords, API keys, or webhook secrets must be
 stored in this repository. Use Google Secret Manager for staging/production and
 gitignored, user-local environment files only for UAT.
 
+### 2.4 Credential status update - 2026-04-29
+
+OTT supplied TEST API credentials through a secure channel. The API username is
+`MYMOOLAHPOT`; the API password and API key are not stored in the repository.
+For local/Codespaces testing they belong only in gitignored `.env.codespaces`.
+For staging and production they must be stored in Google Secret Manager and
+mapped into Cloud Run by deployment tooling.
+
+Partner-facing TEST webhook recommendation:
+
+```text
+https://staging.mymoolah.africa/api/v1/ott/webhook
+```
+
+Use the deployed staging URL for OTT partner testing because it is stable,
+auditable, TLS-terminated, and uses staging Secret Manager values. Codespaces
+public URLs are transient and should be limited to internal smoke tests.
+
 ### 2.3 MMTP references
 
 - `docs/CHART_OF_ACCOUNTS.md`
@@ -101,8 +119,9 @@ change quickly.
   breakers, float monitoring, idempotency, and reconciliation adapters.
 - The cash-withdrawal policy already names Cliquefin / OTT as a contemplated
   cash-withdrawal voucher partner.
-- No dedicated `ottService`, `ottController`, `ottRoutes`, `OttAdapter`, or
-  OTT payout implementation was found in the sweep.
+- A dedicated OTT Payout scaffold now exists (`services/ott/`, `routes/ott.js`,
+  `models/OttPayout.js`, `OttAdapter`) but is disabled by default and must not
+  be treated as production-ready until the contract gates in §5.3.1 are closed.
 - ATM Cash Send appears mostly as wallet UI/navigation concept today; backend
   implementation must not be assumed to exist.
 - Loyalty is a wallet placeholder / Watch-to-Earn adjacent area today; no
@@ -277,17 +296,27 @@ Confirmed from the API manual:
 Planned environment variables:
 
 ```bash
+OTT_PAYOUT_ENABLED=false
 OTT_LIVE_INTEGRATION=false
+OTT_TEST_INTEGRATION=false
 OTT_API_BASE_URL=https://test-payoutapi.ott-mobile.com
-OTT_API_USERNAME=
+OTT_API_USERNAME=MYMOOLAHPOT
 OTT_API_PASSWORD=
 OTT_API_KEY=
 OTT_WEBHOOK_SECRET=
 OTT_PORTAL_URL=https://test-payout-portal.ott-mobile.com
+OTT_WEBHOOK_PUBLIC_BASE_URL=https://staging.mymoolah.africa
+OTT_HASH_PARAM_ORDER_JSON={}
+OTT_ENDPOINTS_JSON={}
+OTT_PAYOUT_PROVIDER_FEE_ZAR=
+OTT_PAYOUT_MM_FEE_ZAR=
+LEDGER_ACCOUNT_OTT_FLOAT=1200-10-08
 ```
 
 Do not add these values to committed files. Names are placeholders for planning
-only and should be finalized during implementation.
+only and should be finalized during implementation. The current scaffold fails
+closed when the feature flag, fee inputs, hash parameter order, or secrets are
+missing.
 
 ### 5.2 Authentication
 
@@ -323,15 +352,41 @@ Confirmed Payout API endpoint family:
 - `POST /api/purchase/v1/GetBalance`
 - `POST /api/purchase/v1/VerifyWH`
 - `POST /api/purchase/v1/GetPaymentStatus`
-- Get Active Providers.
-- Resend SMS of Transaction.
-- Get Universal Branch Codes.
-- Get Country Codes.
-- Get Active Provider Limits.
+- Get Active Providers - path configurable pending partner-confirmed exact path.
+- Resend SMS of Transaction - path configurable pending partner-confirmed exact
+  path.
+- Get Universal Branch Codes - path configurable pending partner-confirmed exact
+  path.
+- Get Country Codes - path configurable pending partner-confirmed exact path.
+- Get Active Provider Limits - path configurable pending partner-confirmed exact
+  path.
 
 Implementation plan must extract and freeze exact path names for the endpoints
 where the API manual showed labels but the current framework summary does not
 yet include path strings.
+
+### 5.3.1 Contract freeze status
+
+MMTP now has a feature-gated implementation scaffold, but the following remain
+partner-confirmed items before enabling wallet debits:
+
+| Contract item | Current status | Implementation handling |
+|---|---|---|
+| Basic Auth username | Received: `MYMOOLAHPOT` | Stored only in local gitignored env / Secret Manager |
+| API password | Received by secure link | André provides to local env / Secret Manager; never commit |
+| API key | Received by secure link | Used only for hash construction; never logged |
+| Exact paths for all named discovery endpoints | TBD | Configurable through `OTT_ENDPOINTS_JSON` |
+| Endpoint-specific hash parameter order | TBD | Required through `OTT_HASH_PARAM_ORDER_JSON`; missing order fails closed |
+| Worked hash examples / vectors | TBD | Unit tests use synthetic vectors until OTT examples are stored outside repo |
+| Provider code list and limits | TBD via API/manual | Read-only checks before payout enablement |
+| Webhook payload schema and retry cadence | TBD | Webhook endpoint exists but fails closed without hash order + secret |
+| Status/error matrix | TBD | Unknown statuses normalise to `processing` and require polling/recon |
+| Settlement/reconciliation file format | TBD | Flexible adapter scaffold exists; final mapping requires OTT sample |
+
+Request signing must remain a pure function: concatenate POST parameter values
+in the exact OTT-specified order, exclude the hash field, append the API key,
+and SHA-256 hash the resulting UTF-8 string. Do not log hash preimages, Basic
+Auth headers, full PII, voucher/PIN values, or bank account details.
 
 ### 5.4 Payout request concepts
 
@@ -418,6 +473,20 @@ code verification:
 These names are not final. They must be checked against existing route mounts
 and service naming before implementation.
 
+Implementation scaffold added:
+
+- `services/ott/ottClient.js`
+- `services/ott/ottPayoutService.js`
+- `routes/ott.js`, mounted at `/api/v1/ott`
+- `models/OttPayout.js`
+- `migrations/20260429_02_create_ott_payouts.js`
+- `services/reconciliation/adapters/OttAdapter.js`
+- `scripts/ott-readonly-check.js`
+
+The scaffold is disabled by default with `OTT_PAYOUT_ENABLED=false`. Read-only
+partner connectivity may be tested only after local or Secret Manager
+credentials and partner-confirmed hash order are configured.
+
 ### 6.2 Reuse candidates to verify
 
 Reuse after verification:
@@ -463,7 +532,8 @@ Before code:
 
 Likely account range:
 
-- `1200-10-XX` supplier float asset range, subject to Finance approval.
+- `1200-10-08` OTT Payout Float Account, subject to Finance approval and
+  migration `20260429_02_create_ott_payouts.js`.
 
 ### 7.2 Voucher resale journal concept
 

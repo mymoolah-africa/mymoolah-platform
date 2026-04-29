@@ -136,6 +136,7 @@ const peachRoutes = require('./routes/peach.js');
 const merchantRoutes = require('./routes/merchants.js');
 const serviceProviderRoutes = require('./routes/serviceproviders.js');
 const easyPayRoutes = require('./routes/easypay.js'); // <-- ADD THIS
+const ottRoutes = require('./routes/ott.js');
 const dtMercuryRoutes = require('./routes/dtmercury.js');
 const ledgerRoutes = require('./routes/ledger.js');
 const settingsRoutes = require('./routes/settings.js');
@@ -493,6 +494,7 @@ app.use('/api/v1/easypay', easyPayRoutes);
 // EasyPay calls: /billpayment/v1/ping, /billpayment/v1/infoRequest,
 //                /billpayment/v1/authorisationRequest, /billpayment/v1/paymentNotification
 app.use('/billpayment/v1', easyPayRoutes);
+app.use('/api/v1/ott', ottRoutes);
 app.use('/api/v1/dtmercury', dtMercuryRoutes);
 app.use('/api/v1/ledger', ledgerRoutes);
 app.use('/api/v1/settings', settingsRoutes);
