@@ -160,6 +160,7 @@ describe('EasyPay V5 controller', () => {
     expect(res.body).toEqual({ EchoData: 'payment-echo' });
     expect(mockModels.Transaction.create).toHaveBeenCalledWith(
       expect.objectContaining({
+        transactionId: expect.stringMatching(/^EP-42-\d+-DEP$/),
         type: 'deposit',
         walletId: 'WAL-TEST-0007',
       }),
@@ -167,6 +168,7 @@ describe('EasyPay V5 controller', () => {
     );
     expect(mockModels.Transaction.create).toHaveBeenCalledWith(
       expect.objectContaining({
+        transactionId: expect.stringMatching(/^EP-42-\d+-FEE$/),
         type: 'fee',
         walletId: 'WAL-TEST-0007',
       }),

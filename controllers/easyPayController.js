@@ -384,6 +384,7 @@ class EasyPayController {
         });
 
         const depositTx = await Transaction.create({
+          transactionId: `${transactionRef}-DEP`,
           userId: bill.userId,
           walletId: wallet.walletId,
           type: 'deposit',
@@ -408,6 +409,7 @@ class EasyPayController {
         }, { transaction: t });
 
         await Transaction.create({
+          transactionId: `${transactionRef}-FEE`,
           userId: bill.userId,
           walletId: wallet.walletId,
           type: 'fee',

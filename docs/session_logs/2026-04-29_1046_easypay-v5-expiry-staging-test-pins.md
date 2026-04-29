@@ -30,6 +30,7 @@ Investigated why Lesaka/EasyPay reported that all test PINs were invalid. The ro
 - [x] Added focused Jest tests for EasyPay V5 controller authorisation/payment notification behavior.
 - [x] Applied final audit hardening: required V5 fields, integer-cent amount parsing, amount range validation on payment notification, inactive-wallet acknowledgement, EasyPay fee spend-limit bypass, `Transaction.reference` model alignment, and generator insert-conflict aborts.
 - [x] Converted EasyPay gross deposit + user fee ledger posting to one balanced four-line journal entry so the two legs cannot half-post.
+- [x] Investigated staging full-flow verifier failure after deploy; Cloud Run logs showed `Transaction.transactionId cannot be null`. Added explicit deposit/fee `transactionId` values in `paymentNotification`.
 - [x] Updated EasyPay docs, email drafts, changelog, and handover context.
 
 ---
@@ -80,6 +81,7 @@ The EasyPay test PIN generator now refuses ambiguous runs and forces an explicit
 - Additional audit found `Payment.reference` used EasyPay's POS `Reference` directly despite a unique DB index. This is now an internal composite reference based on `EasyPayNumber + Reference`.
 - Additional audit found V5 contract and financial edge cases: missing required fields could serialize bad responses, notification amount parsing used `parseFloat`/truthiness, fee debits could hit user spend limits, and `Transaction.reference` was not in the model. These have been hardened.
 - Additional finance audit found gross and fee JEs posted separately. The posting now uses one balanced JE for both legs.
+- Post-deploy verifier surfaced one more callback validation error: `Transaction.transactionId` is required, so EasyPay-created Transaction rows must set it explicitly rather than relying on model hooks.
 
 ---
 
