@@ -29,6 +29,7 @@ Investigated why Lesaka/EasyPay reported that all test PINs were invalid. The ro
 - [x] Extended the verifier with a disposable `--allow-payment-notification` full-flow mode so MMTP can prove the callback before asking EasyPay to retest.
 - [x] Added focused Jest tests for EasyPay V5 controller authorisation/payment notification behavior.
 - [x] Applied final audit hardening: required V5 fields, integer-cent amount parsing, amount range validation on payment notification, inactive-wallet acknowledgement, EasyPay fee spend-limit bypass, `Transaction.reference` model alignment, and generator insert-conflict aborts.
+- [x] Converted EasyPay gross deposit + user fee ledger posting to one balanced four-line journal entry so the two legs cannot half-post.
 - [x] Updated EasyPay docs, email drafts, changelog, and handover context.
 
 ---
@@ -78,6 +79,7 @@ The EasyPay test PIN generator now refuses ambiguous runs and forces an explicit
 - Theodore's second concern, paying R400 against an R100 happy-path PIN, was caused by the test generator's broad min/max range. Real generated top-up PINs are exact amount, so the generator was corrected.
 - Additional audit found `Payment.reference` used EasyPay's POS `Reference` directly despite a unique DB index. This is now an internal composite reference based on `EasyPayNumber + Reference`.
 - Additional audit found V5 contract and financial edge cases: missing required fields could serialize bad responses, notification amount parsing used `parseFloat`/truthiness, fee debits could hit user spend limits, and `Transaction.reference` was not in the model. These have been hardened.
+- Additional finance audit found gross and fee JEs posted separately. The posting now uses one balanced JE for both legs.
 
 ---
 

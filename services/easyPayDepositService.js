@@ -46,25 +46,18 @@ function calculateEasyPayFee(grossAmountRand) {
  *   Client Float:  CR grossAmount - DR totalFee = CR netAmount (user net balance increase)
  */
 async function postEasyPayDeposit({ reference, grossAmountRand, totalFeeRand, description }) {
-  const depositJE = await ledgerService.postJournalEntry({
+  const journalEntry = await ledgerService.postJournalEntry({
     reference: `EP-DEP-${reference}`,
-    description: description || `EasyPay deposit (gross face value): ${reference}`,
+    description: description || `EasyPay deposit and user fee: ${reference}`,
     lines: [
       { accountCode: ACCOUNT_EASYPAY_FLOAT, dc: 'debit', amount: grossAmountRand, memo: 'EasyPay float — gross face value receivable T+2' },
       { accountCode: ACCOUNT_CLIENT_FLOAT, dc: 'credit', amount: grossAmountRand, memo: 'Client wallet credit — gross face value' },
-    ],
-  });
-
-  const feeJE = await ledgerService.postJournalEntry({
-    reference: `EP-FEE-${reference}`,
-    description: `EasyPay user fee (R5.50 + VAT, pass-through): ${reference}`,
-    lines: [
       { accountCode: ACCOUNT_CLIENT_FLOAT, dc: 'debit', amount: totalFeeRand, memo: 'Flat fee charged to user (R5.50 excl VAT + 15% VAT)' },
       { accountCode: ACCOUNT_EASYPAY_FLOAT, dc: 'credit', amount: totalFeeRand, memo: 'EasyPay retains fee from settlement' },
     ],
   });
 
-  return { depositJE, feeJE };
+  return { depositJE: journalEntry, feeJE: journalEntry };
 }
 
 /**

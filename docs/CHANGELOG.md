@@ -18,6 +18,7 @@ Standardised EasyPay PIN/voucher expiry to 30 days across active code and docume
 - Changed EasyPay authorisation storage to use an internal composite reference (`EasyPayNumber + POS Reference`) and made repeated authorisations idempotent so reused POS references cannot trip the unique `payments.reference` index.
 - Hardened V5 contract validation: `infoRequest` invalid-account responses now return a date-string `expiryDate`; `authorisationRequest` requires `EchoData`; `paymentNotification` requires `AccountNumber` and integer-cent `Amount`.
 - `paymentNotification` now validates the notified amount against the bill's allowed range, acknowledges inactive/no-wallet/orphan cases without throwing, and bypasses daily/monthly spend limits only for the post-deposit EasyPay fee sweep.
+- EasyPay gross deposit and user fee ledger posting now uses one balanced four-line journal entry, preventing partial JE posting between gross and fee legs.
 - Added `Transaction.reference` to the Sequelize model so EasyPay deposit/fee transaction references are persisted for audit and reconciliation.
 - Updated the EasyPay staging test PIN generator so successful cash-in rows are exact-amount (`minAmount=maxAmount=amount`), matching real app/USSD issued top-up PINs, and forced PIN/account cells to text in the XLSX output.
 - The test PIN generator now aborts if an expected bill insert is skipped by conflict, preventing XLSX/DB divergence.
