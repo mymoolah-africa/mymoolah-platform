@@ -8,7 +8,7 @@
 ---
 
 ## Session Summary
-Hardened the EasyPay V5 `transactions.reference` migration after UAT failed with `ERROR: must be owner of table transactions`. Confirmed the reference column is still part of the active V5 cash-in path and documented the separate legacy EasyPay cash-out code risk for a future cleanup pass.
+Hardened the EasyPay V5 `transactions.reference` migration after UAT failed with `ERROR: must be owner of table transactions`. Confirmed the reference column is still part of the active V5 cash-in path and documented the separate legacy EasyPay cash-out code risk for a future cleanup pass. A follow-up hardening pass added table-owner diagnostics and skips the optional reference index when the cash-in-critical column already exists but the migration role does not own `public.transactions`.
 
 ---
 
@@ -16,6 +16,8 @@ Hardened the EasyPay V5 `transactions.reference` migration after UAT failed with
 - [x] Reviewed the failing migration `20260429_01_add_reference_to_transactions.js`.
 - [x] Confirmed active EasyPay V5 cash-in `paymentNotification` writes `Transaction.reference` for deposit and fee audit rows.
 - [x] Hardened the migration to check catalog metadata before ownership-sensitive DDL.
+- [x] Added current-user/table-owner diagnostics after UAT still failed post-pull.
+- [x] Changed the migration to skip optional index creation when the column exists but the migration role does not own `public.transactions`.
 - [x] Documented legacy EasyPay cash-out voucher code as tech debt instead of mixing that cleanup into the migration repair.
 - [x] Updated changelog and handover documentation.
 
@@ -24,12 +26,12 @@ Hardened the EasyPay V5 `transactions.reference` migration after UAT failed with
 ## Key Decisions
 - **Keep `Transaction.reference`**: It is required by current EasyPay V5 cash-in deposit/fee transaction records and is not only a legacy cash-out artifact.
 - **Scope migration only**: Legacy cash-out code remains a separate cleanup concern because changing voucher behavior during a DB repair could affect old rows and user refunds.
-- **Fail clearly if schema is genuinely missing**: The migration skips DDL only when column/index metadata already exists; if the connected role cannot create missing schema, UAT needs an owner/admin repair rather than a silent workaround.
+- **Fail clearly if schema is genuinely missing**: The migration skips the optional index only when the column exists but ownership blocks index creation; if the column itself is missing, UAT needs an owner/admin repair rather than a silent workaround.
 
 ---
 
 ## Files Modified
-- `migrations/20260429_01_add_reference_to_transactions.js` - Added catalog prechecks before `ALTER TABLE`, `COMMENT`, and `CREATE INDEX CONCURRENTLY`.
+- `migrations/20260429_01_add_reference_to_transactions.js` - Added catalog prechecks before `ALTER TABLE`, `COMMENT`, and `CREATE INDEX CONCURRENTLY`, plus ownership-aware diagnostics and optional index skip behavior.
 - `docs/CHANGELOG.md` - Added the migration hardening entry.
 - `docs/AGENT_HANDOVER.md` - Updated latest status and next-agent context.
 - `docs/CURSOR_2.0_RULES_FINAL.md` - Added tech debt note for legacy EasyPay cash-out voucher code.
@@ -38,12 +40,13 @@ Hardened the EasyPay V5 `transactions.reference` migration after UAT failed with
 ---
 
 ## Code Changes Summary
-The migration now checks `information_schema.columns` for `transactions.reference` and `pg_indexes` for `idx_transactions_reference` before attempting DDL. This avoids PostgreSQL ownership checks on `ALTER TABLE ... IF NOT EXISTS` in environments where schema parity already exists.
+The migration now checks `information_schema.columns` for `transactions.reference`, `pg_indexes` for `idx_transactions_reference`, and `pg_class` ownership for `public.transactions` before attempting DDL. This avoids PostgreSQL ownership checks on optional DDL in environments where the cash-in-critical column already exists, while still failing clearly if the column is missing and the migration role is not the owner/admin.
 
 ---
 
 ## Issues Encountered
 - UAT migration failed from PostgreSQL table ownership checks, not from general database login/auth failure.
+- A proxy restart is unlikely to fix this specific failure because Sequelize connects and reaches DDL execution; the failure is emitted by PostgreSQL authorization checks.
 - André noted EasyPay changed to V5 cash-in only; active route review confirmed legacy cash-out code still exists in voucher controller/model paths.
 
 ---
@@ -51,6 +54,7 @@ The migration now checks `information_schema.columns` for `transactions.referenc
 ## Testing Performed
 - [x] Syntax check: `node --check migrations/20260429_01_add_reference_to_transactions.js`
 - [x] Whitespace check: `git diff --check -- migrations/20260429_01_add_reference_to_transactions.js`
+- [x] Follow-up syntax/whitespace check after ownership-aware changes.
 - [x] Cursor lints: no errors on the edited migration file.
 - [ ] Codespaces UAT migration rerun still required: `./scripts/run-migrations-master.sh uat`
 - [ ] Codespaces staging migration rerun still required if not already applied: `./scripts/run-migrations-master.sh staging`
@@ -60,7 +64,8 @@ The migration now checks `information_schema.columns` for `transactions.referenc
 ## Next Steps
 - [ ] Pull latest in Codespaces.
 - [ ] Run `./scripts/run-migrations-master.sh uat`.
-- [ ] If UAT still reports `must be owner of table transactions`, inspect whether `transactions.reference` or `idx_transactions_reference` is missing and repair table ownership/admin DDL explicitly.
+- [ ] If UAT now reports `transactions.reference is missing, but current migration role does not own public.transactions`, repair table ownership/admin DDL explicitly before retrying.
+- [ ] If UAT logs that the column exists and index is skipped, the migration should complete; add the index later with the owner/admin role if query performance requires it.
 - [ ] After UAT succeeds, run staging migration and complete EasyPay V5 disposable full-flow verification.
 - [ ] Schedule a dedicated EasyPay cleanup pass for legacy cash-out voucher code.
 
