@@ -70,10 +70,11 @@ const PROCESSED_PREFIX  = `processed/standardbank/${ENV_PREFIX}statements/`;
 const FAILED_PREFIX     = `failed/standardbank/${ENV_PREFIX}statements/`;
 
 // SBSA H2H filename patterns (confirmed in SBSA info sheet 2026-03-23)
-// MT940 end-of-day:  MYMOOLAH_OWN11_FINSTMT_YYYYMMDD_HHMMSS
-// MT942 intraday:    MYMOOLAH_OWN11_PROVSTMT_YYYYMMDD_HHMMSS
-const FINSTMT_PATTERN  = /^MYMOOLAH_OWN11_FINSTMT_\d{8}_\d{6}/i;
-const PROVSTMT_PATTERN = /^MYMOOLAH_OWN11_PROVSTMT_\d{8}_\d{6}/i;
+// MT940 end-of-day:  MYMOOLAH_OWN11_FINSTMT_YYYYMMDDHHMMSSSSS_...
+// MT942 intraday:    MYMOOLAH_OWN11_PROVSTMT_YYYYMMDDHHMMSSSSS_...
+// Older docs showed an underscore between date and time; real PROD files do not.
+const FINSTMT_PATTERN  = /^MYMOOLAH_OWN11_FINSTMT_\d{14,17}(?:_|\.txt|$)/i;
+const PROVSTMT_PATTERN = /^MYMOOLAH_OWN11_PROVSTMT_\d{14,17}(?:_|\.txt|$)/i;
 
 // Ledger accounts
 const SBSA_MAIN_ACCOUNT_CODE = process.env.SBSA_MAIN_ACCOUNT_CODE || '1100-02-01'; // SBSA Main Bank Account asset

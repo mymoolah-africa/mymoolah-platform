@@ -41,6 +41,28 @@ describe('sbsaStatementService — statement credit safety', () => {
     jest.clearAllMocks();
   });
 
+  it('recognises real SBSA production FINSTMT and PROVSTMT filenames in the GCS inbox', async () => {
+    const processSpy = jest
+      .spyOn(sbsaStatementService, 'processFile')
+      .mockResolvedValue({ skipped: false });
+    sbsaStatementService.bucket = {
+      getFiles: jest.fn().mockResolvedValue([[
+        { name: 'standardbank/inbox/statements/MYMOOLAH_OWN11_FINSTMT_20260425061519710_242046957.txt' },
+        { name: 'standardbank/inbox/statements/MYMOOLAH_OWN11_PROVSTMT_20260423060512901_241713565.txt' },
+        { name: 'standardbank/inbox/statements/.keep' },
+      ]]),
+    };
+
+    const result = await sbsaStatementService.pollAndProcess();
+
+    expect(result).toMatchObject({ processed: 2, skipped: 0, failed: 0 });
+    expect(processSpy).toHaveBeenCalledTimes(2);
+    expect(processSpy.mock.calls.map(([file]) => file.name)).toEqual([
+      'standardbank/inbox/statements/MYMOOLAH_OWN11_FINSTMT_20260425061519710_242046957.txt',
+      'standardbank/inbox/statements/MYMOOLAH_OWN11_PROVSTMT_20260423060512901_241713565.txt',
+    ]);
+  });
+
   it('does not auto-credit non-DEP statement credits from realtime rails', async () => {
     const result = await sbsaStatementService._processCreditTransaction(
       {
