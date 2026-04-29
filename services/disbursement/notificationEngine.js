@@ -15,7 +15,7 @@
 
 const crypto = require('crypto');
 const { Storage } = require('@google-cloud/storage');
-const { getUATClient, getStagingClient, getProductionClient } = require('../../scripts/db-connection-helper');
+const db = require('../../models');
 
 const LOG_PREFIX = '[NotificationEngine]';
 const WEBHOOK_TIMEOUT_MS = 10_000;
@@ -56,10 +56,16 @@ const VALID_EVENT_TYPES = new Set(Object.values(EVENT_TYPES));
 // ---------------------------------------------------------------------------
 
 function getClient() {
-  const env = process.env.MM_DEPLOYMENT_ENV || process.env.NODE_ENV || 'uat';
-  if (env === 'production') return getProductionClient();
-  if (env === 'staging') return getStagingClient();
-  return getUATClient();
+  return {
+    query: async (sql, bind = []) => {
+      const rows = await db.sequelize.query(sql, {
+        bind,
+        type: db.Sequelize.QueryTypes.SELECT,
+      });
+      return { rows };
+    },
+    release: () => {},
+  };
 }
 
 // ---------------------------------------------------------------------------

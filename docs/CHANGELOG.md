@@ -9,10 +9,12 @@ Closed the main blockers found during the final SBSA H2H/FSTP production investi
 - Fixed `services/standardbank/mt940Parser.js` to parse real SBSA wrapped MT940/MT942 files:
   - Ignores the SWIFT envelope before `:20:` instead of treating it as a bad statement block.
   - Supports SBSA MT942 `PROVSTMT` files that provide `:34F:`/`:90C:`/`:90D:` without `:60M:`/`:62M:`.
+- Fixed `services/standardbank/sbsaStatementService.js` to recognise real production statement filenames such as `MYMOOLAH_OWN11_FINSTMT_20260425061519710_242046957.txt` and `MYMOOLAH_OWN11_PROVSTMT_20260423060512901_241713565.txt`.
 - Hardened `services/standardbank/sbsaStatementService.js` statement-credit safety:
   - Only `DEP` statement credits are delegated to deposit notification auto-crediting.
   - `TRF` statement credits are skipped to avoid double-crediting PayShap/realtime rails already handled elsewhere.
   - Statement deposit idempotency now uses a stable hash of the bank line identity instead of `runId`, so the same R10 line across multiple PROVSTMT/FINSTMT files credits at most once.
+- Fixed `services/disbursement/notificationEngine.js` so Cloud Run can load the Pain.002 poller. The previous implementation imported `scripts/db-connection-helper.js`, but `scripts/` is excluded from the backend Docker image.
 - Added `scripts/sbsa-h2h-gateway-sync.sh`, a dry-run-first VM script for `sftp-1-vm` to copy SBSA external `/Inbox` files into the correct GCS `standardbank/inbox/payments/` and `standardbank/inbox/statements/` prefixes. Outbound support exists but must only be used after explicit production approval because it can move real money.
 - Added focused Jest coverage for real SBSA statement shapes and statement-credit double-credit prevention.
 
@@ -25,6 +27,7 @@ Closed the main blockers found during the final SBSA H2H/FSTP production investi
 ### Validation
 - `npx jest tests/standardbank/mt940Parser.sbsa-real-shape.test.js tests/standardbank/sbsaStatementService.statementCreditSafety.test.js --runInBand`
 - `node --check services/standardbank/mt940Parser.js && node --check services/standardbank/sbsaStatementService.js && node --check tests/standardbank/mt940Parser.sbsa-real-shape.test.js && node --check tests/standardbank/sbsaStatementService.statementCreditSafety.test.js`
+- `node --check services/disbursement/notificationEngine.js && node --check services/standardbank/pain002PollerService.js`
 - `bash -n scripts/sbsa-h2h-gateway-sync.sh`
 - Dry-run on `sftp-1-vm`: `SBSA_H2H_MAX_FILES=12 bash -s -- --inbound < scripts/sbsa-h2h-gateway-sync.sh`
 - Cursor lints: no errors on edited files.

@@ -384,8 +384,8 @@ Recommended signing: **SHA256**
 
 | File Type | Pattern | Example |
 |-----------|---------|---------|
-| MT940 (end-of-day) | `MYMOOLAH_OWN11_FINSTMT_YYYYMMDD_HHMMSS` | `MYMOOLAH_OWN11_FINSTMT_20260323_060000` |
-| MT942 (intraday) | `MYMOOLAH_OWN11_PROVSTMT_YYYYMMDD_HHMMSS` | `MYMOOLAH_OWN11_PROVSTMT_20260323_141500` |
+| MT940 (end-of-day) | `MYMOOLAH_OWN11_FINSTMT_yyyymmddhhmmssSSS_*` | `MYMOOLAH_OWN11_FINSTMT_20260425061519710_242046957.txt` |
+| MT942 (intraday) | `MYMOOLAH_OWN11_PROVSTMT_yyyymmddhhmmssSSS_*` | `MYMOOLAH_OWN11_PROVSTMT_20260423060512901_241713565.txt` |
 | Pain.001 (outbound payment) | `CLNT_USERID_Pain001v3_CountryCode_TST/PRD_yyyymmddhhmmssSSS.xml` | Per SBSA spec |
 | ACK response | `MYMOOLAH_OWN11_ACK_TST/PRD_yyyymmddhhmmssSSS.xml` | Confirmation of file receipt |
 | NACK response | `MYMOOLAH_OWN11_NACK_TST/PRD_yyyymmddhhmmssSSS.xml` | Rejection notification |
@@ -415,7 +415,7 @@ Recommended signing: **SHA256**
 
 - **Gateway sync**: `scripts/sbsa-h2h-gateway-sync.sh` — Dry-run-first helper for `sftp-1-vm` to copy SBSA external `/Inbox` files into GCS. It skips zero-byte inbound files and routes `FINSTMT`/`PROVSTMT` to `standardbank/inbox/statements/`, and `ACK`/`NACK`/`INTAUD`/`FINAUD`/`UNP_DATA`/`VET_DATA` to `standardbank/inbox/payments/`.
 - **Parser**: `services/standardbank/mt940Parser.js` — Parses real SBSA MT940/MT942 SWIFT files, including wrapped SWIFT envelopes and MT942 `:34F:` intraday balances without `:60M:`/`:62M:`.
-- **Service**: `services/standardbank/sbsaStatementService.js` — Orchestrates: poll GCS → parse → match known references → credit wallet EFT deposits via deposit notification service → archive
+- **Service**: `services/standardbank/sbsaStatementService.js` — Orchestrates: poll GCS → parse → match known references → credit wallet EFT deposits via deposit notification service → archive. It recognises real production compact timestamp filenames, not only the older documented `YYYYMMDD_HHMMSS` shape.
 - **Poller cron**: `server.js` — Runs every 2 minutes (configurable via `SBSA_STATEMENT_POLL_SCHEDULE`)
 - **Deposit crediting**: `services/standardbankDepositNotificationService.js` — Resolves MSISDN reference → wallet credit, or parks in suspense for ops review
 - **Idempotency**: Files tracked by MD5 hash in `SBSAStatementRun` table; statement deposits tracked by a stable bank-line hash in `StandardBankTransaction.transactionId`, not by statement run ID. This prevents the same bank line appearing in multiple PROVSTMT/FINSTMT files from crediting twice.
