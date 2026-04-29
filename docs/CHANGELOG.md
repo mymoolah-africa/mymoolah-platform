@@ -1,5 +1,21 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-29 - EasyPay V5 transaction reference migration hardening
+
+### Summary
+Hardened the EasyPay V5 `transactions.reference` repair migration after UAT failed with `ERROR: must be owner of table transactions` even though previous UAT migrations have run successfully. The fix preserves the current EasyPay V5 cash-in-only model and avoids touching legacy cash-out behavior.
+
+### Changes
+- Updated `migrations/20260429_01_add_reference_to_transactions.js` to query PostgreSQL catalog metadata before ownership-sensitive DDL.
+- The migration now skips `ALTER TABLE`, `COMMENT`, and `CREATE INDEX CONCURRENTLY` when the `transactions.reference` column/index already exist, allowing environments with schema parity to mark the migration applied.
+- Confirmed the `Transaction.reference` field is still required by active V5 cash-in `paymentNotification` deposit/fee rows; it is not a legacy cash-out-only artifact.
+- Flagged remaining legacy EasyPay cash-out code in voucher paths as tech debt for a separate cleanup pass.
+
+### Validation
+- `node --check migrations/20260429_01_add_reference_to_transactions.js`
+- `git diff --check -- migrations/20260429_01_add_reference_to_transactions.js`
+- Cursor lints: no errors on the migration file.
+
 ## 2026-04-29 - OTT Payout implementation scaffold
 
 ### Summary

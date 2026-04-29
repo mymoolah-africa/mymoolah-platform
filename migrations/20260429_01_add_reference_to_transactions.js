@@ -10,20 +10,49 @@
  */
 module.exports = {
   async up(queryInterface) {
-    await queryInterface.sequelize.query(`
-      ALTER TABLE transactions
-      ADD COLUMN IF NOT EXISTS "reference" VARCHAR(255);
-    `, { transaction: null });
+    const columnExists = async () => {
+      const [rows] = await queryInterface.sequelize.query(`
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'transactions'
+          AND column_name = 'reference'
+        LIMIT 1;
+      `, { transaction: null });
+      return rows.length > 0;
+    };
 
-    await queryInterface.sequelize.query(`
-      COMMENT ON COLUMN transactions."reference"
-      IS 'External reference number for payments';
-    `, { transaction: null });
+    const indexExists = async () => {
+      const [rows] = await queryInterface.sequelize.query(`
+        SELECT 1
+        FROM pg_indexes
+        WHERE schemaname = 'public'
+          AND indexname = 'idx_transactions_reference'
+        LIMIT 1;
+      `, { transaction: null });
+      return rows.length > 0;
+    };
 
-    await queryInterface.sequelize.query(`
-      CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_transactions_reference
-      ON transactions ("reference");
-    `, { transaction: null });
+    const hasReferenceColumn = await columnExists();
+    if (!hasReferenceColumn) {
+      await queryInterface.sequelize.query(`
+        ALTER TABLE transactions
+        ADD COLUMN "reference" VARCHAR(255);
+      `, { transaction: null });
+
+      await queryInterface.sequelize.query(`
+        COMMENT ON COLUMN transactions."reference"
+        IS 'External reference number for payments';
+      `, { transaction: null });
+    }
+
+    const hasReferenceIndex = await indexExists();
+    if (!hasReferenceIndex) {
+      await queryInterface.sequelize.query(`
+        CREATE INDEX CONCURRENTLY idx_transactions_reference
+        ON transactions ("reference");
+      `, { transaction: null });
+    }
   },
 
   async down(queryInterface) {

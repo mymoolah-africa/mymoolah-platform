@@ -189,6 +189,7 @@ This section must be maintained by every agent. Flag issues here so future agent
 | `aiSupportService.js` references `gpt-5` | `services/aiSupportService.js:1187,1558` | Medium — will crash if called | Archive the file |
 | Conversation history in-memory only | `services/ragService.js` | Medium — lost on restart, not scalable | Migrate to Redis for horizontal scaling (Phase 3) |
 | npm audit: 25 vulnerabilities (2 critical) | `package.json` | Medium | Run `npm audit fix` when stable |
+| Legacy EasyPay cash-out voucher code remains after V5 cash-in pivot | `controllers/voucherController.js`, `models/voucherModel.js`, `routes/vouchers.js` | Medium — inactive/legacy branches can confuse future EasyPay cash-in work or be accidentally re-exposed | Run a dedicated EasyPay cleanup pass to separate retained historical voucher support from deprecated cash-out paths; do not mix with migration repairs |
 
 ### **Architectural Decisions Log**
 | Decision | Date | Reason |
