@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useRef, ReactNode } fro
 import { useAuth } from './AuthContext';
 import { APP_CONFIG } from '../config/app-config';
 import { getToken } from '../utils/authToken';
+import { cleanTransactionDescription } from '../utils/transactionDisplay';
 
 interface WalletBalance {
   available: number;
@@ -137,6 +138,12 @@ export function MoolahProvider({ children }: { children: ReactNode }) {
           ? `Voucher purchase - ${metaProductName}`
           : metaProductName;
       }
+
+      displayDescription = cleanTransactionDescription({
+        description: displayDescription,
+        type,
+        metadata: tx.metadata || {},
+      });
 
       return {
         id: tx.id || `tx_${tx.transactionId}`,

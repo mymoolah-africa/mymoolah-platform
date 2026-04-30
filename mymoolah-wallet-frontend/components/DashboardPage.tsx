@@ -6,6 +6,7 @@ import { APP_CONFIG } from '../config/app-config';
 
 // Import centralized transaction icon utility
 import { getTransactionIcon } from '../utils/transactionIcons.tsx';
+import { cleanTransactionDescription } from '../utils/transactionDisplay';
 
 // Import icons directly from lucide-react (for other UI elements)
 import { 
@@ -55,7 +56,11 @@ function formatTransactionDate(date: Date | string): string {
 
 // Derive primary text for display - clean up description format
 function getPrimaryDisplayText(transaction: Transaction): string {
-  let description = transaction.description || '';
+  let description = cleanTransactionDescription({
+    description: transaction.description,
+    type: transaction.type,
+    metadata: transaction.metadata || {},
+  });
   
   // Remove "Ref:" prefix and extract the actual description
           // Convert transaction description format

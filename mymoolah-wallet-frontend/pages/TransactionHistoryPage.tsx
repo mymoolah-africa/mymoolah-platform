@@ -6,6 +6,7 @@ import { APP_CONFIG } from '../config/app-config';
 
 // Import centralized transaction icon utility
 import { getTransactionIcon } from '../utils/transactionIcons.tsx';
+import { cleanTransactionDescription } from '../utils/transactionDisplay';
 import { TransactionDetailModal } from '../components/TransactionDetailModal';
 
 import { Button } from '../components/ui/button';
@@ -110,8 +111,12 @@ export function TransactionHistoryPage() {
             const rawDescription = metaProductName
               ? (isVoucherTx ? `Voucher purchase - ${metaProductName}` : metaProductName)
               : tx.description;
-            // Strip "(incl. VAT)" suffix from fee descriptions for cleaner display
-            const displayDescription = (rawDescription || '').replace(/\s*\(incl\.?\s*VAT\)/i, '').trim() || rawDescription;
+            // Strip "(incl. VAT)" suffix and raw bank narrative noise for cleaner display.
+            const displayDescription = cleanTransactionDescription({
+              description: (rawDescription || '').replace(/\s*\(incl\.?\s*VAT\)/i, '').trim() || rawDescription,
+              type: isCredit ? 'money_in' : 'money_out',
+              metadata: tx.metadata || {},
+            });
             
                          return {
                id: tx.id,

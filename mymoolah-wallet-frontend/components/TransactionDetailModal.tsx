@@ -2,6 +2,7 @@ import React from 'react';
 import { X, Copy, Share, Zap, CheckCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader } from './ui/card';
 import { Button } from './ui/button';
+import { cleanTransactionDescription } from '../utils/transactionDisplay';
 
 interface Transaction {
   id: string;
@@ -31,6 +32,7 @@ interface TransactionDetailModalProps {
 
 export function TransactionDetailModal({ isOpen, onClose, transaction }: TransactionDetailModalProps) {
   if (!isOpen || !transaction) return null;
+  const displayDescription = cleanTransactionDescription(transaction);
 
   const isElectricity = transaction.metadata?.vasType === 'electricity' || 
                         transaction.description?.toLowerCase().includes('electricity');
@@ -461,7 +463,7 @@ export function TransactionDetailModal({ isOpen, onClose, transaction }: Transac
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {/* Description */}
-              {transaction.description && (
+              {displayDescription && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{
                     fontFamily: 'Montserrat, sans-serif',
@@ -482,9 +484,9 @@ export function TransactionDetailModal({ isOpen, onClose, transaction }: Transac
                     whiteSpace: 'nowrap',
                     textAlign: 'right'
                   }}
-                  title={transaction.description}
+                  title={displayDescription}
                   >
-                    {transaction.description}
+                    {displayDescription}
                   </span>
                 </div>
               )}

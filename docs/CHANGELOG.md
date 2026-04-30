@@ -13,6 +13,8 @@ Stopped hidden automatic PBAC retry creation after proxy-based RTP system reject
 - Updated bank deposit display text generation in `services/standardbankDepositNotificationService.js` to use `Deposit from <sender>` when a reliable sender exists, otherwise `Deposit`.
 - Updated `mymoolah-wallet-frontend/utils/transactionIcons.tsx` so SBSA/bank-origin deposits use the inbound arrow icon instead of the wallet icon.
 - Updated statement fallback payloads to pass the full statement narrative into deposit display metadata.
+- Added `mymoolah-wallet-frontend/utils/transactionDisplay.ts` so existing raw SBSA `/PREF/...PAYSHAP PAYMENT FROM` narratives render as `Deposit` in transaction lists and detail modals.
+- Tightened backend sender extraction so raw SBSA `/PREF` narratives are not saved as sender names for future credits.
 
 ### Validation
 - `npm run build` in `mymoolah-wallet-frontend`
@@ -20,6 +22,7 @@ Stopped hidden automatic PBAC retry creation after proxy-based RTP system reject
 - `node --check services/standardbankDepositNotificationService.js && node --check services/standardbank/sbsaStatementService.js && node --check controllers/standardbankController.js && node --check tests/standardbank/depositDescription.test.js`
 - `npx jest tests/standardbank/standardbankRtpService.test.js tests/standardbank/depositDescription.test.js tests/standardbank/sbsaStatementService.statementCreditSafety.test.js tests/standardbank/inboundCreditEventService.test.js --runInBand --no-cache`
 - Latest focused RTP validation: `20/20` tests pass; Discovery logs as `mode=PBAC`, `DbtrAcct` uses the Discovery account number, `DbtrAgt=679000`, and `hasProxy=false`.
+- Latest display cleanup validation: `npm run build` in `mymoolah-wallet-frontend`; focused backend tests pass `21/21`.
 
 ## 2026-04-30 - PayShap H2H R100 fallback recovery
 

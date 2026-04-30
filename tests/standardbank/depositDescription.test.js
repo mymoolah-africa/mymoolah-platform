@@ -29,4 +29,21 @@ describe('standardbankDepositNotificationService deposit descriptions', () => {
       referenceNumber: '0825571055',
     })).toBe('Deposit');
   });
+
+  it('does not treat repeated SBSA /PREF PayShap narrative as a sender name', () => {
+    expect(buildWalletDepositDescription({
+      description: '/PREF/ZA001960PAYSHAP PAYMENT FROM /PREF/ZA001960PAYSHAP PAYMENT FROM',
+      referenceNumber: '0825571055',
+      inboundCreditEvent: {
+        rawPayload: {
+          narrative: {
+            narrativeLines: [
+              '/PREF/ZA001960PAYSHAP PAYMENT FROM',
+              '/PREF/ZA001960PAYSHAP PAYMENT FROM',
+            ],
+          },
+        },
+      },
+    })).toBe('Deposit');
+  });
 });

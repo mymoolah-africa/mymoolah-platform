@@ -19,6 +19,7 @@ Fixed the unsafe Discovery RTP retry behaviour by suppressing hidden automatic P
 - [x] Changed RTP callback handling so proxy system rejects no longer auto-create PBAC retries by default.
 - [x] Verified production `20260430_v4` still failed the original Discovery proxy RTP with `RJCT` / `EERRR,EBONF`, while correctly suppressing hidden PBAC retry.
 - [x] Added Discovery-specific primary PBAC routing so Discovery RTPs use bank account details from initiation instead of proxy-first.
+- [x] Cleaned wallet transaction display so raw SBSA `/PREF/...PAYSHAP PAYMENT FROM` narratives render as `Deposit`.
 - [x] Added focused regression tests for deposit descriptions and RTP auto-PBAC suppression.
 
 ---
@@ -39,6 +40,8 @@ Fixed the unsafe Discovery RTP retry behaviour by suppressing hidden automatic P
 - `services/standardbank/sbsaStatementService.js` - Passed full statement narrative into deposit notification payloads.
 - `controllers/standardbankController.js` - Passed sender name into inbound PayShap deposit processing.
 - `mymoolah-wallet-frontend/utils/transactionIcons.tsx` - Classified SBSA/bank-origin deposits as banking transactions for inbound arrow icon display.
+- `mymoolah-wallet-frontend/utils/transactionDisplay.ts` - Centralised cleanup of raw transaction descriptions for wallet lists and detail modals.
+- Wallet dashboard/history/detail components - Applied display cleanup consistently without changing persisted historical transaction rows.
 - `tests/standardbank/depositDescription.test.js` - Added deposit description tests.
 - `docs/CHANGELOG.md` and `docs/AGENT_HANDOVER.md` - Updated current status and validation notes.
 
@@ -58,6 +61,8 @@ Commands:
 
 Latest result: `20/20` focused tests passed. Discovery test logs `mode=PBAC`, `DbtrAcct.Id.Item.Id=18828076450`, `DbtrAgt=679000`, and `hasProxy=false`.
 
+Latest display cleanup result: wallet frontend build passed; focused backend tests pass `21/21`.
+
 ---
 
 ## Production Evidence
@@ -66,6 +71,7 @@ Latest result: `20/20` focused tests passed. Discovery test logs `mode=PBAC`, `D
 - Timeline: initiated `2026-04-30T10:52:07Z`, pending callbacks at `10:52:16Z`, rejected at `10:52:46Z`.
 - Reject reasons: group `EBONF: One or more request to pays failed when trying to create batch`, payment `EERRR: Error`.
 - DB state: one RTP row, status `rejected`, metadata `pbacAutoRetry: suppressed`, `proxyRejectCodes: [EERRR, EBONF]`; no PBAC retry record created.
+- Follow-up Discovery instant payment was credited at 13:08; UI screenshot showed raw `/PREF/...PAYSHAP PAYMENT FROM` narrative, now cleaned in display code.
 
 ---
 

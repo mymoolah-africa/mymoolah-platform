@@ -161,6 +161,7 @@ function cleanSenderName(value) {
   if (!candidate || candidate.length < 2 || candidate.length > 80) return null;
   if (/^(UNKNOWN|N\/A|NA|NONREF|NOT PROVIDED)$/i.test(candidate)) return null;
   if (/^(PAYSHAP|RPP|EFT|INSTANT EFT|BANK ACCOUNT|PAYMENT FROM)$/i.test(candidate)) return null;
+  if (/\/PREF\//i.test(candidate) || /PAYSHAP PAYMENT FROM/i.test(candidate) || /ZA\d{6,}PAYSHAP/i.test(candidate)) return null;
   if (/^\+?\d[\d\s-]{6,}$/.test(candidate)) return null;
 
   return candidate;

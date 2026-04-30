@@ -6,6 +6,7 @@ import { APP_CONFIG } from '../config/app-config';
 
 // Import centralized transaction icon utility
 import { getTransactionIcon } from '../utils/transactionIcons.tsx';
+import { cleanTransactionDescription } from '../utils/transactionDisplay';
 
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -103,9 +104,14 @@ export function TransactionHistoryPage() {
               tx.metadata?.productType === 'voucher' ||
               tx.metadata?.voucher ||
               (tx.description || '').toLowerCase().includes('voucher');
-            const displayDescription = metaProductName
+            const rawDescription = metaProductName
               ? (isVoucherTx ? `Voucher purchase - ${metaProductName}` : metaProductName)
               : tx.description;
+            const displayDescription = cleanTransactionDescription({
+              description: rawDescription,
+              type: isCredit ? 'money_in' : 'money_out',
+              metadata: tx.metadata || {},
+            });
             
                          return {
                id: tx.id,
