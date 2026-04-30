@@ -332,6 +332,10 @@ class SBSAStatementService {
     });
 
     if (txn.swiftTypeCode !== 'DEP') {
+      if (this._isPayShapStatementFallbackCandidate(txn)) {
+        return await this._processPayShapStatementFallback(txn, statement, runId);
+      }
+
       logger.info('Skipping non-EFT statement credit to avoid double-crediting realtime rails', {
         seq: txn.seq,
         ref,
@@ -399,6 +403,94 @@ class SBSAStatementService {
     }
 
     return false; // Unmatched — handled by deposit notification service
+  }
+
+  /**
+   * Only PayShap/RPP-looking TRF credits may enter the controlled fallback gate.
+   * Everything else remains skipped to avoid broad TRF auto-crediting.
+   */
+  _isPayShapStatementFallbackCandidate(txn) {
+    if (txn.swiftTypeCode !== 'TRF' || txn.direction !== 'credit') return false;
+
+    const narrative = this._statementNarrativeText(txn);
+    if (!narrative) return false;
+    if (/\b(RTP|REQUEST TO PAY)\b/i.test(narrative)) return false;
+    if (/\b(PAYSHAP|RPP)\b/i.test(narrative) && /\b(FROM|CREDIT)\b/i.test(narrative)) return true;
+
+    return false;
+  }
+
+  _statementNarrativeText(txn) {
+    return [
+      txn.clientReference,
+      txn.bankReference,
+      txn.rawNarrative,
+      txn.narrative?.narrative,
+      ...(Array.isArray(txn.narrative?.lines) ? txn.narrative.lines : []),
+    ].filter(Boolean).join(' ');
+  }
+
+  async _processPayShapStatementFallback(txn, statement, runId) {
+    const ref = txn.clientReference || txn.bankReference || '';
+    const syntheticTxnId = this._buildStatementTransactionId(txn, statement);
+    const amountRands = txn.amountCents / 100;
+
+    logger.info('Processing PayShap statement fallback candidate through duplicate-proof gate', {
+      seq: txn.seq,
+      ref,
+      amountCents: txn.amountCents,
+      syntheticTxnId,
+      runId,
+    });
+
+    try {
+      const result = await depositNotificationService.processDepositNotification({
+        transactionId: syntheticTxnId,
+        referenceNumber: ref,
+        amount: amountRands,
+        currency: statement.currency,
+        description: txn.narrative?.narrative || txn.rawNarrative || '',
+        source: 'h2h_statement_trf',
+        inboundCreditEvent: {
+          sourceType: 'h2h_statement_trf',
+          statementRunId: runId,
+          statementTransactionId: syntheticTxnId,
+          sourceReference: txn.bankReference || txn.clientReference || syntheticTxnId,
+          valueDate: txn.valueDate || null,
+          rawPayload: {
+            statementAccount: statement.accountNumber,
+            statementType: statement.statementType,
+            valueDate: txn.valueDate,
+            entryDate: txn.entryDate,
+            swiftTypeCode: txn.swiftTypeCode,
+            clientReference: txn.clientReference,
+            bankReference: txn.bankReference,
+            rawNarrative: txn.rawNarrative,
+            statementOccurrence: txn.statementOccurrence,
+          },
+          metadata: {
+            fallbackPolicy: 'rpp_payshap_trf_phase_1',
+          },
+        },
+      });
+
+      logger.info('PayShap statement fallback result', {
+        ref,
+        amountRands,
+        credited: result.credited,
+        syntheticTxnId,
+        inboundCreditEventId: result.inboundCreditEventId,
+      });
+    } catch (err) {
+      logger.warn('PayShap statement fallback candidate could not be processed', {
+        ref,
+        amountCents: txn.amountCents,
+        syntheticTxnId,
+        error: err.message,
+      });
+    }
+
+    return false;
   }
 
   /**

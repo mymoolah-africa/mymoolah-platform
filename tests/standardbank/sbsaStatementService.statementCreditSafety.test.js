@@ -75,10 +75,72 @@ describe('sbsaStatementService — statement credit safety', () => {
         swiftTypeCode: 'TRF',
         clientReference: '0821234567',
         bankReference: 'NONREF',
-        rawNarrative: '/PREF/ZA001960PAYSHAP PAYMENT FROM',
+        rawNarrative: '/PREF/ZA000377IB PAYMENT FROM',
       },
       { currency: 'ZAR', statementType: 'MT940', accountNumber: '272406481' },
       123
+    );
+
+    expect(result).toBe(true);
+    expect(depositNotificationService.processDepositNotification).not.toHaveBeenCalled();
+  });
+
+  it('routes PayShap-looking TRF credits through the gated fallback path', async () => {
+    depositNotificationService.processDepositNotification.mockResolvedValue({
+      success: true,
+      credited: 'wallet',
+      inboundCreditEventId: 42,
+    });
+
+    const result = await sbsaStatementService._processCreditTransaction(
+      {
+        seq: 8,
+        valueDate: '2026-04-28',
+        entryDate: '2026-04-28',
+        direction: 'credit',
+        amountCents: 40000,
+        amount: 400,
+        swiftTypeCode: 'TRF',
+        clientReference: 'Andre Botes: 0821234567',
+        bankReference: 'PMTMMRPP1777209000674',
+        rawNarrative: '/PREF/ZA002002RPP PAYSHAP PAYMENT FROM',
+        statementOccurrence: 1,
+      },
+      { currency: 'ZAR', statementType: 'MT940', accountNumber: '272406481' },
+      555
+    );
+
+    expect(result).toBe(false);
+    expect(depositNotificationService.processDepositNotification).toHaveBeenCalledTimes(1);
+    expect(depositNotificationService.processDepositNotification.mock.calls[0][0]).toMatchObject({
+      referenceNumber: 'Andre Botes: 0821234567',
+      amount: 400,
+      currency: 'ZAR',
+      source: 'h2h_statement_trf',
+      inboundCreditEvent: {
+        sourceType: 'h2h_statement_trf',
+        statementRunId: 555,
+        sourceReference: 'PMTMMRPP1777209000674',
+      },
+    });
+  });
+
+  it('keeps RTP-shaped TRF credits out of the phase-1 fallback', async () => {
+    const result = await sbsaStatementService._processCreditTransaction(
+      {
+        seq: 9,
+        valueDate: '2026-04-28',
+        entryDate: '2026-04-28',
+        direction: 'credit',
+        amountCents: 10000,
+        amount: 100,
+        swiftTypeCode: 'TRF',
+        clientReference: '0821234567',
+        bankReference: 'RTPREF',
+        rawNarrative: '/PREF/ZA002002RTP REQUEST TO PAY FROM',
+      },
+      { currency: 'ZAR', statementType: 'MT940', accountNumber: '272406481' },
+      556
     );
 
     expect(result).toBe(true);

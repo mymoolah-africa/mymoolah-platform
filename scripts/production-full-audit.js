@@ -424,6 +424,75 @@ function journalRefLinksVas(refs, vasTransactionId, vasTsKey, walletTxnId, maxDr
       pass(`All ${jeBalance.rows.length} journal entry references are unique (idempotency intact)`, 'COMPLETENESS');
     }
 
+    section('SBSA inbound credit event gate');
+    const eventTables = await c.query(`
+      SELECT
+        to_regclass('public.sbsa_inbound_credit_events') AS events_table,
+        to_regclass('public.sbsa_inbound_credit_event_sources') AS sources_table
+    `);
+    if (!eventTables.rows[0].events_table || !eventTables.rows[0].sources_table) {
+      warn('SBSA inbound credit event gate tables not found — PayShap/H2H delayed fallback not migrated yet', 'COMPLETENESS');
+    } else {
+      const doubleCreditEvents = await c.query(`
+        SELECT e.id, e.reference_number, e.amount, e.wallet_id,
+               COUNT(DISTINCT t.id) AS wallet_txn_count,
+               COUNT(DISTINCT je.id) AS journal_count
+        FROM sbsa_inbound_credit_events e
+        LEFT JOIN transactions t
+          ON CASE
+               WHEN t.metadata->>'inboundCreditEventId' ~ '^\\d+$'
+               THEN (t.metadata->>'inboundCreditEventId')::int
+               ELSE NULL
+             END = e.id
+        LEFT JOIN journal_entries je
+          ON je.reference = e.journal_reference
+        WHERE e.status = 'credited'
+        GROUP BY e.id, e.reference_number, e.amount, e.wallet_id
+        HAVING COUNT(DISTINCT t.id) > 1 OR COUNT(DISTINCT je.id) > 1
+      `);
+
+      if (doubleCreditEvents.rows.length > 0) {
+        doubleCreditEvents.rows.forEach(e => {
+          fail(`Inbound credit event #${e.id} ref=${e.reference_number} amount=${money(e.amount)} has wallet_txns=${e.wallet_txn_count}, journals=${e.journal_count}`, 'COMPLETENESS');
+        });
+      } else {
+        pass('No credited SBSA inbound event has multiple wallet transactions or journals', 'COMPLETENESS');
+      }
+
+      const multiSourceEvents = await c.query(`
+        SELECT e.id, e.reference_number, e.amount, e.status,
+               COUNT(*) AS source_count,
+               STRING_AGG(DISTINCT s.source_type, ', ' ORDER BY s.source_type) AS source_types
+        FROM sbsa_inbound_credit_events e
+        JOIN sbsa_inbound_credit_event_sources s ON s.event_id = e.id
+        GROUP BY e.id, e.reference_number, e.amount, e.status
+        HAVING COUNT(*) > 1
+        ORDER BY e.id
+      `);
+
+      multiSourceEvents.rows.forEach(e => {
+        pass(`Inbound event #${e.id}: ${e.source_count} sources (${e.source_types}) reconcile to one ${e.status} event for ${money(e.amount)}`, 'COMPLETENESS');
+      });
+
+      const suspenseFallbacks = await c.query(`
+        SELECT e.id, e.reference_number, e.amount, e.status, COUNT(s.id) AS source_count
+        FROM sbsa_inbound_credit_events e
+        JOIN sbsa_inbound_credit_event_sources s ON s.event_id = e.id
+        WHERE e.status IN ('suspense', 'failed')
+          AND s.source_type = 'h2h_statement_trf'
+        GROUP BY e.id, e.reference_number, e.amount, e.status
+        ORDER BY e.id
+      `);
+
+      if (suspenseFallbacks.rows.length > 0) {
+        suspenseFallbacks.rows.forEach(e => {
+          warn(`H2H PayShap fallback event #${e.id} is ${e.status}: ref=${e.reference_number}, amount=${money(e.amount)}, sources=${e.source_count}`, 'COMPLETENESS');
+        });
+      } else {
+        pass('No H2H PayShap fallback events are stuck in suspense or failed state', 'COMPLETENESS');
+      }
+    }
+
     console.log(`\n  ${BOLD}Commission Summary:${RESET}`);
     console.log(`    Gross commission:   ${money(totalCommGross)}`);
     console.log(`    Net revenue:        ${money(totalRevNet)}`);

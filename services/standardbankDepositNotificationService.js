@@ -12,6 +12,7 @@
 
 const db = require('../models');
 const { normalizeToE164 } = require('../utils/msisdn');
+const inboundCreditEventService = require('./standardbank/inboundCreditEventService');
 
 const logger = {
   info:  (...a) => console.log('[DepositNotification]', ...a),
@@ -368,12 +369,49 @@ async function processDepositNotification(payload) {
     return { success: false, error: 'Invalid amount' };
   }
 
+  const inboundClaim = await inboundCreditEventService.claimOrDuplicate(payload);
+  const inboundEventId = inboundClaim.event?.id || null;
+  if (inboundClaim.action === 'duplicate') {
+    logger.info('Inbound credit duplicate suppressed by event gate', {
+      transactionId,
+      referenceNumber,
+      amount,
+      sourceType: inboundClaim.claim?.sourceType,
+      eventId: inboundEventId,
+      reason: inboundClaim.reason,
+    });
+    return {
+      success: true,
+      credited: 'already_processed',
+      message: 'Inbound credit duplicate',
+      inboundCreditEventId: inboundEventId,
+    };
+  }
+  if (inboundClaim.action === 'suspense') {
+    return { success: false, error: 'Invalid inbound credit claim' };
+  }
+
   // Idempotency — primary: exact transactionId match
   const existing = await db.StandardBankTransaction.findOne({
     where: { transactionId, type: 'deposit' },
   });
   if (existing) {
-    return { success: true, credited: 'already_processed', message: 'Duplicate' };
+    if (inboundEventId) {
+      await inboundCreditEventService.markCredited(inboundEventId, {
+        accountType: existing.accountType,
+        accountId: existing.accountId,
+        userId: existing.userId,
+        walletId: existing.walletId,
+        standardBankTransactionId: existing.id,
+        journalReference: `SBSA-DEP-${transactionId}`,
+        metadata: {
+          transactionId,
+          referenceNumber,
+          duplicateSource: 'existing_standard_bank_transaction',
+        },
+      });
+    }
+    return { success: true, credited: 'already_processed', message: 'Duplicate', inboundCreditEventId: inboundEventId };
   }
 
   // Idempotency — cross-channel: PayShap and H2H SOAP may notify for the same
@@ -408,7 +446,13 @@ async function processDepositNotification(payload) {
   const suspenseCode    = process.env.LEDGER_ACCOUNT_UNALLOCATED    || '2600-01-01';
 
   if (!resolved) {
-    return await parkInSuspense({ transactionId, referenceNumber, amount, currency, payload, bankCode, suspenseCode });
+    const suspenseResult = await parkInSuspense({ transactionId, referenceNumber, amount, currency, payload, bankCode, suspenseCode });
+    if (inboundEventId) {
+      await inboundCreditEventService.markSuspense(inboundEventId, {
+        metadata: { reason: 'unresolved_reference', transactionId, referenceNumber },
+      });
+    }
+    return suspenseResult;
   }
 
   if (resolved.type === 'wallet') {
@@ -429,7 +473,7 @@ async function processDepositNotification(payload) {
 
       await lockedWallet.credit(amount, 'credit', { transaction });
 
-      await db.StandardBankTransaction.create(
+      const sbsaTransaction = await db.StandardBankTransaction.create(
         {
           transactionId,
           merchantTransactionId: `DEP-${transactionId}`,
@@ -446,6 +490,13 @@ async function processDepositNotification(payload) {
           status: 'completed',
           rawRequest: payload,
           rawResponse: null,
+          metadata: inboundEventId
+            ? {
+                inboundCreditEventId,
+                inboundCreditSource: inboundClaim.claim?.sourceType,
+                duplicatePolicy: 'sbsa_inbound_credit_events.reconciliation_key',
+              }
+            : null,
           webhookReceivedAt: new Date(),
           processedAt: new Date(),
         },
@@ -453,7 +504,7 @@ async function processDepositNotification(payload) {
       );
 
       const userTxnId = `TXN-SBSA-DEP-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      await db.Transaction.create(
+      const walletTransaction = await db.Transaction.create(
         {
           transactionId: userTxnId,
           userId,
@@ -469,6 +520,8 @@ async function processDepositNotification(payload) {
             source: 'SBSA_DEPOSIT_NOTIFICATION',
             sbsaTransactionId: transactionId,
             referenceNumber,
+            inboundCreditEventId: inboundEventId || undefined,
+            inboundCreditSource: inboundClaim.claim?.sourceType || undefined,
           },
         },
         { transaction }
@@ -476,10 +529,12 @@ async function processDepositNotification(payload) {
 
       await transaction.commit();
 
+      const journalReference = `SBSA-DEP-${transactionId}`;
+      let ledgerError = null;
       try {
         const ledgerService = require('./ledgerService');
         await ledgerService.postJournalEntry({
-          reference: `SBSA-DEP-${transactionId}`,
+          reference: journalReference,
           description: `Deposit notification: ${referenceNumber}`,
           lines: [
             { accountCode: bankCode, dc: 'debit', amount, memo: 'Bank inflow (deposit)' },
@@ -487,12 +542,36 @@ async function processDepositNotification(payload) {
           ],
         });
       } catch (ledgerErr) {
+        ledgerError = ledgerErr;
         console.warn('SBSA deposit ledger posting skipped:', ledgerErr.message);
       }
 
-      return { success: true, credited: 'wallet', walletId: lockedWallet.walletId };
+      if (inboundEventId) {
+        await inboundCreditEventService.markCredited(inboundEventId, {
+          accountType: 'wallet',
+          accountId: lockedWallet.id,
+          userId,
+          walletId: lockedWallet.walletId,
+          standardBankTransactionId: sbsaTransaction.id,
+          walletTransactionId: walletTransaction.id,
+          journalReference: ledgerError ? null : journalReference,
+          metadata: {
+            transactionId,
+            referenceNumber,
+            ledgerStatus: ledgerError ? 'failed' : 'posted',
+            ledgerError: ledgerError?.message,
+          },
+        });
+      }
+
+      return { success: true, credited: 'wallet', walletId: lockedWallet.walletId, inboundCreditEventId: inboundEventId };
     } catch (err) {
-      await transaction.rollback();
+      if (!transaction.finished) {
+        await transaction.rollback();
+      }
+      if (inboundEventId) {
+        await inboundCreditEventService.markFailed(inboundEventId, err).catch(() => {});
+      }
       throw err;
     }
   }
@@ -522,7 +601,7 @@ async function processDepositNotification(payload) {
       );
     }
 
-    await db.StandardBankTransaction.create({
+    const sbsaTransaction = await db.StandardBankTransaction.create({
       transactionId,
       merchantTransactionId: `DEP-${transactionId}`,
       originalMessageId: transactionId,
@@ -535,14 +614,23 @@ async function processDepositNotification(payload) {
       accountId: resolved.floatAccount?.id,
       status: 'completed',
       rawRequest: payload,
+      metadata: inboundEventId
+        ? {
+            inboundCreditEventId,
+            inboundCreditSource: inboundClaim.claim?.sourceType,
+            duplicatePolicy: 'sbsa_inbound_credit_events.reconciliation_key',
+          }
+        : null,
       webhookReceivedAt: new Date(),
       processedAt: new Date(),
     });
 
+    const journalReference = `SBSA-DEP-${transactionId}`;
+    let ledgerError = null;
     try {
       const ledgerService = require('./ledgerService');
       await ledgerService.postJournalEntry({
-        reference: `SBSA-DEP-${transactionId}`,
+        reference: journalReference,
         description: `Deposit notification: ${referenceNumber}`,
         lines: [
           { accountCode: bankCode, dc: 'debit', amount, memo: 'Bank inflow (deposit)' },
@@ -550,11 +638,30 @@ async function processDepositNotification(payload) {
         ],
       });
     } catch (ledgerErr) {
+      ledgerError = ledgerErr;
       console.warn('SBSA deposit ledger posting skipped:', ledgerErr.message);
     }
 
-    return { success: true, credited: resolved.type };
+    if (inboundEventId) {
+      await inboundCreditEventService.markCredited(inboundEventId, {
+        accountType: resolved.type,
+        accountId: resolved.floatAccount?.id,
+        standardBankTransactionId: sbsaTransaction.id,
+        journalReference: ledgerError ? null : journalReference,
+        metadata: {
+          transactionId,
+          referenceNumber,
+          ledgerStatus: ledgerError ? 'failed' : 'posted',
+          ledgerError: ledgerError?.message,
+        },
+      });
+    }
+
+    return { success: true, credited: resolved.type, inboundCreditEventId: inboundEventId };
   } catch (err) {
+    if (inboundEventId) {
+      await inboundCreditEventService.markFailed(inboundEventId, err).catch(() => {});
+    }
     return { success: false, error: err.message };
   }
 }

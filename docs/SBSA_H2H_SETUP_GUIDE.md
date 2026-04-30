@@ -418,8 +418,9 @@ Recommended signing: **SHA256**
 - **Service**: `services/standardbank/sbsaStatementService.js` — Orchestrates: poll GCS → parse → match known references → credit wallet EFT deposits via deposit notification service → archive. It recognises real production compact timestamp filenames, not only the older documented `YYYYMMDD_HHMMSS` shape.
 - **Poller cron**: `server.js` — Runs every 2 minutes (configurable via `SBSA_STATEMENT_POLL_SCHEDULE`)
 - **Deposit crediting**: `services/standardbankDepositNotificationService.js` — Resolves MSISDN reference → wallet credit, or parks in suspense for ops review
+- **Inbound credit event gate**: `services/standardbank/inboundCreditEventService.js` — Creates a channel-neutral `sbsa_inbound_credit_events.reconciliation_key` before wallet crediting. Both PayShap callbacks and controlled H2H PayShap `TRF` fallback sources attach to this event, so a delayed second source is recorded as audit evidence and does not credit again.
 - **Idempotency**: Files tracked by MD5 hash in `SBSAStatementRun` table; statement deposits tracked by a stable bank-line hash in `StandardBankTransaction.transactionId`, not by statement run ID. This prevents the same bank line appearing in multiple PROVSTMT/FINSTMT files from crediting twice.
-- **Credit safety**: Statement auto-crediting is limited to `DEP` lines such as `IB PAYMENT FROM`. `TRF` credits are skipped in the statement path to avoid double-crediting realtime PayShap/RPP rails.
+- **Credit safety**: Statement auto-crediting remains limited to `DEP` lines such as `IB PAYMENT FROM`. `TRF` credits are skipped unless they pass the phase-1 PayShap/RPP fallback classifier (`PAYSHAP`/`RPP` credit wording, not RTP). Even then, they must claim the inbound-credit event gate before any wallet credit.
 
 ### Gateway Sync Operations
 
@@ -454,7 +455,12 @@ SBSA delivers MT942 to our SFTP (every 15 min)
              a. Resolve reference (MSISDN → wallet, float prefix, fuzzy match)
              b. Credit wallet (locked row + ledger journal entry)
              c. Or park in suspense (ops alert email)
-          3. Skip non-DEP credits so PayShap/realtime rails are not credited twice
+          3. If SWIFT type is TRF and looks like an inbound PayShap/RPP credit:
+             a. Build a stable statement source fingerprint
+             b. Claim sbsa_inbound_credit_events by normalized reference + amount + currency
+             c. Credit only if no PayShap/H2H source has already claimed that credit
+             d. Record delayed/duplicate sources as audit evidence without a second wallet credit
+          4. Skip all other non-DEP credits so unrelated realtime rails are not credited twice
         → Archive file to processed/ folder
 ```
 

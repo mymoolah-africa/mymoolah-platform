@@ -1,5 +1,29 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-30 - Duplicate-proof PayShap H2H fallback
+
+### Summary
+Implemented phase 1 of the missed PayShap credit safety layer. RPP / PayShapID / plain inbound PayShap credits now claim a database-backed inbound-credit event gate, and H2H statement `TRF` lines only enter a controlled fallback path when they look like inbound PayShap/RPP credits. RTP remains explicitly out of scope for phase 1.
+
+### Changes
+- Added `sbsa_inbound_credit_events` and `sbsa_inbound_credit_event_sources` through migration `20260430_01_create_sbsa_inbound_credit_events.js`.
+- Added `models/SBSAInboundCreditEvent.js` and `models/SBSAInboundCreditEventSource.js`.
+- Added `services/standardbank/inboundCreditEventService.js` to claim source fingerprints and channel-neutral reconciliation keys before wallet crediting.
+- Routed inbound PayShap callback flows in `controllers/standardbankController.js` through the event gate metadata.
+- Updated `services/standardbank/sbsaStatementService.js` so only PayShap/RPP-looking `TRF` credits use the fallback gate; unrelated `TRF` and RTP-shaped credits remain skipped.
+- Updated `services/standardbankDepositNotificationService.js` to suppress delayed duplicate sources and attach credited wallet/SBSA/journal evidence to the inbound event.
+- Extended `scripts/production-full-audit.js` with SBSA inbound credit gate checks for duplicate wallet transactions/journals, multi-source events, and fallback suspense/failure states.
+- Added targeted Jest coverage for the event gate and statement fallback classifier.
+
+### Validation
+- `node --check models/SBSAInboundCreditEvent.js && node --check models/SBSAInboundCreditEventSource.js && node --check migrations/20260430_01_create_sbsa_inbound_credit_events.js && node --check services/standardbank/inboundCreditEventService.js && node --check services/standardbankDepositNotificationService.js && node --check services/standardbank/sbsaStatementService.js && node --check controllers/standardbankController.js && node --check scripts/production-full-audit.js`
+- `npx jest tests/standardbank/inboundCreditEventService.test.js tests/standardbank/sbsaStatementService.statementCreditSafety.test.js --runInBand`
+- Broader `npx jest tests/standardbank --runInBand` was attempted and still has unrelated `pain002PollerService.test.js` mock failures around response filtering / `WalletBankPayment.findAll`.
+
+### Deployment Notes
+- Run migration `20260430_01_create_sbsa_inbound_credit_events.js` via `./scripts/run-migrations-master.sh uat`, then staging, then production after approval.
+- Do not include RTP fallback in this phase; design RTP separately because it has fee/net-credit rules.
+
 ## 2026-04-29 - COA fee and input VAT classification documented
 
 ### Summary

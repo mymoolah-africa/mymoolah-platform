@@ -211,6 +211,16 @@ async function processRppCallback(originalMessageId, transactionIdentifier, stat
             currency: rawBody?.intrBkSttlmAmt?.ccy || rawBody?.currency || 'ZAR',
             description: `PayShap inbound (via RPP callback): ${originalMessageId}`,
             source: 'payshap_inbound_rpp_fallback',
+            inboundCreditEvent: {
+              sourceType: 'payshap_rpp_callback',
+              sourceReference: originalMessageId,
+              rawPayload: rawBody,
+              metadata: {
+                originalMessageId,
+                transactionIdentifier,
+                callbackStatus: status,
+              },
+            },
           });
         } catch (depErr) {
           console.error('[RPP-CB-INBOUND] Deposit processing failed:', depErr.message);
@@ -994,6 +1004,19 @@ async function handlePayshapInboundCredit(req, res) {
           currency,
           description: `PayShap inbound credit R${amount.toFixed(2)} from ${payerName || 'unknown'}`,
           source: 'payshap_inbound',
+          inboundCreditEvent: {
+            sourceType: 'payshap_inbound',
+            sourceReference: orgnlMsgId,
+            rawPayload: tx,
+            metadata: {
+              orgnlMsgId,
+              txId,
+              endToEndId,
+              uetr,
+              payerName,
+              txStatus: txSts,
+            },
+          },
         });
 
         console.log('[PayShap-Inbound] Result: credited=%s txId=%s ref=%s',
