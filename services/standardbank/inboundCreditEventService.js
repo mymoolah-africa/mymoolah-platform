@@ -104,6 +104,13 @@ function buildClaim(payload = {}) {
   };
 }
 
+function canRetryFailedEvent(event) {
+  return event
+    && event.status === 'failed'
+    && !event.creditedWalletTransactionId
+    && !event.creditedStandardBankTransactionId;
+}
+
 async function findEventBySource(sourceFingerprint, options = {}) {
   const source = await db.SBSAInboundCreditEventSource.findOne({
     where: { sourceFingerprint },
@@ -160,6 +167,21 @@ async function claimOrDuplicate(payload) {
       lock: db.Sequelize.Transaction.LOCK.UPDATE,
     });
     if (sourceMatch?.event) {
+      if (canRetryFailedEvent(sourceMatch.event)) {
+        await sourceMatch.event.update(
+          {
+            status: 'processing',
+            metadata: {
+              ...(sourceMatch.event.metadata || {}),
+              retryReason: 'failed_event_without_credit_evidence',
+              retryAt: new Date().toISOString(),
+            },
+          },
+          { transaction: tx }
+        );
+        await tx.commit();
+        return { action: 'process', claim, event: sourceMatch.event, reason: 'failed_source_retry' };
+      }
       await tx.commit();
       return { action: 'duplicate', claim, event: sourceMatch.event, reason: 'source_replay' };
     }
@@ -205,6 +227,22 @@ async function claimOrDuplicate(payload) {
         transaction: tx,
         lock: db.Sequelize.Transaction.LOCK.UPDATE,
       });
+      if (canRetryFailedEvent(event)) {
+        await event.update(
+          {
+            status: 'processing',
+            metadata: {
+              ...(event.metadata || {}),
+              retryReason: 'failed_event_without_credit_evidence',
+              retryAt: new Date().toISOString(),
+            },
+          },
+          { transaction: tx }
+        );
+        await recordSource(event, claim, 'primary', { transaction: tx });
+        await tx.commit();
+        return { action: 'process', claim, event, reason: 'failed_reconciliation_retry' };
+      }
       await recordSource(event, claim, 'duplicate', { transaction: tx });
       await tx.commit();
       return { action: 'duplicate', claim, event, reason: 'concurrent_reconciliation_claim' };

@@ -117,4 +117,70 @@ describe('inboundCreditEventService', () => {
       expect.any(Object)
     );
   });
+
+  it('allows retrying a failed source only when no credit evidence exists', async () => {
+    const failedEvent = {
+      id: 31,
+      status: 'failed',
+      creditedWalletTransactionId: null,
+      creditedStandardBankTransactionId: null,
+      metadata: { error: 'previous processing bug' },
+      update: jest.fn().mockResolvedValue(undefined),
+    };
+    mockDb.SBSAInboundCreditEventSource.findOne.mockResolvedValue({ eventId: 31 });
+    mockDb.SBSAInboundCreditEvent.findByPk.mockResolvedValue(failedEvent);
+
+    const result = await inboundCreditEventService.claimOrDuplicate({
+      transactionId: 'STMT-bank-line',
+      referenceNumber: '0821234567',
+      amount: 25,
+      currency: 'ZAR',
+      source: 'h2h_statement_trf',
+      inboundCreditEvent: {
+        sourceType: 'h2h_statement_trf',
+        statementTransactionId: 'STMT-bank-line',
+      },
+    });
+
+    expect(result.action).toBe('process');
+    expect(result.reason).toBe('failed_source_retry');
+    expect(failedEvent.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'processing',
+        metadata: expect.objectContaining({
+          retryReason: 'failed_event_without_credit_evidence',
+        }),
+      }),
+      expect.any(Object)
+    );
+  });
+
+  it('does not retry a failed source when credit evidence exists', async () => {
+    const failedButCreditedEvent = {
+      id: 32,
+      status: 'failed',
+      creditedWalletTransactionId: 99,
+      creditedStandardBankTransactionId: 88,
+      metadata: { error: 'post-credit audit update failed' },
+      update: jest.fn(),
+    };
+    mockDb.SBSAInboundCreditEventSource.findOne.mockResolvedValue({ eventId: 32 });
+    mockDb.SBSAInboundCreditEvent.findByPk.mockResolvedValue(failedButCreditedEvent);
+
+    const result = await inboundCreditEventService.claimOrDuplicate({
+      transactionId: 'STMT-bank-line',
+      referenceNumber: '0821234567',
+      amount: 25,
+      currency: 'ZAR',
+      source: 'h2h_statement_trf',
+      inboundCreditEvent: {
+        sourceType: 'h2h_statement_trf',
+        statementTransactionId: 'STMT-bank-line',
+      },
+    });
+
+    expect(result.action).toBe('duplicate');
+    expect(result.reason).toBe('source_replay');
+    expect(failedButCreditedEvent.update).not.toHaveBeenCalled();
+  });
 });

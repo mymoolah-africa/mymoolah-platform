@@ -492,7 +492,7 @@ async function processDepositNotification(payload) {
           rawResponse: null,
           metadata: inboundEventId
             ? {
-                inboundCreditEventId,
+                inboundCreditEventId: inboundEventId,
                 inboundCreditSource: inboundClaim.claim?.sourceType,
                 duplicatePolicy: 'sbsa_inbound_credit_events.reconciliation_key',
               }
@@ -616,7 +616,7 @@ async function processDepositNotification(payload) {
       rawRequest: payload,
       metadata: inboundEventId
         ? {
-            inboundCreditEventId,
+            inboundCreditEventId: inboundEventId,
             inboundCreditSource: inboundClaim.claim?.sourceType,
             duplicatePolicy: 'sbsa_inbound_credit_events.reconciliation_key',
           }
