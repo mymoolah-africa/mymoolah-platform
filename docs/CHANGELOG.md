@@ -1,5 +1,24 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-30 - PayShap H2H R100 fallback recovery
+
+### Summary
+Fixed and deployed the final production recovery path for the skipped R100 PayShap statement fallback credit. The fix keeps duplicate prevention inside `sbsa_inbound_credit_events`: failed events may retry only when there is no wallet or Standard Bank credit evidence.
+
+### Changes
+- Fixed `services/standardbankDepositNotificationService.js` metadata creation to use `inboundEventId` consistently.
+- Hardened `services/standardbank/inboundCreditEventService.js` so failed uncredited events can be retried safely, while failed events with credit evidence remain duplicate-blocked.
+- Added Jest coverage for retrying failed uncredited events and refusing failed credited replays.
+
+### Production Evidence
+- Deployed production backend image `gcr.io/mymoolah-db/mymoolah-backend:20260430_v3` to Cloud Run revision `mymoolah-backend-production-00168-frn`.
+- Reprocessed archived statement object `processed/standardbank/statements/2026-04-30T09-38-01-734Z_MYMOOLAH_OWN11_PROVSTMT_20260430113514689_242652515.txt` through the signed production notification endpoint.
+- Verified exactly one R100.00 `standard_bank_transactions` row, one R100.00 wallet `transactions` row, and one R100.00 `sbsa_inbound_credit_events` row linked to `STMT-47927c63bd32557de46bd3e88c19c112`.
+
+### Validation
+- `node --check services/standardbankDepositNotificationService.js && node --check services/standardbank/inboundCreditEventService.js && node --check tests/standardbank/inboundCreditEventService.test.js`
+- `npx jest tests/standardbank/sbsaStatementService.statementCreditSafety.test.js tests/standardbank/inboundCreditEventService.test.js --runInBand --no-cache`
+
 ## 2026-04-30 - Duplicate-proof PayShap H2H fallback
 
 ### Summary
