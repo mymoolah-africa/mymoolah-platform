@@ -125,6 +125,59 @@ describe('sbsaStatementService — statement credit safety', () => {
     });
   });
 
+  it('routes SBSA MT942 PayShap TRF credits when narrative text is in narrativeLines only', async () => {
+    depositNotificationService.processDepositNotification.mockResolvedValue({
+      success: true,
+      credited: 'wallet',
+      inboundCreditEventId: 43,
+    });
+
+    const txn = {
+      seq: 7,
+      valueDate: '2026-04-30',
+      entryDate: '2026-04-30',
+      direction: 'credit',
+      amountCents: 10000,
+      amount: 100,
+      swiftTypeCode: 'TRF',
+      clientReference: '0825571055',
+      bankReference: 'NONREF',
+      rawNarrative: null,
+      narrative: {
+        structured: false,
+        narrative: null,
+        narrativeLines: ['/PREF/ZA001960PAYSHAP PAYMENT FROM'],
+      },
+      statementOccurrence: 1,
+    };
+
+    expect(sbsaStatementService._statementNarrativeText(txn)).toContain('PAYSHAP PAYMENT FROM');
+    expect(sbsaStatementService._isPayShapStatementFallbackCandidate(txn)).toBe(true);
+
+    const result = await sbsaStatementService._processCreditTransaction(
+      txn,
+      { currency: 'ZAR', statementType: 'MT942', accountNumber: '272406481' },
+      777
+    );
+
+    expect(result).toBe(false);
+    expect(depositNotificationService.processDepositNotification).toHaveBeenCalledTimes(1);
+    expect(depositNotificationService.processDepositNotification.mock.calls[0][0]).toMatchObject({
+      referenceNumber: '0825571055',
+      amount: 100,
+      currency: 'ZAR',
+      source: 'h2h_statement_trf',
+      inboundCreditEvent: {
+        sourceType: 'h2h_statement_trf',
+        statementRunId: 777,
+        sourceReference: 'NONREF',
+        metadata: {
+          fallbackPolicy: 'rpp_payshap_trf_phase_1',
+        },
+      },
+    });
+  });
+
   it('keeps RTP-shaped TRF credits out of the phase-1 fallback', async () => {
     const result = await sbsaStatementService._processCreditTransaction(
       {

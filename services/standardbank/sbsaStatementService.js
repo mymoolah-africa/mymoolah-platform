@@ -415,7 +415,7 @@ class SBSAStatementService {
     const narrative = this._statementNarrativeText(txn);
     if (!narrative) return false;
     if (/\b(RTP|REQUEST TO PAY)\b/i.test(narrative)) return false;
-    if (/\b(PAYSHAP|RPP)\b/i.test(narrative) && /\b(FROM|CREDIT)\b/i.test(narrative)) return true;
+    if (/(PAYSHAP|RPP)/i.test(narrative) && /\b(FROM|CREDIT)\b/i.test(narrative)) return true;
 
     return false;
   }
@@ -426,6 +426,7 @@ class SBSAStatementService {
       txn.bankReference,
       txn.rawNarrative,
       txn.narrative?.narrative,
+      ...(Array.isArray(txn.narrative?.narrativeLines) ? txn.narrative.narrativeLines : []),
       ...(Array.isArray(txn.narrative?.lines) ? txn.narrative.lines : []),
     ].filter(Boolean).join(' ');
   }
