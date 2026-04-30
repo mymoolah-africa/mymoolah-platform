@@ -8,7 +8,7 @@
 ---
 
 ## Session Summary
-Implemented phase 1 of the duplicate-proof PayShap H2H fallback. RPP / PayShapID / plain inbound PayShap credits now use a database-backed inbound-credit event gate, and H2H statement `TRF` lines only enter fallback when they look like inbound PayShap/RPP credits.
+Implemented phase 1 of the duplicate-proof PayShap H2H fallback. RPP / PayShapID / plain inbound PayShap credits now use a database-backed inbound-credit event gate, and H2H statement `TRF` lines only enter fallback when they look like inbound PayShap/RPP credits. Later in the same day, André pulled `main`, applied the migration successfully in UAT, staging, and production, and deployed the backend.
 
 ---
 
@@ -20,6 +20,8 @@ Implemented phase 1 of the duplicate-proof PayShap H2H fallback. RPP / PayShapID
 - [x] Added controlled H2H `TRF` fallback classification while preserving skip behavior for unrelated `TRF` and RTP-shaped lines.
 - [x] Extended production audit checks for inbound-credit duplicate evidence.
 - [x] Added targeted Jest tests and updated H2H/changelog/handover/rules documentation.
+- [x] Migration later applied successfully in UAT, staging, and production.
+- [x] Backend later deployed after the migration.
 
 ---
 
@@ -66,7 +68,7 @@ Implemented phase 1 of the duplicate-proof PayShap H2H fallback. RPP / PayShapID
 - [x] Syntax checks passed.
 - [x] Targeted Jest tests passed.
 - [x] Broader Standard Bank suite attempted; unrelated `pain002PollerService.test.js` failures remain outside this fallback change.
-- [ ] Migration has not yet been run in UAT/staging/production.
+- [x] Migration applied in UAT, staging, and production after André pulled `main` in Codespaces.
 
 Commands:
 
@@ -79,10 +81,10 @@ npx jest tests/standardbank --runInBand
 ---
 
 ## Next Steps
-- [ ] Run migration in UAT via `./scripts/run-migrations-master.sh uat`.
-- [ ] Run migration in staging after UAT passes.
-- [ ] Run production migration only after André approval.
-- [ ] Deploy backend after migration so the new tables exist before the event gate runs.
+- [x] Run migration in UAT via `./scripts/run-migrations-master.sh uat`.
+- [x] Run migration in staging after UAT passes.
+- [x] Run production migration after André approval.
+- [x] Deploy backend after migration so the new tables exist before the event gate runs.
 - [ ] Design RTP fallback as a separate phase.
 
 ---
@@ -91,6 +93,7 @@ npx jest tests/standardbank --runInBand
 - Do not remove the phase-1 RTP exclusion without a separate RTP accounting design.
 - `sbsa_inbound_credit_events.reconciliation_key` intentionally prioritizes no double-crediting over auto-crediting ambiguous same-reference/same-amount duplicates.
 - H2H fallback only starts for `TRF` credit lines whose narrative looks like PayShap/RPP inbound money; unrelated `TRF` lines remain skipped.
+- Migration `20260430_01_create_sbsa_inbound_credit_events.js` is already applied in UAT, staging, and production.
 
 ---
 

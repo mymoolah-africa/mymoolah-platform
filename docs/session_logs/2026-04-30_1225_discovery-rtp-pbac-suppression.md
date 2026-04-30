@@ -76,21 +76,23 @@ Latest display cleanup result: wallet frontend build passed; focused backend tes
 ---
 
 ## Next Steps
-- [ ] Commit/push/deploy these local Discovery PBAC-primary changes when André approves.
+- [x] Commit and push Discovery PBAC-primary and wallet display cleanup changes to `main`.
+- [ ] Deploy latest `main` backend if not already done after commit `3703ebed`.
 - [ ] After deploy, retest Discovery RTP with account details present and confirm initial log says `mode=PBAC`, not `mode=PROXY`.
 - [ ] If product wants account-based RTP fallback later, build an explicit user/customer initiated PBAC flow rather than automatic retry.
 
 ---
 
 ## Important Context for Next Agent
-- There are local uncommitted Discovery PBAC-primary changes at the end of this session unless André subsequently asks to commit/deploy.
+- Discovery PBAC-primary and wallet display cleanup changes were committed and pushed to `main`; latest pushed commit is `3703ebed fix(wallet): clean bank deposit transaction descriptions`.
+- The final end-of-day docs wrap in `docs/session_logs/2026-04-30_1625_discovery-rtp-h2h-wrap.md` was intentionally left uncommitted per André's instruction.
 - The H2H R100 recovery from the previous session is already deployed and verified; do not reprocess it.
 - Existing historical transaction descriptions were intentionally not changed because André said no need.
 
 ---
 
 ## Questions/Unresolved Items
-- No production deployment has been performed for this latest RTP/display change yet.
+- Production deployment/retest status after commit `3703ebed` was not verified in this log.
 
 ---
 

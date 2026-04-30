@@ -24,6 +24,11 @@ Stopped hidden automatic PBAC retry creation after proxy-based RTP system reject
 - Latest focused RTP validation: `20/20` tests pass; Discovery logs as `mode=PBAC`, `DbtrAcct` uses the Discovery account number, `DbtrAgt=679000`, and `hasProxy=false`.
 - Latest display cleanup validation: `npm run build` in `mymoolah-wallet-frontend`; focused backend tests pass `21/21`.
 
+### Git / Deployment Status
+- Pushed to `main`: `f35db188 fix(sbsa): suppress automatic RTP PBAC retry`, `22779fcd fix(sbsa): route Discovery RTP via primary PBAC`, and `3703ebed fix(wallet): clean bank deposit transaction descriptions`.
+- End-of-day docs wrap created on 2026-04-30 at 16:25 SAST and intentionally left uncommitted/unpushed per André's instruction.
+- Production redeploy/retest after `3703ebed` was not verified during the docs wrap.
+
 ## 2026-04-30 - PayShap H2H R100 fallback recovery
 
 ### Summary
@@ -64,7 +69,8 @@ Implemented phase 1 of the missed PayShap credit safety layer. RPP / PayShapID /
 - Broader `npx jest tests/standardbank --runInBand` was attempted and still has unrelated `pain002PollerService.test.js` mock failures around response filtering / `WalletBankPayment.findAll`.
 
 ### Deployment Notes
-- Run migration `20260430_01_create_sbsa_inbound_credit_events.js` via `./scripts/run-migrations-master.sh uat`, then staging, then production after approval.
+- Migration `20260430_01_create_sbsa_inbound_credit_events.js` was applied successfully in UAT, staging, and production after André pulled `main` in Codespaces.
+- Backend was deployed after the migration. Later production recovery evidence for the R100 fallback is documented in the PayShap H2H R100 fallback recovery entry above.
 - Do not include RTP fallback in this phase; design RTP separately because it has fee/net-credit rules.
 
 ## 2026-04-29 - COA fee and input VAT classification documented
