@@ -53,6 +53,15 @@ function isAutoPbacRetryEnabled() {
   return process.env.STANDARDBANK_RTP_AUTO_PBAC_RETRY_ENABLED === 'true';
 }
 
+function shouldUsePrimaryPbacRtp({ payerBankName, payerMobileNumber, payerAccountNumber }) {
+  if (process.env.STANDARDBANK_RTP_DISCOVERY_PROXY_FIRST === 'true') return false;
+  return Boolean(
+    payerMobileNumber
+    && payerAccountNumber
+    && /discovery/i.test(String(payerBankName || ''))
+  );
+}
+
 function buildRtpPaidLedgerLines({
   principalAmount,
   netCredit,
@@ -161,7 +170,9 @@ async function initiateRtpRequest(params) {
   //   Proxy: proxy domain (e.g. 'discoverybank') — proxy directory lookup (preferred)
   //   PBAC: branch code (e.g. '470010') — direct account routing, no proxy lookup
   //   UAT: 'bankc' (SBSA sandbox placeholder)
-  const isPbacMode = !payerMobileNumber && Boolean(payerAccountNumber);
+  const usePrimaryPbac = shouldUsePrimaryPbacRtp({ payerBankName, payerMobileNumber, payerAccountNumber });
+  const effectivePayerMobileNumber = usePrimaryPbac ? undefined : payerMobileNumber;
+  const isPbacMode = !effectivePayerMobileNumber && Boolean(payerAccountNumber);
   const resolvedPayerBankCode = process.env.STANDARDBANK_ENVIRONMENT === 'uat'
     ? 'bankc'
     : isPbacMode
@@ -173,7 +184,7 @@ async function initiateRtpRequest(params) {
     amount: numAmount,
     currency,
     payerName: payerName || 'Payer',
-    payerMobileNumber: payerMobileNumber || undefined,
+    payerMobileNumber: effectivePayerMobileNumber || undefined,
     payerAccountNumber: payerAccountNumber || undefined,
     payerBankCode: resolvedPayerBankCode,
     remittanceInfo,
@@ -235,6 +246,8 @@ async function initiateRtpRequest(params) {
       pricingTier: `${monthlyCount}-txns`,
       creditorName: resolvedCreditorName || undefined,
       creditorPhoneNumber: creditorPhoneNumber || undefined,
+      initiationMode: usePrimaryPbac ? 'PBAC_PRIMARY' : (isPbacMode ? 'PBAC' : 'PROXY'),
+      primaryPbacReason: usePrimaryPbac ? 'discovery_proxy_mandate_state_rejects' : undefined,
       userDescription: description || reference || undefined,
     },
   });
@@ -895,4 +908,5 @@ module.exports = {
   retryRtpAsPbac,
   buildRtpPaidLedgerLines,
   isAutoPbacRetryEnabled,
+  shouldUsePrimaryPbacRtp,
 };
