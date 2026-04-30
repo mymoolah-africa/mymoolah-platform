@@ -375,7 +375,7 @@ class SBSAStatementService {
         referenceNumber: ref,
         amount: amountRands,
         currency: statement.currency,
-        description: txn.narrative?.narrative || txn.rawNarrative || '',
+        description: this._statementNarrativeText(txn),
         source: `${statement.statementType || 'MT940'}_STATEMENT_RUN_${runId}`,
       });
 
@@ -450,7 +450,7 @@ class SBSAStatementService {
         referenceNumber: ref,
         amount: amountRands,
         currency: statement.currency,
-        description: txn.narrative?.narrative || txn.rawNarrative || '',
+        description: this._statementNarrativeText(txn),
         source: 'h2h_statement_trf',
         inboundCreditEvent: {
           sourceType: 'h2h_statement_trf',
@@ -467,6 +467,7 @@ class SBSAStatementService {
             clientReference: txn.clientReference,
             bankReference: txn.bankReference,
             rawNarrative: txn.rawNarrative,
+            narrative: txn.narrative,
             statementOccurrence: txn.statementOccurrence,
           },
           metadata: {

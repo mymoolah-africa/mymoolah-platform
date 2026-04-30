@@ -1,5 +1,23 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-04-30 - Discovery RTP auto-PBAC suppression and deposit display labels
+
+### Summary
+Stopped hidden automatic PBAC retry creation after proxy-based RTP system rejects. Future bank-origin deposits also display with neutral wording and inbound bank-transfer iconography instead of PayShap/EFT-specific labels or wallet-transfer icons.
+
+### Changes
+- Updated `services/standardbankRtpService.js` so proxy system rejects such as `EBONF` no longer launch a second PBAC mandate by default. The original RTP is marked rejected, the user is notified, and metadata records that auto-PBAC was suppressed because account-based RTP must be explicitly customer/user initiated.
+- Added `STANDARDBANK_RTP_AUTO_PBAC_RETRY_ENABLED=true` as the only way to re-enable legacy auto-PBAC behaviour intentionally.
+- Updated bank deposit display text generation in `services/standardbankDepositNotificationService.js` to use `Deposit from <sender>` when a reliable sender exists, otherwise `Deposit`.
+- Updated `mymoolah-wallet-frontend/utils/transactionIcons.tsx` so SBSA/bank-origin deposits use the inbound arrow icon instead of the wallet icon.
+- Updated statement fallback payloads to pass the full statement narrative into deposit display metadata.
+
+### Validation
+- `npm run build` in `mymoolah-wallet-frontend`
+- `node --check services/standardbankRtpService.js && node --check tests/standardbank/standardbankRtpService.test.js`
+- `node --check services/standardbankDepositNotificationService.js && node --check services/standardbank/sbsaStatementService.js && node --check controllers/standardbankController.js && node --check tests/standardbank/depositDescription.test.js`
+- `npx jest tests/standardbank/standardbankRtpService.test.js tests/standardbank/depositDescription.test.js tests/standardbank/sbsaStatementService.statementCreditSafety.test.js tests/standardbank/inboundCreditEventService.test.js --runInBand --no-cache`
+
 ## 2026-04-30 - PayShap H2H R100 fallback recovery
 
 ### Summary

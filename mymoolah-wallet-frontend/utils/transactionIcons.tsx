@@ -169,6 +169,12 @@ function isBankingTransaction(transaction: Transaction): boolean {
   
   // Look for specific bank indicators
   const hasBankIndicators = (
+    metadata.source === 'SBSA_DEPOSIT_NOTIFICATION' ||
+    metadata.inboundCreditSource === 'h2h_statement_trf' ||
+    metadata.inboundCreditSource === 'payshap_inbound' ||
+    metadata.sbsaTransactionId ||
+    description.startsWith('deposit from ') ||
+    description.includes('deposit from bank account') ||
     description.includes('external bank') ||
     description.includes('bank transfer') ||
     description.includes('paygate') ||

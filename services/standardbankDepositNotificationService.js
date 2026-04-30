@@ -143,6 +143,103 @@ function extractMsisdnFromReference(ref, alreadyTried) {
   return candidates;
 }
 
+function normalizeDisplayText(value) {
+  if (typeof value !== 'string') return null;
+  const normalized = value.replace(/\s+/g, ' ').trim();
+  return normalized || null;
+}
+
+function cleanSenderName(value) {
+  let candidate = normalizeDisplayText(value);
+  if (!candidate) return null;
+
+  candidate = candidate
+    .replace(/^["'`]+|["'`]+$/g, '')
+    .replace(/\s+(?:REF(?:ERENCE)?|CID|ACC(?:OUNT)?|PAYSHAP|RPP)\b.*$/i, '')
+    .trim();
+
+  if (!candidate || candidate.length < 2 || candidate.length > 80) return null;
+  if (/^(UNKNOWN|N\/A|NA|NONREF|NOT PROVIDED)$/i.test(candidate)) return null;
+  if (/^(PAYSHAP|RPP|EFT|INSTANT EFT|BANK ACCOUNT|PAYMENT FROM)$/i.test(candidate)) return null;
+  if (/^\+?\d[\d\s-]{6,}$/.test(candidate)) return null;
+
+  return candidate;
+}
+
+function extractSenderFromText(value) {
+  const text = normalizeDisplayText(value);
+  if (!text) return null;
+
+  const fromMatch = text.match(/\bFROM\b\s*[:\-]?\s+(.+)$/i);
+  if (fromMatch) {
+    const fromCandidate = cleanSenderName(fromMatch[1]);
+    if (fromCandidate) return fromCandidate;
+  }
+
+  const colonMatch = text.match(/^([A-Za-z][A-Za-z .,'&-]{1,79})\s*:\s*(?:\+?\d|0[6-8])/);
+  if (colonMatch) {
+    const colonCandidate = cleanSenderName(colonMatch[1]);
+    if (colonCandidate) return colonCandidate;
+  }
+
+  return null;
+}
+
+function getNested(obj, path) {
+  return path.reduce((current, key) => {
+    if (!current || typeof current !== 'object') return undefined;
+    return current[key];
+  }, obj);
+}
+
+function extractSenderNameFromPayload(payload = {}) {
+  const directCandidates = [
+    payload.senderName,
+    payload.payerName,
+    payload.debtorName,
+    payload.dbtrName,
+    payload.fromName,
+    payload.originatorName,
+    payload.remitterName,
+    payload.accountHolderName,
+    getNested(payload, ['inboundCreditEvent', 'metadata', 'payerName']),
+    getNested(payload, ['inboundCreditEvent', 'metadata', 'senderName']),
+    getNested(payload, ['inboundCreditEvent', 'rawPayload', 'orgnlTxRef', 'dbtr', 'pty', 'nm']),
+    getNested(payload, ['inboundCreditEvent', 'rawPayload', 'orgnlTxRef', 'dbtr', 'nm']),
+    getNested(payload, ['inboundCreditEvent', 'rawPayload', 'dbtr', 'pty', 'nm']),
+    getNested(payload, ['inboundCreditEvent', 'rawPayload', 'dbtr', 'nm']),
+  ];
+
+  for (const candidate of directCandidates) {
+    const sender = cleanSenderName(candidate);
+    if (sender) return sender;
+  }
+
+  const textCandidates = [
+    payload.description,
+    payload.referenceNumber,
+    payload.reference,
+    getNested(payload, ['inboundCreditEvent', 'rawPayload', 'clientReference']),
+    getNested(payload, ['inboundCreditEvent', 'rawPayload', 'rawNarrative']),
+    getNested(payload, ['inboundCreditEvent', 'rawPayload', 'narrative', 'narrative']),
+    ...(Array.isArray(getNested(payload, ['inboundCreditEvent', 'rawPayload', 'narrative', 'narrativeLines']))
+      ? getNested(payload, ['inboundCreditEvent', 'rawPayload', 'narrative', 'narrativeLines'])
+      : []),
+  ];
+
+  for (const candidate of textCandidates) {
+    const sender = extractSenderFromText(candidate);
+    if (sender) return sender;
+  }
+
+  return null;
+}
+
+function buildWalletDepositDescription(payload = {}) {
+  const senderName = extractSenderNameFromPayload(payload);
+  return senderName ? `Deposit from ${senderName}` : 'Deposit';
+}
+
 /**
  * Look up a wallet by E.164 phone number.
  * @param {string} e164
@@ -358,6 +455,12 @@ async function processDepositNotification(payload) {
   const referenceNumber = payload.referenceNumber || payload.reference_number || payload.reference || payload.cid;
   const amount = parseFloat(payload.amount || payload.amountCents / 100 || 0);
   const currency = payload.currency || payload.currencyCode || 'ZAR';
+  const displayPayload = {
+    ...payload,
+    referenceNumber,
+  };
+  const senderName = extractSenderNameFromPayload(displayPayload);
+  const walletDepositDescription = senderName ? `Deposit from ${senderName}` : 'Deposit';
 
   if (!transactionId) {
     return { success: false, error: 'Missing transactionId' };
@@ -513,13 +616,14 @@ async function processDepositNotification(payload) {
           amount,
           type: 'deposit',
           status: 'completed',
-          description: `PayShap deposit from bank account (Ref: ${referenceNumber})`,
+          description: walletDepositDescription,
           fee: 0,
           currency,
           metadata: {
             source: 'SBSA_DEPOSIT_NOTIFICATION',
             sbsaTransactionId: transactionId,
             referenceNumber,
+            senderName: senderName || undefined,
             inboundCreditEventId: inboundEventId || undefined,
             inboundCreditSource: inboundClaim.claim?.sourceType || undefined,
           },
@@ -671,4 +775,6 @@ module.exports = {
   processDepositNotification,
   parkInSuspense,
   extractMsisdnFromReference,
+  extractSenderNameFromPayload,
+  buildWalletDepositDescription,
 };

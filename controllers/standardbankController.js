@@ -986,6 +986,7 @@ async function handlePayshapInboundCredit(req, res) {
         const rmtInf = txRef.rmtInf?.ustrd || txRef.rmtInf?.strd?.cdtrRefInf?.ref || null;
         const cdtrAcctId = txRef.cdtrAcct?.id?.othr?.id || null;
         const dbtrAcctId = txRef.dbtrAcct?.id?.othr?.id || null;
+        const senderName = txRef.dbtr?.pty?.nm || txRef.dbtr?.nm || payerName || null;
 
         const reference = cdtrProxy || dbtrProxy || rmtInf || cdtrAcctId || dbtrAcctId || '';
 
@@ -1002,7 +1003,8 @@ async function handlePayshapInboundCredit(req, res) {
           referenceNumber: reference,
           amount,
           currency,
-          description: `PayShap inbound credit R${amount.toFixed(2)} from ${payerName || 'unknown'}`,
+          senderName,
+          description: senderName ? `Deposit from ${senderName}` : 'Deposit',
           source: 'payshap_inbound',
           inboundCreditEvent: {
             sourceType: 'payshap_inbound',
@@ -1013,7 +1015,7 @@ async function handlePayshapInboundCredit(req, res) {
               txId,
               endToEndId,
               uetr,
-              payerName,
+              payerName: senderName,
               txStatus: txSts,
             },
           },

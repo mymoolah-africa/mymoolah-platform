@@ -49,6 +49,10 @@ function getBankCodeFromName(bankName) {
   return BANK_BRANCH_CODES[bankName] || '';
 }
 
+function isAutoPbacRetryEnabled() {
+  return process.env.STANDARDBANK_RTP_AUTO_PBAC_RETRY_ENABLED === 'true';
+}
+
 function buildRtpPaidLedgerLines({
   principalAmount,
   netCredit,
@@ -691,13 +695,15 @@ async function processRtpCallback(originalMessageId, transactionIdentifier, stat
 
   const isPayerDecline = codes.includes('PADCL');
   const hasExpired = rtpRequest.expiresAt && new Date() > new Date(rtpRequest.expiresAt);
-  const canRetryPbac = isSystemReject
+  const pbacRetryEligible = isSystemReject
     && !isPayerDecline
     && !hasExpired
     && rtpRequest.payerMobileNumber
     && rtpRequest.payerAccountNumber
     && !isRetryTarget
     && !alreadyRetried;
+  const autoPbacRetryEnabled = isAutoPbacRetryEnabled();
+  const canRetryPbac = autoPbacRetryEnabled && pbacRetryEligible;
 
   if (canRetryPbac) {
     console.log('[RTP-CB] Proxy rejected (%s) — attempting PBAC fallback for orgnlMsgId=%s acct=%s bank=%s',
@@ -798,6 +804,20 @@ async function processRtpCallback(originalMessageId, transactionIdentifier, stat
     return;
   }
 
+  if (pbacRetryEligible && !autoPbacRetryEnabled) {
+    await rtpRequest.update({
+      metadata: {
+        ...(rtpRequest.metadata || {}),
+        proxyRejectCodes: codes,
+        pbacAutoRetry: 'suppressed',
+        pbacAutoRetryReason: 'requires_explicit_customer_initiated_account_based_rtp',
+        pbacAutoRetrySuppressedAt: new Date().toISOString(),
+      },
+    });
+    console.log('[RTP-CB] Proxy rejected (%s) — auto-PBAC retry suppressed for orgnlMsgId=%s bank=%s',
+      codes.join(','), originalMessageId, rtpRequest.payerBankName || 'unknown');
+  }
+
   // Send notification to user (only reaches here if no retry or retry failed)
   try {
     const notificationService = require('./notificationService');
@@ -874,4 +894,5 @@ module.exports = {
   processRtpCallback,
   retryRtpAsPbac,
   buildRtpPaidLedgerLines,
+  isAutoPbacRetryEnabled,
 };
