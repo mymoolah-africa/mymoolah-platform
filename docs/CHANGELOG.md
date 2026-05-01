@@ -1,5 +1,21 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-05-01 - OTT payout diagnostics for Withdraw Cash
+
+### Summary
+Added safe diagnostics for the Withdraw Cash `/api/v1/ott/payouts` HTTP 500 seen during Codespaces testing. The pasted backend log showed only the generic route-level 500, with no stack trace or internal error code, so the route now logs a redacted OTT failure context and stack preview while keeping the wallet response safe.
+
+### Changes
+- Updated `routes/ott.js` so all OTT route catch blocks pass the request into the shared error handler.
+- Added safe backend error logging for OTT failures: method, path, authenticated user id, provider code, amount, internal error code, status, endpoint key, details, and a short stack preview for 5xx errors.
+- Updated the Withdraw Cash overlay so dev/Codespaces error messages include the backend `error` code in brackets, helping UAT identify whether the failure is fee policy, provider submission, ledger posting, reversal, wallet validation, or another backend path.
+
+### Validation
+- `node --check routes/ott.js` passed.
+- `npm test -- --runInBand tests/ott-payout-service.test.js` passed 10/10.
+- `npm run build` in `mymoolah-wallet-frontend` passed.
+- Cursor lints on touched files: no linter errors.
+
 ## 2026-05-01 - Retail voucher purchase identity fix
 
 ### Summary

@@ -35,8 +35,24 @@ function validateRequest(req, res, next) {
   return next();
 }
 
-function handleError(res, err) {
+function handleError(res, err, req = null) {
   const statusCode = err.statusCode || 500;
+  const safeContext = {
+    method: req?.method,
+    path: req?.originalUrl,
+    userId: req?.user?.id,
+    providerCode: req?.body?.providerCode,
+    amount: req?.body?.amount,
+    code: err.code || null,
+    statusCode,
+    message: err.message,
+    endpointKey: err.endpointKey || null,
+    details: err.details || null,
+  };
+  console.error('[OTT] Request failed:', safeContext);
+  if (statusCode >= 500 && err.stack) {
+    console.error('[OTT] Stack:', err.stack.split('\n').slice(0, 6).join('\n'));
+  }
   return res.status(statusCode).json({
     success: false,
     error: err.code || (statusCode >= 500 ? 'OTT_ERROR' : 'OTT_REQUEST_FAILED'),
@@ -163,7 +179,7 @@ router.post('/providers', [
     const response = await client.getActiveProviders(buildReadOnlyOttPayload(req, 'providers'));
     return res.json({ success: true, data: response.data });
   } catch (err) {
-    return handleError(res, err);
+    return handleError(res, err, req);
   }
 });
 
@@ -176,7 +192,7 @@ router.post('/provider-limits', [
     const response = await client.getActiveProviderLimits(buildReadOnlyOttPayload(req, 'limits'));
     return res.json({ success: true, data: response.data });
   } catch (err) {
-    return handleError(res, err);
+    return handleError(res, err, req);
   }
 });
 
@@ -190,7 +206,7 @@ router.post('/country-codes', [
     const response = await client.getCountryCodes(req.body || {});
     return res.json({ success: true, data: response.data });
   } catch (err) {
-    return handleError(res, err);
+    return handleError(res, err, req);
   }
 });
 
@@ -204,7 +220,7 @@ router.post('/branch-codes', [
     const response = await client.getUniversalBranchCodes(req.body || {});
     return res.json({ success: true, data: response.data });
   } catch (err) {
-    return handleError(res, err);
+    return handleError(res, err, req);
   }
 });
 
@@ -223,7 +239,7 @@ router.post('/payouts/quote', [
     });
     return res.json({ success: true, data: quote });
   } catch (err) {
-    return handleError(res, err);
+    return handleError(res, err, req);
   }
 });
 
@@ -269,7 +285,7 @@ router.post('/payouts', [
     });
     return res.status(201).json({ success: true, data: result });
   } catch (err) {
-    return handleError(res, err);
+    return handleError(res, err, req);
   }
 });
 
@@ -287,7 +303,7 @@ router.get('/payouts/:payoutId', [
     });
     return res.json({ success: true, data: payment });
   } catch (err) {
-    return handleError(res, err);
+    return handleError(res, err, req);
   }
 });
 
@@ -305,7 +321,7 @@ router.post('/payouts/:payoutId/poll', [
     });
     return res.json({ success: true, data: result });
   } catch (err) {
-    return handleError(res, err);
+    return handleError(res, err, req);
   }
 });
 
@@ -315,7 +331,7 @@ router.post('/webhook', async (req, res) => {
     const result = await ottPayoutService.updatePayoutFromWebhook(req.body || {});
     return res.status(200).json({ success: true, received: true, data: result });
   } catch (err) {
-    return handleError(res, err);
+    return handleError(res, err, req);
   }
 });
 

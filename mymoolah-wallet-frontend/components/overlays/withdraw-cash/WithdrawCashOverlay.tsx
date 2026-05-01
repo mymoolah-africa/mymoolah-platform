@@ -18,6 +18,14 @@ const WALLET_MIN_CASH_AMOUNT = 50;
 const WALLET_MAX_CASH_AMOUNT = 4000;
 const QUICK_AMOUNTS = [50, 100, 200, 500, 1000, 2000, 4000];
 
+function formatOttPayoutError(error: ApiError): string {
+  const supportCode = typeof error.payload?.error === 'string' ? error.payload.error : '';
+  if (import.meta.env.DEV && supportCode && !error.message.includes(supportCode)) {
+    return `${error.message} (${supportCode})`;
+  }
+  return error.message;
+}
+
 const FALLBACK_PROVIDERS: CashProvider[] = [
   {
     providerCode: '2',
@@ -154,7 +162,7 @@ export function WithdrawCashOverlay() {
       setResult(finalResult);
       setStep('success');
     } catch (err: any) {
-      setError(err instanceof ApiError ? err.message : 'Could not create the cash PIN. Please try again.');
+      setError(err instanceof ApiError ? formatOttPayoutError(err) : 'Could not create the cash PIN. Please try again.');
       setStep('error');
     } finally {
       setIsSubmitting(false);
