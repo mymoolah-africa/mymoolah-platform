@@ -11,12 +11,13 @@ Fixed the Pick n Pay retail voucher purchase path after Codespaces testing showe
 - Updated the wallet product detail modal so it no longer falls back to the display card ID for purchase requests.
 - Follow-up after retest: sent `variantId` in voucher purchase payloads, validated optional `variantId` at `/api/v1/products/purchase`, and made `ProductPurchaseService` resolve the selected active variant for amount rules, order traceability, and OTT/Flash/MobileMart supplier product/provider code resolution.
 - Follow-up hotfix: hardened product/supplier response formatting so missing brand associations cannot crash a successful purchase response with `Cannot read properties of null (reading 'name')`.
+- Follow-up hotfix: normalised nullable OTT VAS purchase recipients before building the OTT payload so omitted wallet voucher recipients cannot crash `buildOttVasRecipient`.
 - Improved safe frontend error propagation so provider rejections show the backend message instead of only `HTTP 400`.
 - Completed the OTT payout fee wording fix so new and historical OTT fee rows display as `Transaction fee`.
 
 ### Validation
 - `node --check routes/products.js controllers/productController.js services/productPurchaseService.js routes/overlayServices.js controllers/walletController.js services/ott/ottPayoutService.js` passed.
-- `npx jest tests/ott-product-purchase-service.test.js tests/voucherCatalogBrandService.test.js tests/ott-payout-service.test.js --runInBand --forceExit` passed 27/27; hotfix rerun `npx jest tests/ott-product-purchase-service.test.js --runInBand --forceExit` passed 5/5.
+- `npx jest tests/ott-product-purchase-service.test.js tests/voucherCatalogBrandService.test.js tests/ott-payout-service.test.js --runInBand --forceExit` passed 27/27; hotfix reruns `npx jest tests/ott-product-purchase-service.test.js --runInBand --forceExit` passed 5/5 and 6/6.
 - `npm run build` in `mymoolah-wallet-frontend` passed.
 - Cursor lints on touched files: no linter errors.
 

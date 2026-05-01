@@ -1029,6 +1029,7 @@ class ProductPurchaseService {
    */
   async processWithOtt(product, denomination, recipient = {}, supplierTransaction, transaction, user = null) {
     const { OttClient, redact } = require('./ott/ottClient');
+    const safeRecipient = recipient && typeof recipient === 'object' ? recipient : {};
 
     const providerCode = this.resolveOttProviderCode(product);
     if (!providerCode) {
@@ -1037,7 +1038,7 @@ class ProductPurchaseService {
 
     const uniqueReference = `MM-OTT-VAS-${supplierTransaction.id}-${Date.now()}`.slice(0, 64);
     const amountRand = Number((Number(denomination) / 100).toFixed(2));
-    const recipientPayload = this.buildOttVasRecipient({ user, recipient });
+    const recipientPayload = this.buildOttVasRecipient({ user, recipient: safeRecipient });
     const requestPayload = {
       yourUniqueReference: uniqueReference,
       amount: amountRand.toFixed(2),
@@ -1134,11 +1135,12 @@ class ProductPurchaseService {
   }
 
   buildOttVasRecipient({ user, recipient = {} }) {
-    const fullName = String(recipient.name || `${user?.firstName || ''} ${user?.lastName || ''}`.trim()).trim();
+    const safeRecipient = recipient && typeof recipient === 'object' ? recipient : {};
+    const fullName = String(safeRecipient.name || `${user?.firstName || ''} ${user?.lastName || ''}`.trim()).trim();
     const [firstNameFallback, ...surnameParts] = fullName.split(/\s+/);
-    const firstName = user?.firstName || recipient.firstName || recipient.firstname || firstNameFallback || 'Customer';
-    const surname = user?.lastName || recipient.surname || recipient.lastName || surnameParts.join(' ') || 'Customer';
-    const rawIdType = String(user?.idType || recipient.idType || recipient.id_type || '').toLowerCase();
+    const firstName = user?.firstName || safeRecipient.firstName || safeRecipient.firstname || firstNameFallback || 'Customer';
+    const surname = user?.lastName || safeRecipient.surname || safeRecipient.lastName || surnameParts.join(' ') || 'Customer';
+    const rawIdType = String(user?.idType || safeRecipient.idType || safeRecipient.id_type || '').toLowerCase();
     const idType = rawIdType.includes('passport') ? 'PASSPT' : 'RSAID';
 
     return {
@@ -1149,12 +1151,12 @@ class ProductPurchaseService {
       branch_code: '',
       country_of_issue: 'ZA',
       date_of_birth: '',
-      email: recipient.email || user?.email || '',
+      email: safeRecipient.email || user?.email || '',
       firstname: String(firstName || '').slice(0, 80),
-      id_number: user?.idNumber || recipient.idNumber || recipient.id_number || '',
+      id_number: user?.idNumber || safeRecipient.idNumber || safeRecipient.id_number || '',
       id_type: idType,
       middle_name: '',
-      mobile: recipient.phone || recipient.mobile || user?.phoneNumber || '',
+      mobile: safeRecipient.phone || safeRecipient.mobile || user?.phoneNumber || '',
       nationality: 'ZA',
       surname: String(surname || '').slice(0, 80),
       swift_code: '',

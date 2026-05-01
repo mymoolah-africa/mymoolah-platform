@@ -152,6 +152,31 @@ describe('ProductPurchaseService OTT purchase support', () => {
     });
   });
 
+  it('builds OTT VAS recipient safely when recipient is null', () => {
+    const service = new ProductPurchaseService();
+    const recipient = service.buildOttVasRecipient({
+      user: {
+        firstName: 'Andre',
+        lastName: 'User',
+        phoneNumber: '+27825571055',
+        email: 'andre@example.com',
+        idType: 'south_african_id',
+        idNumber: '8001015009087',
+      },
+      recipient: null,
+    });
+
+    expect(recipient).toEqual(expect.objectContaining({
+      account_name: 'Andre User',
+      firstname: 'Andre',
+      surname: 'User',
+      mobile: '+27825571055',
+      email: 'andre@example.com',
+      id_number: '8001015009087',
+      id_type: 'RSAID',
+    }));
+  });
+
   it('polls OTT status when PerformPayout outcome is unknown', async () => {
     const service = new ProductPurchaseService();
     const timeout = new Error('timeout of 15000ms exceeded');
