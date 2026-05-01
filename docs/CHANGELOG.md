@@ -1,5 +1,25 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-05-01 - Product Catalog Governance layer
+
+### Summary
+Added a banking-grade Product Catalog Governance layer so supplier SKUs can be ingested for audit while only reviewed, approved, and published mappings can appear in wallet catalog responses when enforcement is enabled.
+
+### Changes
+- Added `product_catalog_mappings` and `product_catalog_audit_events` via an additive zero-downtime migration.
+- Added Sequelize models and `ProductCatalogGovernanceService` for SKU detection, draft updates, submit, approve, reject, suspend, retire, maker-checker blocking, and immutable audit events.
+- Integrated supplier catalog sync so active supplier variants create or refresh governance mappings without blocking raw ingestion if governance tables are not yet migrated.
+- Added wallet voucher catalog enforcement behind `PRODUCT_CATALOG_GOVERNANCE_ENABLED`; the existing curated allowlist remains the rollout backstop when the flag is off.
+- Added `/api/v1/catalog-governance` admin APIs with portal JWT auth, validation, pagination, filters, 4-eyes transition controls, and queue backfill.
+- Added Admin Portal `Catalog Governance` screen with filters, paginated table, detail review panel, canonical edits, submit/approve/reject/suspend/retire actions, and audit history.
+- Added `docs/PRODUCT_CATALOG_GOVERNANCE.md` with states, controls, admin procedure, rollout, and validation notes.
+
+### Validation
+- `node --check` on the new migration, models, service, admin route, server, wallet overlay route, sync service, and unit test.
+- `npx jest tests/productCatalogGovernanceService.test.js --runInBand` — 3/3 passing.
+- `npm run type-check` in `portal/admin/frontend` no longer reports errors in the new Catalog Governance screen; it still fails on pre-existing unrelated portal type errors in `UserManagementOverlay.tsx`, `components/ui/checkbox.tsx`, and `components/ui/dialog.tsx`.
+- Cursor lints on touched backend, route, and portal files: no new linter errors.
+
 ## 2026-05-01 - Wallet Withdraw Cash UI cleanup
 
 ### Summary
@@ -21,6 +41,7 @@ Cleaned up frontend issues found during Codespaces wallet testing after the Reta
 - Follow-up: aligned KYC submit enforcement with the wallet KYC status screen by treating `users.kycStatus = verified` as authoritative; stale `wallets.kycVerified` remains diagnostic and no longer blocks verified users.
 - Follow-up: removed React style shorthand/non-shorthand mixing in Withdraw Cash to clear the `paddingBottom` console warning.
 - Follow-up: dashboard Recent Transactions now groups OTT Withdraw Cash face value plus OTT/provider/MMTP fees into one total-debit row, while Transaction History keeps the split face-value and fee rows.
+- Follow-up: restored a curated retail-voucher catalog so unmapped supplier products are audited but not shown to customers; added explicit Apple and FNB brand mappings to avoid generic duplicate cards.
 - Added a global wallet route-scroll reset so routed overlays such as Bank Transfer open at the top.
 - Top-aligned shared wallet popup modal containers that previously opened centered/mid-screen.
 
@@ -28,9 +49,11 @@ Cleaned up frontend issues found during Codespaces wallet testing after the Reta
 - `npm run build` in `mymoolah-wallet-frontend`.
 - `node --check controllers/settingsController.js && node --check routes/ott.js`.
 - `node --check controllers/walletController.js`.
+- `node --check routes/overlayServices.js`.
 - `npx jest tests/ott-payout-service.test.js --runInBand --forceExit` — 10/10 passing.
 - Cursor lints on touched frontend files: no linter errors.
 - Cursor lints on `controllers/walletController.js`: no linter errors.
+- Cursor lints on `routes/overlayServices.js`: no linter errors.
 - No additional wallet-debit UAT transaction was run in this cleanup checkpoint.
 
 ## 2026-05-01 - OTT Withdraw Cash frontend simplification

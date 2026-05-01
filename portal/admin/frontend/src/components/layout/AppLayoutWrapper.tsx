@@ -57,6 +57,7 @@ const NAV_GROUPS: NavGroup[] = [
       { label: 'Users & KYC', path: '/admin/users', icon: Users },
       { label: 'Transactions', path: '/admin/transactions', icon: Activity },
       { label: 'Services', path: '/admin/services', icon: Server },
+      { label: 'Catalog Governance', path: '/admin/catalog-governance', icon: Server },
     ],
   },
   {
@@ -87,6 +88,7 @@ const ROUTE_TITLE_RULES: { test: (pathname: string) => boolean; title: string }[
   { test: (p) => p.startsWith('/admin/floats'), title: 'Float Management' },
   { test: (p) => p.startsWith('/admin/users'), title: 'Users & KYC' },
   { test: (p) => p.startsWith('/admin/transactions'), title: 'Transaction Monitoring' },
+  { test: (p) => p.startsWith('/admin/catalog-governance'), title: 'Catalog Governance' },
   { test: (p) => p.startsWith('/admin/services'), title: 'Service Management' },
   { test: (p) => p.startsWith('/admin/security'), title: 'Audit Log' },
   { test: (p) => p.startsWith('/admin/reports'), title: 'Reports & Analytics' },

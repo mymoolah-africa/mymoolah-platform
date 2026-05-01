@@ -155,6 +155,7 @@ const airtimeRoutes = require('./routes/airtime.js');
 const overlayRoutes = require('./routes/overlayServices.js');
 const productRoutes = require('./routes/products.js');
 const catalogSyncRoutes = require('./routes/catalogSync.js');
+const catalogGovernanceRoutes = require('./routes/catalogGovernance.js');
 const userFavoritesRoutes = require('./routes/userFavorites.js');
 const referralRoutes = require('./routes/referrals.js');
 const reconciliationRoutes = require('./routes/reconciliation.js');
@@ -510,6 +511,7 @@ app.use('/api/v1/airtime', airtimeRoutes);
 app.use('/api/v1/overlay', overlayRoutes);
 app.use('/api/v1/products', productRoutes);
 app.use('/api/v1/catalog-sync', catalogSyncRoutes);
+app.use('/api/v1/catalog-governance', catalogGovernanceRoutes);
 app.use('/api/v1/user-favorites', userFavoritesRoutes);
 app.use('/api/v1/ads', adRoutes); // Watch to Earn
 app.use('/api/v1/referrals', referralRoutes);

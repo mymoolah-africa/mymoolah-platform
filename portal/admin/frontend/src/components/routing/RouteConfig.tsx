@@ -13,6 +13,7 @@ import { UserManagementOverlay } from '../admin-overlays/UserManagementOverlay';
 import { TransactionMonitoringOverlay } from '../admin-overlays/TransactionMonitoringOverlay';
 import { FloatManagementOverlay } from '../admin-overlays/FloatManagementOverlay';
 import { ServiceManagementOverlay } from '../admin-overlays/ServiceManagementOverlay';
+import { CatalogGovernanceOverlay } from '../admin-overlays/CatalogGovernanceOverlay';
 import { SettlementManagementOverlay } from '../admin-overlays/SettlementManagementOverlay';
 import { ReportingAnalyticsOverlay } from '../admin-overlays/ReportingAnalyticsOverlay';
 import { SystemConfigurationOverlay } from '../admin-overlays/SystemConfigurationOverlay';
@@ -90,6 +91,7 @@ export const RouteConfig: React.FC = () => {
           <Route path="/admin/floats" element={<FloatManagementOverlay />} />
           <Route path="/admin/settlements" element={<SettlementManagementOverlay />} />
           <Route path="/admin/services" element={<ServiceManagementOverlay />} />
+          <Route path="/admin/catalog-governance" element={<CatalogGovernanceOverlay />} />
           <Route path="/admin/system" element={<SystemConfigurationOverlay />} />
           <Route path="/admin/reports" element={<ReportingAnalyticsOverlay />} />
           <Route path="/admin/unallocated-deposits" element={<UnallocatedDepositsOverlay />} />

@@ -3587,6 +3587,7 @@ const VOUCHER_BRAND_TABLE = [
   { match: /google\s*play/i,                    brand: 'Google Play',      icon: '📱', category: 'gaming', desc: 'Google Play voucher' },
 
   // Apple credit (must come AFTER itunes/apple music)
+  { match: /\bapple\b/i,                        brand: 'Apple Credit',     icon: '🍎', category: 'entertainment', desc: 'Apple App Store / iTunes credit' },
   { match: /\$\d+\s*credit|apple.*credit/i,     brand: 'Apple Credit',     icon: '🍎', category: 'entertainment', desc: 'Apple App Store / iTunes credit' },
 
   // Betting
@@ -3606,6 +3607,7 @@ const VOUCHER_BRAND_TABLE = [
   // Shopping / retail
   { match: /amazon/i,                           brand: 'Amazon',           icon: '🛍️', category: 'shopping', desc: 'Amazon retail voucher' },
   { match: /takealot/i,                         brand: 'Takealot',         icon: '🛍️', category: 'shopping', desc: 'Takealot retail voucher' },
+  { match: /\bfnb\b|first\s*national\s*bank/i,  brand: 'FNB',              icon: '🏦', category: 'shopping', desc: 'FNB retail voucher' },
   { match: /1voucher/i,                         brand: '1Voucher',         icon: '🛒', category: 'shopping', desc: '1Voucher — accepted at thousands of online stores' },
   { match: /blu\s*voucher/i,                    brand: 'Blu Voucher',      icon: '💳', category: 'shopping', desc: 'Blu Voucher' },
   { match: /ringas/i,                           brand: 'Ringas',           icon: '💳', category: 'shopping', desc: 'Ringas voucher' },
@@ -3672,9 +3674,8 @@ function slugifyRetailVoucherName(value) {
 
 /**
  * Recognise a raw supplier product name and return canonical brand info.
- * Recognition is an enhancement layer only. Unknown active voucher products
- * still appear using a sanitized supplier/product name so catalog additions
- * cannot silently disappear from the wallet.
+ * Recognition is the customer-facing allowlist. Unknown active voucher products
+ * are audited but not shown until mapped to a meaningful retail brand.
  */
 function recogniseVoucherBrand(rawName) {
   if (!rawName) {
@@ -3767,6 +3768,7 @@ router.get('/vouchers/catalog', auth, async (req, res) => {
           supplierProductId: variant.supplierProductId,
           variantId: variant.id,
         });
+        continue;
       }
 
       const brandKey = recognised.brand.toLowerCase();
@@ -3881,6 +3883,7 @@ router.get('/vouchers/catalog', auth, async (req, res) => {
         id: `retail-voucher-${slugifyRetailVoucherName(group.brand)}-${bestVariantId || representative.id}`,
         productId: bestProductId || representative.product?.id,
         variantId: bestVariantId || representative.id,
+        supplierProductId: representative.supplierProductId,
         name: group.brand,
         brand: group.brand,
         category: group.category,
@@ -3899,6 +3902,43 @@ router.get('/vouchers/catalog', auth, async (req, res) => {
 
     // Phase 5: Filter and sort
     let result = vouchers;
+    let governanceEnabled = process.env.PRODUCT_CATALOG_GOVERNANCE_ENABLED === 'true';
+
+    if (governanceEnabled) {
+      const ProductCatalogGovernanceService = require('../services/productCatalogGovernanceService');
+      const governanceService = new ProductCatalogGovernanceService();
+      const approvedMappings = await governanceService.getPublishedMappings({ productType: 'voucher' });
+      const mappingByVariant = new Map();
+      const mappingBySupplierSku = new Map();
+
+      approvedMappings.forEach((mapping) => {
+        if (mapping.sourceVariantId) mappingByVariant.set(Number(mapping.sourceVariantId), mapping);
+        if (mapping.supplierCode && mapping.supplierProductId) {
+          mappingBySupplierSku.set(`${mapping.supplierCode}:${mapping.supplierProductId}`, mapping);
+        }
+      });
+
+      result = result
+        .map((voucher) => {
+          const mapping =
+            mappingByVariant.get(Number(voucher.variantId)) ||
+            mappingBySupplierSku.get(`${voucher.supplierCode}:${voucher.supplierProductId}`);
+          if (!mapping) return null;
+          return {
+            ...voucher,
+            name: mapping.canonicalName || voucher.name,
+            brand: mapping.canonicalBrand || voucher.brand,
+            category: mapping.category || voucher.category,
+            description: mapping.description || voucher.description,
+            icon: mapping.iconKey || voucher.icon,
+            logoKey: mapping.logoKey || voucher.logoKey,
+            riskTier: mapping.riskTier,
+            governanceMappingId: mapping.id,
+            recognition: 'approved',
+          };
+        })
+        .filter(Boolean);
+    }
 
     if (q) {
       const searchLower = q.toLowerCase();
@@ -3928,6 +3968,7 @@ router.get('/vouchers/catalog', auth, async (req, res) => {
         categories,
         total: result.length,
         catalogAudit: {
+          governanceEnabled,
           fallbackRecognitionCount: fallbackRecognitions.length,
           fallbackRecognitions: fallbackRecognitions.slice(0, 50)
         }

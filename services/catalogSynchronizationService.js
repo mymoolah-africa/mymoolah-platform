@@ -5,8 +5,10 @@ const { Op } = require('sequelize');
 const notificationService = require('./notificationService');
 const ProductCatalogService = require('./productCatalogService');
 const commissionConfig = require('../config/supplier-commissions.json');
+const ProductCatalogGovernanceService = require('./productCatalogGovernanceService');
 
 const _catalogServiceInstance = new ProductCatalogService();
+const _catalogGovernanceService = new ProductCatalogGovernanceService();
 const MobileMartAuthService = require('./mobilemartAuthService');
 const FlashAuthService = require('./flashAuthService');
 
@@ -560,6 +562,7 @@ class CatalogSynchronizationService {
 
       this.syncStats.totalProducts++;
       await tx.commit();
+      await this.queueGovernanceMapping(variant.id);
     } catch (error) {
       await tx.rollback();
       throw error;
@@ -1011,6 +1014,7 @@ class CatalogSynchronizationService {
       this.syncStats.totalProducts++;
       
       await transaction.commit();
+      await this.queueGovernanceMapping(productVariant.id);
       
     } catch (error) {
       await transaction.rollback();
@@ -1151,6 +1155,26 @@ class CatalogSynchronizationService {
    */
   async updateCatalogCache() {
     await _catalogServiceInstance.refreshView();
+  }
+
+  async queueGovernanceMapping(variantId) {
+    try {
+      const variant = await ProductVariant.findByPk(variantId, {
+        include: [
+          { model: Product, as: 'product' },
+          { model: Supplier, as: 'supplier' },
+        ],
+      });
+      if (!variant) return;
+      await _catalogGovernanceService.ensureMappingForVariant(variant, {
+        id: 'catalog-sync',
+        email: 'system@mymoolah.internal',
+        role: 'system',
+      });
+    } catch (error) {
+      // Governance must never block raw supplier sync; unmapped SKUs remain hidden until reviewed.
+      console.warn(`⚠️ Catalog governance queue skipped for variant ${variantId}: ${error.message}`);
+    }
   }
 
   /**
