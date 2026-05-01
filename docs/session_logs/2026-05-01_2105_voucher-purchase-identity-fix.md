@@ -3,12 +3,12 @@
 **Session Date**: 2026-05-01 21:05 SAST  
 **Agent**: Cursor AI Agent  
 **User**: André  
-**Session Duration**: Follow-up after Codespaces Pick n Pay voucher test
+**Session Duration**: Follow-up after Codespaces Pick n Pay voucher test; final retest passed
 
 ---
 
 ## Session Summary
-Fixed the Pick n Pay voucher purchase path after Codespaces testing showed the voucher card displayed correctly but the purchase request failed with HTTP 400. The fix keeps customer-facing voucher identity stable through `catalogKey` while making the backend purchase identity explicit through `purchaseProductId` and `variantId`.
+Fixed the Pick n Pay voucher purchase path after Codespaces testing showed the voucher card displayed correctly but the purchase request failed with HTTP 400. The fix keeps customer-facing voucher identity stable through `catalogKey` while making the backend purchase identity explicit through `purchaseProductId` and `variantId`. André pulled/restarted in Codespaces after the final hotfix and confirmed the flow looks better.
 
 ---
 
@@ -22,6 +22,7 @@ Fixed the Pick n Pay voucher purchase path after Codespaces testing showed the v
 - [x] Improved safe frontend error propagation so backend rejection messages are shown instead of only `HTTP 400`.
 - [x] Completed the interrupted OTT fee display wording fix and updated focused tests.
 - [x] Updated changelog and handover documentation.
+- [x] Final user retest confirmation captured: André confirmed “all looks better”.
 
 ---
 
@@ -72,6 +73,7 @@ Fixed the Pick n Pay voucher purchase path after Codespaces testing showed the v
 - [x] Backend syntax checks passed.
 - [x] Focused Jest tests passed.
 - [x] Wallet frontend build passed.
+- [x] Manual Codespaces retest passed after André pulled/restarted.
 - [x] Cursor lints checked on touched files.
 
 Commands/results:
@@ -85,9 +87,9 @@ Commands/results:
 ---
 
 ## Next Steps
-- [ ] André to pull latest code in Codespaces.
-- [ ] Rebuild the wallet frontend and restart the backend/proxy using the approved script.
-- [ ] Retest Pick n Pay voucher purchase.
+- [x] André pulled latest code in Codespaces.
+- [x] Backend/proxy restarted using the approved script.
+- [x] Pick n Pay voucher purchase flow retested; André confirmed it looks better.
 
 ---
 
@@ -99,7 +101,7 @@ Commands/results:
 ---
 
 ## Questions/Unresolved Items
-- Manual Codespaces retest is still needed after André pulls and restarts.
+- No open Pick n Pay voucher blocker from this session.
 
 ---
 

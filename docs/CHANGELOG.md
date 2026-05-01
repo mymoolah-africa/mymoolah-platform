@@ -3,7 +3,7 @@
 ## 2026-05-01 - Retail voucher purchase identity fix
 
 ### Summary
-Fixed the Pick n Pay retail voucher purchase path after Codespaces testing showed the card displayed correctly but `/api/v1/products/purchase` returned HTTP 400.
+Fixed the Pick n Pay retail voucher purchase path after Codespaces testing showed the card displayed correctly but `/api/v1/products/purchase` returned HTTP 400. Final Codespaces retest was confirmed by André after the backend recipient hotfix.
 
 ### Changes
 - Kept customer-facing voucher identity stable through backend `catalogKey`, while adding an explicit `purchaseProductId` for wallet purchase calls.
@@ -14,6 +14,7 @@ Fixed the Pick n Pay retail voucher purchase path after Codespaces testing showe
 - Follow-up hotfix: normalised nullable OTT VAS purchase recipients before building the OTT payload so omitted wallet voucher recipients cannot crash `buildOttVasRecipient`.
 - Improved safe frontend error propagation so provider rejections show the backend message instead of only `HTTP 400`.
 - Completed the OTT payout fee wording fix so new and historical OTT fee rows display as `Transaction fee`.
+- Captured final Codespaces retest confirmation from André: “all looks better”.
 
 ### Validation
 - `node --check routes/products.js controllers/productController.js services/productPurchaseService.js routes/overlayServices.js controllers/walletController.js services/ott/ottPayoutService.js` passed.
