@@ -13,6 +13,8 @@ Cleaned up frontend issues found during Codespaces wallet testing after the Reta
 - Removed the frontend ID/passport prompt from Withdraw Cash; the OTT payout route now builds the recipient payload from the KYC-verified `User` record.
 - Removed the separate `Check fees` step so Withdraw Cash submits directly through the payout endpoint.
 - Updated OTT provider loading to merge active providers and provider limits, allowing live providers such as Nedbank to activate when returned by OTT.
+- Follow-up: set Nedbank Cardless Cash Send to OTT provider code `10`, made it selectable, and hardened provider parsing for OTT capitalized response fields.
+- Follow-up: removed the visible Verified Profile card and fixed the Withdraw Cash action to a bottom action bar above navigation.
 - Added a global wallet route-scroll reset so routed overlays such as Bank Transfer open at the top.
 - Top-aligned shared wallet popup modal containers that previously opened centered/mid-screen.
 

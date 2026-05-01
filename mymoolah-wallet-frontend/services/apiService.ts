@@ -742,19 +742,27 @@ class ApiService {
       ? payload
       : Array.isArray(payload?.providers)
         ? payload.providers
-        : Array.isArray(payload?.providerLimits)
-          ? payload.providerLimits
-          : Array.isArray(payload?.data)
-            ? payload.data
-            : [];
+        : Array.isArray(payload?.Providers)
+          ? payload.Providers
+          : Array.isArray(payload?.providerLimits)
+            ? payload.providerLimits
+            : Array.isArray(payload?.ProviderLimits)
+              ? payload.ProviderLimits
+              : Array.isArray(payload?.data)
+                ? payload.data
+                : Array.isArray(payload?.Data)
+                  ? payload.Data
+                  : payload && typeof payload === 'object'
+                    ? Object.values(payload).filter((entry) => entry && typeof entry === 'object')
+                    : [];
 
     return candidates
       .map((provider: any) => {
         const providerCode = String(
-          provider.providerCode || provider.provider_code || provider.code || provider.id || ''
+          provider.providerCode || provider.ProviderCode || provider.provider_code || provider.code || provider.id || provider.providerId || ''
         ).trim();
         const providerName = String(
-          provider.providerName || provider.provider_name || provider.name || provider.description || ''
+          provider.providerName || provider.ProviderName || provider.provider_name || provider.name || provider.description || ''
         ).trim();
         if (!providerCode || !providerName) return null;
         const minAmount = Number(provider.minAmount ?? provider.minimumAmount ?? provider.min ?? 0);

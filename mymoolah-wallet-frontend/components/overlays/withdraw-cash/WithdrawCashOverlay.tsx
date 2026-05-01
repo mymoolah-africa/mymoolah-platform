@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Input } from '../../ui/input';
 import { Label } from '../../ui/label';
 import { Alert, AlertDescription } from '../../ui/alert';
-import { useAuth } from '../../../contexts/AuthContext';
 import { apiService, ApiError, type OttPayoutProvider, type OttPayoutResult } from '../../../services/apiService';
 
 type Step = 'details' | 'processing' | 'success' | 'error';
@@ -29,54 +28,31 @@ const FALLBACK_PROVIDERS: CashProvider[] = [
     available: true,
   },
   {
-    providerCode: 'NEDBANK',
+    providerCode: '10',
     providerName: 'Nedbank Cardless Cash Send',
     helper: 'You will receive a Nedbank SMS with the cash PIN and instructions.',
-    available: false,
+    available: true,
   },
 ];
 
-function normalizeMobile(value: string): string {
-  const digits = String(value || '').replace(/\D/g, '');
-  if (digits.startsWith('27')) return `+${digits}`;
-  if (digits.startsWith('0') && digits.length === 10) return `+27${digits.slice(1)}`;
-  if (digits.length === 9) return `+27${digits}`;
-  return value;
-}
-
-function splitName(name: string): { firstName: string; surname: string } {
-  const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return { firstName: '', surname: '' };
-  if (parts.length === 1) return { firstName: parts[0], surname: '' };
-  return { firstName: parts[0], surname: parts.slice(1).join(' ') };
-}
+const CASH_PROVIDER_ALIASES: Record<string, string[]> = {
+  '2': ['2', 'standard', 'instant money'],
+  '112': ['112', 'absa', 'cashsend'],
+  '10': ['10', 'nedbank', 'cardless'],
+};
 
 export function WithdrawCashOverlay() {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const defaultName = splitName(user?.name || '');
 
   const [providers, setProviders] = useState<CashProvider[]>(FALLBACK_PROVIDERS);
   const [selectedProviderCode, setSelectedProviderCode] = useState(FALLBACK_PROVIDERS[0].providerCode);
   const [amount, setAmount] = useState('');
-  const [firstName, setFirstName] = useState(defaultName.firstName);
-  const [surname, setSurname] = useState(defaultName.surname);
-  const [mobile, setMobile] = useState(normalizeMobile(user?.phoneNumber || user?.identifier || ''));
   const [result, setResult] = useState<OttPayoutResult | null>(null);
   const [step, setStep] = useState<Step>('details');
   const [error, setError] = useState('');
   const [isLoadingProviders, setIsLoadingProviders] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    const profileName = splitName(user?.name || '');
-    const profileMobile = normalizeMobile(user?.phoneNumber || user?.identifier || '');
-
-    if (!firstName && profileName.firstName) setFirstName(profileName.firstName);
-    if (!surname && profileName.surname) setSurname(profileName.surname);
-    if (!mobile && profileMobile) setMobile(profileMobile);
-  }, [firstName, mobile, surname, user]);
 
   useEffect(() => {
     let mounted = true;
@@ -90,11 +66,9 @@ export function WithdrawCashOverlay() {
           const live = activeProviders.find((provider) => {
             const name = provider.providerName.toLowerCase();
             const code = provider.providerCode.toLowerCase();
+            const aliases = CASH_PROVIDER_ALIASES[fallback.providerCode] || [];
             if (fallback.providerCode.toLowerCase() === code) return true;
-            if (fallback.providerName.toLowerCase().includes('standard')) return name.includes('standard');
-            if (fallback.providerName.toLowerCase().includes('absa')) return name.includes('absa');
-            if (fallback.providerName.toLowerCase().includes('nedbank')) return name.includes('nedbank') || code === '10';
-            return false;
+            return aliases.some((alias) => code === alias || name.includes(alias));
           });
           return live ? { ...fallback, ...live, helper: fallback.helper, available: live.available } : fallback;
         });
@@ -314,24 +288,6 @@ export function WithdrawCashOverlay() {
         </CardContent>
       </Card>
 
-      <Card className="mb-4">
-        <CardHeader>
-          <CardTitle className="text-base">Verified profile</CardTitle>
-          <p className="text-sm text-gray-600">
-            We use your KYC-verified MyMoolah profile for the cash-send request. You do not need to enter your ID or passport number again.
-          </p>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Profile used</p>
-            <p className="text-sm font-semibold text-gray-900 mt-1">
-              {firstName && surname ? `${firstName} ${surname}` : 'KYC-verified wallet profile'}
-            </p>
-            <p className="text-sm text-gray-600">{mobile || 'Verified mobile number on file'}</p>
-          </div>
-        </CardContent>
-      </Card>
-
       {error && step !== 'error' && (
         <Alert className="mb-4 border-red-200 bg-red-50">
           <AlertTriangle className="h-4 w-4 text-red-600" />
@@ -339,7 +295,19 @@ export function WithdrawCashOverlay() {
         </Alert>
       )}
 
-      <div className="sticky bottom-24 bg-white pt-3">
+      <div
+        className="bg-white"
+        style={{
+          position: 'fixed',
+          left: '50%',
+          bottom: '96px',
+          transform: 'translateX(-50%)',
+          width: 'calc(100% - 32px)',
+          maxWidth: '343px',
+          padding: '12px 0 16px',
+          zIndex: 9999,
+        }}
+      >
         <Button onClick={handleSubmit} disabled={isSubmitting || !!formError} className="w-full bg-[#86BE41] hover:bg-[#75a938]">
           {isSubmitting ? 'Processing...' : 'Withdraw Cash'}
         </Button>

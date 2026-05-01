@@ -21,6 +21,8 @@ Cleaned up wallet frontend naming and routed overlay behaviour after the OTT Wit
 - [x] Added `/withdraw-cash-overlay` as the canonical route while keeping `/atm-cashsend-overlay` as a compatibility alias.
 - [x] Fixed routed overlay scroll restoration by resetting the wallet shell scroll container on route changes.
 - [x] Swept shared popup modal containers so wallet modals anchor from the top rather than centered mid-screen.
+- [x] Follow-up: removed the visible Verified Profile card and fixed the Withdraw Cash action as a bottom action bar.
+- [x] Follow-up: changed Nedbank Cardless Cash Send to OTT provider code `10`, made it selectable, and hardened provider response parsing.
 
 ---
 
@@ -48,6 +50,8 @@ Cleaned up wallet frontend naming and routed overlay behaviour after the OTT Wit
 
 ## Code Changes Summary
 - Withdraw Cash now uses `withdraw-cash/WithdrawCashOverlay.tsx`, direct submit, verified profile messaging, and server-side identity enrichment.
+- Follow-up simplified the screen further by removing the visible Verified Profile card; server-side identity enrichment remains unchanged.
+- Nedbank Cardless Cash Send now uses OTT provider code `10` and appears selectable instead of `Soon`.
 - OTT payout provider loading now merges `/api/v1/ott/providers` and `/api/v1/ott/provider-limits`.
 - Wallet route changes reset the internal scroll container to top.
 - Shared modal containers no longer open centered/mid-page.
