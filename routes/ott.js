@@ -136,6 +136,14 @@ function cryptoSafeEqual(a, b) {
   return crypto.timingSafeEqual(a, b);
 }
 
+function buildReadOnlyOttPayload(req, purpose) {
+  return {
+    ...(req.body || {}),
+    requestdate: req.body?.requestdate || new Date().toISOString(),
+    yourUniqueReference: req.body?.yourUniqueReference || `MM-OTT-RO-${Date.now()}-${purpose}`.slice(0, 50),
+  };
+}
+
 router.get('/health', (req, res) => {
   res.json({
     success: true,
@@ -152,7 +160,7 @@ router.post('/providers', [
 ], async (req, res) => {
   try {
     const client = new OttClient();
-    const response = await client.getActiveProviders(req.body || {});
+    const response = await client.getActiveProviders(buildReadOnlyOttPayload(req, 'providers'));
     return res.json({ success: true, data: response.data });
   } catch (err) {
     return handleError(res, err);
@@ -165,7 +173,7 @@ router.post('/provider-limits', [
 ], async (req, res) => {
   try {
     const client = new OttClient();
-    const response = await client.getActiveProviderLimits(req.body || {});
+    const response = await client.getActiveProviderLimits(buildReadOnlyOttPayload(req, 'limits'));
     return res.json({ success: true, data: response.data });
   } catch (err) {
     return handleError(res, err);

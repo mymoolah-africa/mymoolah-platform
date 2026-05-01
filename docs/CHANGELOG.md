@@ -16,6 +16,7 @@ Cleaned up frontend issues found during Codespaces wallet testing after the Reta
 - Follow-up: set Nedbank Cardless Cash Send to OTT provider code `10`, made it selectable, and hardened provider parsing for OTT capitalized response fields.
 - Follow-up: removed the visible Verified Profile card and fixed the Withdraw Cash action to a bottom action bar above navigation.
 - Follow-up: made OTT provider discovery and provider-limit lookup authenticated read-only calls instead of KYC-gated calls, removing noisy `KYC verification required` console errors on screen load while keeping quote/submit/status KYC-gated.
+- Follow-up: provider discovery routes now add the OTT-required `requestdate` and `yourUniqueReference` server-side so wallet screen loads do not send empty discovery payloads to OTT.
 - Follow-up: updated cash amount presets to clearer chips across the wallet guardrail range `R50` to `R4,000`; live OTT limits still narrow the allowed range when returned.
 - Added a global wallet route-scroll reset so routed overlays such as Bank Transfer open at the top.
 - Top-aligned shared wallet popup modal containers that previously opened centered/mid-screen.
