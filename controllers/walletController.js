@@ -587,6 +587,7 @@ class WalletController {
         const usdcSendGroups = new Map();
         const rppGroups = new Map(); // PayShap RPP: group principal + fee into one combined row
         const rtpGroups = new Map(); // PayShap RTP: group principal + fee into one net credit row
+        const ottPayoutGroups = new Map(); // OTT cash withdrawal: group face value + fees into one dashboard row
         const otherTransactions = [];
         
         normalizedRows.forEach(tx => {
@@ -710,6 +711,16 @@ class WalletController {
         const otherForRecent = [];
         otherTransactions.forEach((tx) => {
           const metadata = tx.metadata || {};
+          // OTT cash withdrawal: group face value + provider/MMTP fee into ONE dashboard row.
+          // Transaction History (limit > 10) intentionally keeps the split lines.
+          if (metadata.ottPayoutId && (tx.transactionId || '').startsWith('OTT-')) {
+            const key = String(metadata.ottPayoutId);
+            if (!ottPayoutGroups.has(key)) ottPayoutGroups.set(key, { main: null, fee: null });
+            const g = ottPayoutGroups.get(key);
+            if (tx.type === 'fee' || (tx.transactionId || '').startsWith('OTT-FEE-')) g.fee = tx;
+            else g.main = tx;
+            return;
+          }
           // Flash voucher top-up: group by vasTransactionId (main has isVoucherTopupAmount, fee has isTopUpFee)
           if (metadata.isVoucherTopup && (metadata.isVoucherTopupAmount || metadata.isTopUpFee)) {
             const key = metadata.vasTransactionId;
@@ -846,8 +857,28 @@ class WalletController {
           } else if (g.principal) combinedRtpRows.push(g.principal);
           else if (g.fee) combinedRtpRows.push(g.fee);
         });
+        const combinedOttPayoutRows = [];
+        ottPayoutGroups.forEach((g) => {
+          if (g.main && g.fee) {
+            const faceValue = Math.abs(parseFloat(g.main.amount || 0));
+            const feeAmount = Math.abs(parseFloat(g.fee.amount || 0));
+            const totalDebit = faceValue + feeAmount;
+            combinedOttPayoutRows.push({
+              ...g.main,
+              amount: totalDebit,
+              metadata: {
+                ...(g.main.metadata || {}),
+                combinedOttPayout: true,
+                ottFaceValue: faceValue,
+                ottFeeAmount: feeAmount,
+                totalDebit,
+              },
+            });
+          } else if (g.main) combinedOttPayoutRows.push(g.main);
+          else if (g.fee) combinedOttPayoutRows.push(g.fee);
+        });
         normalizedRows.length = 0;
-        normalizedRows.push(...combinedRefunds, ...combinedVoucherTopupRows, ...combinedCashoutRows, ...combinedUsdcRows, ...combinedRppRows, ...combinedRtpRows, ...otherForRecent);
+        normalizedRows.push(...combinedRefunds, ...combinedVoucherTopupRows, ...combinedCashoutRows, ...combinedUsdcRows, ...combinedRppRows, ...combinedRtpRows, ...combinedOttPayoutRows, ...otherForRecent);
         normalizedRows.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       }
 

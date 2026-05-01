@@ -20,14 +20,17 @@ Cleaned up frontend issues found during Codespaces wallet testing after the Reta
 - Follow-up: updated cash amount presets to clearer chips across the wallet guardrail range `R50` to `R4,000`; live OTT limits still narrow the allowed range when returned.
 - Follow-up: aligned KYC submit enforcement with the wallet KYC status screen by treating `users.kycStatus = verified` as authoritative; stale `wallets.kycVerified` remains diagnostic and no longer blocks verified users.
 - Follow-up: removed React style shorthand/non-shorthand mixing in Withdraw Cash to clear the `paddingBottom` console warning.
+- Follow-up: dashboard Recent Transactions now groups OTT Withdraw Cash face value plus OTT/provider/MMTP fees into one total-debit row, while Transaction History keeps the split face-value and fee rows.
 - Added a global wallet route-scroll reset so routed overlays such as Bank Transfer open at the top.
 - Top-aligned shared wallet popup modal containers that previously opened centered/mid-screen.
 
 ### Validation
 - `npm run build` in `mymoolah-wallet-frontend`.
 - `node --check controllers/settingsController.js && node --check routes/ott.js`.
+- `node --check controllers/walletController.js`.
 - `npx jest tests/ott-payout-service.test.js --runInBand --forceExit` — 10/10 passing.
 - Cursor lints on touched frontend files: no linter errors.
+- Cursor lints on `controllers/walletController.js`: no linter errors.
 - No additional wallet-debit UAT transaction was run in this cleanup checkpoint.
 
 ## 2026-05-01 - OTT Withdraw Cash frontend simplification

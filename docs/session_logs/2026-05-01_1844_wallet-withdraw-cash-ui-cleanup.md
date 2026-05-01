@@ -28,6 +28,7 @@ Cleaned up wallet frontend naming and routed overlay behaviour after the OTT Wit
 - [x] Follow-up: updated amount chips and enforced wallet guardrails of R50 minimum and R4,000 maximum, with live OTT limits still able to narrow the range.
 - [x] Follow-up: aligned KYC submit enforcement to the KYC status screen by using `users.kycStatus = verified` as authoritative instead of blocking on a stale wallet mirror flag.
 - [x] Follow-up: removed Withdraw Cash padding shorthand/non-shorthand mixing to clear the React console warning.
+- [x] Follow-up: fixed dashboard Recent Transactions for OTT Withdraw Cash so the face value plus fees display as one total debit, while Transaction History remains split.
 
 ---
 
@@ -48,6 +49,7 @@ Cleaned up wallet frontend naming and routed overlay behaviour after the OTT Wit
 - `controllers/settingsController.js` - Changed the quick-access service id from `atm-cashsend` to `withdraw-cash`.
 - `mymoolah-wallet-frontend/pages/TransactPage.tsx` and `components/BottomNavigation.tsx` - Updated canonical route/service id and legacy compatibility mapping.
 - `mymoolah-wallet-frontend/pages/DashboardPage.tsx` and `components/DashboardPage.tsx` - Updated dashboard voucher label.
+- `controllers/walletController.js` - Added dashboard-only OTT payout grouping for face value plus provider/MMTP fees.
 - Shared modal components - Top-aligned wallet popup modals.
 - `docs/CHANGELOG.md`, `docs/AGENT_HANDOVER.md`, and this session log - Captured handover context.
 
@@ -63,6 +65,7 @@ Cleaned up wallet frontend naming and routed overlay behaviour after the OTT Wit
 - Cash amount presets now render as larger chips: R50, R100, R200, R500, R1,000, R2,000, and R4,000.
 - KYC middleware now uses verified user status as the authoritative gate; `wallet.kycVerified` remains diagnostic metadata.
 - Withdraw Cash overlay uses explicit padding sides instead of mixing `padding` with `paddingBottom`.
+- Dashboard Recent Transactions now groups OTT payout face value and fee rows using `metadata.ottPayoutId`; the full Transaction History endpoint view remains split because grouping only runs for dashboard-size requests.
 - Wallet route changes reset the internal scroll container to top.
 - Shared modal containers no longer open centered/mid-page.
 
@@ -78,8 +81,10 @@ Cleaned up wallet frontend naming and routed overlay behaviour after the OTT Wit
 ## Testing Performed
 - [x] Wallet frontend build: `npm run build` in `mymoolah-wallet-frontend`.
 - [x] Backend syntax: `node --check controllers/settingsController.js && node --check routes/ott.js`.
+- [x] Backend syntax: `node --check controllers/walletController.js`.
 - [x] Focused OTT payout tests: `npx jest tests/ott-payout-service.test.js --runInBand --forceExit` passed `10/10`.
 - [x] Cursor lints on touched frontend files: no linter errors.
+- [x] Cursor lints on `controllers/walletController.js`: no linter errors.
 - [ ] Manual Codespaces UAT wallet-debit test: not run; André will test after pull.
 
 ---
@@ -88,6 +93,7 @@ Cleaned up wallet frontend naming and routed overlay behaviour after the OTT Wit
 - [ ] André to pull latest `main` in Codespaces and test the wallet UI.
 - [ ] Verify `Transact -> Add Money -> Bank Transfer` opens at the top.
 - [ ] Verify `Transact -> Withdraw Cash` shows the canonical overlay, no ID/passport prompt, and no `Check fees` button.
+- [ ] Verify Dashboard Recent Transactions shows one OTT Withdraw Cash total debit, e.g. R50.00 + R12.45 as R62.45, while Transaction History shows the two split rows.
 - [ ] Run any controlled UAT wallet-debit Withdraw Cash test only after André explicitly approves.
 
 ---
@@ -97,6 +103,7 @@ Cleaned up wallet frontend naming and routed overlay behaviour after the OTT Wit
 - `/atm-cashsend-overlay` remains a compatibility alias only; new UI should navigate to `/withdraw-cash-overlay`.
 - Legacy saved quick-access settings may still contain `atm-cashsend`; `BottomNavigation` maps that to `withdraw-cash`.
 - OTT payout identity fields are intentionally server-side; do not reintroduce frontend ID/passport prompts.
+- OTT payout transactions intentionally display differently by context: dashboard requests (`limit <= 10`) group face value and fee rows into one total debit; Transaction History requests keep the raw split rows for audit clarity.
 
 ---
 
