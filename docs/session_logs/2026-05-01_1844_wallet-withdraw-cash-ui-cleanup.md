@@ -23,6 +23,8 @@ Cleaned up wallet frontend naming and routed overlay behaviour after the OTT Wit
 - [x] Swept shared popup modal containers so wallet modals anchor from the top rather than centered mid-screen.
 - [x] Follow-up: removed the visible Verified Profile card and fixed the Withdraw Cash action as a bottom action bar.
 - [x] Follow-up: changed Nedbank Cardless Cash Send to OTT provider code `10`, made it selectable, and hardened provider response parsing.
+- [x] Follow-up: changed OTT provider discovery and limits to authenticated read-only calls so the screen no longer logs repeated KYC 403 errors before transaction submission.
+- [x] Follow-up: updated amount chips and enforced wallet guardrails of R50 minimum and R4,000 maximum, with live OTT limits still able to narrow the range.
 
 ---
 
@@ -53,6 +55,8 @@ Cleaned up wallet frontend naming and routed overlay behaviour after the OTT Wit
 - Follow-up simplified the screen further by removing the visible Verified Profile card; server-side identity enrichment remains unchanged.
 - Nedbank Cardless Cash Send now uses OTT provider code `10` and appears selectable instead of `Soon`.
 - OTT payout provider loading now merges `/api/v1/ott/providers` and `/api/v1/ott/provider-limits`.
+- `/api/v1/ott/providers` and `/api/v1/ott/provider-limits` require authentication but no longer require KYC; `/api/v1/ott/payouts/quote`, `/api/v1/ott/payouts`, and payout status routes remain KYC-gated.
+- Cash amount presets now render as larger chips: R50, R100, R200, R500, R1,000, R2,000, and R4,000.
 - Wallet route changes reset the internal scroll container to top.
 - Shared modal containers no longer open centered/mid-page.
 

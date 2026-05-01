@@ -14,24 +14,34 @@ interface CashProvider extends OttPayoutProvider {
   helper: string;
 }
 
+const WALLET_MIN_CASH_AMOUNT = 50;
+const WALLET_MAX_CASH_AMOUNT = 4000;
+const QUICK_AMOUNTS = [50, 100, 200, 500, 1000, 2000, 4000];
+
 const FALLBACK_PROVIDERS: CashProvider[] = [
   {
     providerCode: '2',
     providerName: 'Standard Bank Instant Money',
     helper: 'You will receive a Standard Bank SMS with the PIN and instructions.',
     available: true,
+    minAmount: WALLET_MIN_CASH_AMOUNT,
+    maxAmount: WALLET_MAX_CASH_AMOUNT,
   },
   {
     providerCode: '112',
     providerName: 'ABSA CashSend',
     helper: 'You will receive an ABSA SMS with the PIN and instructions.',
     available: true,
+    minAmount: WALLET_MIN_CASH_AMOUNT,
+    maxAmount: WALLET_MAX_CASH_AMOUNT,
   },
   {
     providerCode: '10',
     providerName: 'Nedbank Cardless Cash Send',
     helper: 'You will receive a Nedbank SMS with the cash PIN and instructions.',
     available: true,
+    minAmount: WALLET_MIN_CASH_AMOUNT,
+    maxAmount: WALLET_MAX_CASH_AMOUNT,
   },
 ];
 
@@ -40,6 +50,10 @@ const CASH_PROVIDER_ALIASES: Record<string, string[]> = {
   '112': ['112', 'absa', 'cashsend'],
   '10': ['10', 'nedbank', 'cardless'],
 };
+
+function formatRand(value: number): string {
+  return `R${value.toLocaleString('en-ZA', { maximumFractionDigits: 0 })}`;
+}
 
 export function WithdrawCashOverlay() {
   const navigate = useNavigate();
@@ -94,19 +108,23 @@ export function WithdrawCashOverlay() {
   );
 
   const amountNumber = Number(amount);
-  const quickAmounts = [50, 100, 200, 300, 500];
+  const effectiveMinAmount = Math.max(WALLET_MIN_CASH_AMOUNT, selectedProvider?.minAmount || WALLET_MIN_CASH_AMOUNT);
+  const effectiveMaxAmount = Math.min(WALLET_MAX_CASH_AMOUNT, selectedProvider?.maxAmount || WALLET_MAX_CASH_AMOUNT);
+  const quickAmounts = QUICK_AMOUNTS.filter((value) => value >= effectiveMinAmount && value <= effectiveMaxAmount);
 
   const formError = useMemo(() => {
     if (!selectedProvider?.available) return 'Please choose an available cash provider.';
-    if (!Number.isFinite(amountNumber) || amountNumber < 1) return 'Enter the cash amount.';
-    if (selectedProvider.minAmount && amountNumber < selectedProvider.minAmount) {
-      return `Minimum amount for ${selectedProvider.providerName} is R${selectedProvider.minAmount.toFixed(2)}.`;
+    if (!Number.isFinite(amountNumber) || amountNumber <= 0) {
+      return `Enter an amount from ${formatRand(effectiveMinAmount)} to ${formatRand(effectiveMaxAmount)}.`;
     }
-    if (selectedProvider.maxAmount && amountNumber > selectedProvider.maxAmount) {
-      return `Maximum amount for ${selectedProvider.providerName} is R${selectedProvider.maxAmount.toFixed(2)}.`;
+    if (amountNumber < effectiveMinAmount) {
+      return `Minimum amount is ${formatRand(effectiveMinAmount)}.`;
+    }
+    if (amountNumber > effectiveMaxAmount) {
+      return `Maximum amount is ${formatRand(effectiveMaxAmount)}.`;
     }
     return '';
-  }, [amountNumber, selectedProvider]);
+  }, [amountNumber, effectiveMaxAmount, effectiveMinAmount, selectedProvider]);
 
   const pollIfNeeded = async (payout: OttPayoutResult): Promise<OttPayoutResult> => {
     if (!payout.requiresPolling && payout.status !== 'processing') return payout;
@@ -264,6 +282,9 @@ export function WithdrawCashOverlay() {
       <Card className="mb-4">
         <CardHeader>
           <CardTitle className="text-base">Cash amount</CardTitle>
+          <p className="text-sm text-gray-600">
+            Choose an amount from {formatRand(effectiveMinAmount)} to {formatRand(effectiveMaxAmount)}.
+          </p>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
@@ -275,14 +296,24 @@ export function WithdrawCashOverlay() {
               onChange={(event) => {
                 setAmount(event.target.value.replace(/[^0-9.]/g, ''));
               }}
-              placeholder="100.00"
+              placeholder={`${effectiveMinAmount}.00`}
             />
           </div>
-          <div className="grid grid-cols-5 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             {quickAmounts.map((value) => (
-              <Button key={value} type="button" variant="outline" onClick={() => setAmount(String(value))}>
-                R{value}
-              </Button>
+              <button
+                key={value}
+                type="button"
+                onClick={() => setAmount(String(value))}
+                className={`min-h-[48px] rounded-2xl border px-3 text-sm font-semibold transition ${
+                  amountNumber === value
+                    ? 'border-[#86BE41] bg-[#86BE41]/10 text-[#4f7f22]'
+                    : 'border-gray-200 bg-white text-gray-900 hover:border-[#86BE41] hover:bg-[#86BE41]/5'
+                }`}
+                aria-pressed={amountNumber === value}
+              >
+                {formatRand(value)}
+              </button>
             ))}
           </div>
         </CardContent>

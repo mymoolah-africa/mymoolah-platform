@@ -149,7 +149,6 @@ router.get('/health', (req, res) => {
 router.post('/providers', [
   ottPayoutLimiter,
   authMiddleware,
-  requireKYCVerification,
 ], async (req, res) => {
   try {
     const client = new OttClient();
@@ -163,7 +162,6 @@ router.post('/providers', [
 router.post('/provider-limits', [
   ottPayoutLimiter,
   authMiddleware,
-  requireKYCVerification,
 ], async (req, res) => {
   try {
     const client = new OttClient();
