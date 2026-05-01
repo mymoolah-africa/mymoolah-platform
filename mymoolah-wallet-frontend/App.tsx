@@ -35,7 +35,7 @@ import { ElectricityOverlay } from './components/overlays/ElectricityOverlay';
 import { BillPaymentOverlay } from './components/overlays/BillPaymentOverlay';
 import { FlashEeziCashOverlay } from './components/overlays/flash-eezicash/FlashEeziCashOverlay';
 import { MMCashRetailOverlay } from './components/overlays/mmcash-retail/MMCashRetailOverlay';
-import { ATMCashSendOverlay } from './components/overlays/atm-cashsend/ATMCashSendOverlay';
+import { WithdrawCashOverlay } from './components/overlays/atm-cashsend/ATMCashSendOverlay';
 import { TopupEasyPayOverlay } from './components/overlays/topup-easypay/TopupEasyPayOverlay';
 import { CashoutEasyPayPage } from './pages/CashoutEasyPayPage';
 import { DigitalVouchersOverlay } from './components/overlays/digital-vouchers/DigitalVouchersOverlay';
@@ -131,7 +131,7 @@ function AppContent() {
             <Route path="/bill-payment-overlay" element={<ProtectedRoute><BillPaymentOverlay /></ProtectedRoute>} />
             <Route path="/flash-eezicash-overlay" element={<ProtectedRoute><FlashEeziCashOverlay /></ProtectedRoute>} />
             <Route path="/mmcash-retail-overlay" element={<ProtectedRoute><MMCashRetailOverlay /></ProtectedRoute>} />
-            <Route path="/atm-cashsend-overlay" element={<ProtectedRoute><ATMCashSendOverlay /></ProtectedRoute>} />
+            <Route path="/atm-cashsend-overlay" element={<ProtectedRoute><WithdrawCashOverlay /></ProtectedRoute>} />
             <Route path="/topup-easypay" element={<ProtectedRoute><TopupEasyPayOverlay /></ProtectedRoute>} />
             <Route path="/cashout-easypay" element={<ProtectedRoute><CashoutEasyPayPage /></ProtectedRoute>} />
             <Route path="/vouchers-overlay" element={<ProtectedRoute><DigitalVouchersOverlay /></ProtectedRoute>} />

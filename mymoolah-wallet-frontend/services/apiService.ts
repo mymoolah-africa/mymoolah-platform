@@ -256,6 +256,47 @@ export interface AirtimePurchaseResult {
   completedAt: string;
 }
 
+export interface OttPayoutProvider {
+  providerCode: string;
+  providerName: string;
+  minAmount?: number;
+  maxAmount?: number;
+  available: boolean;
+}
+
+export interface OttPayoutQuote {
+  amount: number;
+  providerCode: string;
+  currency: string;
+  providerFeeAmount: number;
+  mmtpFeeAmount: number;
+  totalDebit: number;
+}
+
+export interface OttPayoutResult {
+  payoutId: string;
+  uniqueReferenceId?: string;
+  status: 'processing' | 'completed' | 'failed' | 'cancelled' | 'reversed' | string;
+  amount: number;
+  providerFeeAmount: number;
+  mmtpFeeAmount: number;
+  totalDebit: number;
+  currency: string;
+  outcomeUnknown?: boolean;
+  requiresPolling?: boolean;
+}
+
+export interface OttPayoutRecipient {
+  firstName: string;
+  surname: string;
+  mobile: string;
+  idType: 'RSAID' | 'PASSPT';
+  idNumber: string;
+  title?: string;
+  countryOfIssue?: string;
+  nationality?: string;
+}
+
 // API Service Class
 class ApiService {
   private normalizeSAMobileNumber(phoneNumber: string): string {
@@ -637,6 +678,78 @@ class ApiService {
       data?.reference ||
       idempotencyKey.slice(0, 12).toUpperCase();
     return { pin, ref };
+  }
+
+  async getOttPayoutProviders(): Promise<OttPayoutProvider[]> {
+    const response = await this.request<any>('/api/v1/ott/provider-limits', {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
+    const payload = response?.data?.data ?? response?.data ?? response;
+    return this.normalizeOttProviders(payload);
+  }
+
+  async quoteOttPayout(amount: number, providerCode: string): Promise<OttPayoutQuote> {
+    const response = await this.request<any>('/api/v1/ott/payouts/quote', {
+      method: 'POST',
+      body: JSON.stringify({ amount, providerCode }),
+    });
+    return (response?.data?.data ?? response?.data ?? response) as OttPayoutQuote;
+  }
+
+  async submitOttPayout(args: {
+    amount: number;
+    providerCode: string;
+    providerName?: string;
+    recipient: OttPayoutRecipient;
+    reference?: string;
+  }): Promise<OttPayoutResult> {
+    const response = await this.request<any>('/api/v1/ott/payouts', {
+      method: 'POST',
+      headers: { 'X-Idempotency-Key': generateIdempotencyKey() },
+      body: JSON.stringify(args),
+    });
+    return (response?.data?.data ?? response?.data ?? response) as OttPayoutResult;
+  }
+
+  async pollOttPayout(payoutId: string): Promise<OttPayoutResult> {
+    const response = await this.request<any>(`/api/v1/ott/payouts/${encodeURIComponent(payoutId)}/poll`, {
+      method: 'POST',
+    });
+    return (response?.data?.data ?? response?.data ?? response) as OttPayoutResult;
+  }
+
+  private normalizeOttProviders(payload: any): OttPayoutProvider[] {
+    const candidates = Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload?.providers)
+        ? payload.providers
+        : Array.isArray(payload?.providerLimits)
+          ? payload.providerLimits
+          : Array.isArray(payload?.data)
+            ? payload.data
+            : [];
+
+    return candidates
+      .map((provider: any) => {
+        const providerCode = String(
+          provider.providerCode || provider.provider_code || provider.code || provider.id || ''
+        ).trim();
+        const providerName = String(
+          provider.providerName || provider.provider_name || provider.name || provider.description || ''
+        ).trim();
+        if (!providerCode || !providerName) return null;
+        const minAmount = Number(provider.minAmount ?? provider.minimumAmount ?? provider.min ?? 0);
+        const maxAmount = Number(provider.maxAmount ?? provider.maximumAmount ?? provider.max ?? 0);
+        return {
+          providerCode,
+          providerName,
+          minAmount: Number.isFinite(minAmount) && minAmount > 0 ? minAmount : undefined,
+          maxAmount: Number.isFinite(maxAmount) && maxAmount > 0 ? maxAmount : undefined,
+          available: provider.active !== false && provider.available !== false,
+        };
+      })
+      .filter(Boolean) as OttPayoutProvider[];
   }
 
   async getVouchers(query?: string, category?: string): Promise<{ vouchers: any[]; categories?: any[]; total?: number }> {

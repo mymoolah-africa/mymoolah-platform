@@ -51,11 +51,11 @@ class SettingsController {
         },
         {
           id: 'cashout-easypay',
-          name: 'Cash-out at EasyPay',
-          description: 'Cash-out vouchers for EasyPay store withdrawal',
+          name: 'EasyPay Cash-out',
+          description: 'Withdraw cash at EasyPay stores',
           category: 'payment',
-          available: true,
-          comingSoon: false
+          available: false,
+          comingSoon: true
         },
         {
           id: 'electricity',
@@ -67,8 +67,8 @@ class SettingsController {
         },
         {
           id: 'flash-eezicash',
-          name: 'Cash-out at Flash',
-          description: 'eeziCash vouchers for instant cash withdrawal',
+          name: 'Withdraw Cash',
+          description: 'Get a cash PIN sent to your phone',
           category: 'payment',
           available: true,
           comingSoon: false
@@ -91,7 +91,7 @@ class SettingsController {
         },
         {
           id: 'send-money',
-          name: 'Pay Beneficiary',
+          name: 'Pay Someone',
           description: 'Transfer money to MyMoolah users or bank accounts',
           category: 'payment',
           available: true,
@@ -115,9 +115,9 @@ class SettingsController {
         },
         {
           id: 'vouchers',
-          name: 'Vouchers',
-          description: 'Buy and send digital vouchers',
-          category: 'digital',
+          name: 'My Vouchers',
+          description: 'Create, redeem and view MyMoolah wallet vouchers',
+          category: 'financial',
           available: true,
           comingSoon: false
         },
@@ -132,11 +132,11 @@ class SettingsController {
         // ===== COMING SOON SERVICES (Alphabetical) =====
         {
           id: 'atm-cashsend',
-          name: 'ATM Cash Send',
-          description: 'Send cash vouchers for ATM withdrawal',
+          name: 'Withdraw Cash',
+          description: 'Get a provider cash PIN sent to your phone',
           category: 'payment',
-          available: false,
-          comingSoon: true
+          available: true,
+          comingSoon: false
         },
         {
           id: 'loyalty',
@@ -148,8 +148,8 @@ class SettingsController {
         },
         {
           id: 'mmcash-retail',
-          name: 'Cash-out at Retail',
-          description: 'MMCash vouchers for retail partner cash-out',
+          name: 'Retail Cash-out',
+          description: 'MMCash vouchers for future retail partner cash-out',
           category: 'payment',
           available: false,
           comingSoon: true

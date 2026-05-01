@@ -268,7 +268,7 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
               Processing Your Purchase
             </h3>
             <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '14px', color: '#6b7280' }}>
-              Please wait while we process your voucher...
+              Please wait while we process your gift card...
             </p>
           </div>
         );
@@ -283,7 +283,7 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
               Purchase Successful!
             </h3>
             <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '14px', color: '#6b7280', marginBottom: '20px' }}>
-              Your {voucher.name} voucher has been purchased
+              Your {voucher.name} gift card has been purchased.
             </p>
 
             <Card style={{ marginBottom: '16px' }}>
@@ -292,7 +292,7 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
                   {displayVoucherCode && (
                     <div className="flex items-start justify-between gap-3">
                       <span style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '14px', color: '#6b7280' }}>
-                        Voucher Code:
+                        Gift Card Code:
                       </span>
                       <div className="flex flex-col items-end gap-2 flex-1">
                         <span style={{
@@ -321,6 +321,14 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
                     </div>
                   )}
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card style={{ marginBottom: '16px', backgroundColor: '#f0f9ff', borderColor: '#bfdbfe' }}>
+              <CardContent className="p-4">
+                <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '13px', color: '#1e40af', margin: 0 }}>
+                  Some providers send the PIN or redemption code by SMS after a successful transaction. Please check the SMS on your registered phone and keep the code private.
+                </p>
               </CardContent>
             </Card>
 
@@ -371,16 +379,16 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
   };
 
   const titleMap: Record<PurchaseStep, string> = {
-    selection: 'Purchase Voucher',
+    selection: 'Buy Gift Card',
     processing: 'Processing...',
     success: 'Success!',
     error: 'Error'
   };
 
   const descMap: Record<PurchaseStep, string> = {
-    selection: 'Complete your voucher purchase',
-    processing: 'Processing your voucher purchase',
-    success: 'Your voucher has been issued',
+    selection: 'Complete your gift card purchase',
+    processing: 'Processing your gift card purchase',
+    success: 'Your gift card has been issued',
     error: 'We could not complete the purchase'
   };
 

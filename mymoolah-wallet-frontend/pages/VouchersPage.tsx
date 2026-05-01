@@ -1233,7 +1233,7 @@ export function VouchersPage() {
                 margin: 0
               }}
             >
-              MMVouchers
+              MyMoolah Vouchers
             </h1>
           </div>
 
@@ -1335,7 +1335,7 @@ export function VouchersPage() {
                 border: '1px solid transparent'
               }}
             >
-              Vouchers
+              Mine
             </TabsTrigger>
             <TabsTrigger 
               value="sell"
@@ -1868,7 +1868,7 @@ export function VouchersPage() {
                   }}
                 >
                   <Plus style={{ width: '24px', height: '24px', color: '#86BE41' }} />
-                  Generate New Voucher
+                  Create MyMoolah Voucher
                 </CardTitle>
                 <p 
                   style={{
@@ -1878,7 +1878,7 @@ export function VouchersPage() {
                     margin: 0
                   }}
                 >
-                  Create MyMoolah, EasyPay, or 3rd Party vouchers
+                  Create a wallet-value voucher. Gift cards are bought separately under Buy Gift Cards.
                 </p>
               </CardHeader>
               <CardContent style={{ padding: '24px' }}>
@@ -1899,8 +1899,8 @@ export function VouchersPage() {
                     </Label>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px' }}>
                       {[
-                        { id: 'mm_voucher', name: 'MyMoolah Voucher', desc: 'Redeemable at MyMoolah network and partner retailers', icon: <Wallet style={{ width: '20px', height: '20px' }} /> },
-                        { id: 'easypay_voucher', name: 'EasyPay Voucher', desc: 'Redeemable at any EasyPay merchant', icon: <Ticket style={{ width: '20px', height: '20px' }} /> }
+                        { id: 'mm_voucher', name: 'MyMoolah Voucher', desc: 'Wallet-value voucher for MyMoolah redemption and future retail cash-out', icon: <Wallet style={{ width: '20px', height: '20px' }} /> },
+                        { id: 'easypay_voucher', name: 'EasyPay Cash-out Voucher', desc: 'Future EasyPay cash-out flow. Use only when this service is enabled for testing.', icon: <Ticket style={{ width: '20px', height: '20px' }} /> }
                       ].map((type) => (
                         <button
                           key={type.id}
@@ -2064,7 +2064,7 @@ export function VouchersPage() {
                           margin: '0 0 4px 0'
                         }}
                       >
-                        Voucher Format Information
+                        Voucher Information
                       </p>
                       <p 
                         style={{
@@ -2075,8 +2075,8 @@ export function VouchersPage() {
                         }}
                       >
                         {sellVoucherType === 'mm_voucher' && 'MyMoolah vouchers use 16 digits in format: XXXX XXXX XXXX XXXX'}
-                        {sellVoucherType === 'easypay_voucher' && 'EasyPay Vouchers enable seamless payments at hundreds of online and in-store merchants through our award-winning payment network.'}
-                        {sellVoucherType === 'third_party_voucher' && 'Third party vouchers use custom merchant format codes.'}
+                        {sellVoucherType === 'easypay_voucher' && 'EasyPay cash-out vouchers are not gift cards. They are reserved for the EasyPay cash-out journey.'}
+                        {sellVoucherType === 'third_party_voucher' && 'Supplier gift cards are bought under Buy Gift Cards, not created here.'}
                       </p>
                     </AlertDescription>
                   </Alert>

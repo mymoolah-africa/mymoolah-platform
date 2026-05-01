@@ -49,7 +49,7 @@ const serviceMapping = {
   'send-money': {
     id: 'send-money',
     path: '/send-money',
-    label: 'Pay Recipient',
+    label: 'Pay Someone',
     icon: () => <Send style={{ width: '20px', height: '20px' }} />
   },
   'request-money': {
@@ -97,7 +97,7 @@ const serviceMapping = {
   'vouchers': {
     id: 'vouchers',
     path: '/vouchers',
-    label: 'Vouchers',
+    label: 'My Vouchers',
     icon: () => <Ticket style={{ width: '20px', height: '20px' }} />
   },
   'watch-to-earn': {
@@ -122,7 +122,7 @@ const serviceMapping = {
   'flash-eezicash': {
     id: 'flash-eezicash',
     path: '/flash-eezicash-overlay',
-    label: 'Cash-out at Flash',
+    label: 'Withdraw Cash',
     icon: () => <DollarSign style={{ width: '20px', height: '20px' }} />
   },
   'mmcash-retail': {
@@ -134,7 +134,7 @@ const serviceMapping = {
   'atm-cashsend': {
     id: 'atm-cashsend',
     path: '/atm-cashsend-overlay',
-    label: 'ATM Cash Send',
+    label: 'Withdraw Cash',
     icon: () => <AtSign style={{ width: '20px', height: '20px' }} />
   },
   'tap-to-add-money': {

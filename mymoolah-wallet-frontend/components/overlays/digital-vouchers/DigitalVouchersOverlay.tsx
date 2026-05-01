@@ -83,7 +83,7 @@ export function DigitalVouchersOverlay() {
         localStorage.setItem(favoritesKey, JSON.stringify(pruned));
       }
     } catch {
-      setError('We could not load vouchers right now. Please check your connection and try again.');
+      setError('We could not load gift cards right now. Please check your connection and try again.');
     } finally {
       setIsLoading(false);
     }
@@ -149,7 +149,7 @@ export function DigitalVouchersOverlay() {
           Back
         </Button>
         <h1 style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '20px', fontWeight: '600', color: '#1f2937' }}>
-          Digital Vouchers
+          Buy Gift Cards
         </h1>
         <div style={{ width: '40px' }} />
       </div>
@@ -170,7 +170,7 @@ export function DigitalVouchersOverlay() {
         <div className="text-center py-8">
           <div className="w-12 h-12 mx-auto mb-4 border-4 border-gray-200 border-t-[#86BE41] rounded-full animate-spin" />
           <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '14px', color: '#6b7280' }}>
-            Loading vouchers...
+            Loading gift cards...
           </p>
         </div>
       )}
@@ -203,11 +203,11 @@ export function DigitalVouchersOverlay() {
         </div>
       )}
 
-      {/* All Vouchers */}
+      {/* All Gift Cards */}
       {!isLoading && otherVouchers.length > 0 && (
         <div className="mb-6">
           <h2 style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '16px', fontWeight: '600', color: '#1f2937', marginBottom: '12px' }}>
-            {searchQuery ? 'Search Results' : 'All Vouchers'}
+            {searchQuery ? 'Search Results' : 'All Gift Cards'}
           </h2>
           <div className="grid grid-cols-3 gap-3">
             {otherVouchers.map(v => (
@@ -229,7 +229,7 @@ export function DigitalVouchersOverlay() {
         <div className="text-center py-12">
           <div className="text-4xl mb-3">🔍</div>
           <h3 style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '16px', fontWeight: '600', color: '#1f2937', marginBottom: '8px' }}>
-            No vouchers found
+            No gift cards found
           </h3>
           <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '14px', color: '#6b7280' }}>
             {searchQuery ? 'Try a different search term' : 'Vouchers will appear here once available'}

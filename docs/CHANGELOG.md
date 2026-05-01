@@ -1,5 +1,25 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-05-01 - OTT Withdraw Cash frontend simplification
+
+### Summary
+Simplified the wallet frontend information architecture for OTT cash-send and voucher/gift-card journeys without changing existing working backend product flows.
+
+### Changes
+- Reorganized the wallet `TransactPage` around user intent: Payments, Add Money, Withdraw Cash, Buy, and Loyalty.
+- Replaced ATM/cash-send wording with `Withdraw Cash` and safer `cash PIN` copy.
+- Added `WithdrawCashOverlay` behind the existing `/atm-cashsend-overlay` route, wired to existing OTT provider-limits, payout quote, payout submit, and payout poll endpoints.
+- Added clear messaging that provider PINs/codes are delivered by SMS after a successful transaction and that users must follow the provider SMS instructions.
+- Renamed visible supplier catalog copy from Digital Vouchers to `Buy Gift Cards`.
+- Clarified `MyMoolah Vouchers` as wallet-value vouchers, separate from supplier/OTT retail gift cards.
+- Removed a stale unused ATM Cash Send placeholder component.
+
+### Validation
+- `npm run build` in `mymoolah-wallet-frontend` after each checkpoint; latest build passed.
+- `node --check controllers/settingsController.js`.
+- Cursor lints on changed files: no linter errors.
+- No wallet-debit UAT transaction was run in this frontend checkpoint.
+
 ## 2026-05-01 - Frontend skill routing optimization
 
 ### Summary

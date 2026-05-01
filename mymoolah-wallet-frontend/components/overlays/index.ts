@@ -5,7 +5,7 @@ export { ElectricityOverlay } from './ElectricityOverlay';
 export { BillPaymentOverlay } from './BillPaymentOverlay';
 export { FlashEeziCashOverlay } from './flash-eezicash/FlashEeziCashOverlay';
 export { MMCashRetailOverlay } from './mmcash-retail/MMCashRetailOverlay';
-export { ATMCashSendOverlay } from './atm-cashsend/ATMCashSendOverlay';
+export { WithdrawCashOverlay } from './atm-cashsend/ATMCashSendOverlay';
 export { BeneficiaryModal } from './shared/BeneficiaryModal';
 
 // Digital Vouchers Overlay Components

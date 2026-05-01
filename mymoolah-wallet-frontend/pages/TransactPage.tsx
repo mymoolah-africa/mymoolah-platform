@@ -117,7 +117,7 @@ export function TransactPage() {
     
     try {
       // Check KYC requirements for sensitive services
-      const kycRequiredServices = ['send-money', 'request-money', 'withdraw'];
+      const kycRequiredServices = ['send-money', 'request-money', 'flash-eezicash', 'atm-cashsend'];
       
       if (kycRequiredServices.includes(service.id) && requiresKYC('send')) {
         navigate('/kyc/documents?returnTo=' + service.route);
@@ -136,47 +136,17 @@ export function TransactPage() {
   const _viteMode: string = (import.meta as any).env?.MODE ?? 'production';
   const isUAT = _viteMode !== 'production';
 
-  // Define 4 main service sections
+  // Define service sections by user intent. Supplier/provider choices stay inside flows.
   const serviceSections: ServiceSection[] = [
     {
       id: 'payments',
-      title: 'Payments & Transfers',
-      description: 'Send money, receive funds, and manage transfers',
+      title: 'Payments',
+      description: 'Pay people, request money, or scan to pay',
       color: '#86BE41',
       services: [
         {
-          id: 'request-money',
-          title: 'Request Money',
-          description: 'Request payments from MyMoolah users or bank accounts',
-          icon: <HandCoins className="w-6 h-6" />,
-          route: '/request-money',
-          available: true,
-          badge: 'Live',
-          badgeType: 'success'
-        },
-        {
-          id: 'add-money-eft',
-          title: 'Top-up via EFT',
-          description: 'Bank transfer using your mobile number as reference — auto-allocated to your wallet',
-          icon: <Banknote className="w-6 h-6" />,
-          route: '/add-money-eft',
-          available: true,
-          badge: 'Live',
-          badgeType: 'success'
-        },
-        {
-          id: 'topup-voucher',
-          title: 'Top-up with Voucher',
-          description: 'Use a 1Voucher, Flash Pay, or FNB voucher to add money to your wallet',
-          icon: <Ticket className="w-6 h-6" />,
-          route: '/topup-voucher',
-          available: true,
-          badge: 'New',
-          badgeType: 'success'
-        },
-        {
           id: 'send-money',
-          title: 'Pay Recipient',
+          title: 'Pay Someone',
           description: 'Transfer to MyMoolah users or bank accounts',
           icon: <Send className="w-6 h-6" />,
           route: '/send-money',
@@ -185,24 +155,52 @@ export function TransactPage() {
           badgeType: 'success'
         },
         {
+          id: 'request-money',
+          title: 'Request Money',
+          description: 'Ask someone to pay you',
+          icon: <HandCoins className="w-6 h-6" />,
+          route: '/request-money',
+          available: true,
+          badge: 'Live',
+          badgeType: 'success'
+        },
+        {
           id: 'qr-payments',
-          title: 'QR-Payments',
+          title: 'QR Payments',
           description: 'Scan QR codes to make instant payments',
           icon: <QrCode className="w-6 h-6" />,
           route: '/qr-payment',
           available: true,
           badge: 'Live',
           badgeType: 'success'
+        }
+      ]
+    },
+    {
+      id: 'add-money',
+      title: 'Add Money',
+      description: 'Put money into your MyMoolah wallet',
+      color: '#2D8CCA',
+      services: [
+        {
+          id: 'add-money-eft',
+          title: 'Bank Transfer',
+          description: 'Use your mobile number as the payment reference',
+          icon: <Banknote className="w-6 h-6" />,
+          route: '/add-money-eft',
+          available: true,
+          badge: 'Live',
+          badgeType: 'success'
         },
         {
-          id: 'flash-eezicash',
-          title: 'Cash-out at Flash',
-          description: 'eeziCash vouchers for instant cash withdrawal',
-          icon: <DollarSign className="w-6 h-6" />,
-          route: '/flash-eezicash-overlay',
+          id: 'topup-voucher',
+          title: 'Voucher Top-up',
+          description: 'Redeem a 1Voucher, Flash Pay, or FNB voucher into your wallet',
+          icon: <Ticket className="w-6 h-6" />,
+          route: '/topup-voucher',
           available: true,
           badge: 'New',
-          badgeType: 'warning'
+          badgeType: 'success'
         },
         {
           id: 'tap-to-add-money',
@@ -214,28 +212,46 @@ export function TransactPage() {
           hidden: true,
         },
         {
-          id: 'atm-cashsend',
-          title: 'ATM Cash Send',
-          description: 'Send cash vouchers for ATM withdrawal',
-          icon: <AtSign className="w-6 h-6" />,
-          route: '/atm-cashsend-overlay',
-          available: false,
-          hidden: true,
-        },
-        {
           id: 'topup-easypay',
-          title: 'Top-up at EasyPay',
-          description: 'Create top-up request, pay at EasyPay, get money in wallet',
+          title: 'EasyPay Top-up',
+          description: 'Create a top-up request and pay at EasyPay',
           icon: <Wallet className="w-6 h-6" />,
           route: '/topup-easypay',
           available: true,
           badge: 'New',
           badgeType: 'success'
+        }
+      ]
+    },
+    {
+      id: 'withdraw-cash',
+      title: 'Withdraw Cash',
+      description: 'Get a cash PIN by SMS from a supported provider',
+      color: '#86BE41',
+      services: [
+        {
+          id: 'flash-eezicash',
+          title: 'Flash eeziCash',
+          description: 'Legacy direct Flash cash voucher flow',
+          icon: <DollarSign className="w-6 h-6" />,
+          route: '/flash-eezicash-overlay',
+          available: true,
+          hidden: true,
+        },
+        {
+          id: 'atm-cashsend',
+          title: 'Withdraw Cash',
+          description: 'Get a provider cash PIN sent to your phone',
+          icon: <AtSign className="w-6 h-6" />,
+          route: '/atm-cashsend-overlay',
+          available: true,
+          badge: 'New',
+          badgeType: 'success',
         },
         {
           id: 'cashout-easypay',
-          title: 'Cash-out at EasyPay',
-          description: 'Cash-out vouchers for EasyPay store withdrawal',
+          title: 'EasyPay Cash-out',
+          description: 'Withdraw cash at EasyPay stores',
           icon: <DollarSign className="w-6 h-6" />,
           route: '/cashout-easypay',
           available: false,
@@ -245,8 +261,8 @@ export function TransactPage() {
         },
         {
           id: 'mmcash-retail',
-          title: 'Cash-out at Retail',
-          description: 'MMCash vouchers for retail partner cash-out',
+          title: 'Retail Cash-out',
+          description: 'Withdraw cash at retail partners',
           icon: <DollarSign className="w-6 h-6" />,
           route: '/mmcash-retail-overlay',
           available: false,
@@ -257,33 +273,15 @@ export function TransactPage() {
       ]
     },
     {
-      id: 'vouchers',
-      title: 'Vouchers & Digital Services',
-      description: 'Buy vouchers and digital products',
+      id: 'buy',
+      title: 'Buy',
+      description: 'Buy airtime, utilities, bills, and gift cards',
       color: '#f59e0b',
-      services: [
-        {
-          id: 'vouchers-overlay',
-          title: 'Digital Vouchers',
-          description: 'Gaming credits, streaming services, and more',
-          icon: <Gift className="w-6 h-6" />,
-          route: '/vouchers-overlay',
-          available: true,
-          badge: 'Hot',
-          badgeType: 'warning'
-        }
-      ]
-    },
-    {
-      id: 'bills',
-      title: 'Bills & Utilities',
-      description: 'Pay your bills and utilities with ease',
-      color: '#2D8CCA',
       services: [
         {
           id: 'airtime-data-overlay',
           title: 'Airtime & Data',
-          description: 'Top-up airtime and data instantly',
+          description: 'Top up airtime and data instantly',
           icon: <Smartphone className="w-6 h-6" />,
           route: '/airtime-data-overlay',
           available: true,
@@ -293,7 +291,7 @@ export function TransactPage() {
         {
           id: 'electricity-overlay',
           title: 'Electricity',
-          description: 'Prepaid electricity tokens',
+          description: 'Buy prepaid electricity tokens',
           icon: <Zap className="w-6 h-6" />,
           route: '/electricity-overlay',
           available: true,
@@ -302,13 +300,23 @@ export function TransactPage() {
         },
         {
           id: 'bill-payment-overlay',
-          title: 'Bill Payments',
+          title: 'Bills',
           description: 'Pay bills and utilities',
           icon: <Receipt className="w-6 h-6" />,
           route: '/bill-payment-overlay',
           available: true,
           badge: 'Live',
           badgeType: 'success'
+        },
+        {
+          id: 'vouchers-overlay',
+          title: 'Buy Gift Cards',
+          description: 'Retail, food, gaming and shopping vouchers',
+          icon: <Gift className="w-6 h-6" />,
+          route: '/vouchers-overlay',
+          available: true,
+          badge: 'Hot',
+          badgeType: 'warning'
         }
       ]
     },
