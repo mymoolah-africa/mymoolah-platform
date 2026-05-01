@@ -18,6 +18,8 @@ Cleaned up frontend issues found during Codespaces wallet testing after the Reta
 - Follow-up: made OTT provider discovery and provider-limit lookup authenticated read-only calls instead of KYC-gated calls, removing noisy `KYC verification required` console errors on screen load while keeping quote/submit/status KYC-gated.
 - Follow-up: provider discovery routes now add the OTT-required `requestdate` and `yourUniqueReference` server-side so wallet screen loads do not send empty discovery payloads to OTT.
 - Follow-up: updated cash amount presets to clearer chips across the wallet guardrail range `R50` to `R4,000`; live OTT limits still narrow the allowed range when returned.
+- Follow-up: aligned KYC submit enforcement with the wallet KYC status screen by treating `users.kycStatus = verified` as authoritative; stale `wallets.kycVerified` remains diagnostic and no longer blocks verified users.
+- Follow-up: removed React style shorthand/non-shorthand mixing in Withdraw Cash to clear the `paddingBottom` console warning.
 - Added a global wallet route-scroll reset so routed overlays such as Bank Transfer open at the top.
 - Top-aligned shared wallet popup modal containers that previously opened centered/mid-screen.
 

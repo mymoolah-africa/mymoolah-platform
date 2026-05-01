@@ -184,7 +184,17 @@ export function WithdrawCashOverlay() {
   if (step === 'success') {
     const isCompleted = result?.status === 'completed';
     return (
-      <div role="dialog" aria-labelledby="withdraw-success-title" style={{ padding: '1rem', fontFamily: 'Montserrat, sans-serif', paddingBottom: '110px' }}>
+      <div
+        role="dialog"
+        aria-labelledby="withdraw-success-title"
+        style={{
+          paddingTop: '1rem',
+          paddingRight: '1rem',
+          paddingBottom: '110px',
+          paddingLeft: '1rem',
+          fontFamily: 'Montserrat, sans-serif',
+        }}
+      >
         <Button variant="ghost" onClick={() => navigate('/transact')} className="mb-4">
           <ArrowLeft className="w-5 h-5 mr-2" />
           Back
@@ -228,7 +238,17 @@ export function WithdrawCashOverlay() {
   }
 
   return (
-    <div role="dialog" aria-labelledby="withdraw-cash-title" style={{ padding: '1rem', fontFamily: 'Montserrat, sans-serif', paddingBottom: '110px' }}>
+    <div
+      role="dialog"
+      aria-labelledby="withdraw-cash-title"
+      style={{
+        paddingTop: '1rem',
+        paddingRight: '1rem',
+        paddingBottom: '110px',
+        paddingLeft: '1rem',
+        fontFamily: 'Montserrat, sans-serif',
+      }}
+    >
       <div className="flex items-center justify-between mb-6">
         <Button variant="ghost" onClick={() => navigate('/transact')}>
           <ArrowLeft className="w-5 h-5 mr-2" />

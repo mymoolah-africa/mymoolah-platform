@@ -41,12 +41,11 @@ const requireKYCVerification = async (req, res, next) => {
       });
     }
 
-    // Check both user KYC status and wallet KYC verification
+    // User KYC status is the authoritative verification source. The wallet flag is
+    // a legacy mirror used by older flows and can lag behind the user profile.
     const userKYCVerified = user.kycStatus === 'verified';
     const walletKYCVerified = wallet.kycVerified === true;
-
-    // User is restricted if either check fails
-    const isRestricted = !userKYCVerified || !walletKYCVerified;
+    const isRestricted = !userKYCVerified;
 
     if (isRestricted) {
       return res.status(403).json({
@@ -113,10 +112,10 @@ const getKYCStatus = async (req, res, next) => {
       return next();
     }
 
-    // Check both user KYC status and wallet KYC verification
+    // User KYC status is authoritative; wallet.kycVerified is diagnostic only.
     const userKYCVerified = user.kycStatus === 'verified';
     const walletKYCVerified = wallet.kycVerified === true;
-    const isRestricted = !userKYCVerified || !walletKYCVerified;
+    const isRestricted = !userKYCVerified;
 
     const kycTier = user.kyc_tier !== null && user.kyc_tier !== undefined ? user.kyc_tier : 0;
     const tierLimits = getLimitsForTier(kycTier);
