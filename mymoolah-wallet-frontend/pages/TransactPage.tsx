@@ -275,7 +275,7 @@ export function TransactPage() {
     {
       id: 'buy',
       title: 'Buy',
-      description: 'Buy airtime, utilities, bills, and gift cards',
+      description: 'Buy airtime, utilities, bills, and retail vouchers',
       color: '#f59e0b',
       services: [
         {
@@ -310,7 +310,7 @@ export function TransactPage() {
         },
         {
           id: 'vouchers-overlay',
-          title: 'Buy Gift Cards',
+          title: 'Buy Retail Vouchers',
           description: 'Retail, food, gaming and shopping vouchers',
           icon: <Gift className="w-6 h-6" />,
           route: '/vouchers-overlay',

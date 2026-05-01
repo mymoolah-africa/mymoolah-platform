@@ -1878,7 +1878,7 @@ export function VouchersPage() {
                     margin: 0
                   }}
                 >
-                  Create a wallet-value voucher. Gift cards are bought separately under Buy Gift Cards.
+                  Create a wallet-value voucher. Retail vouchers are bought separately under Buy Retail Vouchers.
                 </p>
               </CardHeader>
               <CardContent style={{ padding: '24px' }}>
@@ -2075,8 +2075,8 @@ export function VouchersPage() {
                         }}
                       >
                         {sellVoucherType === 'mm_voucher' && 'MyMoolah vouchers use 16 digits in format: XXXX XXXX XXXX XXXX'}
-                        {sellVoucherType === 'easypay_voucher' && 'EasyPay cash-out vouchers are not gift cards. They are reserved for the EasyPay cash-out journey.'}
-                        {sellVoucherType === 'third_party_voucher' && 'Supplier gift cards are bought under Buy Gift Cards, not created here.'}
+                        {sellVoucherType === 'easypay_voucher' && 'EasyPay cash-out vouchers are not retail vouchers. They are reserved for the EasyPay cash-out journey.'}
+                        {sellVoucherType === 'third_party_voucher' && 'Supplier retail vouchers are bought under Buy Retail Vouchers, not created here.'}
                       </p>
                     </AlertDescription>
                   </Alert>

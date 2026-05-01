@@ -3567,24 +3567,24 @@ const VOUCHER_BRAND_TABLE = [
   // Streaming / entertainment
   { match: /netflix/i,                          brand: 'Netflix',          icon: '🎭', category: 'entertainment', desc: 'Netflix streaming — top up your Netflix account' },
   { match: /dstv/i,                             brand: 'DStv',             icon: '📺', category: 'entertainment', desc: 'DStv subscription payment' },
-  { match: /showmax/i,                          brand: 'Showmax',          icon: '🎬', category: 'entertainment', desc: 'Showmax streaming gift card' },
-  { match: /spotify/i,                          brand: 'Spotify',          icon: '🎵', category: 'entertainment', desc: 'Spotify music gift card' },
-  { match: /apple\s*music/i,                    brand: 'Apple Music',      icon: '🎵', category: 'entertainment', desc: 'Apple Music gift card' },
-  { match: /itunes/i,                           brand: 'iTunes',           icon: '🍎', category: 'entertainment', desc: 'iTunes / Apple gift card' },
+  { match: /showmax/i,                          brand: 'Showmax',          icon: '🎬', category: 'entertainment', desc: 'Showmax streaming voucher' },
+  { match: /spotify/i,                          brand: 'Spotify',          icon: '🎵', category: 'entertainment', desc: 'Spotify music voucher' },
+  { match: /apple\s*music/i,                    brand: 'Apple Music',      icon: '🎵', category: 'entertainment', desc: 'Apple Music retail voucher' },
+  { match: /itunes/i,                           brand: 'iTunes',           icon: '🍎', category: 'entertainment', desc: 'iTunes / Apple retail voucher' },
   { match: /ott/i,                              brand: 'OTT Voucher',      icon: '🎬', category: 'entertainment', desc: 'OTT streaming voucher' },
   { match: /talk\s*360/i,                       brand: 'Talk360',          icon: '📞', category: 'entertainment', desc: 'Talk360 international calling credit' },
 
   // Gaming — specific game currencies BEFORE generic gaming
   { match: /free\s*fire|diamond/i,              brand: 'Free Fire',        icon: '💎', category: 'gaming', desc: 'Free Fire Diamonds — in-game currency' },
   { match: /pubg|battleground|\buc\b/i,         brand: 'PUBG Mobile',      icon: '🎮', category: 'gaming', desc: 'PUBG Mobile UC — in-game currency' },
-  { match: /roblox/i,                           brand: 'Roblox',           icon: '🟥', category: 'gaming', desc: 'Roblox gift card — buy Robux' },
-  { match: /steam/i,                            brand: 'Steam',            icon: '🎮', category: 'gaming', desc: 'Steam Wallet gift card' },
-  { match: /playstation|psn/i,                  brand: 'PlayStation',      icon: '🎮', category: 'gaming', desc: 'PlayStation Store gift card' },
-  { match: /xbox/i,                             brand: 'Xbox',             icon: '🎮', category: 'gaming', desc: 'Xbox gift card' },
-  { match: /nintendo/i,                         brand: 'Nintendo',         icon: '🎮', category: 'gaming', desc: 'Nintendo eShop gift card' },
+  { match: /roblox/i,                           brand: 'Roblox',           icon: '🟥', category: 'gaming', desc: 'Roblox retail voucher — buy Robux' },
+  { match: /steam/i,                            brand: 'Steam',            icon: '🎮', category: 'gaming', desc: 'Steam Wallet voucher' },
+  { match: /playstation|psn/i,                  brand: 'PlayStation',      icon: '🎮', category: 'gaming', desc: 'PlayStation Store voucher' },
+  { match: /xbox/i,                             brand: 'Xbox',             icon: '🎮', category: 'gaming', desc: 'Xbox retail voucher' },
+  { match: /nintendo/i,                         brand: 'Nintendo',         icon: '🎮', category: 'gaming', desc: 'Nintendo eShop voucher' },
   { match: /razer\s*gold/i,                     brand: 'Razer Gold',       icon: '🎮', category: 'gaming', desc: 'Razer Gold gaming credits' },
-  { match: /fifa|ea\s*sport/i,                  brand: 'EA Sports FC',     icon: '⚽', category: 'gaming', desc: 'EA Sports FC gift card' },
-  { match: /google\s*play/i,                    brand: 'Google Play',      icon: '📱', category: 'gaming', desc: 'Google Play gift card' },
+  { match: /fifa|ea\s*sport/i,                  brand: 'EA Sports FC',     icon: '⚽', category: 'gaming', desc: 'EA Sports FC retail voucher' },
+  { match: /google\s*play/i,                    brand: 'Google Play',      icon: '📱', category: 'gaming', desc: 'Google Play voucher' },
 
   // Apple credit (must come AFTER itunes/apple music)
   { match: /\$\d+\s*credit|apple.*credit/i,     brand: 'Apple Credit',     icon: '🍎', category: 'entertainment', desc: 'Apple App Store / iTunes credit' },
@@ -3600,20 +3600,21 @@ const VOUCHER_BRAND_TABLE = [
 
   // Transport
   { match: /intercape/i,                        brand: 'Intercape',        icon: '🚌', category: 'transport', desc: 'Intercape bus ticket voucher' },
-  { match: /uber/i,                             brand: 'Uber',             icon: '🚗', category: 'transport', desc: 'Uber gift card' },
-  { match: /bolt/i,                             brand: 'Bolt',             icon: '⚡', category: 'transport', desc: 'Bolt gift card' },
+  { match: /uber/i,                             brand: 'Uber',             icon: '🚗', category: 'transport', desc: 'Uber retail voucher' },
+  { match: /bolt/i,                             brand: 'Bolt',             icon: '⚡', category: 'transport', desc: 'Bolt retail voucher' },
 
   // Shopping / retail
-  { match: /amazon/i,                           brand: 'Amazon',           icon: '🛍️', category: 'shopping', desc: 'Amazon gift card' },
-  { match: /takealot/i,                         brand: 'Takealot',         icon: '🛍️', category: 'shopping', desc: 'Takealot gift card' },
+  { match: /amazon/i,                           brand: 'Amazon',           icon: '🛍️', category: 'shopping', desc: 'Amazon retail voucher' },
+  { match: /takealot/i,                         brand: 'Takealot',         icon: '🛍️', category: 'shopping', desc: 'Takealot retail voucher' },
   { match: /1voucher/i,                         brand: '1Voucher',         icon: '🛒', category: 'shopping', desc: '1Voucher — accepted at thousands of online stores' },
   { match: /blu\s*voucher/i,                    brand: 'Blu Voucher',      icon: '💳', category: 'shopping', desc: 'Blu Voucher' },
   { match: /ringas/i,                           brand: 'Ringas',           icon: '💳', category: 'shopping', desc: 'Ringas voucher' },
-  { match: /makro/i,                            brand: 'Makro',            icon: '🏪', category: 'shopping', desc: 'Makro gift card' },
-  { match: /pick\s*n\s*pay/i,                   brand: 'Pick n Pay',       icon: '🏪', category: 'shopping', desc: 'Pick n Pay gift card' },
-  { match: /bok\s*squad/i,                      brand: 'Bok Squad',        icon: '🏉', category: 'shopping', desc: 'Bok Squad gift card' },
-  { match: /pro\s*shop/i,                       brand: 'Pro Shop',         icon: '🏉', category: 'shopping', desc: 'Pro Shop gift card' },
-  { match: /cycle\s*lab/i,                      brand: 'Cycle Lab',        icon: '🚲', category: 'shopping', desc: 'Cycle Lab gift card' },
+  { match: /makro/i,                            brand: 'Makro',            icon: '🏪', category: 'shopping', desc: 'Makro retail voucher' },
+  { match: /pick\s*n\s*pay/i,                   brand: 'Pick n Pay',       icon: '🏪', category: 'shopping', desc: 'Pick n Pay retail voucher' },
+  { match: /shoprite|checkers/i,                brand: 'Shoprite',         icon: '🛒', category: 'shopping', desc: 'Shoprite retail voucher' },
+  { match: /bok\s*squad/i,                      brand: 'Bok Squad',        icon: '🏉', category: 'shopping', desc: 'Bok Squad retail voucher' },
+  { match: /pro\s*shop/i,                       brand: 'Pro Shop',         icon: '🏉', category: 'shopping', desc: 'Pro Shop retail voucher' },
+  { match: /cycle\s*lab/i,                      brand: 'Cycle Lab',        icon: '🚲', category: 'shopping', desc: 'Cycle Lab retail voucher' },
   { match: /tenacity/i,                         brand: 'Tenacity',         icon: '🏪', category: 'shopping', desc: 'Tenacity retail voucher' },
 
   // Lifestyle
@@ -3625,17 +3626,80 @@ const VOUCHER_BRAND_TABLE = [
   { match: /flash\s*token/i,                    brand: 'Flash Token',      icon: '💰', category: 'other', desc: 'Flash Token cash voucher' },
 ];
 
+function toTitleCase(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/\b[a-z]/g, (char) => char.toUpperCase());
+}
+
+function sanitizeRetailVoucherName(rawName) {
+  const cleaned = String(rawName || '')
+    .replace(/ott\s+mobile\s+gift\s+cards?\s*\|?/ig, '')
+    .replace(/mobile\s+gift\s+cards?\s*\|?/ig, '')
+    .replace(/\bgift\s*card(s)?\b/ig, ' ')
+    .replace(/\bvoucher(s)?\b/ig, ' ')
+    .replace(/\bvariable\b/ig, ' ')
+    .replace(/\bnon\s+void\b/ig, ' ')
+    .replace(/\bout\s+of\s+stock\b/ig, ' ')
+    .replace(/\bsuccess\b/ig, ' ')
+    .replace(/\btimeout\b/ig, ' ')
+    .replace(/\bR\s*\d+(\.\d{1,2})?\b/ig, ' ')
+    .replace(/\$\s*\d+(\.\d{1,2})?\b/ig, ' ')
+    .replace(/[|_/\\-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return cleaned ? toTitleCase(cleaned) : 'Retail Voucher';
+}
+
+function inferRetailVoucherCategory(rawName) {
+  const normalized = String(rawName || '').toLowerCase();
+  if (/bet|lotto|hollywood|supabets|yesplay|flybet/.test(normalized)) return 'betting';
+  if (/game|gaming|steam|xbox|playstation|nintendo|roblox|pubg|free\s*fire|diamond|uc\b/.test(normalized)) return 'gaming';
+  if (/netflix|showmax|spotify|dstv|itunes|apple\s*music|talk\s*360/.test(normalized)) return 'entertainment';
+  if (/uber|bolt|intercape|transport|bus/.test(normalized)) return 'transport';
+  if (/sorbet|ticketmaster|beauty|event/.test(normalized)) return 'lifestyle';
+  return 'shopping';
+}
+
+function slugifyRetailVoucherName(value) {
+  return String(value || 'retail-voucher')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80) || 'retail-voucher';
+}
+
 /**
  * Recognise a raw supplier product name and return canonical brand info.
- * Returns null if the product name doesn't match any known brand — such
- * products are EXCLUDED from the catalog (they're unrecognisable junk).
+ * Recognition is an enhancement layer only. Unknown active voucher products
+ * still appear using a sanitized supplier/product name so catalog additions
+ * cannot silently disappear from the wallet.
  */
 function recogniseVoucherBrand(rawName) {
-  if (!rawName) return null;
-  for (const entry of VOUCHER_BRAND_TABLE) {
-    if (entry.match.test(rawName)) return entry;
+  if (!rawName) {
+    return {
+      brand: 'Retail Voucher',
+      icon: '🛒',
+      category: 'shopping',
+      desc: 'Retail voucher',
+      recognition: 'fallback',
+    };
   }
-  return null;
+  for (const entry of VOUCHER_BRAND_TABLE) {
+    if (entry.match.test(rawName)) {
+      return { ...entry, recognition: 'mapped' };
+    }
+  }
+
+  const brand = sanitizeRetailVoucherName(rawName);
+  return {
+    brand,
+    icon: '🛒',
+    category: inferRetailVoucherCategory(rawName),
+    desc: `${brand} retail voucher`,
+    recognition: 'fallback',
+  };
 }
 
 /**
@@ -3689,13 +3753,21 @@ router.get('/vouchers/catalog', auth, async (req, res) => {
       order: [['commission', 'DESC'], ['priority', 'ASC']]
     });
 
-    // Phase 3: Group by brand-regex, filter to winning supplier per provider
+    // Phase 3: Group by canonical brand where mapped, otherwise by sanitized product name.
     const brandGroups = new Map();
+    const fallbackRecognitions = [];
 
     for (const variant of voucherVariants) {
-      const rawName = variant.product?.name || variant.provider || '';
+      const rawName = variant.product?.name || variant.provider || variant.supplierProductId || '';
       const recognised = recogniseVoucherBrand(rawName);
-      if (!recognised) continue;
+      if (recognised.recognition === 'fallback') {
+        fallbackRecognitions.push({
+          rawName,
+          supplierCode: (variant.supplier?.code || '').toUpperCase(),
+          supplierProductId: variant.supplierProductId,
+          variantId: variant.id,
+        });
+      }
 
       const brandKey = recognised.brand.toLowerCase();
       if (!brandGroups.has(brandKey)) {
@@ -3704,6 +3776,7 @@ router.get('/vouchers/catalog', auth, async (req, res) => {
           icon: recognised.icon,
           category: recognised.category,
           description: recognised.desc,
+          recognition: recognised.recognition,
           variants: []
         });
       }
@@ -3805,7 +3878,7 @@ router.get('/vouchers/catalog', auth, async (req, res) => {
         : (uniqueDenoms.length > 0 ? Math.max(...uniqueDenoms) : 0);
 
       vouchers.push({
-        id: `voucher-${bestVariantId || representative.id}`,
+        id: `retail-voucher-${slugifyRetailVoucherName(group.brand)}-${bestVariantId || representative.id}`,
         productId: bestProductId || representative.product?.id,
         variantId: bestVariantId || representative.id,
         name: group.brand,
@@ -3819,6 +3892,7 @@ router.get('/vouchers/catalog', auth, async (req, res) => {
         maxAmount: maxAmt,
         isVariable: hasVariable,
         denominations: hasVariable ? [] : uniqueDenoms,
+        recognition: group.recognition,
         available: true
       });
     }
@@ -3852,7 +3926,11 @@ router.get('/vouchers/catalog', auth, async (req, res) => {
       data: {
         vouchers: result,
         categories,
-        total: result.length
+        total: result.length,
+        catalogAudit: {
+          fallbackRecognitionCount: fallbackRecognitions.length,
+          fallbackRecognitions: fallbackRecognitions.slice(0, 50)
+        }
       }
     });
 

@@ -8,7 +8,7 @@
 ---
 
 ## Session Summary
-Implemented the approved wallet frontend simplification for OTT cash-send positioning and voucher naming. The work keeps existing routes and backend APIs intact while changing the user-facing model to simple intent-based journeys: `Withdraw Cash`, `MyMoolah Vouchers`, and `Buy Gift Cards`.
+Implemented the approved wallet frontend simplification for OTT cash-send positioning and voucher naming. The work keeps existing routes and backend APIs intact while changing the user-facing model to simple intent-based journeys: `Withdraw Cash`, `MyMoolah Vouchers`, and `Buy Retail Vouchers`.
 
 ---
 
@@ -17,8 +17,10 @@ Implemented the approved wallet frontend simplification for OTT cash-send positi
 - [x] Replaced confusing ATM/cash-send wording with a single `Withdraw Cash` entry.
 - [x] Built a `WithdrawCashOverlay` behind the existing `/atm-cashsend-overlay` route using existing OTT payout quote, submit, and poll endpoints.
 - [x] Added SMS delivery wording for OTT/provider PIN flows: users are told the PIN/code is sent by SMS after a successful transaction and that the provider SMS contains usage instructions.
-- [x] Renamed supplier catalog wording from digital vouchers to `Buy Gift Cards`.
-- [x] Simplified MyMoolah voucher copy so wallet-value vouchers are clearly separate from supplier gift cards.
+- [x] Renamed supplier catalog wording from digital vouchers to `Buy Retail Vouchers`.
+- [x] Simplified MyMoolah voucher copy so wallet-value vouchers are clearly separate from supplier retail vouchers.
+- [x] Converted the voucher catalog from whitelist-only to fail-open recognition so unmapped active retail vouchers appear with sanitized labels instead of disappearing.
+- [x] Added Shoprite/Checkers recognition to the voucher catalog so `Shoprite Voucher` receives a polished label.
 - [x] Removed a stale unused `components/atm-cashsend/ATMCashSendOverlay.tsx` placeholder that still displayed ATM-specific copy.
 
 ---
@@ -26,7 +28,8 @@ Implemented the approved wallet frontend simplification for OTT cash-send positi
 ## Key Decisions
 - **Do not promise ATM cash-out for Standard Bank**: Earlier UAT SMS wording suggested provider-specific instructions. The frontend now says `cash PIN` and defers redemption-channel details to the provider SMS.
 - **Keep route stability for now**: `/atm-cashsend-overlay` remains active so existing quick-access settings do not break, but the component export and UI are now `WithdrawCashOverlay`.
-- **Separate voucher concepts**: MyMoolah vouchers remain wallet-value vouchers; supplier/OTT retail products are presented as gift cards.
+- **Separate voucher concepts**: MyMoolah vouchers remain wallet-value vouchers; supplier/OTT retail products are presented as retail vouchers.
+- **Catalog robustness**: Recognition rules are now enhancement-only. Active voucher products that are not mapped still appear as sanitized retail vouchers and are reported through `catalogAudit`.
 
 ---
 
@@ -39,7 +42,8 @@ Implemented the approved wallet frontend simplification for OTT cash-send positi
 - `mymoolah-wallet-frontend/pages/WalletSettingsPage.tsx` - Updated cash icon handling.
 - `controllers/settingsController.js` - Updated available-service labels/descriptions for quick access.
 - `mymoolah-wallet-frontend/pages/VouchersPage.tsx` - Clarified MyMoolah voucher wording.
-- `mymoolah-wallet-frontend/components/overlays/digital-vouchers/*` - Renamed visible catalog wording to `Buy Gift Cards` and added SMS delivery guidance.
+- `mymoolah-wallet-frontend/components/overlays/digital-vouchers/*` - Renamed visible catalog wording to `Buy Retail Vouchers` and added SMS delivery guidance.
+- `routes/overlayServices.js` - Made retail voucher recognition fail-open and added Shoprite/Checkers retail voucher recognition.
 
 ---
 

@@ -10,8 +10,10 @@ Simplified the wallet frontend information architecture for OTT cash-send and vo
 - Replaced ATM/cash-send wording with `Withdraw Cash` and safer `cash PIN` copy.
 - Added `WithdrawCashOverlay` behind the existing `/atm-cashsend-overlay` route, wired to existing OTT provider-limits, payout quote, payout submit, and payout poll endpoints.
 - Added clear messaging that provider PINs/codes are delivered by SMS after a successful transaction and that users must follow the provider SMS instructions.
-- Renamed visible supplier catalog copy from Digital Vouchers to `Buy Gift Cards`.
-- Clarified `MyMoolah Vouchers` as wallet-value vouchers, separate from supplier/OTT retail gift cards.
+- Renamed visible supplier catalog copy from Digital Vouchers to `Buy Retail Vouchers`.
+- Clarified `MyMoolah Vouchers` as wallet-value vouchers, separate from supplier/OTT retail vouchers.
+- Converted the retail voucher catalog from whitelist-only to fail-open recognition: mapped brands still receive polished labels, while unmapped active voucher products now appear with a sanitized retail-voucher name and catalog audit metadata instead of being silently hidden.
+- Added Shoprite/Checkers recognition in the voucher catalog so `Shoprite Voucher` receives a polished label.
 - Removed a stale unused ATM Cash Send placeholder component.
 
 ### Validation

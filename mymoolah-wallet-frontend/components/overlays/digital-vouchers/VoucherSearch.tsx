@@ -17,7 +17,7 @@ export function VoucherSearch({ searchQuery, onSearch, onClear }: VoucherSearchP
         </div>
         <Input
           type="text"
-          placeholder="Search gift cards..."
+          placeholder="Search retail vouchers..."
           value={searchQuery}
           onChange={(e) => onSearch(e.target.value)}
           style={{
@@ -30,7 +30,7 @@ export function VoucherSearch({ searchQuery, onSearch, onClear }: VoucherSearchP
             border: '1px solid #e2e8f0',
             backgroundColor: '#ffffff'
           }}
-          aria-label="Search gift cards by name or description"
+          aria-label="Search retail vouchers by name or description"
         />
         {searchQuery && (
           <button

@@ -26,6 +26,19 @@ export interface Voucher {
   denominations: number[];
 }
 
+function buildRetailVoucherId(voucher: any, index: number): string {
+  const parts = [
+    voucher.id,
+    voucher.productId,
+    voucher.variantId,
+    voucher.supplierCode,
+    voucher.name || voucher.brand,
+  ].filter((part) => part !== undefined && part !== null && String(part).trim() !== '');
+
+  const base = parts.map((part) => String(part).trim().replace(/\s+/g, '-')).join('|');
+  return base || `retail-voucher-${index}`;
+}
+
 export function DigitalVouchersOverlay() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -52,8 +65,8 @@ export function DigitalVouchersOverlay() {
       setIsLoading(true);
       setError(null);
       const response = await apiService.getVouchers();
-      const loaded: Voucher[] = (response.vouchers || []).map((v: any) => ({
-        id: (v.id || '').toString(),
+      const loaded: Voucher[] = (response.vouchers || []).map((v: any, index: number) => ({
+        id: buildRetailVoucherId(v, index),
         productId: v.productId,
         variantId: v.variantId,
         name: v.name || 'Voucher',
@@ -83,7 +96,7 @@ export function DigitalVouchersOverlay() {
         localStorage.setItem(favoritesKey, JSON.stringify(pruned));
       }
     } catch {
-      setError('We could not load gift cards right now. Please check your connection and try again.');
+      setError('We could not load retail vouchers right now. Please check your connection and try again.');
     } finally {
       setIsLoading(false);
     }
@@ -149,7 +162,7 @@ export function DigitalVouchersOverlay() {
           Back
         </Button>
         <h1 style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '20px', fontWeight: '600', color: '#1f2937' }}>
-          Buy Gift Cards
+          Buy Retail Vouchers
         </h1>
         <div style={{ width: '40px' }} />
       </div>
@@ -170,7 +183,7 @@ export function DigitalVouchersOverlay() {
         <div className="text-center py-8">
           <div className="w-12 h-12 mx-auto mb-4 border-4 border-gray-200 border-t-[#86BE41] rounded-full animate-spin" />
           <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '14px', color: '#6b7280' }}>
-            Loading gift cards...
+            Loading retail vouchers...
           </p>
         </div>
       )}
@@ -203,11 +216,11 @@ export function DigitalVouchersOverlay() {
         </div>
       )}
 
-      {/* All Gift Cards */}
+      {/* All Retail Vouchers */}
       {!isLoading && otherVouchers.length > 0 && (
         <div className="mb-6">
           <h2 style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '16px', fontWeight: '600', color: '#1f2937', marginBottom: '12px' }}>
-            {searchQuery ? 'Search Results' : 'All Gift Cards'}
+            {searchQuery ? 'Search Results' : 'All Retail Vouchers'}
           </h2>
           <div className="grid grid-cols-3 gap-3">
             {otherVouchers.map(v => (
@@ -229,7 +242,7 @@ export function DigitalVouchersOverlay() {
         <div className="text-center py-12">
           <div className="text-4xl mb-3">🔍</div>
           <h3 style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '16px', fontWeight: '600', color: '#1f2937', marginBottom: '8px' }}>
-            No gift cards found
+            No retail vouchers found
           </h3>
           <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '14px', color: '#6b7280' }}>
             {searchQuery ? 'Try a different search term' : 'Vouchers will appear here once available'}
