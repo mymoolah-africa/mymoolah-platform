@@ -20,6 +20,7 @@ Implemented the approved Product Catalog Governance MVP so raw supplier SKUs can
 - [x] Added paginated admin governance APIs with permission checks and 4-eyes controls.
 - [x] Built Admin Portal Catalog Governance screen with filters, detail review, edits, submit, approve, reject, suspend, retire, and audit history.
 - [x] Added focused service tests and updated governance docs, changelog, and handover.
+- [x] Follow-up: replaced voucher display/favorite identity with backend-owned canonical `catalogKey` values and added recognition tests across supplier naming variants.
 
 ---
 
@@ -28,6 +29,7 @@ Implemented the approved Product Catalog Governance MVP so raw supplier SKUs can
 - **Raw ingestion is non-blocking**: Supplier sync queues governance mappings after successful raw SKU upsert, but catches governance errors so supplier ingestion remains available even before migration.
 - **Maker-checker is service-owned**: Admin routes call `ProductCatalogGovernanceService`; the service blocks self-approval and writes immutable audit events for state transitions.
 - **Customer exposure requires published approval**: Pending, rejected, suspended, retired, and unmapped SKUs are never returned by wallet governance enforcement.
+- **Stable customer-facing identity**: Wallet voucher display/favorites must key on backend canonical `catalogKey`, not supplier/product/variant IDs. Supplier winners and variant IDs can change without changing the customer-facing brand.
 
 ---
 
@@ -37,13 +39,16 @@ Implemented the approved Product Catalog Governance MVP so raw supplier SKUs can
 - `models/ProductCatalogAuditEvent.js` - Sequelize model for immutable mapping audit events.
 - `services/productCatalogGovernanceService.js` - Core governance detection, transition, validation, maker-checker, audit, list/detail, and publication service.
 - `services/catalogSynchronizationService.js` - Queues governance mappings after Flash/MobileMart variant sync.
+- `services/voucherCatalogBrandService.js` - Central canonical voucher brand recognition and stable catalog keys.
 - `routes/overlayServices.js` - Adds feature-flagged approved/published wallet catalog enforcement.
 - `routes/catalogGovernance.js` - Admin API routes for list, detail, edit, submit, approve, reject, suspend, retire, and backfill.
 - `server.js` - Mounts `/api/v1/catalog-governance`.
+- `mymoolah-wallet-frontend/components/overlays/digital-vouchers/DigitalVouchersOverlay.tsx` - Uses backend catalog keys for stable voucher IDs and migrates old favorite IDs by brand key.
 - `portal/admin/frontend/src/components/admin-overlays/CatalogGovernanceOverlay.tsx` - Admin Portal governance review UI.
 - `portal/admin/frontend/src/components/routing/RouteConfig.tsx` - Registers Catalog Governance route.
 - `portal/admin/frontend/src/components/layout/AppLayoutWrapper.tsx` - Adds sidebar navigation and page title.
 - `tests/productCatalogGovernanceService.test.js` - Focused service tests for canonical-field validation, self-approval block, approval publication, and audit events.
+- `tests/voucherCatalogBrandService.test.js` - Tests supplier naming variants map to stable canonical brands and catalog keys.
 - `docs/PRODUCT_CATALOG_GOVERNANCE.md` - Governance states, controls, procedure, rollout, and validation guide.
 - `docs/CHANGELOG.md` - Product Catalog Governance release entry.
 - `docs/AGENT_HANDOVER.md` - Latest feature summary and UAT next steps.
@@ -56,6 +61,7 @@ Implemented the approved Product Catalog Governance MVP so raw supplier SKUs can
 - Added safe supplier sync integration and admin backfill path.
 - Added admin API and portal UI for operations review.
 - Added wallet read-path governance enforcement behind `PRODUCT_CATALOG_GOVERNANCE_ENABLED`.
+- Added backend-owned stable `catalogKey` for mapped retail voucher brands so favorites and customer-facing display survive supplier/catalog refreshes.
 
 ---
 
@@ -71,10 +77,13 @@ Implemented the approved Product Catalog Governance MVP so raw supplier SKUs can
 - [x] Portal type-check attempted.
 - [x] Cursor lints checked on touched files.
 - [x] Test results: focused governance Jest tests pass; portal type-check is blocked by pre-existing unrelated errors.
+- [x] Wallet frontend build passed after canonical catalog-key follow-up.
 
 Commands/results:
 - `node --check` on new/changed backend files: passed.
 - `npx jest tests/productCatalogGovernanceService.test.js --runInBand`: passed 3/3.
+- `npx jest tests/voucherCatalogBrandService.test.js --runInBand`: passed 13/13.
+- `npm run build` in `mymoolah-wallet-frontend`: passed.
 - `npm run type-check` in `portal/admin/frontend`: fails only on pre-existing unrelated type errors after the new screen fix.
 
 ---
@@ -96,6 +105,7 @@ Commands/results:
 - Governance table migration is required before using the Admin Portal backfill/API.
 - Supplier sync catches governance queue errors by design so raw ingestion is not blocked.
 - The attached plan file under `.cursor/plans/` was not edited.
+- Treat any future retail voucher display issue as a canonical catalog identity issue first. Do not add isolated brand workarounds in the wallet; add or adjust backend catalog-key recognition tests and mappings.
 
 ---
 

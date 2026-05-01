@@ -10,6 +10,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 
 export interface Voucher {
   id: string;
+  catalogKey?: string;
   productId?: number;
   variantId?: number;
   name: string;
@@ -26,17 +27,18 @@ export interface Voucher {
   denominations: number[];
 }
 
-function buildRetailVoucherId(voucher: any, index: number): string {
-  const parts = [
-    voucher.id,
-    voucher.productId,
-    voucher.variantId,
-    voucher.supplierCode,
-    voucher.name || voucher.brand,
-  ].filter((part) => part !== undefined && part !== null && String(part).trim() !== '');
+function voucherBrandSlug(value: any): string {
+  return String(value || 'voucher')
+    .toLowerCase()
+    .trim()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
 
-  const base = parts.map((part) => String(part).trim().replace(/\s+/g, '-')).join('|');
-  return base || `retail-voucher-${index}`;
+function buildRetailVoucherId(voucher: any, index: number): string {
+  const brandSlug = voucherBrandSlug(voucher.catalogKey || voucher.brand || voucher.name);
+  return brandSlug ? `retail-voucher-${brandSlug}` : `retail-voucher-${index}`;
 }
 
 export function DigitalVouchersOverlay() {
@@ -67,6 +69,7 @@ export function DigitalVouchersOverlay() {
       const response = await apiService.getVouchers();
       const loaded: Voucher[] = (response.vouchers || []).map((v: any, index: number) => ({
         id: buildRetailVoucherId(v, index),
+        catalogKey: v.catalogKey,
         productId: v.productId,
         variantId: v.variantId,
         name: v.name || 'Voucher',
@@ -87,10 +90,19 @@ export function DigitalVouchersOverlay() {
 
       // Load favorites and prune stale IDs that no longer match any voucher
       const loadedIds = new Set(loaded.map(v => v.id));
+      const loadedByBrandSlug = new Map(loaded.map(v => [voucherBrandSlug(v.catalogKey || v.brand || v.name), v.id]));
       const stored = typeof window !== 'undefined' ? localStorage.getItem(favoritesKey) : null;
       let favs: string[] = [];
       try { favs = stored ? JSON.parse(stored) : []; } catch { favs = []; }
-      const pruned = Array.isArray(favs) ? favs.filter(id => loadedIds.has(id)) : [];
+      const pruned = Array.isArray(favs)
+        ? Array.from(new Set(favs.map(id => {
+          if (loadedIds.has(id)) return id;
+          for (const [brandSlug, stableId] of loadedByBrandSlug.entries()) {
+            if (String(id).toLowerCase().includes(brandSlug)) return stableId;
+          }
+          return null;
+        }).filter((id): id is string => !!id && loadedIds.has(id))))
+        : [];
       setFavorites(pruned);
       if (typeof window !== 'undefined') {
         localStorage.setItem(favoritesKey, JSON.stringify(pruned));

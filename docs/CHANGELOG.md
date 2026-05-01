@@ -13,10 +13,13 @@ Added a banking-grade Product Catalog Governance layer so supplier SKUs can be i
 - Added `/api/v1/catalog-governance` admin APIs with portal JWT auth, validation, pagination, filters, 4-eyes transition controls, and queue backfill.
 - Added Admin Portal `Catalog Governance` screen with filters, paginated table, detail review panel, canonical edits, submit/approve/reject/suspend/retire actions, and audit history.
 - Added `docs/PRODUCT_CATALOG_GOVERNANCE.md` with states, controls, admin procedure, rollout, and validation notes.
+- Follow-up: extracted retail voucher brand recognition to `services/voucherCatalogBrandService.js` and added backend-owned stable `catalogKey` values so wallet display/favorites no longer depend on supplier/product/variant IDs. Added coverage for supplier naming variants including `PicknPay`, `Pick n Pay`, `Pick and Pay`, `PnP`, Hollywood Bets, Blu Voucher, FNB, Apple, Shoprite, and Checkers.
 
 ### Validation
 - `node --check` on the new migration, models, service, admin route, server, wallet overlay route, sync service, and unit test.
 - `npx jest tests/productCatalogGovernanceService.test.js --runInBand` — 3/3 passing.
+- `npx jest tests/voucherCatalogBrandService.test.js --runInBand` — 13/13 passing.
+- `npm run build` in `mymoolah-wallet-frontend` passed after the canonical catalog-key follow-up.
 - `npm run type-check` in `portal/admin/frontend` no longer reports errors in the new Catalog Governance screen; it still fails on pre-existing unrelated portal type errors in `UserManagementOverlay.tsx`, `components/ui/checkbox.tsx`, and `components/ui/dialog.tsx`.
 - Cursor lints on touched backend, route, and portal files: no new linter errors.
 
