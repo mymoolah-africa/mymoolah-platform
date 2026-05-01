@@ -10,9 +10,56 @@ const DEFAULT_ENDPOINTS = {
   getPaymentStatus: '/api/purchase/v1/GetPaymentStatus',
   getActiveProviders: '/api/purchase/v1/GetActiveProviders',
   resendSms: '/api/purchase/v1/ResendSMS',
-  getUniversalBranchCodes: '/api/purchase/v1/GetUniversalBranchCodes',
+  getUniversalBranchCodes: '/api/purchase/v1/GetBranchCodes',
   getCountryCodes: '/api/purchase/v1/GetCountryCodes',
-  getActiveProviderLimits: '/api/purchase/v1/GetActiveProviderLimits',
+  getActiveProviderLimits: '/api/purchase/v1/GetActiveProvidersLimits',
+};
+
+const ENDPOINT_ALIASES = {
+  performPayout: 'PerformPayout',
+  getBalance: 'GetBalance',
+  verifyWebhook: 'VerifyWH',
+  getPaymentStatus: 'GetPaymentStatus',
+  getActiveProviders: 'GetActiveProviders',
+  resendSms: 'ResendSMS',
+  getUniversalBranchCodes: 'GetBranchCodes',
+  getCountryCodes: 'GetCountryCodes',
+  getActiveProviderLimits: 'GetActiveProvidersLimits',
+};
+
+const DEFAULT_HASH_PARAM_ORDER = {
+  performPayout: [
+    'recipient.account_name',
+    'recipient.account_number',
+    'amount',
+    'recipient.bank_id',
+    'recipient.branch_name',
+    'recipient.branch_code',
+    'recipient.country_of_issue',
+    'recipient.date_of_birth',
+    'recipient.email',
+    'recipient.firstname',
+    'recipient.id_number',
+    'recipient.id_type',
+    'recipient.middle_name',
+    'recipient.mobile',
+    'recipient.nationality',
+    'provider.providerCode',
+    'provider.providerName',
+    'recipient.surname',
+    'recipient.swift_code',
+    'recipient.title',
+    'yourUniqueReference',
+  ],
+  getBalance: ['requestdate', 'yourUniqueReference'],
+  verifyWebhook: ['requestdate', 'yourUniqueReference', 'whSecret'],
+  webhook: ['requestdate', 'yourUniqueReference'],
+  getActiveProviders: ['requestdate', 'yourUniqueReference'],
+  getPaymentStatus: ['requestdate', 'yourUniqueReference'],
+  resendSms: ['requestdate', 'yourUniqueReference'],
+  getUniversalBranchCodes: ['requestdate', 'yourUniqueReference'],
+  getCountryCodes: ['requestdate', 'yourUniqueReference'],
+  getActiveProviderLimits: ['requestdate', 'yourUniqueReference'],
 };
 
 const SENSITIVE_KEYS = [
@@ -52,11 +99,17 @@ function getConfig() {
     password: process.env.OTT_API_PASSWORD,
     apiKey: process.env.OTT_API_KEY,
     webhookSecret: process.env.OTT_WEBHOOK_SECRET,
-    hashFieldName: process.env.OTT_HASH_FIELD_NAME || 'hash',
+    hashFieldName: process.env.OTT_HASH_FIELD_NAME || 'hashcheck',
     timeoutMs: Number(process.env.OTT_API_TIMEOUT_MS || 15000),
     endpoints: { ...DEFAULT_ENDPOINTS, ...endpointOverrides },
-    hashParamOrder,
+    hashParamOrder: { ...DEFAULT_HASH_PARAM_ORDER, ...hashParamOrder },
   };
+}
+
+function resolveConfigEntry(map, endpointKey) {
+  if (!map || !endpointKey) return undefined;
+  const alias = ENDPOINT_ALIASES[endpointKey];
+  return map[endpointKey] || (alias ? map[alias] : undefined);
 }
 
 function assertConfigured(config = getConfig()) {
@@ -86,6 +139,13 @@ function normaliseHashValue(value) {
   return String(value);
 }
 
+function getPathValue(payload, path) {
+  if (!path) return undefined;
+  return String(path)
+    .split('.')
+    .reduce((current, key) => (current && current[key] !== undefined ? current[key] : undefined), payload);
+}
+
 function buildRequestHash(payload, orderedParams, apiKey) {
   if (!Array.isArray(orderedParams) || orderedParams.length === 0) {
     const err = new Error('OTT hash parameter order is not configured for this endpoint');
@@ -101,7 +161,7 @@ function buildRequestHash(payload, orderedParams, apiKey) {
   }
 
   const preimage = orderedParams
-    .map((param) => normaliseHashValue(payload[param]))
+    .map((param) => normaliseHashValue(getPathValue(payload, param)))
     .join('') + apiKey;
 
   return crypto.createHash('sha256').update(preimage, 'utf8').digest('hex');
@@ -146,7 +206,7 @@ class OttClient {
   }
 
   endpointPath(endpointKey) {
-    const path = this.config.endpoints[endpointKey];
+    const path = resolveConfigEntry(this.config.endpoints, endpointKey);
     if (!path) {
       const err = new Error(`OTT endpoint path is not configured: ${endpointKey}`);
       err.statusCode = 500;
@@ -157,7 +217,7 @@ class OttClient {
   }
 
   signedPayload(endpointKey, payload = {}) {
-    const order = this.config.hashParamOrder[endpointKey];
+    const order = resolveConfigEntry(this.config.hashParamOrder, endpointKey);
     const hash = buildRequestHash(payload, order, this.config.apiKey);
     return {
       ...payload,
@@ -225,6 +285,7 @@ class OttClient {
 module.exports = {
   OttClient,
   DEFAULT_ENDPOINTS,
+  DEFAULT_HASH_PARAM_ORDER,
   buildRequestHash,
   getConfig,
   redact,

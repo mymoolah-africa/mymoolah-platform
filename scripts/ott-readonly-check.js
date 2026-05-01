@@ -7,11 +7,11 @@ require('dotenv').config();
 const { OttClient } = require('../services/ott/ottClient');
 
 const CHECKS = {
-  balance: (client) => client.getBalance({}),
-  providers: (client) => client.getActiveProviders({}),
-  limits: (client) => client.getActiveProviderLimits({}),
-  countries: (client) => client.getCountryCodes({}),
-  branches: (client) => client.getUniversalBranchCodes({}),
+  balance: (client, payload) => client.getBalance(payload),
+  providers: (client, payload) => client.getActiveProviders(payload),
+  limits: (client, payload) => client.getActiveProviderLimits(payload),
+  countries: (client, payload) => client.getCountryCodes(payload),
+  branches: (client, payload) => client.getUniversalBranchCodes(payload),
 };
 
 function parseArgs(argv) {
@@ -34,6 +34,13 @@ function summarise(data) {
   return { type: typeof data };
 }
 
+function buildReadOnlyPayload(check) {
+  return {
+    requestdate: new Date().toISOString(),
+    yourUniqueReference: `MM-OTT-RO-${Date.now()}-${check}`.slice(0, 50),
+  };
+}
+
 async function main() {
   const selectedChecks = parseArgs(process.argv.slice(2));
   const client = new OttClient();
@@ -44,7 +51,7 @@ async function main() {
       throw new Error(`Unknown check "${check}". Valid checks: ${Object.keys(CHECKS).join(', ')}`);
     }
     const startedAt = Date.now();
-    const response = await CHECKS[check](client);
+    const response = await CHECKS[check](client, buildReadOnlyPayload(check));
     results.push({
       check,
       httpStatus: response.status,

@@ -80,7 +80,7 @@ describe('OTT payout service', () => {
         paymentReference: 'OTT-PAY-123',
         providerTransactionReference: 'PROV-123',
       },
-      request: { uniqueReferenceId: 'MM-OTT-TEST' },
+      request: { yourUniqueReference: 'MM-OTT-TEST' },
     });
     ledgerService.postJournalEntry.mockResolvedValue({});
   });
@@ -130,6 +130,8 @@ describe('OTT payout service', () => {
         mobile: '+27825571055',
         firstName: 'Test',
         surname: 'User',
+        idType: 'RSAID',
+        idNumber: '8001015009087',
         branchCode: '198765',
       },
       reference: 'Cash send',
@@ -148,9 +150,16 @@ describe('OTT payout service', () => {
       { transaction: mockTransaction }
     );
     expect(mockPerformPayout).toHaveBeenCalledWith(expect.objectContaining({
-      uniqueReferenceId: expect.stringMatching(/^MM-OTT-/),
-      provider_providerCode: 'NEDBANK',
+      yourUniqueReference: expect.stringMatching(/^MM-OTT-/),
       amount: '100.00',
+      provider: expect.objectContaining({ providerCode: 'NEDBANK' }),
+      recipient: expect.objectContaining({
+        firstname: 'Test',
+        surname: 'User',
+        id_type: 'RSAID',
+        id_number: '8001015009087',
+        mobile: '+27825571055',
+      }),
     }));
     expect(result.totalDebit).toBe(111.11);
   });
@@ -162,7 +171,13 @@ describe('OTT payout service', () => {
       userId: 7,
       amount: 100,
       providerCode: 'NEDBANK',
-      recipient: {},
+      recipient: {
+        mobile: '+27825571055',
+        firstName: 'Test',
+        surname: 'User',
+        idType: 'RSAID',
+        idNumber: '8001015009087',
+      },
     })).rejects.toMatchObject({ code: 'WALLET_CASH_WITHDRAW_RESTRICTED' });
 
     expect(mockWallet.debit).not.toHaveBeenCalled();
@@ -182,18 +197,37 @@ describe('OTT payout service', () => {
     expect(mockPayment.update).not.toHaveBeenCalled();
   });
 
+  it('validates official OTT recipient fields before wallet debit', async () => {
+    await expect(service.submitOttPayout({
+      userId: 7,
+      amount: 100,
+      providerCode: 'NEDBANK',
+      recipient: {},
+    })).rejects.toMatchObject({ code: 'OTT_RECIPIENT_DETAILS_REQUIRED' });
+
+    expect(mockModels.Wallet.findOne).not.toHaveBeenCalled();
+    expect(mockWallet.debit).not.toHaveBeenCalled();
+    expect(mockPerformPayout).not.toHaveBeenCalled();
+  });
+
   it('reverses wallet debit when OTT returns a failed status body', async () => {
     mockPerformPayout.mockResolvedValue({
       status: 200,
       data: { status: 'failed', message: 'Provider declined' },
-      request: { uniqueReferenceId: 'MM-OTT-TEST' },
+      request: { yourUniqueReference: 'MM-OTT-TEST' },
     });
 
     await service.submitOttPayout({
       userId: 7,
       amount: 100,
       providerCode: 'NEDBANK',
-      recipient: {},
+      recipient: {
+        mobile: '+27825571055',
+        firstName: 'Test',
+        surname: 'User',
+        idType: 'RSAID',
+        idNumber: '8001015009087',
+      },
       idempotencyKey: 'idem-failed',
     });
 
@@ -208,7 +242,13 @@ describe('OTT payout service', () => {
       userId: 7,
       amount: 100,
       providerCode: 'NEDBANK',
-      recipient: {},
+      recipient: {
+        mobile: '+27825571055',
+        firstName: 'Test',
+        surname: 'User',
+        idType: 'RSAID',
+        idNumber: '8001015009087',
+      },
       idempotencyKey: 'idem-ledger',
     })).rejects.toMatchObject({ code: 'OTT_LEDGER_POST_FAILED' });
 

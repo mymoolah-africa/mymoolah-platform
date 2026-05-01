@@ -56,6 +56,13 @@ function sanitizeText(value, max = 80) {
     .slice(0, max);
 }
 
+function normalizeIdType(value) {
+  const raw = String(value || '').trim().toUpperCase();
+  if (['RSAID', 'SA_ID', 'SAID', 'NATIONAL_ID'].includes(raw)) return 'RSAID';
+  if (['PASSPT', 'PASSPORT'].includes(raw)) return 'PASSPT';
+  return raw;
+}
+
 function last4(value) {
   return String(value || '').replace(/\D/g, '').slice(-4) || null;
 }
@@ -71,11 +78,11 @@ function maskName(firstName, surname) {
 
 function normalizeProviderStatus(status) {
   const normalized = String(status || '').toLowerCase();
-  if (['completed', 'success', 'successful', 'paid', 'processed'].includes(normalized)) return 'completed';
-  if (['failed', 'declined', 'rejected', 'error'].includes(normalized)) return 'failed';
+  if (['completed', 'success', 'successful', 'paid', 'processed', 'payment successful'].includes(normalized)) return 'completed';
+  if (['failed', 'declined', 'rejected', 'error', 'failed at provider', '97'].includes(normalized)) return 'failed';
   if (['reversed', 'refunded'].includes(normalized)) return 'reversed';
   if (['cancelled', 'canceled', 'expired'].includes(normalized)) return 'cancelled';
-  if (['accepted', 'processing', 'pending', 'submitted'].includes(normalized)) return 'processing';
+  if (['accepted', 'processing', 'pending', 'submitted', 'pending transaction'].includes(normalized)) return 'processing';
   return 'processing';
 }
 
@@ -89,21 +96,63 @@ function extractProviderRefs(data = {}) {
 
 function buildPayoutPayload({ payment, request }) {
   return {
-    uniqueReferenceId: payment.uniqueReferenceId,
-    provider_providerCode: request.providerCode,
+    yourUniqueReference: payment.uniqueReferenceId,
     amount: roundMoney(payment.amount).toFixed(2),
-    mobile: request.mobile,
-    accountName: sanitizeText(request.accountName || `${request.firstName || ''} ${request.surname || ''}`.trim(), 120),
-    accountNumber: request.accountNumber || '',
-    bankId: request.bankId || '',
-    branchCode: request.branchCode || '',
-    branchName: sanitizeText(request.branchName, 80),
-    countryOfIssue: request.countryOfIssue || 'ZA',
-    middleName: sanitizeText(request.middleName, 80),
-    nationality: request.nationality || 'ZA',
-    surname: sanitizeText(request.surname, 80),
-    swiftCode: request.swiftCode || '',
+    provider: {
+      providerCode: String(request.providerCode || ''),
+      providerName: sanitizeText(request.providerName, 80),
+    },
+    recipient: {
+      account_name: sanitizeText(request.accountName || `${request.firstName || ''} ${request.surname || ''}`.trim(), 120),
+      account_number: sanitizeText(request.accountNumber, 40),
+      bank_id: sanitizeText(request.bankId || '0', 16),
+      branch_name: sanitizeText(request.branchName, 80),
+      branch_code: sanitizeText(request.branchCode, 16),
+      country_of_issue: sanitizeText(request.countryOfIssue || 'ZA', 3),
+      date_of_birth: sanitizeText(request.dateOfBirth, 20),
+      email: sanitizeText(request.email, 120),
+      firstname: sanitizeText(request.firstName || request.firstname, 80),
+      id_number: sanitizeText(request.idNumber || request.id_number, 40),
+      id_type: normalizeIdType(request.idType || request.id_type),
+      middle_name: sanitizeText(request.middleName, 80),
+      mobile: sanitizeText(request.mobile, 32),
+      nationality: sanitizeText(request.nationality || 'ZA', 3),
+      surname: sanitizeText(request.surname, 80),
+      swift_code: sanitizeText(request.swiftCode, 16),
+      title: sanitizeText(request.title, 20),
+    },
+    optionalData: {
+      mmtpPayoutId: payment.payoutId,
+      reference: sanitizeText(payment.reference, 80),
+    },
   };
+}
+
+function validateOfficialPayoutRequest({ recipient = {} }) {
+  const requiredFields = [
+    ['recipient.firstName', recipient.firstName || recipient.firstname],
+    ['recipient.surname', recipient.surname],
+    ['recipient.mobile', recipient.mobile],
+    ['recipient.idType', recipient.idType || recipient.id_type],
+    ['recipient.idNumber', recipient.idNumber || recipient.id_number],
+  ];
+  const missing = requiredFields
+    .filter(([, value]) => !String(value || '').trim())
+    .map(([field]) => field);
+  if (missing.length > 0) {
+    const err = new Error(`OTT payout recipient details missing: ${missing.join(', ')}`);
+    err.statusCode = 400;
+    err.code = 'OTT_RECIPIENT_DETAILS_REQUIRED';
+    err.details = missing;
+    throw err;
+  }
+  const idType = normalizeIdType(recipient.idType || recipient.id_type);
+  if (!['RSAID', 'PASSPT'].includes(idType)) {
+    const err = new Error('OTT payout recipient idType must be RSAID or PASSPT');
+    err.statusCode = 400;
+    err.code = 'OTT_RECIPIENT_ID_TYPE_INVALID';
+    throw err;
+  }
 }
 
 function buildOttPayoutLedgerLines({
@@ -300,9 +349,10 @@ async function reverseWalletDebit(payment, reason) {
   await postReversalLedger(payment, reason);
 }
 
-async function submitOttPayout({ userId, amount, providerCode, recipient = {}, reference, idempotencyKey }) {
+async function submitOttPayout({ userId, amount, providerCode, providerName, recipient = {}, reference, idempotencyKey }) {
   requireEnabled();
   const quote = await quoteOttPayout({ amount, providerCode });
+  validateOfficialPayoutRequest({ recipient });
   const payoutId = `OTT-${Date.now()}-${uuidv4().slice(0, 8)}`;
   const uniqueReferenceId = `MM-${payoutId}`.replace(/[^a-zA-Z0-9-]/g, '').slice(0, 64);
   let payment;
@@ -381,7 +431,7 @@ async function submitOttPayout({ userId, amount, providerCode, recipient = {}, r
   }
 
   const client = new OttClient();
-  const requestPayload = buildPayoutPayload({ payment, request: { ...recipient, providerCode } });
+  const requestPayload = buildPayoutPayload({ payment, request: { ...recipient, providerCode, providerName } });
   let response;
   try {
     response = await client.performPayout(requestPayload);
@@ -460,12 +510,12 @@ async function pollPayoutStatus({ userId, payoutId }) {
   }
   const client = new OttClient();
   const response = await client.getPaymentStatus({
-    uniqueReferenceId: paymentRecord.uniqueReferenceId,
-    paymentReference: paymentRecord.ottPaymentReference || '',
+    requestdate: new Date().toISOString(),
+    yourUniqueReference: paymentRecord.uniqueReferenceId,
   });
   const updateResult = await updatePayoutFromWebhook({
     ...(response.data || {}),
-    uniqueReferenceId: paymentRecord.uniqueReferenceId,
+    yourUniqueReference: paymentRecord.uniqueReferenceId,
   });
   return {
     payoutId: paymentRecord.payoutId,
@@ -476,7 +526,7 @@ async function pollPayoutStatus({ userId, payoutId }) {
 }
 
 async function updatePayoutFromWebhook(payload = {}) {
-  const uniqueReferenceId = payload.uniqueReferenceId || payload.merchantUniqueReference || payload.merchant_reference;
+  const uniqueReferenceId = payload.uniqueReferenceId || payload.yourUniqueReference || payload.merchantUniqueReference || payload.merchant_reference;
   if (!uniqueReferenceId) {
     const err = new Error('Webhook unique reference is required');
     err.statusCode = 400;

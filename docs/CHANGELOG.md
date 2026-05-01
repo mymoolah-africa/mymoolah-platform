@@ -1,5 +1,27 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-05-01 - OTT UAT read-only readiness
+
+### Summary
+Aligned the OTT Mobile Payout scaffold with the official password-protected OTT Payout API manual so Codespaces/UAT can run credentialed read-only checks before any wallet-debit payout tests.
+
+### Changes
+- Updated `services/ott/ottClient.js` with confirmed endpoint paths, `hashcheck` as the hash field, nested hash parameter resolution, and manual-derived default hash orders.
+- Updated `scripts/ott-readonly-check.js` so read-only calls send `requestdate` and `yourUniqueReference` as required by OTT.
+- Updated `services/ott/ottPayoutService.js` and `routes/ott.js` to build the official `provider` / `recipient` / `yourUniqueReference` payout payload and validate required recipient fields before any wallet debit.
+- Updated `env.template`, `scripts/deploy-backend.sh`, and the OTT integration framework with UAT-readiness details.
+- `OTT_PAYOUT_ENABLED=false` remains the required default until André explicitly approves a UAT wallet-debit payout test.
+
+### Validation
+- `node --check services/ott/ottClient.js services/ott/ottPayoutService.js routes/ott.js scripts/ott-readonly-check.js tests/ott-client.test.js tests/ott-payout-service.test.js tests/ott-adapter.test.js`
+- `npx jest tests/ott-client.test.js tests/ott-payout-service.test.js tests/ott-adapter.test.js --runInBand --forceExit` — 14/14 passing.
+- Local env presence check was secret-safe and showed local `.env.codespaces` lacks OTT password/API key/webhook secret/fee values; André confirmed UAT variables are already in Codespaces `.env`.
+- After André added the OTT password/API key locally, the first read-only call failed with OTT hash validation because `.env.codespaces` still overrode `OTT_HASH_FIELD_NAME=hash`; corrected the local gitignored value to `hashcheck`.
+- Read-only OTT UAT smoke test succeeded for `balance`, `providers`, and `limits` with HTTP 200 responses.
+
+### UAT Next Step
+- Pull `main` in Codespaces if testing there separately, keep `OTT_PAYOUT_ENABLED=false`, ensure `OTT_TEST_INTEGRATION=true` and `OTT_HASH_FIELD_NAME=hashcheck`, then run `node scripts/ott-readonly-check.js --check=balance,providers,limits`.
+
 ## 2026-04-30 - Discovery RTP auto-PBAC suppression and deposit display labels
 
 ### Summary

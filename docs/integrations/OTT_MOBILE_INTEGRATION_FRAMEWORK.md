@@ -308,14 +308,16 @@ OTT_PORTAL_URL=https://test-payout-portal.ott-mobile.com
 OTT_WEBHOOK_PUBLIC_BASE_URL=https://staging.mymoolah.africa
 OTT_HASH_PARAM_ORDER_JSON={}
 OTT_ENDPOINTS_JSON={}
+OTT_HASH_FIELD_NAME=hashcheck
 OTT_PAYOUT_PROVIDER_FEE_ZAR=
 OTT_PAYOUT_MM_FEE_ZAR=
 LEDGER_ACCOUNT_OTT_FLOAT=1200-10-08
 ```
 
 Do not add these values to committed files. Names are placeholders for planning
-only and should be finalized during implementation. The current scaffold fails
-closed when the feature flag, fee inputs, hash parameter order, or secrets are
+only and should be finalized during implementation. The current scaffold includes
+the May 2026 manual endpoint and hash-order defaults, allows env overrides, and
+fails closed when the feature flag, fee inputs, integration flag, or secrets are
 missing.
 
 ### 5.2 Authentication
@@ -334,11 +336,12 @@ The API uses two layers:
    - Concatenate values.
    - Append the API key.
    - SHA-256 hash the result.
-   - Include the resulting hash in the request.
+  - Include the resulting hash in the request as `hashcheck`.
 
 Implementation guardrails:
 
-- Hash construction must be unit-tested per endpoint using OTT examples.
+- Hash construction must be unit-tested per endpoint using OTT examples or the
+  extracted manual order.
 - Never log hash preimages, API keys, Basic Auth headers, webhook secrets, full
   mobile numbers, account numbers, voucher PINs, or bank beneficiary details.
 - Store only masked request/response metadata unless full payload retention is
@@ -352,18 +355,15 @@ Confirmed Payout API endpoint family:
 - `POST /api/purchase/v1/GetBalance`
 - `POST /api/purchase/v1/VerifyWH`
 - `POST /api/purchase/v1/GetPaymentStatus`
-- Get Active Providers - path configurable pending partner-confirmed exact path.
-- Resend SMS of Transaction - path configurable pending partner-confirmed exact
-  path.
-- Get Universal Branch Codes - path configurable pending partner-confirmed exact
-  path.
-- Get Country Codes - path configurable pending partner-confirmed exact path.
-- Get Active Provider Limits - path configurable pending partner-confirmed exact
-  path.
+- `POST /api/purchase/v1/GetActiveProviders`
+- `POST /api/purchase/v1/ResendSMS`
+- `POST /api/purchase/v1/GetBranchCodes`
+- `POST /api/purchase/v1/GetCountryCodes`
+- `POST /api/purchase/v1/GetActiveProvidersLimits`
 
-Implementation plan must extract and freeze exact path names for the endpoints
-where the API manual showed labels but the current framework summary does not
-yet include path strings.
+Manual update applied 2026-05-01: the scaffold now uses the confirmed path
+names above and `hashcheck` as the request hash field. `OTT_ENDPOINTS_JSON`
+remains available only as an override if OTT changes paths later.
 
 ### 5.3.1 Contract freeze status
 
@@ -375,12 +375,12 @@ partner-confirmed items before enabling wallet debits:
 | Basic Auth username | Received: `MYMOOLAHPOT` | Stored only in local gitignored env / Secret Manager |
 | API password | Received by secure link | André provides to local env / Secret Manager; never commit |
 | API key | Received by secure link | Used only for hash construction; never logged |
-| Exact paths for all named discovery endpoints | TBD | Configurable through `OTT_ENDPOINTS_JSON` |
-| Endpoint-specific hash parameter order | TBD | Required through `OTT_HASH_PARAM_ORDER_JSON`; missing order fails closed |
+| Exact paths for all named discovery endpoints | Confirmed from manual 2026-05-01 | Defaults in `ottClient.js`; configurable through `OTT_ENDPOINTS_JSON` |
+| Endpoint-specific hash parameter order | Confirmed from manual 2026-05-01 | Defaults in `ottClient.js`; configurable through `OTT_HASH_PARAM_ORDER_JSON` |
 | Worked hash examples / vectors | TBD | Unit tests use synthetic vectors until OTT examples are stored outside repo |
 | Provider code list and limits | TBD via API/manual | Read-only checks before payout enablement |
 | Webhook payload schema and retry cadence | TBD | Webhook endpoint exists but fails closed without hash order + secret |
-| Status/error matrix | TBD | Unknown statuses normalise to `processing` and require polling/recon |
+| Status/error matrix | Partially confirmed from manual | Success/pending/auth/hash/provider-failure mapped; unknown statuses normalise to `processing` and require polling/recon |
 | Settlement/reconciliation file format | TBD | Flexible adapter scaffold exists; final mapping requires OTT sample |
 
 Request signing must remain a pure function: concatenate POST parameter values
