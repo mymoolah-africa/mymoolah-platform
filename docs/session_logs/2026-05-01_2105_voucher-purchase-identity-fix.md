@@ -17,6 +17,7 @@ Fixed the Pick n Pay voucher purchase path after Codespaces testing showed the v
 - [x] Aligned retail voucher grouped-card representative variant, product ID, supplier product ID, and amount constraints.
 - [x] Added explicit wallet `purchaseProductId` handling so display IDs cannot be used for purchase calls.
 - [x] Follow-up after retest: sent `variantId` through the wallet purchase payload and made the backend purchase service resolve the selected variant for amount rules and supplier execution.
+- [x] Hotfix after next retest: hardened purchase response formatting so a missing brand association cannot crash the response.
 - [x] Improved safe frontend error propagation so backend rejection messages are shown instead of only `HTTP 400`.
 - [x] Completed the interrupted OTT fee display wording fix and updated focused tests.
 - [x] Updated changelog and handover documentation.
@@ -39,6 +40,7 @@ Fixed the Pick n Pay voucher purchase path after Codespaces testing showed the v
 - `routes/products.js` - Validates optional `variantId` for product purchases.
 - `controllers/productController.js` - Passes optional `variantId` into `ProductPurchaseService`.
 - `services/productPurchaseService.js` - Resolves selected active variants for amount validation, order traceability, and OTT/Flash/MobileMart supplier code/provider execution.
+- `services/productPurchaseService.js` - Formats product and supplier response summaries with safe fallbacks when brand/supplier associations are missing.
 - `tests/ott-product-purchase-service.test.js` - Covers selected-variant OTT provider resolution.
 - `services/ott/ottPayoutService.js` - Keeps OTT payout fee transaction description as `Transaction fee`.
 - `controllers/walletController.js` - Displays historical OTT payout fee rows as `Transaction fee`.
@@ -59,6 +61,7 @@ Fixed the Pick n Pay voucher purchase path after Codespaces testing showed the v
 ## Issues Encountered
 - **Jest assertion was stale**: The OTT payout test expected a hardcoded fee transaction ID. Updated it to assert the generated `OTT-FEE-OTT-` prefix and the `Transaction fee` label.
 - **Retest still returned HTTP 400**: The first patch separated display and product IDs, but the backend still treated purchases as product-only. Fixed by making the route, controller, wallet modal, and purchase service variant-aware.
+- **Next retest crashed on `brand.name`**: Backend purchase response assumed `product.brand` was always present. Fixed with safe product/supplier summary helpers and a focused regression test.
 
 ---
 
@@ -71,6 +74,7 @@ Fixed the Pick n Pay voucher purchase path after Codespaces testing showed the v
 Commands/results:
 - `node --check routes/products.js controllers/productController.js services/productPurchaseService.js routes/overlayServices.js controllers/walletController.js services/ott/ottPayoutService.js` - passed.
 - `npx jest tests/ott-product-purchase-service.test.js tests/voucherCatalogBrandService.test.js tests/ott-payout-service.test.js --runInBand --forceExit` - passed 27/27.
+- Hotfix rerun: `npx jest tests/ott-product-purchase-service.test.js --runInBand --forceExit` - passed 5/5.
 - `npm run build` in `mymoolah-wallet-frontend` - passed.
 - Cursor lints on touched files - no linter errors.
 

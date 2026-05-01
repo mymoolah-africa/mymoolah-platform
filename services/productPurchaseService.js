@@ -383,16 +383,8 @@ class ProductPurchaseService {
           denomination: order.denomination,
           createdAt: order.createdAt
         },
-        product: {
-          id: product.id,
-          name: product.name,
-          type: product.type,
-          brand: product.brand.name
-        },
-        supplier: {
-          name: product.supplier.name,
-          code: product.supplier.code
-        },
+        product: this.formatProductSummary(product),
+        supplier: this.formatSupplierSummary(product),
         recipient: order.recipient,
         voucherCode: supplierResult.success ? supplierResult.data?.voucherCode || null : null,
         transactionRef: supplierResult.success
@@ -406,6 +398,26 @@ class ProductPurchaseService {
       console.error('Purchase error:', error);
       throw error;
     }
+  }
+
+  /**
+   * Create a masked view of the voucher code (last 4 visible)
+   */
+  formatProductSummary(product) {
+    if (!product) return null;
+    return {
+      id: product.id,
+      name: product.name,
+      type: product.type,
+      brand: product.brand?.name || product.name || 'Product'
+    };
+  }
+
+  formatSupplierSummary(product) {
+    return {
+      name: product?.supplier?.name || product?.supplier?.code || 'Supplier',
+      code: product?.supplier?.code || null
+    };
   }
 
   /**
@@ -1235,16 +1247,8 @@ class ProductPurchaseService {
       amount: order.amount,
       denomination: order.denomination,
       recipient: order.recipient,
-      product: {
-        id: order.product.id,
-        name: order.product.name,
-        type: order.product.type,
-        brand: order.product.brand.name
-      },
-      supplier: {
-        name: order.product.supplier.name,
-        code: order.product.supplier.code
-      },
+      product: this.formatProductSummary(order.product),
+      supplier: this.formatSupplierSummary(order.product),
       createdAt: order.createdAt,
       updatedAt: order.updatedAt,
       supplierTransactions: order.supplierTransactions.map(tx => ({
@@ -1301,16 +1305,8 @@ class ProductPurchaseService {
       status: order.status,
       amount: order.amount,
       denomination: order.denomination,
-      product: {
-        id: order.product.id,
-        name: order.product.name,
-        type: order.product.type,
-        brand: order.product.brand.name
-      },
-      supplier: {
-        name: order.product.supplier.name,
-        code: order.product.supplier.code
-      },
+      product: this.formatProductSummary(order.product),
+      supplier: this.formatSupplierSummary(order.product),
       createdAt: order.createdAt
     }));
 

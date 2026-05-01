@@ -130,6 +130,28 @@ describe('ProductPurchaseService OTT purchase support', () => {
     expect(service.resolveOttProviderName(product)).toBe('PicknPay Voucher');
   });
 
+  it('formats purchase response safely when product brand is missing', () => {
+    const service = new ProductPurchaseService();
+    const product = {
+      id: 370,
+      name: 'PicknPay Voucher',
+      type: 'voucher',
+      brand: null,
+      supplier: { code: 'OTT', name: 'OTT Mobile' },
+    };
+
+    expect(service.formatProductSummary(product)).toEqual({
+      id: 370,
+      name: 'PicknPay Voucher',
+      type: 'voucher',
+      brand: 'PicknPay Voucher',
+    });
+    expect(service.formatSupplierSummary(product)).toEqual({
+      name: 'OTT Mobile',
+      code: 'OTT',
+    });
+  });
+
   it('polls OTT status when PerformPayout outcome is unknown', async () => {
     const service = new ProductPurchaseService();
     const timeout = new Error('timeout of 15000ms exceeded');
