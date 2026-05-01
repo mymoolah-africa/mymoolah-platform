@@ -113,6 +113,23 @@ describe('ProductPurchaseService OTT purchase support', () => {
     expect(service.resolveOttProviderCode({ supplierProductId: 'OTT-141', metadata: {} })).toBe('141');
   });
 
+  it('prefers selected variant provider metadata for OTT catalog purchases', () => {
+    const service = new ProductPurchaseService();
+    const product = {
+      supplierProductId: 'OTT-999',
+      metadata: { providerCode: '999', providerName: 'Wrong Product' },
+      _selectedVariant: {
+        supplierProductId: 'OTT-68',
+        provider: 'PicknPay Voucher',
+        constraints: { providerCode: '68' },
+        metadata: { providerName: 'PicknPay Voucher' },
+      },
+    };
+
+    expect(service.resolveOttProviderCode(product)).toBe('68');
+    expect(service.resolveOttProviderName(product)).toBe('PicknPay Voucher');
+  });
+
   it('polls OTT status when PerformPayout outcome is unknown', async () => {
     const service = new ProductPurchaseService();
     const timeout = new Error('timeout of 15000ms exceeded');

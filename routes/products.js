@@ -52,6 +52,11 @@ const purchaseValidation = [
   body('productId')
     .isInt({ min: 1 })
     .withMessage('Product ID must be a positive integer'),
+
+  body('variantId')
+    .optional({ nullable: true })
+    .isInt({ min: 1 })
+    .withMessage('Variant ID must be a positive integer'),
   
   body('denomination')
     .isInt({ min: 1 })

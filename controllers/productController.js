@@ -296,7 +296,7 @@ class ProductController {
         });
       }
 
-      const { productId, denomination, recipient, idempotencyKey } = req.body;
+      const { productId, variantId, denomination, recipient, idempotencyKey } = req.body;
       const userId = req.user.id;
       const clientId = req.user.clientId || null;
 
@@ -347,6 +347,7 @@ class ProductController {
 
       const purchaseData = {
         productId: parsedProductId,
+        variantId: variantId ? parseInt(variantId) : null,
         denomination: parsedDenomination,
         recipient: recipient || null,
         idempotencyKey: finalIdempotencyKey

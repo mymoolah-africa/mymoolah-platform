@@ -335,6 +335,9 @@ class ApiService {
         const msg =
           (typeof body.message === 'string' && body.message) ||
           (typeof body.error === 'string' && body.error) ||
+          (body.data && typeof body.data === 'object' && typeof (body.data as Record<string, unknown>).message === 'string'
+            ? ((body.data as Record<string, unknown>).message as string)
+            : '') ||
           `HTTP ${response.status}`;
         throw new ApiError(msg, response.status, body);
       }
@@ -1055,6 +1058,7 @@ class ApiService {
 
   async purchaseVoucher(purchaseData: {
     productId: number;
+    variantId?: number;
     denomination: number;
     recipient?: {
       phone?: string;

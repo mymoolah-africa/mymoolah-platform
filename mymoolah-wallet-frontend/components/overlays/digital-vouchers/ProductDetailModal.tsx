@@ -116,6 +116,7 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
 
       const purchaseData = {
         productId: Number(productIdForPurchase),
+        variantId: voucher.variantId ? Number(voucher.variantId) : undefined,
         denomination: selectedDenomination!,
         idempotencyKey: typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
           ? crypto.randomUUID()
@@ -129,7 +130,12 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
       setTransactionRef(ref);
       setCurrentStep('success');
     } catch (err: any) {
-      const msg = err?.message || err?.data?.message || err?.data?.error || 'There was an error processing your purchase.';
+      const msg =
+        err?.data?.data?.message ||
+        err?.data?.message ||
+        err?.data?.error ||
+        err?.message ||
+        'There was an error processing your purchase.';
       setPurchaseError(msg);
       setCurrentStep('error');
     } finally {

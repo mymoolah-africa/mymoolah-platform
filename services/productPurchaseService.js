@@ -38,7 +38,7 @@ class ProductPurchaseService {
     const transaction = await sequelize.transaction();
     
     try {
-      const { productId, denomination, recipient, idempotencyKey } = purchaseData;
+      const { productId, variantId, denomination, recipient, idempotencyKey } = purchaseData;
 
       // Validate idempotency key
       if (!idempotencyKey) {
@@ -94,27 +94,14 @@ class ProductPurchaseService {
         throw new Error('Product not found or inactive');
       }
 
+      const selectedVariant = this.resolvePurchaseVariant(product, {
+        variantId,
+        denomination
+      });
+      product._selectedVariant = selectedVariant;
+
       // Validate denomination
-      const hasDefinedDenoms = product.denominations && Array.isArray(product.denominations) && product.denominations.length > 0;
-      if (hasDefinedDenoms) {
-        let isValid = product.isValidDenomination(denomination);
-        // International PIN (Flash): catalog may have rands (21) or cents (2100); frontend sends cents.
-        if (!isValid && product.type === 'international_pin' && product.supplier?.code === 'FLASH') {
-          const check = (d) => {
-            const n = Number(d);
-            if (n >= 100) return [n]; // already cents
-            return [n, Math.round(n * 100)]; // rands: accept both
-          };
-          const allValid = product.denominations.flatMap(check);
-          isValid = allValid.includes(denomination);
-        }
-        if (!isValid) {
-          throw new Error('Invalid denomination for this product');
-        }
-      } else {
-        // If no denominations are defined, allow the request to proceed (catalog gap)
-        console.warn(`Product ${product.id} has no denominations defined; allowing denomination ${denomination}`);
-      }
+      this.validateProductDenomination(product, selectedVariant, denomination);
 
       // Validate user
       const user = await User.findByPk(userId, { transaction });
@@ -123,7 +110,7 @@ class ProductPurchaseService {
       }
 
       // Check user limits and constraints
-      await this.validateUserLimits(user, product, denomination, transaction);
+      await this.validateUserLimits(user, product, denomination, transaction, selectedVariant);
 
       // Calculate pricing and commission
       const pricing = await this.calculatePricing(product, denomination, userId, clientId);
@@ -150,6 +137,7 @@ class ProductPurchaseService {
         userId,
         clientId,
         productId,
+        variantId: selectedVariant?.id || null,
         denomination,
         amount: pricing.totalAmount,
         status: 'pending',
@@ -501,6 +489,88 @@ class ProductPurchaseService {
     return result; // Return { commissionCents, vatCents, netCommissionCents, vatRate }
   }
 
+  resolvePurchaseVariant(product, { variantId, denomination } = {}) {
+    const variants = Array.isArray(product.variants) ? product.variants : [];
+    if (variantId) {
+      const selected = variants.find((variant) => Number(variant.id) === Number(variantId));
+      if (!selected) {
+        throw new Error('Product variant not found or inactive');
+      }
+      return selected;
+    }
+
+    return variants.find((variant) => this.isVariantAmountAllowed(variant, denomination)) || variants[0] || null;
+  }
+
+  normalizeAmounts(values) {
+    return Array.isArray(values)
+      ? values.map((value) => Number(value)).filter((value) => Number.isInteger(value) && value > 0)
+      : [];
+  }
+
+  getVariantAmountRules(variant) {
+    if (!variant) {
+      return { denominations: [], minAmount: null, maxAmount: null, hasRules: false };
+    }
+
+    const constraints = variant.constraints || {};
+    const denominations = [
+      ...this.normalizeAmounts(variant.denominations),
+      ...this.normalizeAmounts(variant.predefinedAmounts)
+    ];
+    const minAmount = Number(variant.minAmount ?? constraints.minAmount ?? 0) || null;
+    const maxAmount = Number(variant.maxAmount ?? constraints.maxAmount ?? 0) || null;
+
+    return {
+      denominations: Array.from(new Set(denominations)),
+      minAmount,
+      maxAmount,
+      hasRules: denominations.length > 0 || Boolean(minAmount) || Boolean(maxAmount)
+    };
+  }
+
+  isVariantAmountAllowed(variant, denomination) {
+    const rules = this.getVariantAmountRules(variant);
+    if (!rules.hasRules) return true;
+    if (rules.denominations.length > 0) {
+      return rules.denominations.includes(Number(denomination));
+    }
+    if (rules.minAmount && Number(denomination) < rules.minAmount) return false;
+    if (rules.maxAmount && Number(denomination) > rules.maxAmount) return false;
+    return true;
+  }
+
+  validateProductDenomination(product, selectedVariant, denomination) {
+    const variantRules = this.getVariantAmountRules(selectedVariant);
+    if (variantRules.hasRules) {
+      if (!this.isVariantAmountAllowed(selectedVariant, denomination)) {
+        throw new Error('Invalid denomination for this product');
+      }
+      return;
+    }
+
+    const hasDefinedDenoms = product.denominations && Array.isArray(product.denominations) && product.denominations.length > 0;
+    if (hasDefinedDenoms) {
+      let isValid = product.isValidDenomination(denomination);
+      // International PIN (Flash): catalog may have rands (21) or cents (2100); frontend sends cents.
+      if (!isValid && product.type === 'international_pin' && product.supplier?.code === 'FLASH') {
+        const check = (d) => {
+          const n = Number(d);
+          if (n >= 100) return [n]; // already cents
+          return [n, Math.round(n * 100)]; // rands: accept both
+        };
+        const allValid = product.denominations.flatMap(check);
+        isValid = allValid.includes(denomination);
+      }
+      if (!isValid) {
+        throw new Error('Invalid denomination for this product');
+      }
+    } else {
+      // If no denominations are defined, allow the request to proceed (catalog gap)
+      console.warn(`Product ${product.id} has no denominations defined; allowing denomination ${denomination}`);
+    }
+  }
+
   /**
    * Validate user limits and product constraints
    * @param {Object} user - User object
@@ -508,8 +578,8 @@ class ProductPurchaseService {
    * @param {number} denomination - Denomination in cents
    * @param {Object} transaction - Database transaction
    */
-  async validateUserLimits(user, product, denomination, transaction) {
-    const constraints = product.getConstraints();
+  async validateUserLimits(user, product, denomination, transaction, selectedVariant = null) {
+    const constraints = selectedVariant?.constraints || product.getConstraints();
     
     // Check minimum amount
     if (constraints.minAmount && denomination < constraints.minAmount) {
@@ -695,7 +765,9 @@ class ProductPurchaseService {
   async processWithFlash(product, denomination, recipient, supplierTransaction, transaction) {
     const useFlashAPI = process.env.FLASH_LIVE_INTEGRATION === 'true';
 
-    if (useFlashAPI && product.supplierProductId) {
+    const selectedSupplierProductId = product._selectedVariant?.supplierProductId || product.supplierProductId;
+
+    if (useFlashAPI && selectedSupplierProductId) {
       try {
         const FlashAuthService = require('./flashAuthService');
         const flashAuth = new FlashAuthService();
@@ -705,9 +777,9 @@ class ProductPurchaseService {
         }
         const storeId = process.env.FLASH_STORE_ID || accountNumber.replace(/-/g, '').slice(0, 12) || 'MYMOOLAHDIGITAL';
         const terminalId = process.env.FLASH_TERMINAL_ID || accountNumber.replace(/-/g, '').slice(0, 12) || 'MYMOOLAHPOS01';
-        const productCode = parseInt(String(product.supplierProductId).trim(), 10);
+        const productCode = parseInt(String(selectedSupplierProductId).trim(), 10);
         if (!productCode || productCode <= 0) {
-          throw new Error(`Invalid Flash product code for ${product.name}: ${product.supplierProductId}`);
+          throw new Error(`Invalid Flash product code for ${product.name}: ${selectedSupplierProductId}`);
         }
         const reference = `VOUCH_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
 
@@ -817,8 +889,16 @@ class ProductPurchaseService {
         // Resolve merchantProductId from catalog first (matches overlay services pattern)
         let merchantProductId = null;
 
-        // 1. Try matching variant by denomination (variant may have specific supplierProductId)
-        if (product.variants && product.variants.length > 0) {
+        // 1. Prefer the exact variant selected by the wallet catalog.
+        if (product._selectedVariant?.supplierProductId) {
+          const sid = String(product._selectedVariant.supplierProductId).trim();
+          if (sid && !/^MOBILEMART_/i.test(sid)) {
+            merchantProductId = sid;
+          }
+        }
+
+        // 2. Try matching variant by denomination (variant may have specific supplierProductId)
+        if (!merchantProductId && product.variants && product.variants.length > 0) {
           const matchingVariant = product.variants.find((v) =>
             v.denominations && Array.isArray(v.denominations) && v.denominations.includes(denomination)
           );
@@ -830,7 +910,7 @@ class ProductPurchaseService {
           }
         }
 
-        // 2. Fall back to product-level supplierProductId
+        // 3. Fall back to product-level supplierProductId
         if (!merchantProductId && product.supplierProductId) {
           const sid = String(product.supplierProductId).trim();
           if (sid && !/^MOBILEMART_/i.test(sid)) {
@@ -838,7 +918,7 @@ class ProductPurchaseService {
           }
         }
 
-        // 3. Fallback: fetch from API and match by name (legacy/placeholder products)
+        // 4. Fallback: fetch from API and match by name (legacy/placeholder products)
         if (!merchantProductId) {
           console.log('📞 MobileMart: No catalog merchantProductId, fetching voucher products...');
           const productsResponse = await mobileMartService.makeAuthenticatedRequest(
@@ -1015,8 +1095,14 @@ class ProductPurchaseService {
   }
 
   resolveOttProviderCode(product) {
+    const selectedVariant = product._selectedVariant || null;
+    const fromVariant =
+      selectedVariant?.metadata?.providerCode ||
+      selectedVariant?.metadata?.ottProviderCode ||
+      selectedVariant?.constraints?.providerCode;
     const fromMetadata = product.metadata?.providerCode || product.metadata?.ottProviderCode;
-    const supplierProductId = String(product.supplierProductId || '').trim();
+    const supplierProductId = String(selectedVariant?.supplierProductId || product.supplierProductId || '').trim();
+    if (fromVariant) return String(fromVariant);
     if (fromMetadata) return String(fromMetadata);
     if (supplierProductId.toUpperCase().startsWith('OTT-')) {
       return supplierProductId.slice(4);
@@ -1025,7 +1111,14 @@ class ProductPurchaseService {
   }
 
   resolveOttProviderName(product) {
-    return String(product.metadata?.providerName || product.name || 'OTT Product').slice(0, 80);
+    const selectedVariant = product._selectedVariant || null;
+    return String(
+      selectedVariant?.metadata?.providerName ||
+      selectedVariant?.provider ||
+      product.metadata?.providerName ||
+      product.name ||
+      'OTT Product'
+    ).slice(0, 80);
   }
 
   buildOttVasRecipient({ user, recipient = {} }) {
