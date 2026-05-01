@@ -102,7 +102,39 @@ async function getCommissionInfo(supplierCode, serviceType, productId = null, pe
     info = await resolve('voucher', productId) || await resolve('voucher', null);
   }
 
-  return info || none;
+  if (info) return info;
+
+  if ((supplierCode || '').toUpperCase() === 'OTT') {
+    const fallback = await getOttCatalogCommissionFromVariant(productId);
+    if (fallback) return fallback;
+  }
+
+  return none;
+}
+
+async function getOttCatalogCommissionFromVariant(productId) {
+  if (!productId) return null;
+  const [rows] = await sequelize.query(
+    `SELECT commission, pricing
+     FROM product_variants
+     WHERE "productId" = :productId
+       AND "supplierId" = (SELECT id FROM suppliers WHERE code = 'OTT' LIMIT 1)
+       AND status = 'active'
+     ORDER BY commission DESC NULLS LAST, id ASC
+     LIMIT 1`,
+    { replacements: { productId } }
+  );
+  const row = rows?.[0];
+  if (!row) return null;
+  const pricing = row.pricing || {};
+  const auditSplit = pricing.auditSplit || {};
+  const ratePct = Number(auditSplit.netCommissionPct ?? row.commission ?? 0);
+  if (!Number.isFinite(ratePct) || ratePct <= 0) return null;
+  return {
+    type: 'percentage',
+    ratePct,
+    fixedAmountCents: 0,
+  };
 }
 
 async function getCommissionRatePct(supplierCode, serviceType, productId = null, period = 'month') {

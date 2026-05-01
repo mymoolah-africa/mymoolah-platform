@@ -1,204 +1,136 @@
 ---
 name: frontend-design
-description: Create distinctive, production-grade frontend interfaces for MyMoolah's digital wallet. Use this skill when building wallet components, product overlays, transaction views, or portal admin screens. Generates premium, mobile-first fintech UI.
+description: Build production-grade MyMoolah React interfaces for wallet, portal, overlays, transaction views, VAS, KYC, payment confirmation, and admin screens. Use when implementing or reviewing frontend UI code. Pairs with design-spec for product direction and tailwind-design-system for shared tokens/components.
 ---
 
 # MyMoolah Frontend Design
 
-Create premium, mobile-first fintech UI for MyMoolah's digital wallet platform.
-Design should feel trustworthy, fast, and approachable for South African users
-across all income levels. All components built with React + Tailwind CSS.
+Use this skill when writing or changing frontend code. It turns approved product direction into secure, fast, accessible React UI.
 
-> **Architecture Constraint**: The wallet frontend uses an **overlay-based flow**
-> pattern. Product purchases, send money, top-up, and cashout all happen inside
-> step-based overlays (e.g., `AirtimeDataOverlay`, `ElectricityOverlay`), not
-> separate pages. Code is the source of truth; `pages/*.tsx` may be edited when that is the routed implementation.
->
-> New UI should be built as **overlay components** in `components/overlays/` or
-> **shared components** in `components/ui/`. Never create standalone page files.
+## Use This Skill When
 
-## When This Skill Activates
+- Implementing wallet UI, routed pages, overlays, product purchase flows, statements, receipts, or transaction views.
+- Implementing portal/admin UI outside deep RBAC/workflow logic.
+- Improving visual hierarchy, responsive behavior, loading states, error states, or empty states.
+- Reviewing frontend code for product polish, speed, accessibility, and financial clarity.
 
-- Building wallet dashboard, transaction history, or balance views
-- Creating product purchase overlays (airtime, data, electricity, vouchers)
-- Designing portal/admin interfaces (also read `admin-portal-builder`)
-- Building merchant-facing screens
-- Creating new overlay flows in `components/overlays/`
+## Do Not Use This Skill When
 
----
+- Only writing a product/design brief. Use `design-spec`.
+- Only changing Tailwind tokens, CVA variants, CSS variables, or shared primitives. Use `tailwind-design-system`.
+- Implementing complex admin RBAC, maker-checker, audit logs, operational tables, or portal backend APIs. Use `admin-portal-builder`.
+- Working on money movement logic, ledger, VAT, reconciliation, or DB writes. Use the relevant backend/audit skills.
 
-## 1. MyMoolah Design Language
+## Required Companion Skills
 
-### Brand Personality
-- **Trustworthy**: Clean, structured layouts that signal financial safety
-- **Fast**: Minimal decorations, instant visual feedback, skeleton loading
-- **Approachable**: Friendly colors, clear iconography, jargon-free copy
-- **Premium**: Subtle gradients, refined typography, micro-animations
+- Use `accessibility-compliance` for forms, dialogs, bottom sheets, modals, KYC, PINs, voucher reveal/copy, and confirmation screens.
+- Use `robust-financial-forms` for any form that submits money, KYC, beneficiary, payout, or purchase data.
+- Use `security-best-practices` when rendering PII, voucher PINs, auth state, admin data, or provider errors.
+- Use `tailwind-design-system` before adding new shared classes, tokens, or primitives.
 
-### Color System (MyMoolah Brand)
-```css
-/* MyMoolah Brand */
---color-primary: #86BE41;          /* Brand green: main actions, CTAs */
---color-secondary: #2D8CCA;        /* Brand blue: links, info, secondary actions */
---color-primary-foreground: #ffffff;
+## MyMoolah Frontend Rules
 
-/* Semantic — distinct from brand */
---color-success: #16a34a;          /* Deposits, positive balance */
---color-warning: oklch(75% 0.15 80);           /* Pending states */
---color-error: oklch(55% 0.2 25);              /* Failed transactions, errors */
+- Code is the frontend source of truth.
+- Prefer existing components, overlay patterns, and utility functions before creating new ones.
+- Keep wallet experiences mobile-first and thumb-friendly.
+- Keep portal/admin experiences dense enough for operations but still readable.
+- Never introduce dummy financial flows, fake production data, or placeholder provider values.
+- Never display raw stack traces, SQL, secrets, full ID numbers, full voucher PINs by default, or provider internals to users.
 
-/* Neutral — Warm grays */
---color-background: oklch(99% 0.005 264);
---color-surface: oklch(100% 0 0);
---color-muted: oklch(95% 0.005 264);
---color-foreground: oklch(15% 0.02 264);
-```
+## Wallet Architecture
 
-### Typography
-```css
-/* Use a modern, highly legible sans-serif */
---font-heading: 'Montserrat', system-ui, sans-serif;
---font-body: 'Montserrat', system-ui, sans-serif;
---font-mono: 'JetBrains Mono', 'Fira Code', monospace; /* Amounts, references */
-```
+The wallet uses step-based flows and overlays. For product purchases, send money, top-up, cash-out, vouchers, airtime, electricity, and bill payments:
 
-### Design Principles for Financial UI
-1. **Numbers are king**: Amounts should be the largest, boldest element on screen
-2. **Status is color**: Green (credit), Red (debit), Yellow (pending), Gray (cancelled)
-3. **Trust through consistency**: Same patterns for similar actions everywhere
-4. **Error prevention**: Confirm destructive actions, show previews before submitting
-5. **Progressive disclosure**: Show essentials first, details on demand
+- Prefer existing overlay components and shared UI.
+- Keep each step focused on one decision.
+- Show amount, fee, total, recipient/supplier, and confirmation before submit.
+- Include loading, timeout, pending, success, failed, and retry/support states.
+- Use direct/cached API data for balances; do not use AI for simple balance display.
 
----
+## Visual Standard
 
-## 2. Key Screen Patterns
+Build screens that feel:
 
-### Wallet Dashboard
-```
-┌─────────────────────────────┐
-│  👋 Good morning, Andre     │  ← Personalized greeting
-│                              │
-│  ┌────────────────────────┐ │
-│  │  R 2,450.00            │ │  ← Large, bold balance
-│  │  Available Balance     │ │  ← Subtle label below
-│  │  [Send] [Top Up] [Pay] │ │  ← Primary action buttons
-│  └────────────────────────┘ │
-│                              │
-│  Quick Actions               │
-│  ┌──────┬──────┬──────────┐ │
-│  │Airtime│ Data │Electricity│ │  ← Icon + label, not just icons
-│  └──────┴──────┴──────────┘ │
-│                              │
-│  Recent Transactions         │
-│  ────────────────────────── │
-│  📱 Airtime R30.00    -30.00 │  ← Category icon + amount
-│  💰 Deposit          +500.00 │
-│  ⚡ Electricity R120  -120.00 │
-└─────────────────────────────┘
-```
+- Trustworthy: clean hierarchy, clear labels, calm surfaces.
+- Fast: lightweight UI, skeletons, no blocking spinners where data shape is known.
+- Premium: refined spacing, consistent typography, subtle transitions.
+- Accessible: readable text, 44px touch targets, focus states, no color-only status.
+- Secure: masked sensitive values, deliberate reveal actions, safe error messages.
 
-### Transaction Card Component
-```tsx
-function TransactionCard({ transaction }) {
-  const isCredit = ['deposit', 'receive', 'reward'].includes(transaction.type);
+Brand anchors:
 
-  return (
-    <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors">
-      {/* Category Icon */}
-      <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-        <span className="text-lg">{getCategoryIcon(transaction.type)}</span>
-      </div>
+- Primary green: `#86BE41`
+- Secondary blue: `#2D8CCA`
+- Font: Montserrat
+- Amounts/references: tabular numbers or mono where alignment matters
 
-      {/* Details */}
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate">{transaction.description}</p>
-        <p className="text-xs text-muted-foreground">
-          {formatRelativeTime(transaction.createdAt)}
-        </p>
-      </div>
+Avoid generic purple fintech gradients, crypto aesthetics, heavy animation, noisy cards, and icon-only financial actions.
 
-      {/* Amount — monospace for alignment */}
-      <span className={cn(
-        'text-sm font-semibold font-mono tabular-nums',
-        isCredit ? 'text-success' : 'text-foreground'
-      )}>
-        {isCredit ? '+' : '-'}{formatCurrency(transaction.amount)}
-      </span>
-    </div>
-  );
-}
-```
+## Implementation Checklist
 
----
+Before editing:
 
-## 3. Mobile-First Responsive Rules
+- Locate the existing component or flow first.
+- Check whether a design spec exists. If unclear, use `design-spec` or ask André.
+- Check shared utilities for currency, dates, transaction display, masking, and status labels.
+- Decide if changes are local UI only or design-system-level.
 
-### Breakpoints (MyMoolah)
-```css
-/* Mobile-first: design for 360px width first */
-/* sm: 640px  — larger phones */
-/* md: 768px  — tablets */
-/* lg: 1024px — portal/admin */
-/* xl: 1280px — large portal screens */
-```
+While editing:
 
-### Touch Target Rules
-- Minimum 44x44px for all interactive elements
-- 8px minimum gap between touch targets
-- Full-width buttons on mobile (easier to tap)
-- Bottom navigation for primary actions (thumb zone)
+- Use semantic tokens/classes rather than hardcoded one-off styling where possible.
+- Keep components small and state explicit.
+- Use skeleton loading for known financial data shapes.
+- Use explicit error, timeout, and pending messages.
+- Preserve keyboard, touch, and screen-reader behavior.
+- Keep network calls and expensive calculations out of render loops.
 
----
+Before finishing:
 
-## 4. Loading & Empty States
+- Verify responsive mobile behavior.
+- Verify sensitive data is masked.
+- Verify destructive/payment actions have confirmation.
+- Run targeted frontend build/tests/lints where practical.
+- Update docs/session notes when the UI changes a stable workflow.
 
-### Financial Data Loading (ALWAYS use skeletons)
-```tsx
-function TransactionListSkeleton({ count = 5 }) {
-  return (
-    <div className="space-y-2">
-      {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="flex items-center gap-3 p-3 animate-pulse">
-          <div className="w-10 h-10 rounded-full bg-muted" />
-          <div className="flex-1 space-y-2">
-            <div className="h-4 bg-muted rounded w-3/4" />
-            <div className="h-3 bg-muted rounded w-1/2" />
-          </div>
-          <div className="h-4 bg-muted rounded w-16" />
-        </div>
-      ))}
-    </div>
-  );
-}
-```
+## Financial UI Patterns
 
-### Empty States (with actionable CTA)
-```tsx
-function EmptyTransactions() {
-  return (
-    <div className="flex flex-col items-center justify-center py-12 text-center">
-      <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-        <WalletIcon className="w-8 h-8 text-muted-foreground" />
-      </div>
-      <h3 className="text-lg font-semibold mb-1">No transactions yet</h3>
-      <p className="text-sm text-muted-foreground mb-6 max-w-[280px]">
-        Top up your wallet to start making purchases and sending money.
-      </p>
-      <Button>Top Up Wallet</Button>
-    </div>
-  );
-}
-```
+Money movement confirmation must include:
 
----
+- Source
+- Recipient/supplier
+- Amount
+- Fee
+- Total debit or total received
+- Reference
+- Expected timing
+- Clear primary CTA
+- Cancel/back path
 
-## 5. Design Anti-Patterns (AVOID)
+Transaction and receipt UI must include:
 
-- ❌ Generic purple gradients on white — use MyMoolah brand colors
-- ❌ System fonts (Arial, Times) — use brand typography
-- ❌ Spinners for data loading — use skeleton screens
-- ❌ Text-only buttons without proper sizing — minimum 44px height
-- ❌ Amounts in body text size — amounts should be prominent
-- ❌ Complex animations on mobile — keep it fast, use CSS transitions
-- ❌ Generic "No data" messages — provide actionable empty states
-- ❌ Cards without clear visual hierarchy — balance > description > metadata
+- Status label
+- Amount with sign/meaning
+- Date/time
+- Reference
+- Counterparty/supplier
+- Support path for pending/failed states
+
+Voucher/token UI must:
+
+- Mask PIN/code by default.
+- Provide deliberate reveal/copy.
+- Show expiry and redemption instructions.
+- Avoid screenshots/logging of sensitive data.
+
+## Security And Performance Defaults
+
+- Safe user-facing errors only.
+- Mask PII: ID numbers, account numbers, voucher PINs, provider references where not needed.
+- Do not persist sensitive data in browser storage unless an existing secure pattern already does so.
+- Prefer CSS transitions over JS animation.
+- Respect reduced motion.
+- Avoid large client-side data reductions for financial totals; ask backend for aggregated values.
+
+## When To Stop
+
+Stop and ask André before expanding scope if the UI change requires backend behavior changes, new financial flows, new supplier behavior, production writes, or a design decision not covered by the current brief.

@@ -17,6 +17,12 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'supplierId',
         as: 'floats'
       });
+      if (models.SupplierCommercialTerm) {
+        Supplier.hasMany(models.SupplierCommercialTerm, {
+          foreignKey: 'supplierId',
+          as: 'commercialTerms'
+        });
+      }
     }
 
     // Instance methods

@@ -28,6 +28,23 @@ const mockPayment = {
   update: jest.fn(),
 };
 
+const mockCommercialTerm = {
+  supplierCode: 'OTT',
+  providerCode: '112',
+  providerName: 'ABSA CashSend',
+  providerType: 'payout',
+  serviceFamily: 'cash_send',
+  commercialType: 'fixed_fee',
+  fixedFeeExVat: '9.96',
+  fixedFeeVatRate: '0.1500',
+  fixedFeeIsVatExclusive: true,
+  mmtpFeeExVat: '0.87',
+  reversalFeeExVat: '10.00',
+  effectiveFrom: '2026-05-01',
+  effectiveTo: null,
+  metadata: { source: 'agreement_3_2' },
+};
+
 const mockModels = {
   Sequelize: { Transaction: { LOCK: { UPDATE: 'UPDATE' } } },
   sequelize: { transaction: jest.fn() },
@@ -36,7 +53,9 @@ const mockModels = {
     create: jest.fn(),
     findOne: jest.fn(),
   },
-  Transaction: { create: jest.fn() },
+  Transaction: { create: jest.fn(), update: jest.fn(), findOne: jest.fn() },
+  SupplierCommercialTerm: { findOne: jest.fn() },
+  TaxTransaction: { findOne: jest.fn(), create: jest.fn(), update: jest.fn() },
 };
 
 const mockPerformPayout = jest.fn();
@@ -59,9 +78,10 @@ describe('OTT payout service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     process.env.OTT_PAYOUT_ENABLED = 'true';
-    process.env.OTT_PAYOUT_PROVIDER_FEE_ZAR = '9.96';
-    process.env.OTT_PAYOUT_MM_FEE_ZAR = '1.15';
     process.env.VAT_RATE = '0.15';
+    mockPayment.providerFeeAmount = 11.45;
+    mockPayment.mmtpFeeAmount = 1.00;
+    mockPayment.totalDebit = 112.45;
     mockTransaction.commit.mockResolvedValue();
     mockTransaction.rollback.mockResolvedValue();
     mockModels.sequelize.transaction.mockResolvedValue(mockTransaction);
@@ -69,6 +89,12 @@ describe('OTT payout service', () => {
     mockModels.OttPayout.create.mockResolvedValue(mockPayment);
     mockModels.OttPayout.findOne.mockResolvedValue(mockPayment);
     mockModels.Transaction.create.mockResolvedValue({});
+    mockModels.Transaction.update.mockResolvedValue([2]);
+    mockModels.Transaction.findOne.mockResolvedValue({ transactionId: 'OTT-FEE-OTT-TEST' });
+    mockModels.SupplierCommercialTerm.findOne.mockResolvedValue(mockCommercialTerm);
+    mockModels.TaxTransaction.findOne.mockResolvedValue(null);
+    mockModels.TaxTransaction.create.mockResolvedValue({});
+    mockModels.TaxTransaction.update.mockResolvedValue([1]);
     mockWallet.canCashOut.mockReturnValue({ allowed: true });
     mockWallet.debit.mockResolvedValue(mockWallet);
     mockWallet.credit.mockResolvedValue(mockWallet);
@@ -87,8 +113,6 @@ describe('OTT payout service', () => {
 
   afterEach(() => {
     delete process.env.OTT_PAYOUT_ENABLED;
-    delete process.env.OTT_PAYOUT_PROVIDER_FEE_ZAR;
-    delete process.env.OTT_PAYOUT_MM_FEE_ZAR;
     delete process.env.VAT_RATE;
   });
 
@@ -117,7 +141,7 @@ describe('OTT payout service', () => {
 
   it('fails closed when payout feature flag is disabled', async () => {
     process.env.OTT_PAYOUT_ENABLED = 'false';
-    await expect(service.quoteOttPayout({ amount: 100, providerCode: 'NEDBANK' }))
+    await expect(service.quoteOttPayout({ amount: 100, providerCode: '112' }))
       .rejects.toMatchObject({ code: 'OTT_PAYOUT_DISABLED', statusCode: 403 });
   });
 
@@ -125,7 +149,7 @@ describe('OTT payout service', () => {
     const result = await service.submitOttPayout({
       userId: 7,
       amount: 100,
-      providerCode: 'NEDBANK',
+      providerCode: '112',
       recipient: {
         mobile: '+27825571055',
         firstName: 'Test',
@@ -138,21 +162,38 @@ describe('OTT payout service', () => {
       idempotencyKey: 'idem-1',
     });
 
-    expect(mockWallet.canCashOut).toHaveBeenCalledWith(111.11, { kycTier: undefined });
-    expect(mockWallet.debit).toHaveBeenCalledWith(111.11, 'debit', { transaction: mockTransaction });
+    expect(mockWallet.canCashOut).toHaveBeenCalledWith(112.45, { kycTier: undefined });
+    expect(mockWallet.debit).toHaveBeenCalledWith(112.45, 'debit', { transaction: mockTransaction });
     expect(mockModels.OttPayout.create).toHaveBeenCalledWith(
       expect.objectContaining({
         uniqueReferenceId: expect.stringMatching(/^MM-OTT-/),
-        providerCode: 'NEDBANK',
+        providerCode: '112',
         idempotencyKey: 'idem-1',
-        totalDebit: 111.11,
+        totalDebit: 112.45,
+        feeSnapshot: expect.objectContaining({
+          feePolicy: expect.objectContaining({
+            source: 'supplier_commercial_terms',
+            providerFeeExVat: 9.96,
+            providerFeeAmount: 11.45,
+            mmtpFeeExVat: 0.87,
+            mmtpFeeAmount: 1.00,
+          }),
+        }),
+      }),
+      { transaction: mockTransaction }
+    );
+    expect(mockModels.Transaction.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'withdraw',
+        amount: 100,
+        fee: 12.45,
       }),
       { transaction: mockTransaction }
     );
     expect(mockPerformPayout).toHaveBeenCalledWith(expect.objectContaining({
       yourUniqueReference: expect.stringMatching(/^MM-OTT-/),
       amount: '100.00',
-      provider: expect.objectContaining({ providerCode: 'NEDBANK' }),
+      provider: expect.objectContaining({ providerCode: '112' }),
       recipient: expect.objectContaining({
         firstname: 'Test',
         surname: 'User',
@@ -161,7 +202,18 @@ describe('OTT payout service', () => {
         mobile: '+27825571055',
       }),
     }));
-    expect(result.totalDebit).toBe(111.11);
+    expect(result.totalDebit).toBe(112.45);
+    expect(mockModels.TaxTransaction.create).toHaveBeenCalledWith(expect.objectContaining({
+      originalTransactionId: 'OTT-FEE-OTT-TEST',
+      taxType: 'vat',
+      baseAmount: 0.87,
+      taxAmount: 0.13,
+      totalAmount: 1,
+      transactionType: 'ott_payout_fee',
+      vatDirection: 'output',
+      supplierCode: 'OTT',
+      isClaimable: false,
+    }));
   });
 
   it('does not call OTT when unrestricted cash-out guard fails', async () => {
@@ -170,7 +222,7 @@ describe('OTT payout service', () => {
     await expect(service.submitOttPayout({
       userId: 7,
       amount: 100,
-      providerCode: 'NEDBANK',
+      providerCode: '112',
       recipient: {
         mobile: '+27825571055',
         firstName: 'Test',
@@ -201,7 +253,7 @@ describe('OTT payout service', () => {
     await expect(service.submitOttPayout({
       userId: 7,
       amount: 100,
-      providerCode: 'NEDBANK',
+      providerCode: '112',
       recipient: {},
     })).rejects.toMatchObject({ code: 'OTT_RECIPIENT_DETAILS_REQUIRED' });
 
@@ -220,7 +272,7 @@ describe('OTT payout service', () => {
     await service.submitOttPayout({
       userId: 7,
       amount: 100,
-      providerCode: 'NEDBANK',
+      providerCode: '112',
       recipient: {
         mobile: '+27825571055',
         firstName: 'Test',
@@ -231,8 +283,58 @@ describe('OTT payout service', () => {
       idempotencyKey: 'idem-failed',
     });
 
-    expect(mockWallet.credit).toHaveBeenCalledWith(111.11, 'credit', { transaction: mockTransaction });
+    expect(mockWallet.credit).toHaveBeenCalledWith(112.45, 'credit', { transaction: mockTransaction });
+    expect(mockModels.Transaction.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'reversed',
+        failureReason: 'Provider declined',
+      }),
+      expect.objectContaining({
+        where: expect.objectContaining({
+          reference: 'MM-OTT-TEST',
+          type: ['withdraw', 'fee'],
+        }),
+        transaction: mockTransaction,
+      })
+    );
     expect(ledgerService.postJournalEntry).not.toHaveBeenCalled();
+  });
+
+  it('keeps the wallet debit pending when OTT submit outcome is unknown', async () => {
+    const timeoutError = new Error('timeout of 15000ms exceeded');
+    timeoutError.statusCode = 502;
+    timeoutError.responseData = {};
+    timeoutError.request = { yourUniqueReference: 'MM-OTT-TEST' };
+    mockPerformPayout.mockRejectedValue(timeoutError);
+
+    const result = await service.submitOttPayout({
+      userId: 7,
+      amount: 100,
+      providerCode: '112',
+      recipient: {
+        mobile: '+27825571055',
+        firstName: 'Test',
+        surname: 'User',
+        idType: 'RSAID',
+        idNumber: '8001015009087',
+      },
+      idempotencyKey: 'idem-timeout',
+    });
+
+    expect(result).toEqual(expect.objectContaining({
+      status: 'processing',
+      outcomeUnknown: true,
+      requiresPolling: true,
+      totalDebit: 112.45,
+    }));
+    expect(mockWallet.credit).not.toHaveBeenCalled();
+    expect(mockPayment.update).toHaveBeenCalledWith(expect.objectContaining({
+      status: 'processing',
+      rejectionReason: 'OTT submit outcome unknown; poll required',
+      metadata: expect.objectContaining({
+        submitOutcomeUnknownReason: 'timeout of 15000ms exceeded',
+      }),
+    }));
   });
 
   it('surfaces ledger posting failures without crediting the wallet after OTT accepted the payout', async () => {
@@ -241,7 +343,7 @@ describe('OTT payout service', () => {
     await expect(service.submitOttPayout({
       userId: 7,
       amount: 100,
-      providerCode: 'NEDBANK',
+      providerCode: '112',
       recipient: {
         mobile: '+27825571055',
         firstName: 'Test',
@@ -258,5 +360,30 @@ describe('OTT payout service', () => {
       status: 'ledger_post_failed',
       rejectionReason: 'missing ledger account',
     }));
+  });
+
+  it('marks payout fee VAT evidence as refunded when an OTT payout fee reverses', async () => {
+    mockModels.Transaction.findOne.mockResolvedValue({ transactionId: 'OTT-FEE-OTT-TEST' });
+
+    await service.refundPayoutFeeTaxTransaction(mockPayment);
+
+    expect(mockModels.Transaction.findOne).toHaveBeenCalledWith({
+      where: {
+        reference: 'MM-OTT-TEST',
+        type: 'fee',
+        status: 'reversed',
+      },
+    });
+    expect(mockModels.TaxTransaction.update).toHaveBeenCalledWith(
+      { status: 'refunded' },
+      {
+        where: {
+          originalTransactionId: 'OTT-FEE-OTT-TEST',
+          transactionType: 'ott_payout_fee',
+          entityId: 'OTT',
+          status: ['pending', 'calculated', 'paid', 'reported'],
+        },
+      }
+    );
   });
 });

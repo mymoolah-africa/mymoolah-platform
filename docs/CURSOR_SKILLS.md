@@ -25,7 +25,7 @@ Upgrade principles now applied:
 
 ## Installed Skills
 
-Total installed: 21 project skills. The live folder inventory remains the source of truth.
+Total installed: 22 project skills. The live folder inventory remains the source of truth.
 
 | Skill | Source | Purpose |
 |-------|--------|---------|
@@ -34,10 +34,11 @@ Total installed: 21 project skills. The live folder inventory remains the source
 | **api-design-principles** | wshobson/agents | REST/GraphQL API design, scalability, developer experience |
 | **auditing** | .agents/skills/ (project) | Concise banking-grade ledger/VAT/reconciliation/compliance router; deep reference preserved in `reference-full.md` |
 | **background-jobs-and-cron** | .agents/skills/ (project) | Cloud Scheduler endpoints, node-cron fallbacks, idempotent scheduled jobs, large backfills |
+| **design-spec** | .agents/skills/ (project) | Product design specifications, Design.md briefs, UX flow plans, AI design prompts, and acceptance criteria before frontend coding |
 | **explainer-graphic** | .agents/skills/ (project) | Analogy-led infographics and educational graphics |
 | **find-skills** | vercel-labs/skills + MMTP-tuned | Discover/install skills after checking in-repo inventory first |
 | **fintech-test-driven-development** | .agents/skills/ (project) | Jest/Supertest TDD for financial endpoints, idempotency, race conditions, ledger invariants |
-| **frontend-design** | .agents/skills/ (project) | Distinctive UI, typography, aesthetics |
+| **frontend-design** | .agents/skills/ (project) | Production React UI implementation for wallet, portal, overlays, transaction views, VAS, KYC, and payment confirmation screens |
 | **interaction-design** | wshobson/agents + MMTP-tuned | Microinteractions, motion design, loading states, reduced-motion-safe feedback |
 | **local-ai-and-ocr-pipelines** | .agents/skills/ (project) | OCR/ML pipelines, Tesseract fallback, Transformers.js singleton model loading |
 | **postgresql-optimization** | github/awesome-copilot + MMTP-tuned | PostgreSQL JSONB, indexing, query optimization, db-helper-safe direct query patterns |
@@ -47,7 +48,7 @@ Total installed: 21 project skills. The live folder inventory remains the source
 | **security-best-practices** | supercent-io/skills-template + MMTP-tuned | OWASP, POPIA, JWT HS512, secrets, rate limiting, PII-safe logging |
 | **slide-deck-builder** | .agents/skills/ (project) | Self-contained HTML slide decks, presenter mode, keyboard navigation |
 | **sql-optimization-patterns** | wshobson/agents | SQL tuning, EXPLAIN analysis, performance anti-patterns |
-| **tailwind-design-system** | wshobson/agents + MMTP-tuned | Tailwind v4, design tokens, MyMoolah brand colours, component libraries |
+| **tailwind-design-system** | wshobson/agents + MMTP-tuned | Tailwind/CSS design tokens, semantic colors, CVA variants, shared UI primitives, dark mode, and cross-app consistency |
 | **visual-page-builder** | .agents/skills/ (project) | Self-contained HTML explainers, landing pages, documentation pages, reports |
 | **workflow-visualizer** | .agents/skills/ (project) | Interactive workflow, architecture, system, swimlane, and data-flow diagrams |
 
@@ -80,7 +81,8 @@ npx skills add <owner/repo> --skill <name> --agent cursor -y   # Always pass --a
 | FICA/POPIA/SARB compliance | auditing |
 | Ledger, reconciliation, audit trail | auditing |
 | REST API design | api-design-principles |
-| Tailwind/React UI | tailwind-design-system, frontend-design |
+| Product design specs before UI coding | design-spec |
+| Tailwind/React UI | frontend-design, tailwind-design-system |
 | 11-language, inclusive UX | accessibility-compliance, interaction-design |
 | Admin portal, dashboard, RBAC | admin-portal-builder |
 | Maker-checker workflows | admin-portal-builder, auditing |
@@ -98,4 +100,4 @@ Before creating a new skill, sweep `.agents/skills/` to avoid duplicates:
 ```bash
 ls .agents/skills/
 ```
-Total installed: 21 skills (8 CLI-managed + 13 project-specific).
+Total installed: 22 skills (8 CLI-managed + 14 project-specific).

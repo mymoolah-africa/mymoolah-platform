@@ -139,6 +139,12 @@ class ProductPurchaseService {
         throw new Error('Wallet not found for this user');
       }
 
+      const debitAmountRand = Number((pricing.totalAmount / 100).toFixed(2));
+      const canDebit = wallet.canDebit(debitAmountRand);
+      if (!canDebit.allowed) {
+        throw new Error(canDebit.reason || 'Insufficient balance');
+      }
+
       // Create order
       const order = await Order.create({
         userId,
@@ -172,7 +178,8 @@ class ProductPurchaseService {
         denomination, 
         recipient, 
         supplierTransaction,
-        transaction
+        transaction,
+        user
       );
 
       // Declare walletTransaction outside if/else so it's accessible in setImmediate callback
@@ -209,7 +216,6 @@ class ProductPurchaseService {
         }, { transaction });
 
         // Debit wallet and create transaction history
-        const debitAmountRand = Number((pricing.totalAmount / 100).toFixed(2));
         const transactionId = `VOUCHER_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
         await wallet.debit(debitAmountRand, 'payment', { transaction });
@@ -618,7 +624,7 @@ class ProductPurchaseService {
    * @param {Object} transaction - Database transaction
    * @returns {Promise<Object>} Supplier result
    */
-  async processWithSupplier(product, denomination, recipient, supplierTransaction, transaction) {
+  async processWithSupplier(product, denomination, recipient, supplierTransaction, transaction, user = null) {
     const supplierCode = product.supplier.code;
 
     // Circuit breaker pre-check
@@ -641,6 +647,9 @@ class ProductPurchaseService {
           break;
         case 'MOBILEMART':
           result = await this.processWithMobileMart(product, denomination, recipient, supplierTransaction, transaction);
+          break;
+        case 'OTT':
+          result = await this.processWithOtt(product, denomination, recipient, supplierTransaction, transaction, user);
           break;
         default:
           throw new Error(`Unsupported supplier: ${supplierCode}`);
@@ -920,6 +929,154 @@ class ProductPurchaseService {
         }
       };
     }
+  }
+
+  /**
+   * Process OTT voucher, gift-card, and electricity products through the OTT
+   * PerformPayout API while preserving the generic wallet-backed order flow.
+   */
+  async processWithOtt(product, denomination, recipient = {}, supplierTransaction, transaction, user = null) {
+    const { OttClient, redact } = require('./ott/ottClient');
+
+    const providerCode = this.resolveOttProviderCode(product);
+    if (!providerCode) {
+      throw new Error(`OTT provider code missing for product ${product.name}`);
+    }
+
+    const uniqueReference = `MM-OTT-VAS-${supplierTransaction.id}-${Date.now()}`.slice(0, 64);
+    const amountRand = Number((Number(denomination) / 100).toFixed(2));
+    const recipientPayload = this.buildOttVasRecipient({ user, recipient });
+    const requestPayload = {
+      yourUniqueReference: uniqueReference,
+      amount: amountRand.toFixed(2),
+      provider: {
+        providerCode: String(providerCode),
+        providerName: this.resolveOttProviderName(product),
+      },
+      recipient: recipientPayload,
+      optionalData: {
+        mmtpOrderId: supplierTransaction.orderId,
+        mmtpSupplierTransactionId: supplierTransaction.id,
+        productId: product.id,
+        productName: product.name,
+      },
+    };
+
+    const client = new OttClient();
+    let response;
+    try {
+      response = await client.performPayout(requestPayload);
+    } catch (error) {
+      const { isUnknownProviderOutcome } = require('./ott/ottPayoutService');
+      if (!isUnknownProviderOutcome(error)) {
+        throw error;
+      }
+      response = await client.getPaymentStatus({
+        requestdate: new Date().toISOString(),
+        yourUniqueReference: uniqueReference,
+      });
+    }
+    const data = response.data || {};
+    if (!this.isOttVasSuccess(data)) {
+      throw new Error(data.message || data.errorMessage || 'OTT product purchase was not successful');
+    }
+    const voucherData = data.voucherdata || data.voucherData || data.voucher || {};
+    const voucherCode = this.extractOttVoucherCode(data);
+    const reference = String(
+      data.paymentReference ||
+      data.providerTransactionReference ||
+      data.transactionId ||
+      voucherData.saleID ||
+      uniqueReference
+    );
+
+    return {
+      success: true,
+      data: {
+        reference,
+        status: 'success',
+        voucherCode,
+        message: 'OTT product purchased successfully',
+        ottFulfilled: true,
+        ottProviderCode: String(providerCode),
+        ottUniqueReference: uniqueReference,
+        ottPaymentReference: data.paymentReference || null,
+        ottVoucher: {
+          maskedVoucherId: this.maskVoucherCode(voucherData.voucherID || voucherData.voucherId || null),
+          maskedSaleId: this.maskVoucherCode(voucherData.saleID || voucherData.saleId || null),
+          maskedSerialNumber: this.maskVoucherCode(voucherData.serialNumber || null),
+          amount: voucherData.amount || amountRand,
+          instructions: voucherData.instructions || null,
+          supplier: voucherData.supplier || null,
+        },
+        ottResponse: redact(data),
+      },
+    };
+  }
+
+  resolveOttProviderCode(product) {
+    const fromMetadata = product.metadata?.providerCode || product.metadata?.ottProviderCode;
+    const supplierProductId = String(product.supplierProductId || '').trim();
+    if (fromMetadata) return String(fromMetadata);
+    if (supplierProductId.toUpperCase().startsWith('OTT-')) {
+      return supplierProductId.slice(4);
+    }
+    return supplierProductId || null;
+  }
+
+  resolveOttProviderName(product) {
+    return String(product.metadata?.providerName || product.name || 'OTT Product').slice(0, 80);
+  }
+
+  buildOttVasRecipient({ user, recipient = {} }) {
+    const fullName = String(recipient.name || `${user?.firstName || ''} ${user?.lastName || ''}`.trim()).trim();
+    const [firstNameFallback, ...surnameParts] = fullName.split(/\s+/);
+    const firstName = user?.firstName || recipient.firstName || recipient.firstname || firstNameFallback || 'Customer';
+    const surname = user?.lastName || recipient.surname || recipient.lastName || surnameParts.join(' ') || 'Customer';
+    const rawIdType = String(user?.idType || recipient.idType || recipient.id_type || '').toLowerCase();
+    const idType = rawIdType.includes('passport') ? 'PASSPT' : 'RSAID';
+
+    return {
+      account_name: fullName || `${firstName} ${surname}`.trim(),
+      account_number: '',
+      bank_id: '0',
+      branch_name: '',
+      branch_code: '',
+      country_of_issue: 'ZA',
+      date_of_birth: '',
+      email: recipient.email || user?.email || '',
+      firstname: String(firstName || '').slice(0, 80),
+      id_number: user?.idNumber || recipient.idNumber || recipient.id_number || '',
+      id_type: idType,
+      middle_name: '',
+      mobile: recipient.phone || recipient.mobile || user?.phoneNumber || '',
+      nationality: 'ZA',
+      surname: String(surname || '').slice(0, 80),
+      swift_code: '',
+      title: '',
+    };
+  }
+
+  extractOttVoucherCode(data = {}) {
+    const voucherData = data.voucherdata || data.voucherData || data.voucher || {};
+    return String(
+      voucherData.pin ||
+      voucherData.voucherPin ||
+      voucherData.code ||
+      voucherData.serialNumber ||
+      data.pin ||
+      data.voucherPin ||
+      data.code ||
+      data.token ||
+      data.serialNumber ||
+      data.paymentReference ||
+      'VOUCHER_PENDING'
+    );
+  }
+
+  isOttVasSuccess(data = {}) {
+    const status = String(data.status || data.Status || '').toLowerCase();
+    return ['100', 'success', 'successful', 'completed', 'accepted'].includes(status);
   }
 
   /**

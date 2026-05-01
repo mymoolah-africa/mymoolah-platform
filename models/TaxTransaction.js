@@ -31,6 +31,26 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       comment: 'Type of tax' 
     },
+    vatDirection: {
+      type: DataTypes.ENUM('input', 'output'),
+      allowNull: false,
+      defaultValue: 'output',
+      field: 'vat_direction',
+      comment: 'VAT direction: output VAT payable or input VAT recoverable',
+    },
+    supplierCode: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      field: 'supplier_code',
+      comment: 'Supplier code for claimable input VAT or supplier-linked VAT evidence',
+    },
+    isClaimable: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+      field: 'is_claimable',
+      comment: 'Whether input VAT is claimable with valid tax invoice support',
+    },
     
     // Financial details
     baseAmount: { 

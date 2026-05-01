@@ -1,374 +1,149 @@
 ---
 name: tailwind-design-system
-description: Build scalable design systems with Tailwind CSS v4, design tokens, component libraries, and responsive patterns for MyMoolah's wallet and portal interfaces. Use when creating component libraries, implementing design systems, or standardizing UI patterns.
+description: Maintain MyMoolah's Tailwind/CSS design system: tokens, semantic colors, typography, spacing, CVA variants, shared UI primitives, dark mode, responsive rules, and component consistency across wallet and portal. Use for design-system changes, not one-off screen implementation.
 ---
 
-# MyMoolah Tailwind Design System (v4)
+# MyMoolah Tailwind Design System
 
-Production design system for MyMoolah's digital wallet platform using Tailwind CSS v4
-with CSS-first configuration. Covers design tokens, component variants, dark mode,
-responsive patterns, and MyMoolah brand implementation.
+Use this skill for shared visual infrastructure. It defines how MyMoolah UI is built consistently, securely, accessibly, and efficiently across wallet and portal.
 
-> **Architecture Notes**:
-> - The wallet frontend (`mymoolah-wallet-frontend/`) uses React + Vite + Tailwind.
-> - UI primitives are in `components/ui/` (Button, Card, Dialog, etc.) using CVA.
-> - Code is the source of truth. Edit routed `.tsx` pages, overlay components, or design tokens as appropriate for the task.
-> - The admin portal (`portal/`) shares the same design system.
->
-> **Note**: This skill targets Tailwind CSS v4. For v3 projects, refer to the
-> [upgrade guide](https://tailwindcss.com/docs/upgrade-guide).
+## Use This Skill When
 
-## When This Skill Activates
+- Adding or changing design tokens, CSS variables, Tailwind theme config, or semantic color names.
+- Creating or modifying shared primitives in `components/ui/`.
+- Adding CVA variants, button/card/input/dialog patterns, badge systems, or status chips.
+- Standardizing wallet and portal UI patterns.
+- Fixing repeated hardcoded colors, spacing, shadows, typography, or responsive behavior.
+- Reviewing Tailwind code for maintainability and performance.
 
-- Creating or modifying UI components in `components/ui/`
-- Implementing MyMoolah brand colors and typography
-- Building responsive wallet/portal layouts
-- Setting up dark mode theming
-- Standardizing component patterns across wallet and portal
+## Do Not Use This Skill When
 
----
+- Planning a product flow or writing a design brief. Use `design-spec`.
+- Implementing one specific wallet/portal screen using existing patterns. Use `frontend-design`.
+- Deep-auditing ARIA/screen reader behavior. Use `accessibility-compliance`.
+- Building portal RBAC/workflows/backend APIs. Use `admin-portal-builder`.
 
-## 1. MyMoolah Theme Configuration
+## Design-System Boundaries
+
+Design-system changes should be rare and deliberate. Before changing shared tokens or primitives:
+
+- Search for existing tokens/components.
+- Confirm the change benefits more than one screen or removes meaningful duplication.
+- Preserve backwards compatibility unless the current branch is explicitly being reworked.
+- Avoid visual churn that changes working UI without a user-facing reason.
+
+## Core Tokens
+
+Canonical brand anchors:
 
 ```css
-/* app.css — MyMoolah Tailwind v4 theme */
-@import "tailwindcss";
+--color-primary: #86BE41;
+--color-primary-hover: #6fa334;
+--color-primary-foreground: #ffffff;
 
-@theme {
-  /* === MyMoolah Brand Colors (OKLCH for superior perception) === */
+--color-secondary: #2D8CCA;
+--color-secondary-hover: #2474a8;
+--color-secondary-foreground: #ffffff;
 
-  /* MyMoolah Brand */
-  --color-primary: #86BE41;
-  --color-primary-hover: #6fa334;
-  --color-primary-foreground: #ffffff;
+--font-heading: 'Montserrat', system-ui, sans-serif;
+--font-body: 'Montserrat', system-ui, sans-serif;
+--font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+```
 
-  --color-secondary: #2D8CCA;
-  --color-secondary-hover: #2474a8;
-  --color-secondary-foreground: #ffffff;
+Semantic tokens must describe purpose, not brand:
 
-  --color-accent: #2D8CCA;
-  --color-accent-foreground: #ffffff;
+- `success`: completed, credited, verified.
+- `warning`: pending, needs attention, delayed.
+- `error` or `destructive`: failed, blocked, rejected.
+- `muted`: secondary text, dividers, inactive surfaces.
+- `surface` or `card`: primary content surfaces.
+- `border` and `ring`: focus and structure.
 
-  /* Semantic — Financial Status */
-  --color-success: oklch(65% 0.2 145);           /* Credits, deposits */
-  --color-success-foreground: oklch(98% 0 0);
-  --color-warning: oklch(75% 0.15 80);            /* Pending */
-  --color-warning-foreground: oklch(20% 0.03 80);
-  --color-error: oklch(55% 0.2 25);               /* Failed, debit */
-  --color-error-foreground: oklch(98% 0 0);
+Do not hardcode brand hex values throughout components when a token exists.
 
-  /* Surface — Backgrounds */
-  --color-background: oklch(99% 0.005 264);
-  --color-foreground: oklch(15% 0.02 264);
-  --color-surface: oklch(100% 0 0);
-  --color-muted: oklch(96% 0.005 264);
-  --color-muted-foreground: oklch(45% 0.02 264);
+## Component Rules
 
-  /* Borders & Rings */
-  --color-border: oklch(92% 0.005 264);
-  --color-ring: oklch(45% 0.12 220);
-  --color-ring-offset: oklch(99% 0.005 264);
+Buttons:
 
-  /* Card */
-  --color-card: oklch(100% 0 0);
-  --color-card-foreground: oklch(15% 0.02 264);
+- Minimum mobile tap target: 44px.
+- Primary action uses primary green.
+- Secondary action uses secondary blue, outline, or neutral style.
+- Destructive actions must be visually distinct and confirmed.
+- Disabled states must remain readable and not imply success.
 
-  /* === Typography === */
-  --font-heading: 'Montserrat', system-ui, sans-serif;
-  --font-body: 'Montserrat', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+Cards:
 
-  /* === Border Radius === */
-  --radius-sm: 0.375rem;     /* 6px — inputs, small elements */
-  --radius-md: 0.5rem;       /* 8px — cards, buttons */
-  --radius-lg: 0.75rem;      /* 12px — modals, sheets */
-  --radius-xl: 1rem;         /* 16px — large cards */
-  --radius-2xl: 1.5rem;      /* 24px — balance card, hero sections */
-  --radius-full: 9999px;     /* Pills, avatars */
+- Use consistent radius, border, and subtle shadow.
+- Avoid heavy elevation stacks.
+- Financial hero cards must prioritize amount, label, action, and status.
 
-  /* === Shadows — Subtle, premium feel === */
-  --shadow-sm: 0 1px 2px oklch(0% 0 0 / 0.04);
-  --shadow-md: 0 4px 12px oklch(0% 0 0 / 0.06);
-  --shadow-lg: 0 8px 24px oklch(0% 0 0 / 0.08);
-  --shadow-card: 0 2px 8px oklch(0% 0 0 / 0.04), 0 0 1px oklch(0% 0 0 / 0.08);
+Inputs:
 
-  /* === Animations === */
-  --animate-fade-in: fade-in 0.2s ease-out;
-  --animate-slide-up: slide-up 0.3s ease-out;
-  --animate-slide-down: slide-down 0.3s ease-out;
-  --animate-scale-in: scale-in 0.2s ease-out;
+- Visible labels, not placeholder-only.
+- Error text must be explicit and not color-only.
+- Focus rings must be visible.
+- Sensitive inputs need masking/reveal patterns where appropriate.
 
-  @keyframes fade-in {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-  @keyframes slide-up {
-    from { transform: translateY(0.5rem); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-  }
-  @keyframes slide-down {
-    from { transform: translateY(-0.5rem); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-  }
-  @keyframes scale-in {
-    from { transform: scale(0.95); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
-  }
-}
+Badges/status:
 
-/* Dark mode variant */
-@custom-variant dark (&:where(.dark, .dark *));
+- Use semantic status tokens.
+- Labels must be text-based: Completed, Pending, Failed, Reversed, Expired.
+- Never rely on color alone.
 
-/* Dark mode overrides */
-.dark {
-  --color-background: oklch(12% 0.015 264);
-  --color-foreground: oklch(96% 0.005 264);
-  --color-surface: oklch(16% 0.015 264);
+## CVA Variant Guidance
 
-  --color-primary: oklch(65% 0.12 220);
-  --color-primary-foreground: oklch(12% 0 0);
+Use CVA or existing local variant patterns when a component needs multiple sanctioned variants. Keep variants semantic:
 
-  --color-secondary: oklch(22% 0.02 220);
-  --color-secondary-foreground: oklch(90% 0.02 220);
-
-  --color-muted: oklch(20% 0.01 264);
-  --color-muted-foreground: oklch(65% 0.02 264);
-
-  --color-border: oklch(25% 0.01 264);
-  --color-ring: oklch(65% 0.12 220);
-  --color-ring-offset: oklch(12% 0.015 264);
-
-  --color-card: oklch(16% 0.015 264);
-  --color-card-foreground: oklch(96% 0.005 264);
-
-  --shadow-sm: 0 1px 2px oklch(0% 0 0 / 0.2);
-  --shadow-md: 0 4px 12px oklch(0% 0 0 / 0.3);
-  --shadow-lg: 0 8px 24px oklch(0% 0 0 / 0.4);
-  --shadow-card: 0 2px 8px oklch(0% 0 0 / 0.2), 0 0 1px oklch(0% 0 0 / 0.3);
-}
-
-/* Base styles */
-@layer base {
-  * { @apply border-border; }
-  body { @apply bg-background text-foreground antialiased font-body; }
-  h1, h2, h3, h4, h5, h6 { font-family: var(--font-heading); }
-  .tabular-nums { font-variant-numeric: tabular-nums; }
+```ts
+variant: {
+  primary: 'bg-primary text-primary-foreground hover:bg-primary-hover',
+  secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary-hover',
+  outline: 'border border-border bg-transparent hover:bg-muted',
+  ghost: 'hover:bg-muted',
+  destructive: 'bg-error text-error-foreground hover:bg-error/90',
 }
 ```
 
----
+Avoid adding one-off variants named after a single page or supplier. If a style is only used once, keep it local.
 
-## 2. Core Component Tokens
+## Layout And Responsive Rules
 
-### Button Variants (CVA)
-```typescript
-import { cva, type VariantProps } from 'class-variance-authority';
+- Mobile wallet: design from 360px upward.
+- Portal/admin: optimize for desktop while preserving tablet usability.
+- Use responsive grids deliberately; do not squeeze financial tables into unreadable mobile layouts.
+- Prefer sticky bottom actions for mobile confirmation flows when it improves completion.
+- Respect safe areas and avoid hidden content behind fixed nav.
 
-const buttonVariants = cva(
-  'inline-flex items-center justify-center font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
-  {
-    variants: {
-      variant: {
-        primary: 'bg-primary text-primary-foreground hover:bg-primary-hover shadow-sm',
-        secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary-hover',
-        outline: 'border border-border bg-transparent hover:bg-muted',
-        ghost: 'hover:bg-muted',
-        destructive: 'bg-error text-error-foreground hover:bg-error/90',
-        success: 'bg-success text-success-foreground hover:bg-success/90',
-        link: 'text-primary underline-offset-4 hover:underline p-0 h-auto',
-      },
-      size: {
-        sm: 'h-9 px-3 text-sm rounded-md',
-        md: 'h-11 px-5 text-sm rounded-lg',        // Default: 44px tap target
-        lg: 'h-12 px-8 text-base rounded-lg',
-        icon: 'size-11 rounded-lg',
-        full: 'h-12 w-full rounded-xl text-base',   // Full-width mobile CTA
-      },
-    },
-    defaultVariants: { variant: 'primary', size: 'md' },
-  }
-);
-```
+## Accessibility And Security Defaults
 
-### Card Variants
-```typescript
-const cardVariants = cva('rounded-xl border', {
-  variants: {
-    variant: {
-      default: 'bg-card text-card-foreground shadow-card',
-      elevated: 'bg-card text-card-foreground shadow-lg',
-      balance: 'bg-gradient-to-br from-primary to-accent text-white shadow-lg rounded-2xl',
-      muted: 'bg-muted text-foreground border-transparent',
-    },
-    padding: {
-      sm: 'p-3',
-      md: 'p-4',
-      lg: 'p-6',
-    },
-  },
-  defaultVariants: { variant: 'default', padding: 'md' },
-});
-```
+- 44px minimum touch targets.
+- Visible focus states.
+- Strong contrast for text and controls.
+- Reduced-motion-safe animations.
+- No color-only status.
+- Mask sensitive values in shared components by default where possible.
+- Shared components must not log props that may contain PII, voucher PINs, tokens, account numbers, or provider payloads.
 
----
+## Performance Defaults
 
-## 3. Financial-Specific Utilities
+- Prefer CSS transitions and transforms.
+- Avoid heavy animation libraries for normal wallet interactions.
+- Keep shared components small and tree-shakeable.
+- Avoid large dependency additions for styling unless André approves.
+- Do not compute financial aggregates in frontend components; use backend/API totals.
 
-### Amount Display
-```css
-/* Amount classes for consistent financial number display */
-@utility amount-display {
-  @apply font-mono tabular-nums tracking-tight;
-}
+## Review Checklist
 
-@utility amount-lg {
-  @apply font-mono tabular-nums text-2xl font-bold tracking-tight;
-}
+Before finishing a design-system change:
 
-@utility amount-credit {
-  @apply text-success font-semibold;
-}
+- Existing UI still uses the correct brand tokens.
+- New tokens have clear semantic names.
+- Shared components remain accessible and keyboard-safe.
+- No PII or provider internals are logged.
+- Mobile touch targets are preserved.
+- The change does not silently restyle unrelated flows.
+- Targeted frontend build/lint/test was run where practical.
 
-@utility amount-debit {
-  @apply text-foreground font-semibold;
-}
-```
+## Handoff
 
-### Status Badge Classes
-```css
-@utility badge-success {
-  @apply bg-success/10 text-success text-xs font-medium px-2 py-0.5 rounded-full;
-}
-@utility badge-warning {
-  @apply bg-warning/10 text-warning-foreground text-xs font-medium px-2 py-0.5 rounded-full;
-}
-@utility badge-error {
-  @apply bg-error/10 text-error text-xs font-medium px-2 py-0.5 rounded-full;
-}
-@utility badge-muted {
-  @apply bg-muted text-muted-foreground text-xs font-medium px-2 py-0.5 rounded-full;
-}
-```
-
----
-
-## 4. Layout Patterns
-
-### Wallet Mobile Layout
-```tsx
-function WalletLayout({ children }) {
-  return (
-    <div className="min-h-screen bg-background">
-      {/* Status bar area */}
-      <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-sm border-b border-border">
-        <div className="flex items-center justify-between px-4 h-14">
-          <Logo />
-          <NotificationBell />
-        </div>
-      </header>
-
-      {/* Main content */}
-      <main className="pb-20">{children}</main>
-
-      {/* Bottom navigation — thumb zone */}
-      <nav className="fixed bottom-0 inset-x-0 bg-background border-t border-border z-40">
-        <div className="flex items-center justify-around h-16 px-2">
-          <NavItem icon={<HomeIcon />} label="Home" href="/" />
-          <NavItem icon={<WalletIcon />} label="Wallet" href="/wallet" />
-          <NavItem icon={<ShopIcon />} label="Shop" href="/products" />
-          <NavItem icon={<UserIcon />} label="Profile" href="/profile" />
-        </div>
-      </nav>
-    </div>
-  );
-}
-```
-
-### Portal Admin Layout (Desktop)
-```tsx
-function PortalLayout({ children }) {
-  return (
-    <div className="flex min-h-screen bg-background">
-      {/* Sidebar */}
-      <aside className="w-64 border-r border-border bg-surface hidden lg:block">
-        <nav className="p-4 space-y-1">
-          <SidebarLink icon={<DashboardIcon />} label="Dashboard" href="/portal" />
-          <SidebarLink icon={<UsersIcon />} label="Users" href="/portal/users" />
-          <SidebarLink icon={<LedgerIcon />} label="Ledger" href="/portal/ledger" />
-          <SidebarLink icon={<ReconIcon />} label="Reconciliation" href="/portal/recon" />
-          <SidebarLink icon={<SettingsIcon />} label="Settings" href="/portal/settings" />
-        </nav>
-      </aside>
-
-      {/* Main */}
-      <div className="flex-1 flex flex-col">
-        <header className="h-14 border-b border-border flex items-center px-6">
-          <h1 className="text-lg font-heading font-semibold">Admin Portal</h1>
-        </header>
-        <main className="flex-1 p-6">{children}</main>
-      </div>
-    </div>
-  );
-}
-```
-
----
-
-## 5. Responsive Strategy
-
-### Mobile-First Breakpoints
-```
-Base (0-639px)  → Phone (wallet app primary target)
-sm (640px+)     → Large phone / small tablet
-md (768px+)     → Tablet
-lg (1024px+)    → Portal / admin
-xl (1280px+)    → Wide portal screens
-```
-
-### Grid Patterns
-```tsx
-// Product grid: 2 cols on mobile, 3 on tablet, 4 on desktop
-<div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-  {products.map(p => <ProductCard key={p.id} product={p} />)}
-</div>
-
-// Transaction detail: stack on mobile, side-by-side on tablet
-<div className="flex flex-col md:flex-row gap-6">
-  <div className="md:flex-1">Transaction Details</div>
-  <div className="md:w-80">Related Info</div>
-</div>
-```
-
----
-
-## 6. Utility Functions
-
-```typescript
-// lib/utils.ts
-import { type ClassValue, clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
-
-// Format currency with ZAR symbol
-export function formatCurrency(amount: number, currency = 'ZAR') {
-  return new Intl.NumberFormat('en-ZA', { style: 'currency', currency }).format(amount);
-}
-```
-
----
-
-## 7. Design System Checklist
-
-- [ ] All colors use semantic tokens (not hardcoded hex)
-- [ ] Dark mode tokens defined for every semantic color
-- [ ] Typography uses `font-heading` for titles, `font-body` for content
-- [ ] Amounts always use `font-mono tabular-nums`
-- [ ] All interactive elements meet 44px minimum height
-- [ ] Cards use consistent `shadow-card` + `rounded-xl`
-- [ ] Status uses consistent color coding (success/warning/error)
-- [ ] Mobile layout has bottom navigation in thumb zone
-- [ ] Reduced motion media query respects user preferences
-- [ ] CVA variants used for all component variations
+If the task now requires applying the system to a concrete screen, switch to `frontend-design`.

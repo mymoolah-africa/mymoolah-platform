@@ -60,6 +60,9 @@ describe('OTT client helpers', () => {
     const redacted = redact({
       accountNumber: '1234567890',
       mobile: '+27825571055',
+      id_number: '6411055084084',
+      pin: '3264',
+      serialNumber: '5514788701',
       provider_providerCode: 'NEDBANK',
       nested: { apiKey: 'secret-value' },
     });
@@ -67,6 +70,9 @@ describe('OTT client helpers', () => {
     expect(redacted.provider_providerCode).toBe('NEDBANK');
     expect(redacted.accountNumber).toBe('12***90');
     expect(redacted.mobile).toBe('+2***55');
+    expect(redacted.id_number).toBe('64***84');
+    expect(redacted.pin).toBe('****');
+    expect(redacted.serialNumber).toBe('55***01');
     expect(redacted.nested.apiKey).toBe('se***ue');
   });
 });

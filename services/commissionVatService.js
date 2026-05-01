@@ -78,7 +78,9 @@ async function postCommissionVatAndLedger({
       taxPeriod,
       taxYear: now.getFullYear(),
       status: 'calculated',
-      vat_direction: 'output',
+      vatDirection: 'output',
+      supplierCode: normalizedSupplierCode,
+      isClaimable: false,
       metadata: {
         idempotencyKey,
         purchaserUserId,

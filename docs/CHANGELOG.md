@@ -1,5 +1,61 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-05-01 - Frontend skill routing optimization
+
+### Summary
+Optimized the frontend/design skill set so agents choose the right context for product specs, React UI implementation, and Tailwind design-system work.
+
+### Changes
+- Renamed the newly added `.agents/skills/design` skill to `.agents/skills/design-spec`.
+- Rewrote `design-spec` as a concise pre-build product design specification skill for Design.md briefs, UX flow plans, AI design prompts, and acceptance criteria.
+- Rewrote `frontend-design` as the implementation skill for production MyMoolah React UI, wallet overlays, portal screens, financial states, performance, masking, and safe frontend error handling.
+- Rewrote `tailwind-design-system` as the shared tokens/primitives skill for Tailwind/CSS variables, semantic colors, CVA variants, component consistency, accessibility defaults, and performance-safe styling.
+- Updated `find-skills` and `docs/CURSOR_SKILLS.md` so agents route product design specs, screen implementation, and design-system changes to separate skills.
+
+### Validation
+- Confirmed the live skill inventory contains 22 `SKILL.md` files including `design-spec`, `frontend-design`, and `tailwind-design-system`.
+- `git diff --check` passed after the skill updates.
+
+## 2026-05-01 - OTT payout/catalog UAT schema and quote readiness
+
+### Summary
+Completed the approved OTT payout/catalog readiness plan through the non-destructive UAT gates: COA/VAT schema, supplier commercial terms, provider sync, catalog import, focused tests, UAT migrations, read-only provider/limits sync, quote-only checks, controlled payout/VAS tests, and VAT audit-evidence repair.
+
+### Changes
+- Added idempotent COA migration `20260501_01_seed_vat_input_and_fee_accounts.js` for `1300-20-01`, `5000-10-03`, `5000-10-04`, and `5100-01-01`.
+- Added `supplier_commercial_terms` via `20260501_02_create_supplier_commercial_terms.js`, seeded OTT payout provider fees and OTT voucher/retailer commission splits.
+- Updated `TaxTransaction` to map existing `vat_direction`, `supplier_code`, and `is_claimable` columns.
+- Added `SupplierCommercialTerm`, OTT commercial policy lookup, and provider/catalog sync services.
+- Refactored OTT payout quotes to use provider-specific DB fee policy and snapshot the full fee policy in `ott_payouts.fee_snapshot`.
+- Hardened OTT submit timeout handling so unknown provider outcomes remain `processing` for polling instead of being auto-refunded before the provider status is known.
+- Expanded OTT redaction to mask `id_number`, voucher PIN, serial number, sale/voucher IDs, and additional recipient fields in request/response logs.
+- Added `scripts/ott-sync-providers.js` for read-only `GetActiveProviders` / `GetActiveProvidersLimits` sync plus optional customer-facing catalog import.
+- Imported customer-facing OTT voucher/electricity/gift-card providers with net commission for ranking and gross/switching split in pricing JSON.
+- Added OTT supplier support to `ProductPurchaseService` so imported OTT voucher/gift-card products can be purchased through the wallet-backed order, supplier transaction, wallet debit, commission, and ledger flow.
+- Added OTT supplier float support for face-value VAS journals using `1200-10-08`.
+- Fixed `commissionVatService` to persist mapped `supplierCode`, `vatDirection`, and `isClaimable` fields so OTT VAS commission tax rows carry supplier audit evidence.
+- Added OTT payout MMTP fee VAT tax evidence creation against the completed OTT fee `transactions.transactionId`; provider fees remain pass-through and do not create MMTP VAT rows.
+- Added OTT payout reversal tax handling so related payout-fee VAT evidence is marked `refunded` when a payout reverses.
+- Added read-only `scripts/audit-ott-vat-evidence.js` to detect OTT VAT-control journal lines without matching tax evidence and reversed payout VAT rows not marked `refunded`.
+
+### Validation
+- `node --check` on new/changed migrations, models, OTT services, script, and focused tests.
+- `npx jest tests/ott-product-purchase-service.test.js tests/supplier-pricing-ott.test.js tests/ott-commercial-terms-service.test.js tests/ott-provider-catalog-service.test.js tests/ott-payout-service.test.js tests/ott-client.test.js --runInBand --forceExit` — 21/21 passing.
+- UAT migrations via `./scripts/run-migrations-master.sh uat` completed successfully.
+- UAT read-only provider/limits sync via `ENV_FILE=.env.codespaces node scripts/ott-sync-providers.js --import-catalog` read 16 providers, read 1 limits payload, upserted 16 providers, and imported 9 catalog products.
+- Quote-only UAT checks passed for provider `2` Standard Bank Instant Money (R100 -> R112.45 total), `112` ABSA CashSend (R100 -> R112.45 total), and `127` PayShap Account (R100 -> R103.88 total).
+- UAT catalog rows confirmed for `OTT-3` at 3.00% net, `OTT-68` Pick n Pay at 0.70% net, and `OTT-69` Shoprite at 0.70% net.
+- Controlled UAT payout approved by André for user `1` / `0825571055` and Standard Bank Instant Money provider `2`: R10 amount + R11.45 provider fee + R1.00 MMTP fee = R22.45 total debit. Initial submit timed out after 15s, but `GetPaymentStatus` returned success with OTT payment reference `118268`; UAT record was recovered to `completed`, wallet net debit verified, and journal `OTT-PAYOUT-OTT-1777629657504-e811bbf7` balances R22.45 debit/credit.
+- Controlled UAT Pick n Pay voucher purchase through wallet-backed `ProductPurchaseService`: product `OTT-68`, R10, OTT reference `118269`, order completed, supplier transaction succeeded, wallet debit posted, `VAS-FACE-*` journal balanced R10/R10, and `COMMISSION-*` journal balanced R0.07/R0.07.
+- Controlled UAT Nando's gift-card purchase through wallet-backed `ProductPurchaseService`: product `OTT-156`, R10, OTT reference `118270`, order completed, supplier transaction succeeded, wallet debit posted, `VAS-FACE-*` journal balanced R10/R10, and `COMMISSION-*` journal balanced R0.07/R0.07.
+- Amazon Gift Card provider `OTT-141` did not complete in UAT: R10 was rejected as below provider minimum R100; R100 returned OTT status `97` / `Internal Server Error`. No wallet debit was posted for the failed Amazon attempts.
+- Focused OTT VAT regression passed: `node --check services/commissionVatService.js services/ott/ottPayoutService.js scripts/audit-ott-vat-evidence.js`; `npx jest tests/ott-payout-service.test.js tests/commission-vat-service.test.js --runInBand --forceExit` — 11/11 passing.
+- UAT VAT repair inserted one payout MMTP fee VAT row for `OTT-CORR-FEE-OTT-1777629657504-e811bbf7` (base R0.87, VAT R0.13, total R1.00) and enriched two OTT VAS commission VAT rows with `supplier_code = OTT`; verification confirmed all three are output VAT, non-claimable, and related journals balance.
+- `ENV_FILE=.env.codespaces node scripts/audit-ott-vat-evidence.js --uat` checked 3 OTT VAT evidence rows with 0 issues.
+
+### Remaining Approval Gate
+- `OTT_PAYOUT_ENABLED=false` remains the required default outside controlled test commands. Do not run additional wallet-debit payout or voucher purchase tests until André approves the next provider/product.
+
 ## 2026-05-01 - OTT UAT read-only readiness
 
 ### Summary

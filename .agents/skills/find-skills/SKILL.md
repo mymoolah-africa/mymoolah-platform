@@ -49,7 +49,9 @@ If a listed skill already matches the domain, **tell the user the path** and fol
 | Redis, locks, idempotency cache | `.agents/skills/redis-caching-and-locks/SKILL.md` |
 | Financial API tests (Jest/Supertest) | `.agents/skills/fintech-test-driven-development/SKILL.md` |
 | Admin portal / RBAC / MMAP | `.agents/skills/admin-portal-builder/SKILL.md` |
+| Product design specs / UX briefs before coding | `.agents/skills/design-spec/SKILL.md` |
 | Wallet / portal UI polish | `.agents/skills/frontend-design/SKILL.md` |
+| Tailwind tokens / shared UI primitives | `.agents/skills/tailwind-design-system/SKILL.md` |
 | SQL / DB performance | `.agents/skills/postgresql-optimization/SKILL.md`, `sql-optimization-patterns` |
 | REST API shape | `.agents/skills/api-design-principles/SKILL.md` |
 | Security patterns | `.agents/skills/security-best-practices/SKILL.md` |

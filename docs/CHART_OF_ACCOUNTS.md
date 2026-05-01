@@ -1,6 +1,6 @@
 # MyMoolah Treasury Platform — Chart of Accounts
 
-**Last Updated**: 2026-04-08
+**Last Updated**: 2026-05-01
 **Document Version**: 1.0.0
 **Classification**: Internal — Banking-Grade Financial Architecture
 **Owner**: MyMoolah Treasury / Finance
@@ -76,7 +76,7 @@ and receivables. Normal side: **debit** (increases on debit, decreases on credit
 | `1200-10-07` | PayShap Outbound Float | debit | `20260224_03` | `standardbankRppService.js` | PayShap RPP outbound; **do NOT use for Yellow Card** (see Section 9.1) |
 | `1200-10-08` | OTT Payout Float Account | debit | `20260429_02` | `ottPayoutService.js` | OTT Payout / cash-send principal plus provider pass-through fee clearing; disabled by default until OTT UAT approval |
 | `1200-10-10` | NFC Deposit Float Account | debit | `20260224_03`, `20260210_03` | `nfcDepositService.js` | NFC acquiring float (Halo Dot Phase 1) |
-| `1300-20-01` | VAT Input Recoverable | debit | **NEEDS MIGRATION** | planned bank/supplier fee accounting | Dedicated input VAT asset for claimable VAT on supplier/bank tax invoices; do not mix with output VAT payable in `2300-10-01` |
+| `1300-20-01` | VAT Input Recoverable | debit | `20260501_01` | planned bank/supplier fee accounting | Dedicated input VAT asset for claimable VAT on supplier/bank tax invoices; do not mix with output VAT payable in `2300-10-01` |
 
 ### 2.2 Liabilities (2xxx-xx-xx)
 
@@ -125,9 +125,9 @@ Expense accounts track costs incurred. Normal side: **debit**
 |------|------|--------|-----------|---------|-------|
 | `5000-10-01` | Cost of Sales: PayShap SBSA Fee | debit | `20260224_03`, `20260224_02` | `standardbankRtpService.js` | SBSA fee cost account for flows where MMTP absorbs the fee. RPP customer fees use pass-through clearing instead. |
 | `5000-10-02` | Cost of Sales: EasyPay Cash Handling Fee | debit | `20260410_01` | `easyPayDepositService.js` (batch recon job) | Variable per-merchant cash handling cost; MMTP absorbs; posted from SFTP recon file |
-| `5000-10-03` | Cost of Sales: SBSA PayShap RPP/RTP Fees | debit | **NEEDS MIGRATION** | planned PayShap fee reconciliation | Use only where MMTP absorbs SBSA RPP/RTP fees. If customer pays the SBSA fee as pass-through, use clearing/payable instead. |
-| `5000-10-04` | Cost of Sales: EFT Supplier Payment Fees | debit | **NEEDS MIGRATION** | planned H2H statement fee reconciliation | EFT/payment fees directly tied to supplier settlement or supplier-float top-ups, e.g. MobileMart EFT bank charge, split from input VAT where tax invoice support exists. |
-| `5100-01-01` | Bank Charges Expense | debit | **NEEDS MIGRATION** | planned bank statement reconciliation | General banking/admin fees not directly tied to a supplier/rail transaction, e.g. monthly account fees or Business Online charges, split from input VAT where tax invoice support exists. |
+| `5000-10-03` | Cost of Sales: SBSA PayShap RPP/RTP Fees | debit | `20260501_01` | planned PayShap fee reconciliation | Use only where MMTP absorbs SBSA RPP/RTP fees. If customer pays the SBSA fee as pass-through, use clearing/payable instead. |
+| `5000-10-04` | Cost of Sales: EFT Supplier Payment Fees | debit | `20260501_01` | planned H2H statement fee reconciliation | EFT/payment fees directly tied to supplier settlement or supplier-float top-ups, e.g. MobileMart EFT bank charge, split from input VAT where tax invoice support exists. |
+| `5100-01-01` | Bank Charges Expense | debit | `20260501_01` | planned bank statement reconciliation | General banking/admin fees not directly tied to a supplier/rail transaction, e.g. monthly account fees or Business Online charges, split from input VAT where tax invoice support exists. |
 | `5100-02-01` | Referral Expense | debit | `20260405_01` | `production-full-audit.js` | Referral commission expense; currently referenced only in audit reconciliation — accrual posting path TBD |
 | `5100-03-01` | Ad Reward Expense | debit | `20260224_03` | `adService.js` | Watch-to-Earn user reward payout (R2–R3 per view) |
 

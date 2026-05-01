@@ -4,6 +4,7 @@ const { v4: uuidv4 } = require('uuid');
 const db = require('../../models');
 const ledgerService = require('../ledgerService');
 const { OttClient, redact } = require('./ottClient');
+const { getPayoutFeePolicy } = require('./ottCommercialTermsService');
 
 function roundMoney(value) {
   return Number(Number(value || 0).toFixed(2));
@@ -20,33 +21,6 @@ function requireEnabled() {
     err.code = 'OTT_PAYOUT_DISABLED';
     throw err;
   }
-}
-
-function getConfiguredFee(name) {
-  const raw = process.env[name];
-  if (raw === undefined || raw === '') {
-    const err = new Error(`${name} is required before OTT Payout can debit wallets`);
-    err.statusCode = 500;
-    err.code = 'OTT_FEE_CONFIG_MISSING';
-    throw err;
-  }
-  const amount = roundMoney(raw);
-  if (!Number.isFinite(amount) || amount < 0) {
-    const err = new Error(`${name} must be a non-negative amount`);
-    err.statusCode = 500;
-    err.code = 'OTT_FEE_CONFIG_INVALID';
-    throw err;
-  }
-  return amount;
-}
-
-function calculateFees() {
-  const providerFeeAmount = getConfiguredFee('OTT_PAYOUT_PROVIDER_FEE_ZAR');
-  const mmtpFeeAmount = getConfiguredFee('OTT_PAYOUT_MM_FEE_ZAR');
-  return {
-    providerFeeAmount,
-    mmtpFeeAmount,
-  };
 }
 
 function sanitizeText(value, max = 80) {
@@ -92,6 +66,18 @@ function extractProviderRefs(data = {}) {
     providerTransactionReference: data.providerTransactionReference || data.provider_reference || data.providerRef || null,
     status: normalizeProviderStatus(data.status || data.Status || data.transactionStatus || data.responseStatus),
   };
+}
+
+function isUnknownProviderOutcome(error = {}) {
+  const message = String(error.message || '').toLowerCase();
+  const hasProviderResponse = error.responseData && Object.keys(error.responseData).length > 0;
+  return !hasProviderResponse && (
+    message.includes('timeout') ||
+    message.includes('econnreset') ||
+    message.includes('socket hang up') ||
+    message.includes('network') ||
+    Number(error.statusCode || 0) >= 500
+  );
 }
 
 function buildPayoutPayload({ payment, request }) {
@@ -237,19 +223,15 @@ async function quoteOttPayout({ amount, providerCode }) {
     err.code = 'PROVIDER_REQUIRED';
     throw err;
   }
-  const fees = calculateFees();
+  const feePolicy = await getPayoutFeePolicy({ providerCode });
   return {
     amount: numericAmount,
     providerCode,
     currency: 'ZAR',
-    providerFeeAmount: fees.providerFeeAmount,
-    mmtpFeeAmount: fees.mmtpFeeAmount,
-    totalDebit: roundMoney(numericAmount + fees.providerFeeAmount + fees.mmtpFeeAmount),
-    feePolicy: {
-      source: 'environment',
-      providerFeeEnv: 'OTT_PAYOUT_PROVIDER_FEE_ZAR',
-      mmtpFeeEnv: 'OTT_PAYOUT_MM_FEE_ZAR',
-    },
+    providerFeeAmount: feePolicy.providerFeeAmount,
+    mmtpFeeAmount: feePolicy.mmtpFeeAmount,
+    totalDebit: roundMoney(numericAmount + feePolicy.providerFeeAmount + feePolicy.mmtpFeeAmount),
+    feePolicy,
   };
 }
 
@@ -286,7 +268,83 @@ async function postLedger(payment) {
       ledgerReference: `OTT-PAYOUT-${payment.payoutId}`,
     },
   });
+  await postPayoutFeeTaxTransaction(payment);
   return entry;
+}
+
+async function postPayoutFeeTaxTransaction(payment) {
+  const mmtpFee = roundMoney(payment.mmtpFeeAmount);
+  if (!mmtpFee || mmtpFee <= 0 || !db.TaxTransaction) return null;
+
+  const vatRate = Number(process.env.VAT_RATE || 0.15);
+  const feeExVat = roundMoney(mmtpFee / (1 + vatRate));
+  const vatAmount = roundMoney(mmtpFee - feeExVat);
+  if (vatAmount <= 0) return null;
+
+  const feeTransaction = await db.Transaction.findOne({
+    where: {
+      reference: payment.uniqueReferenceId,
+      type: 'fee',
+      status: 'completed',
+    },
+  });
+  if (!feeTransaction?.transactionId) {
+    await payment.update({
+      metadata: {
+        ...(payment.metadata || {}),
+        taxWarning: 'OTT payout fee transaction not found for tax evidence',
+        taxWarningAt: new Date().toISOString(),
+      },
+    });
+    return null;
+  }
+
+  const originalTransactionId = feeTransaction.transactionId;
+  const existing = await db.TaxTransaction.findOne({ where: { originalTransactionId } });
+  if (existing) return existing;
+
+  const now = new Date();
+  const taxPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  try {
+    return await db.TaxTransaction.create({
+      taxTransactionId: `TAX-${uuidv4()}`,
+      originalTransactionId,
+      taxCode: 'VAT_15',
+      taxName: 'VAT 15%',
+      taxType: 'vat',
+      baseAmount: feeExVat,
+      taxAmount: vatAmount,
+      totalAmount: mmtpFee,
+      taxRate: vatRate,
+      calculationMethod: 'inclusive',
+      businessContext: 'wallet_user',
+      transactionType: 'ott_payout_fee',
+      entityId: 'OTT',
+      entityType: 'supplier',
+      taxPeriod,
+      taxYear: now.getFullYear(),
+      status: 'calculated',
+      vatDirection: 'output',
+      supplierCode: 'OTT',
+      isClaimable: false,
+      metadata: {
+        payoutId: payment.payoutId,
+        uniqueReferenceId: payment.uniqueReferenceId,
+        providerCode: payment.providerCode,
+        vatRate,
+      },
+    });
+  } catch (error) {
+    await payment.update({
+      metadata: {
+        ...(payment.metadata || {}),
+        taxError: error.message,
+        taxErrorAt: new Date().toISOString(),
+      },
+    });
+    console.error('⚠️ Failed to persist OTT payout fee tax transaction:', error.message);
+    return null;
+  }
 }
 
 async function postReversalLedger(payment, reason) {
@@ -308,7 +366,32 @@ async function postReversalLedger(payment, reason) {
       reversalLedgerReference: `OTT-PAYOUT-REV-${payment.payoutId}`,
     },
   });
+  await refundPayoutFeeTaxTransaction(payment, reason);
   return entry;
+}
+
+async function refundPayoutFeeTaxTransaction(payment) {
+  if (!db.TaxTransaction || !db.Transaction) return null;
+
+  const feeTransaction = await db.Transaction.findOne({
+    where: {
+      reference: payment.uniqueReferenceId,
+      type: 'fee',
+      status: 'reversed',
+    },
+  });
+  if (!feeTransaction?.transactionId) return null;
+
+  return db.TaxTransaction.update({
+    status: 'refunded',
+  }, {
+    where: {
+      originalTransactionId: feeTransaction.transactionId,
+      transactionType: 'ott_payout_fee',
+      entityId: 'OTT',
+      status: ['pending', 'calculated', 'paid', 'reported'],
+    },
+  });
 }
 
 async function reverseWalletDebit(payment, reason) {
@@ -334,6 +417,16 @@ async function reverseWalletDebit(payment, reason) {
       currency: payment.currency,
       metadata: { ottPayoutId: payment.payoutId, reason },
     }, { transaction: txn });
+    await db.Transaction.update({
+      status: 'reversed',
+      failureReason: reason,
+    }, {
+      where: {
+        reference: payment.uniqueReferenceId,
+        type: ['withdraw', 'fee'],
+      },
+      transaction: txn,
+    });
     await payment.update({
       status: 'reversed',
       rejectionReason: reason,
@@ -395,7 +488,7 @@ async function submitOttPayout({ userId, amount, providerCode, providerName, rec
       transactionId: `OTT-PAY-${payoutId}`.slice(0, 50),
       userId,
       walletId: wallet.walletId,
-      amount: -quote.amount,
+      amount: quote.amount,
       type: 'withdraw',
       status: 'processing',
       description: reference || 'OTT payout',
@@ -436,6 +529,31 @@ async function submitOttPayout({ userId, amount, providerCode, providerName, rec
   try {
     response = await client.performPayout(requestPayload);
   } catch (error) {
+    if (isUnknownProviderOutcome(error)) {
+      await payment.update({
+        status: 'processing',
+        rejectionReason: 'OTT submit outcome unknown; poll required',
+        providerResponse: redact(error.responseData || {}),
+        metadata: {
+          ...(payment.metadata || {}),
+          request: error.request || redact(requestPayload),
+          submitOutcomeUnknownAt: new Date().toISOString(),
+          submitOutcomeUnknownReason: error.message,
+        },
+      });
+      return {
+        payoutId,
+        uniqueReferenceId,
+        status: 'processing',
+        amount: quote.amount,
+        providerFeeAmount: quote.providerFeeAmount,
+        mmtpFeeAmount: quote.mmtpFeeAmount,
+        totalDebit: quote.totalDebit,
+        currency: quote.currency,
+        outcomeUnknown: true,
+        requiresPolling: true,
+      };
+    }
     await reverseWalletDebit(payment, error.message);
     error.statusCode = error.statusCode || 502;
     throw error;
@@ -572,6 +690,9 @@ module.exports = {
   updatePayoutFromWebhook,
   buildOttPayoutLedgerLines,
   buildPayoutPayload,
+  isUnknownProviderOutcome,
+  postPayoutFeeTaxTransaction,
+  refundPayoutFeeTaxTransaction,
   normalizeProviderStatus,
   toSafePayout,
 };
