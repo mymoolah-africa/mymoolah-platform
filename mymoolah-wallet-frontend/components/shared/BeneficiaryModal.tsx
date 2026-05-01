@@ -219,10 +219,10 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, editBenefic
       bottom: 0,
       backgroundColor: 'rgba(0, 0, 0, 0.5)',
       display: 'flex',
-      alignItems: 'center',
+      alignItems: 'flex-start',
       justifyContent: 'center',
       zIndex: 1000,
-      padding: '1rem'
+      padding: '120px 1rem 1rem'
     }}>
       <Card style={{
         backgroundColor: '#ffffff',

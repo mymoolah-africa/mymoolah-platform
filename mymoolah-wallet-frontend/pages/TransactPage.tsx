@@ -117,7 +117,7 @@ export function TransactPage() {
     
     try {
       // Check KYC requirements for sensitive services
-      const kycRequiredServices = ['send-money', 'request-money', 'flash-eezicash', 'atm-cashsend'];
+      const kycRequiredServices = ['send-money', 'request-money', 'flash-eezicash', 'withdraw-cash'];
       
       if (kycRequiredServices.includes(service.id) && requiresKYC('send')) {
         navigate('/kyc/documents?returnTo=' + service.route);
@@ -239,11 +239,11 @@ export function TransactPage() {
           hidden: true,
         },
         {
-          id: 'atm-cashsend',
+          id: 'withdraw-cash',
           title: 'Withdraw Cash',
           description: 'Get a provider cash PIN sent to your phone',
           icon: <AtSign className="w-6 h-6" />,
-          route: '/atm-cashsend-overlay',
+          route: '/withdraw-cash-overlay',
           available: true,
           badge: 'New',
           badgeType: 'success',

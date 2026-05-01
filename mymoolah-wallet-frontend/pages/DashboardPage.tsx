@@ -497,7 +497,7 @@ export function DashboardPage() {
           </div>
         </button>
 
-        {/* Active Vouchers Card - CLICKABLE with Square Box Count */}
+        {/* MyMoolah Vouchers Card - CLICKABLE with Square Box Count */}
         <button
           onClick={handleVouchersClick}
           style={{
@@ -539,7 +539,7 @@ export function DashboardPage() {
                 margin: '0'
               }}
             >
-              Active Vouchers
+              MyMoolah Vouchers
             </h3>
           </div>
 

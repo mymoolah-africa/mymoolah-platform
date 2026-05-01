@@ -1,4 +1,4 @@
-// import React from 'react';
+import { useLayoutEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { MoolahProvider } from './contexts/MoolahContext';
@@ -35,7 +35,7 @@ import { ElectricityOverlay } from './components/overlays/ElectricityOverlay';
 import { BillPaymentOverlay } from './components/overlays/BillPaymentOverlay';
 import { FlashEeziCashOverlay } from './components/overlays/flash-eezicash/FlashEeziCashOverlay';
 import { MMCashRetailOverlay } from './components/overlays/mmcash-retail/MMCashRetailOverlay';
-import { WithdrawCashOverlay } from './components/overlays/atm-cashsend/ATMCashSendOverlay';
+import { WithdrawCashOverlay } from './components/overlays/withdraw-cash/WithdrawCashOverlay';
 import { TopupEasyPayOverlay } from './components/overlays/topup-easypay/TopupEasyPayOverlay';
 import { CashoutEasyPayPage } from './pages/CashoutEasyPayPage';
 import { DigitalVouchersOverlay } from './components/overlays/digital-vouchers/DigitalVouchersOverlay';
@@ -52,14 +52,23 @@ import { KYCStatusPage } from './pages/KYCStatusPage';
 
 function AppContent() {
   const location = useLocation();
+  const mainContentRef = useRef<HTMLDivElement | null>(null);
   
   // Pages that should NOT show bottom navigation
   const pagesWithoutNavigation = ['/login', '/register', '/forgot-password', '/kyc', '/kyc/documents', '/kyc/status'];
   const showBottomNavigation = !pagesWithoutNavigation.includes(location.pathname);
   
   // Pages that should show the top banner (main app pages)
-  const pagesWithTopBanner = ['/dashboard', '/send-money', '/buy-usdc', '/transact', '/qr-payment', '/vouchers', '/profile', '/transactions', '/wallet-settings', '/request-money', '/services', '/support', '/feedback', '/electricity', '/bill-payments', '/referrals', '/airtime-data-overlay', '/electricity-overlay', '/bill-payment-overlay', '/flash-eezicash-overlay', '/mmcash-retail-overlay', '/atm-cashsend-overlay', '/topup-easypay', '/cashout-easypay', '/vouchers-overlay', '/tap-to-add-money', '/add-money-eft', '/topup-voucher', '/kyc', '/kyc/documents', '/kyc/status'];
+  const pagesWithTopBanner = ['/dashboard', '/send-money', '/buy-usdc', '/transact', '/qr-payment', '/vouchers', '/profile', '/transactions', '/wallet-settings', '/request-money', '/services', '/support', '/feedback', '/electricity', '/bill-payments', '/referrals', '/airtime-data-overlay', '/electricity-overlay', '/bill-payment-overlay', '/flash-eezicash-overlay', '/mmcash-retail-overlay', '/withdraw-cash-overlay', '/atm-cashsend-overlay', '/topup-easypay', '/cashout-easypay', '/vouchers-overlay', '/tap-to-add-money', '/add-money-eft', '/topup-voucher', '/kyc', '/kyc/documents', '/kyc/status'];
   const showTopBanner = pagesWithTopBanner.includes(location.pathname);
+
+  useLayoutEffect(() => {
+    const scrollContainer = mainContentRef.current;
+    if (scrollContainer) {
+      scrollContainer.scrollTop = 0;
+      scrollContainer.scrollLeft = 0;
+    }
+  }, [location.pathname]);
 
   return (
     <div 
@@ -87,6 +96,7 @@ function AppContent() {
         
         {/* Main Content Area - Flex 1 to take remaining space */}
         <div 
+          ref={mainContentRef}
           style={{
             flex: 1,
             overflow: 'auto',
@@ -131,6 +141,7 @@ function AppContent() {
             <Route path="/bill-payment-overlay" element={<ProtectedRoute><BillPaymentOverlay /></ProtectedRoute>} />
             <Route path="/flash-eezicash-overlay" element={<ProtectedRoute><FlashEeziCashOverlay /></ProtectedRoute>} />
             <Route path="/mmcash-retail-overlay" element={<ProtectedRoute><MMCashRetailOverlay /></ProtectedRoute>} />
+            <Route path="/withdraw-cash-overlay" element={<ProtectedRoute><WithdrawCashOverlay /></ProtectedRoute>} />
             <Route path="/atm-cashsend-overlay" element={<ProtectedRoute><WithdrawCashOverlay /></ProtectedRoute>} />
             <Route path="/topup-easypay" element={<ProtectedRoute><TopupEasyPayOverlay /></ProtectedRoute>} />
             <Route path="/cashout-easypay" element={<ProtectedRoute><CashoutEasyPayPage /></ProtectedRoute>} />

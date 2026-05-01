@@ -8,6 +8,7 @@ const { requireKYCVerification } = require('../middleware/kycMiddleware');
 const { idempotencyMiddleware } = require('../middleware/idempotency');
 const ottPayoutService = require('../services/ott/ottPayoutService');
 const { OttClient, buildRequestHash, getConfig } = require('../services/ott/ottClient');
+const db = require('../models');
 
 const router = express.Router();
 const ottPayoutLimiter = rateLimit({
@@ -54,6 +55,46 @@ function requireIdempotencyKey(req, res, next) {
     });
   }
   return next();
+}
+
+function mapOttIdType(idType) {
+  const normalized = String(idType || '').trim().toLowerCase();
+  if (normalized.includes('passport')) return 'PASSPT';
+  return 'RSAID';
+}
+
+async function buildVerifiedRecipient(req) {
+  const user = await db.User.findByPk(req.user.id, {
+    attributes: ['id', 'firstName', 'lastName', 'email', 'phoneNumber', 'idNumber', 'idType', 'kycStatus'],
+  });
+
+  if (!user || user.kycStatus !== 'verified') {
+    const err = new Error('Verified user profile is required for OTT payouts');
+    err.statusCode = 403;
+    err.code = 'KYC_VERIFICATION_REQUIRED';
+    throw err;
+  }
+
+  if (!user.firstName || !user.lastName || !user.phoneNumber || !user.idNumber || !user.idType) {
+    const err = new Error('Verified profile details are incomplete');
+    err.statusCode = 400;
+    err.code = 'VERIFIED_PROFILE_INCOMPLETE';
+    throw err;
+  }
+
+  return {
+    ...(req.body.recipient || {}),
+    firstName: user.firstName,
+    surname: user.lastName,
+    mobile: user.phoneNumber,
+    email: user.email,
+    idType: mapOttIdType(user.idType),
+    idNumber: user.idNumber,
+    title: (req.body.recipient || {}).title || 'MR',
+    countryOfIssue: (req.body.recipient || {}).countryOfIssue || 'ZA',
+    nationality: (req.body.recipient || {}).nationality || 'ZA',
+    kycTier: req.kycStatus?.kycTier,
+  };
 }
 
 function verifyWebhookPayload(payload) {
@@ -210,15 +251,13 @@ router.post('/payouts', [
   validateRequest,
 ], async (req, res) => {
   try {
+    const recipient = await buildVerifiedRecipient(req);
     const result = await ottPayoutService.submitOttPayout({
       userId: req.user.id,
       amount: Number(req.body.amount),
       providerCode: req.body.providerCode,
       providerName: req.body.providerName,
-      recipient: {
-        ...(req.body.recipient || {}),
-        kycTier: req.kycStatus?.kycTier,
-      },
+      recipient,
       reference: req.body.reference,
       idempotencyKey: req.idempotencyKey,
     });

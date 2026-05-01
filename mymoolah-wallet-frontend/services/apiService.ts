@@ -262,6 +262,7 @@ export interface OttPayoutProvider {
   minAmount?: number;
   maxAmount?: number;
   available: boolean;
+  hasLimits?: boolean;
 }
 
 export interface OttPayoutQuote {
@@ -287,11 +288,11 @@ export interface OttPayoutResult {
 }
 
 export interface OttPayoutRecipient {
-  firstName: string;
-  surname: string;
-  mobile: string;
-  idType: 'RSAID' | 'PASSPT';
-  idNumber: string;
+  firstName?: string;
+  surname?: string;
+  mobile?: string;
+  idType?: 'RSAID' | 'PASSPT';
+  idNumber?: string;
   title?: string;
   countryOfIssue?: string;
   nationality?: string;
@@ -681,12 +682,29 @@ class ApiService {
   }
 
   async getOttPayoutProviders(): Promise<OttPayoutProvider[]> {
-    const response = await this.request<any>('/api/v1/ott/provider-limits', {
-      method: 'POST',
-      body: JSON.stringify({}),
-    });
-    const payload = response?.data?.data ?? response?.data ?? response;
-    return this.normalizeOttProviders(payload);
+    const [providersResponse, limitsResponse] = await Promise.allSettled([
+      this.request<any>('/api/v1/ott/providers', {
+        method: 'POST',
+        body: JSON.stringify({}),
+      }),
+      this.request<any>('/api/v1/ott/provider-limits', {
+        method: 'POST',
+        body: JSON.stringify({}),
+      }),
+    ]);
+
+    const providers = providersResponse.status === 'fulfilled'
+      ? this.normalizeOttProviders(providersResponse.value?.data?.data ?? providersResponse.value?.data ?? providersResponse.value)
+      : [];
+    const providerLimits = limitsResponse.status === 'fulfilled'
+      ? this.normalizeOttProviders(limitsResponse.value?.data?.data ?? limitsResponse.value?.data ?? limitsResponse.value, true)
+      : [];
+
+    if (providersResponse.status === 'rejected' && limitsResponse.status === 'rejected') {
+      throw providersResponse.reason || limitsResponse.reason;
+    }
+
+    return this.mergeOttProviders(providers, providerLimits);
   }
 
   async quoteOttPayout(amount: number, providerCode: string): Promise<OttPayoutQuote> {
@@ -701,7 +719,7 @@ class ApiService {
     amount: number;
     providerCode: string;
     providerName?: string;
-    recipient: OttPayoutRecipient;
+    recipient?: OttPayoutRecipient;
     reference?: string;
   }): Promise<OttPayoutResult> {
     const response = await this.request<any>('/api/v1/ott/payouts', {
@@ -719,7 +737,7 @@ class ApiService {
     return (response?.data?.data ?? response?.data ?? response) as OttPayoutResult;
   }
 
-  private normalizeOttProviders(payload: any): OttPayoutProvider[] {
+  private normalizeOttProviders(payload: any, hasLimits = false): OttPayoutProvider[] {
     const candidates = Array.isArray(payload)
       ? payload
       : Array.isArray(payload?.providers)
@@ -747,9 +765,28 @@ class ApiService {
           minAmount: Number.isFinite(minAmount) && minAmount > 0 ? minAmount : undefined,
           maxAmount: Number.isFinite(maxAmount) && maxAmount > 0 ? maxAmount : undefined,
           available: provider.active !== false && provider.available !== false,
+          hasLimits,
         };
       })
       .filter(Boolean) as OttPayoutProvider[];
+  }
+
+  private mergeOttProviders(providers: OttPayoutProvider[], providerLimits: OttPayoutProvider[]): OttPayoutProvider[] {
+    const merged = new Map<string, OttPayoutProvider>();
+
+    [...providers, ...providerLimits].forEach((provider) => {
+      const key = provider.providerCode.toLowerCase();
+      const existing = merged.get(key);
+      merged.set(key, {
+        ...existing,
+        ...provider,
+        providerName: provider.providerName || existing?.providerName || provider.providerCode,
+        available: existing ? existing.available !== false && provider.available !== false : provider.available,
+        hasLimits: Boolean(existing?.hasLimits || provider.hasLimits),
+      });
+    });
+
+    return Array.from(merged.values());
   }
 
   async getVouchers(query?: string, category?: string): Promise<{ vouchers: any[]; categories?: any[]; total?: number }> {

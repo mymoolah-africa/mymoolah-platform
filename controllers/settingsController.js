@@ -131,7 +131,7 @@ class SettingsController {
         },
         // ===== COMING SOON SERVICES (Alphabetical) =====
         {
-          id: 'atm-cashsend',
+          id: 'withdraw-cash',
           name: 'Withdraw Cash',
           description: 'Get a provider cash PIN sent to your phone',
           category: 'payment',

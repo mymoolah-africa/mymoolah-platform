@@ -332,12 +332,12 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, onSave, edi
     }}>
       <Card style={{
         position: 'fixed',
-        top: '50%',
+        top: '120px',
         left: '50%',
-        transform: 'translate(-50%, -50%)',
+        transform: 'translateX(-50%)',
         width: 'calc(100% - 32px)',
         maxWidth: '375px',
-        maxHeight: 'calc(100vh - 100px)',
+        maxHeight: 'calc(100vh - 120px - 60px)',
         overflow: 'auto',
         backgroundColor: '#ffffff',
         border: 'none',

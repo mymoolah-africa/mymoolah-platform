@@ -125,6 +125,7 @@ export function WalletSettingsPage() {
         return <DollarSign className="w-6 h-6" />;
       case 'mmcash-retail':
         return <Store className="w-6 h-6" />;
+      case 'withdraw-cash':
       case 'atm-cashsend':
         return <AtSign className="w-6 h-6" />;
       // Loyalty & Promotions

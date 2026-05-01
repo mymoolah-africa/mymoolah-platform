@@ -7,9 +7,9 @@ import { Input } from '../../ui/input';
 import { Label } from '../../ui/label';
 import { Alert, AlertDescription } from '../../ui/alert';
 import { useAuth } from '../../../contexts/AuthContext';
-import { apiService, ApiError, type OttPayoutProvider, type OttPayoutQuote, type OttPayoutResult } from '../../../services/apiService';
+import { apiService, ApiError, type OttPayoutProvider, type OttPayoutResult } from '../../../services/apiService';
 
-type Step = 'details' | 'confirm' | 'processing' | 'success' | 'error';
+type Step = 'details' | 'processing' | 'success' | 'error';
 
 interface CashProvider extends OttPayoutProvider {
   helper: string;
@@ -31,7 +31,7 @@ const FALLBACK_PROVIDERS: CashProvider[] = [
   {
     providerCode: 'NEDBANK',
     providerName: 'Nedbank Cardless Cash Send',
-    helper: 'Nedbank will show here once the active OTT provider code is returned.',
+    helper: 'You will receive a Nedbank SMS with the cash PIN and instructions.',
     available: false,
   },
 ];
@@ -62,15 +62,21 @@ export function WithdrawCashOverlay() {
   const [firstName, setFirstName] = useState(defaultName.firstName);
   const [surname, setSurname] = useState(defaultName.surname);
   const [mobile, setMobile] = useState(normalizeMobile(user?.phoneNumber || user?.identifier || ''));
-  const [idNumber, setIdNumber] = useState('');
-  const [quote, setQuote] = useState<OttPayoutQuote | null>(null);
   const [result, setResult] = useState<OttPayoutResult | null>(null);
   const [step, setStep] = useState<Step>('details');
   const [error, setError] = useState('');
   const [isLoadingProviders, setIsLoadingProviders] = useState(false);
-  const [isQuoting, setIsQuoting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    const profileName = splitName(user?.name || '');
+    const profileMobile = normalizeMobile(user?.phoneNumber || user?.identifier || '');
+
+    if (!firstName && profileName.firstName) setFirstName(profileName.firstName);
+    if (!surname && profileName.surname) setSurname(profileName.surname);
+    if (!mobile && profileMobile) setMobile(profileMobile);
+  }, [firstName, mobile, surname, user]);
 
   useEffect(() => {
     let mounted = true;
@@ -87,7 +93,7 @@ export function WithdrawCashOverlay() {
             if (fallback.providerCode.toLowerCase() === code) return true;
             if (fallback.providerName.toLowerCase().includes('standard')) return name.includes('standard');
             if (fallback.providerName.toLowerCase().includes('absa')) return name.includes('absa');
-            if (fallback.providerName.toLowerCase().includes('nedbank')) return name.includes('nedbank');
+            if (fallback.providerName.toLowerCase().includes('nedbank')) return name.includes('nedbank') || code === '10';
             return false;
           });
           return live ? { ...fallback, ...live, helper: fallback.helper, available: live.available } : fallback;
@@ -125,30 +131,8 @@ export function WithdrawCashOverlay() {
     if (selectedProvider.maxAmount && amountNumber > selectedProvider.maxAmount) {
       return `Maximum amount for ${selectedProvider.providerName} is R${selectedProvider.maxAmount.toFixed(2)}.`;
     }
-    if (!firstName.trim()) return 'Enter your first name.';
-    if (!surname.trim()) return 'Enter your surname.';
-    if (!/^(\+27|27|0)[6-8][0-9]{8}$/.test(mobile.replace(/\s/g, ''))) return 'Enter a valid South African mobile number.';
-    if (!/^\d{13}$/.test(idNumber.trim())) return 'Enter your 13-digit South African ID number.';
     return '';
-  }, [amountNumber, firstName, idNumber, mobile, selectedProvider, surname]);
-
-  const handleQuote = async () => {
-    setError('');
-    if (formError) {
-      setError(formError);
-      return;
-    }
-    try {
-      setIsQuoting(true);
-      const nextQuote = await apiService.quoteOttPayout(amountNumber, selectedProvider.providerCode);
-      setQuote(nextQuote);
-      setStep('confirm');
-    } catch (err: any) {
-      setError(err instanceof ApiError ? err.message : 'Could not get a quote. Please try again.');
-    } finally {
-      setIsQuoting(false);
-    }
-  };
+  }, [amountNumber, selectedProvider]);
 
   const pollIfNeeded = async (payout: OttPayoutResult): Promise<OttPayoutResult> => {
     if (!payout.requiresPolling && payout.status !== 'processing') return payout;
@@ -160,7 +144,10 @@ export function WithdrawCashOverlay() {
   };
 
   const handleSubmit = async () => {
-    if (!quote || formError) return;
+    if (formError || isSubmitting) {
+      if (formError) setError(formError);
+      return;
+    }
     setError('');
     setStep('processing');
     setIsSubmitting(true);
@@ -169,16 +156,6 @@ export function WithdrawCashOverlay() {
         amount: amountNumber,
         providerCode: selectedProvider.providerCode,
         providerName: selectedProvider.providerName,
-        recipient: {
-          firstName: firstName.trim(),
-          surname: surname.trim(),
-          mobile: normalizeMobile(mobile),
-          idType: 'RSAID',
-          idNumber: idNumber.trim(),
-          title: 'MR',
-          countryOfIssue: 'ZA',
-          nationality: 'ZA',
-        },
         reference: `Withdraw cash - ${selectedProvider.providerName}`,
       });
       const finalResult = await pollIfNeeded(submitted);
@@ -206,7 +183,7 @@ export function WithdrawCashOverlay() {
         <div className="flex flex-col items-center justify-center text-center" style={{ minHeight: '65vh' }}>
           <Loader2 className="w-14 h-14 animate-spin text-[#86BE41] mb-4" />
           <h1 id="withdraw-processing-title" className="text-xl font-bold text-gray-900">Creating your cash PIN</h1>
-          <p className="text-sm text-gray-600 mt-2 max-w-xs">Please wait. Do not close this screen while we confirm the request.</p>
+          <p className="text-sm text-gray-600 mt-2 max-w-xs">Please wait. Do not close this screen while we process the request.</p>
         </div>
       </div>
     );
@@ -323,14 +300,13 @@ export function WithdrawCashOverlay() {
               value={amount}
               onChange={(event) => {
                 setAmount(event.target.value.replace(/[^0-9.]/g, ''));
-                setQuote(null);
               }}
               placeholder="100.00"
             />
           </div>
           <div className="grid grid-cols-5 gap-2">
             {quickAmounts.map((value) => (
-              <Button key={value} type="button" variant="outline" onClick={() => { setAmount(String(value)); setQuote(null); }}>
+              <Button key={value} type="button" variant="outline" onClick={() => setAmount(String(value))}>
                 R{value}
               </Button>
             ))}
@@ -340,27 +316,18 @@ export function WithdrawCashOverlay() {
 
       <Card className="mb-4">
         <CardHeader>
-          <CardTitle className="text-base">Your details</CardTitle>
-          <p className="text-sm text-gray-600">OTT needs these details to create the cash PIN and send the provider SMS.</p>
+          <CardTitle className="text-base">Verified profile</CardTitle>
+          <p className="text-sm text-gray-600">
+            We use your KYC-verified MyMoolah profile for the cash-send request. You do not need to enter your ID or passport number again.
+          </p>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label htmlFor="first-name">First name</Label>
-              <Input id="first-name" value={firstName} onChange={(event) => setFirstName(event.target.value)} />
-            </div>
-            <div>
-              <Label htmlFor="surname">Surname</Label>
-              <Input id="surname" value={surname} onChange={(event) => setSurname(event.target.value)} />
-            </div>
-          </div>
-          <div>
-            <Label htmlFor="mobile">Mobile number for SMS</Label>
-            <Input id="mobile" value={mobile} onChange={(event) => setMobile(event.target.value)} />
-          </div>
-          <div>
-            <Label htmlFor="id-number">SA ID number</Label>
-            <Input id="id-number" inputMode="numeric" maxLength={13} value={idNumber} onChange={(event) => setIdNumber(event.target.value.replace(/\D/g, ''))} />
+        <CardContent>
+          <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Profile used</p>
+            <p className="text-sm font-semibold text-gray-900 mt-1">
+              {firstName && surname ? `${firstName} ${surname}` : 'KYC-verified wallet profile'}
+            </p>
+            <p className="text-sm text-gray-600">{mobile || 'Verified mobile number on file'}</p>
           </div>
         </CardContent>
       </Card>
@@ -372,30 +339,10 @@ export function WithdrawCashOverlay() {
         </Alert>
       )}
 
-      {step === 'confirm' && quote && (
-        <Card className="mb-4 border-[#86BE41]/30 bg-[#86BE41]/5">
-          <CardContent className="p-4 space-y-2">
-            <div className="flex justify-between text-sm"><span>Cash amount</span><strong>R{quote.amount.toFixed(2)}</strong></div>
-            <div className="flex justify-between text-sm"><span>Provider fee</span><strong>R{quote.providerFeeAmount.toFixed(2)}</strong></div>
-            <div className="flex justify-between text-sm"><span>MyMoolah fee</span><strong>R{quote.mmtpFeeAmount.toFixed(2)}</strong></div>
-            <div className="flex justify-between text-base border-t pt-2"><span>Total from wallet</span><strong>R{quote.totalDebit.toFixed(2)}</strong></div>
-          </CardContent>
-        </Card>
-      )}
-
       <div className="sticky bottom-24 bg-white pt-3">
-        {step === 'confirm' && quote ? (
-          <div className="grid grid-cols-2 gap-3">
-            <Button variant="outline" onClick={() => setStep('details')} disabled={isSubmitting}>Change</Button>
-            <Button onClick={handleSubmit} disabled={isSubmitting || !!formError} className="bg-[#86BE41] hover:bg-[#75a938]">
-              {isSubmitting ? 'Creating...' : 'Confirm'}
-            </Button>
-          </div>
-        ) : (
-          <Button onClick={handleQuote} disabled={isQuoting || !!formError} className="w-full bg-[#86BE41] hover:bg-[#75a938]">
-            {isQuoting ? 'Checking fees...' : 'Check fees'}
-          </Button>
-        )}
+        <Button onClick={handleSubmit} disabled={isSubmitting || !!formError} className="w-full bg-[#86BE41] hover:bg-[#75a938]">
+          {isSubmitting ? 'Processing...' : 'Withdraw Cash'}
+        </Button>
       </div>
     </div>
   );

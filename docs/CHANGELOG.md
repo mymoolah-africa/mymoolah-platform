@@ -1,5 +1,28 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-05-01 - Wallet Withdraw Cash UI cleanup
+
+### Summary
+Cleaned up frontend issues found during Codespaces wallet testing after the Retail Vouchers and Withdraw Cash changes.
+
+### Changes
+- Renamed the dashboard card from `Active Vouchers` to `MyMoolah Vouchers`.
+- Renamed the Withdraw Cash implementation path from the legacy ATM/CashSend file to `withdraw-cash/WithdrawCashOverlay.tsx`.
+- Added `/withdraw-cash-overlay` as the canonical route while keeping `/atm-cashsend-overlay` as a legacy alias.
+- Updated quick-access/settings service id to `withdraw-cash` with a frontend fallback for existing saved `atm-cashsend` settings.
+- Removed the frontend ID/passport prompt from Withdraw Cash; the OTT payout route now builds the recipient payload from the KYC-verified `User` record.
+- Removed the separate `Check fees` step so Withdraw Cash submits directly through the payout endpoint.
+- Updated OTT provider loading to merge active providers and provider limits, allowing live providers such as Nedbank to activate when returned by OTT.
+- Added a global wallet route-scroll reset so routed overlays such as Bank Transfer open at the top.
+- Top-aligned shared wallet popup modal containers that previously opened centered/mid-screen.
+
+### Validation
+- `npm run build` in `mymoolah-wallet-frontend`.
+- `node --check controllers/settingsController.js && node --check routes/ott.js`.
+- `npx jest tests/ott-payout-service.test.js --runInBand --forceExit` — 10/10 passing.
+- Cursor lints on touched frontend files: no linter errors.
+- No additional wallet-debit UAT transaction was run in this cleanup checkpoint.
+
 ## 2026-05-01 - OTT Withdraw Cash frontend simplification
 
 ### Summary

@@ -115,8 +115,9 @@ export function ModalContainer({
           backgroundColor: 'rgba(0, 0, 0, 0.5)',
           zIndex: 9998,
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
+          alignItems: 'flex-start',
+          justifyContent: 'center',
+          paddingTop: '120px'
         }}
         onClick={onClose}
         aria-hidden="true"
@@ -132,9 +133,9 @@ export function ModalContainer({
         tabIndex={-1}
         style={{
           position: 'fixed',
-          top: '50%',
+          top: '120px',
           left: '50%',
-          transform: 'translate(-50%, -50%)',
+          transform: 'translateX(-50%)',
           backgroundColor: '#ffffff',
           borderRadius: '12px',
           boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
