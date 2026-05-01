@@ -1,5 +1,22 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-05-01 - Retail voucher purchase identity fix
+
+### Summary
+Fixed the Pick n Pay retail voucher purchase path after Codespaces testing showed the card displayed correctly but `/api/v1/products/purchase` returned HTTP 400.
+
+### Changes
+- Kept customer-facing voucher identity stable through backend `catalogKey`, while adding an explicit `purchaseProductId` for wallet purchase calls.
+- Aligned grouped voucher cards so the representative variant, displayed amount constraints, variant ID, supplier product ID, and purchase product ID all come from the same selected catalog row.
+- Updated the wallet product detail modal so it no longer falls back to the display card ID for purchase requests.
+- Completed the OTT payout fee wording fix so new and historical OTT fee rows display as `Transaction fee`.
+
+### Validation
+- `node --check routes/overlayServices.js controllers/walletController.js services/ott/ottPayoutService.js` passed.
+- `npx jest tests/voucherCatalogBrandService.test.js tests/ott-payout-service.test.js --runInBand --forceExit` passed 23/23.
+- `npm run build` in `mymoolah-wallet-frontend` passed.
+- Cursor lints on touched files: no linter errors.
+
 ## 2026-05-01 - Product Catalog Governance layer
 
 ### Summary

@@ -11,6 +11,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 export interface Voucher {
   id: string;
   catalogKey?: string;
+  purchaseProductId?: number;
   productId?: number;
   variantId?: number;
   name: string;
@@ -70,6 +71,7 @@ export function DigitalVouchersOverlay() {
       const loaded: Voucher[] = (response.vouchers || []).map((v: any, index: number) => ({
         id: buildRetailVoucherId(v, index),
         catalogKey: v.catalogKey,
+        purchaseProductId: v.purchaseProductId || v.productId,
         productId: v.productId,
         variantId: v.variantId,
         name: v.name || 'Voucher',

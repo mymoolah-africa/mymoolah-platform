@@ -551,6 +551,9 @@ class WalletController {
       const normalizedRows = transactions.map((t) => {
         const metadata = t.metadata || {};
         let displayAmount = parseFloat(t.amount || 0);
+        const isOttPayoutFee =
+          metadata.ottPayoutId &&
+          (t.type === 'fee' || (t.transactionId || '').startsWith('OTT-FEE-'));
         
         // For top-up transactions: transaction amount already shows gross amount
         // No adjustment needed - transaction.amount is already grossAmount
@@ -568,7 +571,7 @@ class WalletController {
                 t.type === 'send' ? 'sent' : 
                 t.type === 'receive' ? 'received' : t.type,
           status: t.status || 'completed',
-          description: t.description || 'Transaction',
+          description: isOttPayoutFee ? 'Transaction fee' : (t.description || 'Transaction'),
           currency: t.currency || 'ZAR',
           fee: t.fee ? parseFloat(t.fee) : 0,
           createdAt: t.createdAt,

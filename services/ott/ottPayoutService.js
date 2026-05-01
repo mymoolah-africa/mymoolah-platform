@@ -506,7 +506,7 @@ async function submitOttPayout({ userId, amount, providerCode, providerName, rec
         amount: -roundMoney(quote.providerFeeAmount + quote.mmtpFeeAmount),
         type: 'fee',
         status: 'completed',
-        description: 'OTT payout fee',
+        description: 'Transaction fee',
         reference: uniqueReferenceId,
         currency: quote.currency,
         metadata: {

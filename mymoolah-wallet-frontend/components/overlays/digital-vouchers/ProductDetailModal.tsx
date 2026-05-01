@@ -26,6 +26,7 @@ function getBrandLogo(brandName: string): string | null {
 
 interface Voucher {
   id: string;
+  purchaseProductId?: number;
   productId?: number;
   variantId?: number;
   name: string;
@@ -110,7 +111,7 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
     setPurchaseError('');
 
     try {
-      const productIdForPurchase = voucher.productId || voucher.variantId || Number(voucher.id);
+      const productIdForPurchase = voucher.purchaseProductId || voucher.productId;
       if (!productIdForPurchase) throw new Error('Product ID is required for purchase');
 
       const purchaseData = {

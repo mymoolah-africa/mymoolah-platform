@@ -3732,7 +3732,10 @@ router.get('/vouchers/catalog', auth, async (req, res) => {
         }
       }
 
-      const representative = variableVariant || winnerVariants[0];
+      const bestVariant = bestVariantId
+        ? winnerVariants.find((v) => Number(v.id) === Number(bestVariantId))
+        : null;
+      const representative = bestVariant || variableVariant || winnerVariants[0];
       const uniqueDenoms = Array.from(new Set(allDenoms)).sort((a, b) => a - b);
       const minAmt = variableVariant
         ? parseFloat(variableVariant.minAmount) || 0
@@ -3744,8 +3747,9 @@ router.get('/vouchers/catalog', auth, async (req, res) => {
       vouchers.push({
         id: `retail-voucher-${group.catalogKey}`,
         catalogKey: group.catalogKey,
-        productId: bestProductId || representative.product?.id,
-        variantId: bestVariantId || representative.id,
+        productId: representative.product?.id,
+        purchaseProductId: representative.product?.id,
+        variantId: representative.id,
         supplierProductId: representative.supplierProductId,
         name: group.brand,
         brand: group.brand,
@@ -3791,6 +3795,7 @@ router.get('/vouchers/catalog', auth, async (req, res) => {
             ...voucher,
             id: `retail-voucher-${mapping.catalogKey || voucher.catalogKey || buildCatalogKey(mapping.canonicalBrand || mapping.canonicalName || voucher.brand)}`,
             catalogKey: mapping.catalogKey || voucher.catalogKey || buildCatalogKey(mapping.canonicalBrand || mapping.canonicalName || voucher.brand),
+            purchaseProductId: voucher.purchaseProductId || voucher.productId,
             name: mapping.canonicalName || voucher.name,
             brand: mapping.canonicalBrand || voucher.brand,
             category: mapping.category || voucher.category,

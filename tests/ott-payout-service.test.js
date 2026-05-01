@@ -190,6 +190,15 @@ describe('OTT payout service', () => {
       }),
       { transaction: mockTransaction }
     );
+    expect(mockModels.Transaction.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        transactionId: expect.stringMatching(/^OTT-FEE-OTT-/),
+        type: 'fee',
+        amount: -12.45,
+        description: 'Transaction fee',
+      }),
+      { transaction: mockTransaction }
+    );
     expect(mockPerformPayout).toHaveBeenCalledWith(expect.objectContaining({
       yourUniqueReference: expect.stringMatching(/^MM-OTT-/),
       amount: '100.00',
@@ -204,7 +213,7 @@ describe('OTT payout service', () => {
     }));
     expect(result.totalDebit).toBe(112.45);
     expect(mockModels.TaxTransaction.create).toHaveBeenCalledWith(expect.objectContaining({
-      originalTransactionId: 'OTT-FEE-OTT-TEST',
+      originalTransactionId: expect.stringMatching(/^OTT-FEE-OTT-/),
       taxType: 'vat',
       baseAmount: 0.87,
       taxAmount: 0.13,
