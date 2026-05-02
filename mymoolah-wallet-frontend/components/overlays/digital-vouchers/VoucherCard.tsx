@@ -3,8 +3,14 @@ import { Star } from 'lucide-react';
 
 import oneVoucherLogo from '../../../assets/1voucher-logo.png';
 import betwayLogo from '../../../assets/betway-logo.png';
+import bluLogo from '../../../assets/blu_logo.png';
+import fnbLogo from '../../../assets/fnb_logo.png';
 import hollywoodLogo from '../../../assets/hollywood-logo.png';
 import ottLogo from '../../../assets/ott-logo.png';
+import pnpLogo from '../../../assets/pnp_logo.png';
+import shopriteLogo from '../../../assets/shoprite_logo.png';
+import supabetsLogo from '../../../assets/supabets_logo.png';
+import yesplayLogo from '../../../assets/yesplay_logo.png';
 
 const _viteMode: string = (import.meta as any).env?.MODE ?? 'production';
 const _viteNodeEnv: string = (import.meta as any).env?.VITE_NODE_ENV ?? '';
@@ -18,13 +24,41 @@ const SUPPLIER_BORDER: Record<string, string> = {
 const BRAND_LOGO_MAP: Record<string, string> = {
   '1voucher': oneVoucherLogo,
   'betway': betwayLogo,
+  'blu': bluLogo,
+  'blue': bluLogo,
+  'blu voucher': bluLogo,
+  'blue voucher': bluLogo,
+  'fnb': fnbLogo,
+  'first national bank': fnbLogo,
+  'fnb voucher': fnbLogo,
   'hollywood bets': hollywoodLogo,
   'ott voucher': ottLogo,
+  'pick n pay': pnpLogo,
+  'pick n pay voucher': pnpLogo,
+  'pick and pay': pnpLogo,
+  'picknpay': pnpLogo,
+  'pnp': pnpLogo,
+  'shoprite': shopriteLogo,
+  'shoprite voucher': shopriteLogo,
+  'checkers': shopriteLogo,
+  'checkers voucher': shopriteLogo,
+  'supabets': supabetsLogo,
+  'supa bets': supabetsLogo,
+  'supabets voucher': supabetsLogo,
+  'yesplay': yesplayLogo,
+  'yes play': yesplayLogo,
+  'yesplay voucher': yesplayLogo,
 };
 
-function getBrandLogo(brandName: string): string | null {
-  const key = brandName.toLowerCase().trim();
-  return BRAND_LOGO_MAP[key] || null;
+function getBrandLogo(...brandNames: Array<string | undefined | null>): string | null {
+  for (const brandName of brandNames) {
+    const key = String(brandName || '').toLowerCase().trim();
+    if (!key) continue;
+    if (BRAND_LOGO_MAP[key]) return BRAND_LOGO_MAP[key];
+    const matchedKey = Object.keys(BRAND_LOGO_MAP).find(candidate => key.includes(candidate));
+    if (matchedKey) return BRAND_LOGO_MAP[matchedKey];
+  }
+  return null;
 }
 
 interface Voucher {
@@ -57,7 +91,7 @@ function formatRands(cents: number): string {
 export function VoucherCard({ voucher, isFavorite, canFavorite = true, onSelect, onToggleFavorite }: VoucherCardProps) {
   const supplierKey = (voucher.supplierCode || '').toUpperCase();
   const supplierBorder = isUatOrStaging ? (SUPPLIER_BORDER[supplierKey] ?? undefined) : undefined;
-  const brandLogo = getBrandLogo(voucher.name);
+  const brandLogo = getBrandLogo(voucher.brand, voucher.name);
 
   const priceLabel = voucher.isVariable
     ? `${formatRands(voucher.minAmount)} – ${formatRands(voucher.maxAmount)}`

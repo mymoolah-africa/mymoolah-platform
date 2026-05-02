@@ -63,18 +63,19 @@ interface Transaction {
   metadata?: any;
 }
 
-// South African Banks Supporting PayShap
+// South African banks supported for bank transfers.
 const SA_BANKS = [
-  { code: 'ABSA', name: 'ABSA Bank' },
-  { code: 'FNB', name: 'First National Bank' },
-  { code: 'NEDBANK', name: 'Nedbank' },
-  { code: 'STANDARD', name: 'Standard Bank' },
-  { code: 'CAPITEC', name: 'Capitec Bank' },
-  { code: 'DISCOVERY', name: 'Discovery Bank' },
-  { code: 'INVESTEC', name: 'Investec Bank' },
-  { code: 'AFRICAN', name: 'African Bank' },
-  { code: 'BIDVEST', name: 'Bidvest Bank' },
-  { code: 'POSTBANK', name: 'Postbank' }
+  { code: 'ABSA', name: 'ABSA Bank', branchCode: '632005' },
+  { code: 'AFRICAN', name: 'African Bank', branchCode: '430000' },
+  { code: 'BIDVEST', name: 'Bidvest Bank', branchCode: '462005' },
+  { code: 'CAPITEC', name: 'Capitec Bank', branchCode: '470010' },
+  { code: 'DISCOVERY', name: 'Discovery Bank', branchCode: '679000' },
+  { code: 'FNB', name: 'First National Bank', branchCode: '250655' },
+  { code: 'INVESTEC', name: 'Investec Bank', branchCode: '580105' },
+  { code: 'NEDBANK', name: 'Nedbank', branchCode: '198765' },
+  { code: 'POSTBANK', name: 'Postbank', branchCode: '460005' },
+  { code: 'STANDARD', name: 'Standard Bank', branchCode: '051001' },
+  { code: 'TYMEBANK', name: 'TymeBank', branchCode: '678910' }
 ];
 
 // No mock data; pull from backend
@@ -260,6 +261,13 @@ export function SendMoneyPage() {
   // Confirmation Modal State
   const [showPaymentConfirmationModal, setShowPaymentConfirmationModal] = useState(false);
   const [beneficiaryForPayment, setBeneficiaryForPayment] = useState<PaymentBeneficiary | null>(null);
+  const [showInstantFeeConfirmationModal, setShowInstantFeeConfirmationModal] = useState(false);
+  const [instantFeeConfirmationMessage, setInstantFeeConfirmationMessage] = useState('');
+  const [pendingInstantPaymentFlow, setPendingInstantPaymentFlow] = useState<'payNow' | 'savedBeneficiary' | null>(null);
+  const [pendingOneTimeBankAccount, setPendingOneTimeBankAccount] = useState<{
+    beneficiaryId: string | number;
+    accountId: number;
+  } | null>(null);
   
   // Edit/Remove Beneficiary State
   const [showEditBeneficiaryModal, setShowEditBeneficiaryModal] = useState(false);
@@ -302,7 +310,6 @@ export function SendMoneyPage() {
   const [instantPaymentEnabled, setInstantPaymentEnabled] = useState(false);
   const [selectedBankAccountId, setSelectedBankAccountId] = useState<number | null>(null);
   const [walletBankQuote, setWalletBankQuote] = useState<WalletBankPaymentQuote | null>(null);
-  const [isLoadingWalletBankQuote, setIsLoadingWalletBankQuote] = useState(false);
 
   // Fetch wallet balance
   const fetchWalletBalance = async () => {
@@ -336,7 +343,7 @@ export function SendMoneyPage() {
   useEffect(() => {
     const amount = parseFloat(paymentAmount);
     const isBankRail = selectedAccountType === 'eft' || selectedAccountType === 'payshap';
-    if (!isBankRail || !selectedBankAccountId || !amount || amount <= 0) {
+    if (!isBankRail || !instantPaymentEnabled || !selectedBankAccountId || !amount || amount <= 0) {
       setWalletBankQuote(null);
       return;
     }
@@ -344,17 +351,13 @@ export function SendMoneyPage() {
     let cancelled = false;
     const loadQuote = async () => {
       try {
-        setIsLoadingWalletBankQuote(true);
-        const rail = instantPaymentEnabled ? 'payshap' : 'eft';
-        const quote = await apiService.quoteWalletBankPayment(selectedBankAccountId, amount, rail);
+        const quote = await apiService.quoteWalletBankPayment(selectedBankAccountId, amount, 'payshap');
         if (!cancelled) setWalletBankQuote(quote);
       } catch (err) {
         if (!cancelled) {
           setWalletBankQuote(null);
           logError('SendMoneyPage', 'Wallet-bank quote failed', err as Error);
         }
-      } finally {
-        if (!cancelled) setIsLoadingWalletBankQuote(false);
       }
     };
 
@@ -616,7 +619,7 @@ export function SendMoneyPage() {
       : getSelectedAccount(b);
     
     // Determine payment rail and details from selected account or legacy format
-    // 'bank' type → 'payshap' rail (instant RPP); 'mymoolah' type → 'mymoolah' rail
+    // Bank recipients can later use standard EFT or instant rail at payment time.
     let rawAccountType: 'mymoolah' | 'bank' = b.accountType;
     let accountNumber = ''; // bank account number (identifier in BeneficiaryPaymentMethod)
     let bankName = b.bankName;
@@ -629,7 +632,7 @@ export function SendMoneyPage() {
       // msisdn stays as the beneficiary's phone — NOT the account number
     }
 
-    // Bank payments default to H2H EFT; Instant Payment is a toggle in the modal.
+    // Bank payments default to H2H EFT; Instant Payment is selected in the payment modal.
     const paymentRail = rawAccountType === 'bank' ? 'eft' : 'mymoolah';
     setSelectedAccountType(paymentRail as any);
     setInstantPaymentEnabled(false);
@@ -654,7 +657,7 @@ export function SendMoneyPage() {
         accountNumber: ''
       }));
     } else {
-      // Bank/PayShap: identifier = bank account number, msisdn = beneficiary phone for FICA
+      // Bank transfer: identifier = bank account number, msisdn = beneficiary phone for FICA
       setNewBeneficiary(prev => ({
         ...prev,
         name: b.name,
@@ -788,6 +791,7 @@ export function SendMoneyPage() {
 
   // Handle Add Beneficiary
   const handleAddBeneficiary = async () => {
+    const isBankBeneficiary = selectedAccountType === 'bank' || selectedAccountType === 'eft' || selectedAccountType === 'payshap';
     // Validate required fields including MSISDN
     if (!newBeneficiary.name || !newBeneficiary.msisdn) {
       showError('Validation Error', 'Please fill in all required fields: Name and Mobile Number (MSISDN)', 'warning');
@@ -795,7 +799,7 @@ export function SendMoneyPage() {
     }
 
     // For bank accounts, also require bank name and account number
-    if (selectedAccountType === 'bank' && (!newBeneficiary.bankName || !newBeneficiary.identifier)) {
+    if (isBankBeneficiary && (!newBeneficiary.bankName || !newBeneficiary.identifier)) {
       showError('Validation Error', 'For bank payments, please also select a bank and enter the account number', 'warning');
       return;
     }
@@ -807,13 +811,15 @@ export function SendMoneyPage() {
     }
 
     try {
-      const legacyAccountType: 'mymoolah' | 'bank' = selectedAccountType === 'payshap' ? 'bank' : selectedAccountType === 'mymoolah' ? 'mymoolah' : 'bank';
+      const legacyAccountType: 'mymoolah' | 'bank' = isBankBeneficiary ? 'bank' : 'mymoolah';
+      const selectedBank = SA_BANKS.find(bank => bank.name === newBeneficiary.bankName);
       const createdBeneficiary = await beneficiaryService.createPaymentBeneficiary({
         name: newBeneficiary.name.trim(),
         msisdn: newBeneficiary.msisdn.trim(),
         accountType: legacyAccountType,
-        bankName: selectedAccountType === 'payshap' ? newBeneficiary.bankName?.trim() : undefined,
-        accountNumber: selectedAccountType === 'payshap' ? newBeneficiary.identifier.trim() : undefined
+        bankName: isBankBeneficiary ? newBeneficiary.bankName?.trim() : undefined,
+        accountNumber: isBankBeneficiary ? newBeneficiary.identifier.trim() : undefined,
+        branchCode: isBankBeneficiary ? selectedBank?.branchCode : undefined
       });
 
       setBeneficiaries(prev => [createdBeneficiary, ...prev.filter(b => b.id !== createdBeneficiary.id)]);
@@ -915,8 +921,105 @@ export function SendMoneyPage() {
     return err?.message || 'Bank payment failed. Please try again.';
   };
 
+  const createPayNowBankAccount = async () => {
+    const selectedBank = SA_BANKS.find(bank => bank.name === newBeneficiary.bankName);
+    const createdBeneficiary = await beneficiaryService.createPaymentBeneficiary({
+      name: newBeneficiary.name.trim(),
+      msisdn: newBeneficiary.msisdn.trim(),
+      accountType: 'bank',
+      bankName: newBeneficiary.bankName?.trim(),
+      accountNumber: newBeneficiary.identifier.trim(),
+      branchCode: selectedBank?.branchCode,
+    });
+    const bankAccount = createdBeneficiary.accounts?.find(a => a.type === 'bank') || createdBeneficiary.accounts?.[0];
+    const bankAccountId = bankAccount?.id || null;
+    if (!bankAccountId) {
+      throw new Error('Bank beneficiary account could not be created');
+    }
+
+    const accountRef = {
+      beneficiaryId: createdBeneficiary.id,
+      accountId: bankAccountId,
+    };
+    setSelectedBankAccountId(bankAccountId);
+    setPendingOneTimeBankAccount(accountRef);
+    return accountRef;
+  };
+
+  const removeOneTimeBankAccount = async (accountRef: { beneficiaryId: string | number; accountId: number } | null) => {
+    if (!accountRef) return;
+    try {
+      await beneficiaryService.removePaymentAccount(accountRef.beneficiaryId, 'bank', accountRef.accountId);
+    } catch (err) {
+      logError('SendMoneyPage', 'Failed to remove one-time bank recipient after Pay Now', err as Error);
+    }
+  };
+
+  const closeInstantFeeConfirmation = () => {
+    const accountRef = pendingOneTimeBankAccount;
+    setShowInstantFeeConfirmationModal(false);
+    setPendingInstantPaymentFlow(null);
+    void removeOneTimeBankAccount(accountRef);
+    setPendingOneTimeBankAccount(null);
+    setSelectedBankAccountId(null);
+    setWalletBankQuote(null);
+  };
+
+  const getInstantPaymentConfirmationMessage = (quote?: WalletBankPaymentQuote | null) => {
+    if (!quote) {
+      return 'Instant Payment fee could not be loaded. Please try again.';
+    }
+
+    return `Instant Payment fee: ${formatCurrency(quote.feeAmount)}. Total debit: ${formatCurrency(quote.totalDebit)}. Do you want to continue?`;
+  };
+
+  const confirmInstantPayment = async (
+    flow: 'payNow' | 'savedBeneficiary',
+    bankAccountId: number | null,
+    amount: number
+  ) => {
+    setIsProcessing(true);
+    let createdAccountRef: { beneficiaryId: string | number; accountId: number } | null = null;
+    try {
+      let quoteAccountId = bankAccountId;
+      if (!quoteAccountId && flow === 'payNow') {
+        createdAccountRef = await createPayNowBankAccount();
+        quoteAccountId = createdAccountRef.accountId;
+      }
+
+      const quote = quoteAccountId
+        ? await apiService.quoteWalletBankPayment(quoteAccountId, amount, 'payshap')
+        : walletBankQuote;
+
+      if (!quote) {
+        if (createdAccountRef) {
+          await removeOneTimeBankAccount(createdAccountRef);
+          setPendingOneTimeBankAccount(null);
+          setSelectedBankAccountId(null);
+        }
+        showError('Quote Required', 'Please select or save the bank recipient first so we can quote the Instant Payment fee before submission.', 'warning');
+        return;
+      }
+
+      setWalletBankQuote(quote || null);
+      setInstantFeeConfirmationMessage(getInstantPaymentConfirmationMessage(quote));
+      setPendingInstantPaymentFlow(flow);
+      setShowInstantFeeConfirmationModal(true);
+    } catch (err: any) {
+      if (createdAccountRef) {
+        await removeOneTimeBankAccount(createdAccountRef);
+        setPendingOneTimeBankAccount(null);
+        setSelectedBankAccountId(null);
+      }
+      logError('SendMoneyPage', 'Failed to quote Instant Payment fee', err as Error);
+      showError('Quote Failed', err?.message || 'Could not confirm the Instant Payment fee. Please try again.', 'error');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   // One-time payment flow (Pay Now card)
-  const handlePayNow = async () => {
+  const handlePayNow = async (skipInstantConfirmation = false) => {
     // Validate required fields including MSISDN
     if (!newBeneficiary.name || !newBeneficiary.msisdn || !paymentAmount) {
       showError('Validation Error', 'Please fill in all required fields: Name, Mobile Number (MSISDN), and Amount', 'warning');
@@ -939,9 +1042,15 @@ export function SendMoneyPage() {
       return;
     }
 
+    if (isBankPayment && instantPaymentEnabled && !skipInstantConfirmation) {
+      await confirmInstantPayment('payNow', selectedBankAccountId, parseFloat(paymentAmount));
+      return;
+    }
+
     if (isBankPayment) {
-      // Wallet-to-bank: default H2H EFT, optional instant PayShap RPP.
+      // Wallet-to-bank: default H2H EFT, optional instant payment rail.
       setIsProcessing(true);
+      let oneTimeAccountRef = pendingOneTimeBankAccount;
       try {
         const amount = parseFloat(paymentAmount);
         const ref = (paymentReference || '').trim().slice(0, 20);
@@ -949,18 +1058,8 @@ export function SendMoneyPage() {
         let bankAccountId = selectedBankAccountId;
 
         if (!bankAccountId) {
-          const createdBeneficiary = await beneficiaryService.createPaymentBeneficiary({
-            name: newBeneficiary.name.trim(),
-            msisdn: newBeneficiary.msisdn.trim(),
-            accountType: 'bank',
-            bankName: newBeneficiary.bankName?.trim(),
-            accountNumber: newBeneficiary.identifier.trim(),
-          });
-          const bankAccount = createdBeneficiary.accounts?.find(a => a.type === 'bank') || createdBeneficiary.accounts?.[0];
-          bankAccountId = bankAccount?.id || null;
-          if (!bankAccountId) {
-            throw new Error('Bank beneficiary account could not be created');
-          }
+          oneTimeAccountRef = await createPayNowBankAccount();
+          bankAccountId = oneTimeAccountRef.accountId;
         }
 
         const result = await apiService.submitWalletBankPayment(
@@ -971,6 +1070,9 @@ export function SendMoneyPage() {
         );
 
         await fetchTransactions();
+        if (!saveAsBeneficiary) {
+          await removeOneTimeBankAccount(oneTimeAccountRef);
+        }
         await loadBeneficiaries();
         setShowPayNow(false);
         setNewBeneficiary({ name: '', msisdn: '', identifier: '', bankName: '', accountNumber: '' });
@@ -980,7 +1082,9 @@ export function SendMoneyPage() {
         setIsRecurring(false);
         setIsOneTimeMode(false);
         setSelectedBankAccountId(null);
+        setPendingOneTimeBankAccount(null);
         setInstantPaymentEnabled(false);
+        setSaveAsBeneficiary(false);
 
         showError(
           'Payment Initiated',
@@ -988,6 +1092,11 @@ export function SendMoneyPage() {
           'info'
         );
       } catch (err: any) {
+        if (!saveAsBeneficiary) {
+          await removeOneTimeBankAccount(oneTimeAccountRef);
+          setPendingOneTimeBankAccount(null);
+          setSelectedBankAccountId(null);
+        }
         logError('SendMoneyPage', 'Wallet-bank payment failed', err as Error);
         showError('Payment Failed', getWalletBankPaymentErrorMessage(err), 'error');
       } finally {
@@ -1123,7 +1232,7 @@ export function SendMoneyPage() {
   };
 
   // Handle Payment
-  const handlePayment = async () => {
+  const handlePayment = async (skipInstantConfirmation = false) => {
     if (!selectedBeneficiary || !paymentAmount) return;
 
     setIsProcessing(true);
@@ -1143,6 +1252,11 @@ export function SendMoneyPage() {
         const bankAccountId = selectedAccount?.type === 'bank' ? selectedAccount.id : selectedBeneficiary.accounts?.find(a => a.type === 'bank')?.id;
         if (!bankAccountId) {
           throw new Error('Please select a bank account for this beneficiary');
+        }
+        if (instantPaymentEnabled && !skipInstantConfirmation) {
+          setIsProcessing(false);
+          await confirmInstantPayment('savedBeneficiary', bankAccountId, amount);
+          return;
         }
         const result = await apiService.submitWalletBankPayment(
           bankAccountId,
@@ -1458,43 +1572,39 @@ export function SendMoneyPage() {
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
-                {/* Payment Rail Selection — 2×2 grid */}
+                {/* Payment Method Selection */}
                 <div className="space-y-2">
                   <Label style={{ fontFamily: 'Montserrat, sans-serif' }}>Payment Method</Label>
                   <div className="grid grid-cols-2 gap-2">
                     {/* 1. MyMoolah — wallet-to-wallet */}
                     <Button
                       variant={selectedAccountType === 'mymoolah' ? 'default' : 'outline'}
-                      onClick={() => setSelectedAccountType('mymoolah')}
+                      onClick={() => {
+                        setSelectedAccountType('mymoolah');
+                        setInstantPaymentEnabled(false);
+                      }}
                       className={`h-16 flex-col gap-0.5 ${selectedAccountType === 'mymoolah' ? 'bg-[#86BE41] text-white border-[#86BE41]' : 'border-gray-200 text-gray-700'}`}
                     >
                       <Wallet className="w-5 h-5" />
                       <span style={{ fontSize: '11px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}>MyMoolah</span>
                     </Button>
-                    {/* 2. EFT — future SBSA EFT, coming soon */}
-                    <Button
-                      variant="outline"
-                      disabled
-                      className="h-16 flex-col gap-0.5 border-gray-200 text-gray-400 opacity-60 cursor-not-allowed relative"
-                    >
-                      <Building2 className="w-5 h-5" />
-                      <span style={{ fontSize: '11px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}>EFT</span>
-                      <span style={{ fontSize: '8px', fontFamily: 'Montserrat, sans-serif', background: '#e5e7eb', color: '#6b7280', borderRadius: '4px', padding: '1px 4px', lineHeight: '1.4' }}>Coming Soon</span>
-                    </Button>
-                    {/* 3. PayShap — instant RPP via Standard Bank */}
+                    {/* 2. Bank Transfer */}
                     <Button
                       variant={selectedAccountType === 'payshap' ? 'default' : 'outline'}
-                      onClick={() => setSelectedAccountType('payshap')}
+                      onClick={() => {
+                        setSelectedAccountType('payshap');
+                        setInstantPaymentEnabled(false);
+                      }}
                       className={`h-16 flex-col gap-0.5 ${selectedAccountType === 'payshap' ? 'bg-[#2D8CCA] text-white border-[#2D8CCA]' : 'border-gray-200 text-gray-700'}`}
                     >
-                      <Send className="w-5 h-5" />
-                      <span style={{ fontSize: '11px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}>PayShap</span>
+                      <Building2 className="w-5 h-5" />
+                      <span style={{ fontSize: '11px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}>Bank Transfer</span>
                     </Button>
-                    {/* 4. MoolahMove — cross-border VALR + Yellow Card, coming soon */}
+                    {/* 3. MoolahMove — coming soon */}
                     <Button
                       variant="outline"
                       disabled
-                      className="h-16 flex-col gap-0.5 border-amber-200 text-amber-400 opacity-60 cursor-not-allowed"
+                      className="h-16 flex-col gap-0.5 border-amber-200 text-amber-400 opacity-60 cursor-not-allowed col-span-2"
                     >
                       <Globe className="w-5 h-5" />
                       <span style={{ fontSize: '11px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}>MoolahMove</span>
@@ -2336,6 +2446,7 @@ export function SendMoneyPage() {
                   </p>
                 </div>
                 <Switch
+                  id="recurring-payment"
                   checked={isRecurring}
                   onCheckedChange={setIsRecurring}
                 />
@@ -2343,24 +2454,46 @@ export function SendMoneyPage() {
 
               {selectedBeneficiary?.accountType === 'bank' && (
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-100">
-                    <div>
-                      <p style={{
-                        fontFamily: 'Montserrat, sans-serif',
-                        fontSize: 'var(--mobile-font-base)',
-                        fontWeight: 'var(--font-weight-medium)'
-                      }}>
-                        Instant Payment
-                      </p>
-                      <p style={{
-                        fontFamily: 'Montserrat, sans-serif',
-                        fontSize: 'var(--mobile-font-small)',
-                        color: '#6b7280'
-                      }}>
-                        Standard EFT is the default. Instant uses PayShap and may cost more.
-                      </p>
-                    </div>
-                    <Switch checked={instantPaymentEnabled} onCheckedChange={setInstantPaymentEnabled} />
+                  <Label style={{ fontFamily: 'Montserrat, sans-serif' }}>Transfer Speed</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      aria-pressed={!instantPaymentEnabled}
+                      onClick={() => setInstantPaymentEnabled(false)}
+                      className={`rounded-xl border p-3 text-left transition min-h-[92px] ${
+                        !instantPaymentEnabled
+                          ? 'border-[#2D8CCA] bg-blue-50 shadow-sm'
+                          : 'border-gray-200 bg-white hover:border-[#2D8CCA]/40'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <Building2 className={`w-4 h-4 ${!instantPaymentEnabled ? 'text-[#2D8CCA]' : 'text-gray-500'}`} />
+                        <span className={`text-[10px] rounded-full px-2 py-0.5 ${!instantPaymentEnabled ? 'bg-[#2D8CCA] text-white' : 'bg-gray-100 text-gray-500'}`}>
+                          Default
+                        </span>
+                      </div>
+                      <p className="font-semibold text-sm text-gray-900" style={{ fontFamily: 'Montserrat, sans-serif' }}>Standard EFT</p>
+                      <p className="text-xs text-gray-500 mt-1" style={{ fontFamily: 'Montserrat, sans-serif' }}>Normal bank transfer timing</p>
+                    </button>
+                    <button
+                      type="button"
+                      aria-pressed={instantPaymentEnabled}
+                      onClick={() => setInstantPaymentEnabled(true)}
+                      className={`rounded-xl border p-3 text-left transition min-h-[92px] ${
+                        instantPaymentEnabled
+                          ? 'border-[#2D8CCA] bg-blue-50 shadow-sm'
+                          : 'border-gray-200 bg-white hover:border-[#2D8CCA]/40'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <Send className={`w-4 h-4 ${instantPaymentEnabled ? 'text-[#2D8CCA]' : 'text-gray-500'}`} />
+                        <span className={`text-[10px] rounded-full px-2 py-0.5 ${instantPaymentEnabled ? 'bg-[#2D8CCA] text-white' : 'bg-gray-100 text-gray-500'}`}>
+                          Faster
+                        </span>
+                      </div>
+                      <p className="font-semibold text-sm text-gray-900" style={{ fontFamily: 'Montserrat, sans-serif' }}>Instant Payment</p>
+                      <p className="text-xs text-gray-500 mt-1" style={{ fontFamily: 'Montserrat, sans-serif' }}>Faster bank transfer</p>
+                    </button>
                   </div>
                 </div>
               )}
@@ -2376,7 +2509,7 @@ export function SendMoneyPage() {
                   Cancel
                 </Button>
                 <Button 
-                  onClick={handlePayment}
+                  onClick={() => handlePayment()}
                   disabled={!paymentAmount || parseFloat(paymentAmount) <= 0 || isProcessing}
                   className="flex-1 bg-gradient-to-r from-[#86BE41] to-[#2D8CCA] text-white"
                 >
@@ -2402,10 +2535,13 @@ export function SendMoneyPage() {
       <Dialog open={showPayNow} onOpenChange={(v) => {
         setShowPayNow(v);
         if (!v) {
+          void removeOneTimeBankAccount(pendingOneTimeBankAccount);
           setIsOneTimeMode(false);
           setSelectedBankAccountId(null);
           setInstantPaymentEnabled(false);
           setWalletBankQuote(null);
+          setPendingOneTimeBankAccount(null);
+          setSaveAsBeneficiary(false);
         }
       }}>
         <DialogContent className="max-w-sm mx-auto" aria-describedby="pay-now-desc">
@@ -2418,43 +2554,36 @@ export function SendMoneyPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            {/* Payment Rail Selection — 2×2 grid */}
+            {/* Payment Method Selection */}
             <div className="space-y-2">
               <Label style={{ fontFamily: 'Montserrat, sans-serif' }}>Payment Method</Label>
               <div className="grid grid-cols-2 gap-2">
                 {/* 1. MyMoolah — wallet-to-wallet */}
                 <Button
                   variant={selectedAccountType === 'mymoolah' ? 'default' : 'outline'}
-                  onClick={() => setSelectedAccountType('mymoolah')}
+                  onClick={() => {
+                    setSelectedAccountType('mymoolah');
+                    setInstantPaymentEnabled(false);
+                  }}
                   className={`h-16 flex-col gap-0.5 ${selectedAccountType === 'mymoolah' ? 'bg-[#86BE41] text-white border-[#86BE41]' : 'border-gray-200 text-gray-700'}`}
                 >
                   <Wallet className="w-5 h-5" />
                   <span style={{ fontSize: '11px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}>MyMoolah</span>
                 </Button>
-                {/* 2. EFT — default wallet-to-bank rail */}
+                {/* 2. Bank Transfer */}
                 <Button
                   variant={selectedAccountType === 'eft' || selectedAccountType === 'payshap' ? 'default' : 'outline'}
                   onClick={() => { setSelectedAccountType('eft'); setInstantPaymentEnabled(false); }}
                   className={`h-16 flex-col gap-0.5 ${selectedAccountType === 'eft' || selectedAccountType === 'payshap' ? 'bg-[#2D8CCA] text-white border-[#2D8CCA]' : 'border-gray-200 text-gray-700'}`}
                 >
                   <Building2 className="w-5 h-5" />
-                  <span style={{ fontSize: '11px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}>Bank EFT</span>
-                  <span style={{ fontSize: '8px', fontFamily: 'Montserrat, sans-serif', background: '#e0f2fe', color: '#075985', borderRadius: '4px', padding: '1px 4px', lineHeight: '1.4' }}>Default</span>
+                  <span style={{ fontSize: '11px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}>Bank Transfer</span>
                 </Button>
-                {/* 3. PayShap — instant RPP via Standard Bank */}
-                <Button
-                  variant={selectedAccountType === 'payshap' ? 'default' : 'outline'}
-                  onClick={() => { setSelectedAccountType('payshap'); setInstantPaymentEnabled(true); }}
-                  className={`h-16 flex-col gap-0.5 ${selectedAccountType === 'payshap' ? 'bg-[#2D8CCA] text-white border-[#2D8CCA]' : 'border-gray-200 text-gray-700'}`}
-                >
-                  <Send className="w-5 h-5" />
-                  <span style={{ fontSize: '11px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}>Instant</span>
-                </Button>
-                {/* 4. MoolahMove — cross-border VALR + Yellow Card, coming soon */}
+                {/* 3. MoolahMove — coming soon */}
                 <Button
                   variant="outline"
                   disabled
-                  className="h-16 flex-col gap-0.5 border-amber-200 text-amber-400 opacity-60 cursor-not-allowed"
+                  className="h-16 flex-col gap-0.5 border-amber-200 text-amber-400 opacity-60 cursor-not-allowed col-span-2"
                 >
                   <Globe className="w-5 h-5" />
                   <span style={{ fontSize: '11px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}>MoolahMove</span>
@@ -2477,7 +2606,7 @@ export function SendMoneyPage() {
                 />
               </div>
               
-              {/* Mobile Number Field - For MyMoolah: this IS their account number. For PayShap: MSISDN for FICA */}
+              {/* Mobile Number Field - For MyMoolah: this IS their account number. For bank transfers: MSISDN for FICA */}
               <div>
                 <Label style={{ fontFamily: 'Montserrat, sans-serif' }}>
                   {selectedAccountType === 'mymoolah' 
@@ -2551,45 +2680,66 @@ export function SendMoneyPage() {
                       style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 'var(--mobile-font-base)', height: 'var(--mobile-touch-target)' }}
                     />
                   </div>
-                  <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-100">
-                    <div>
-                      <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 'var(--mobile-font-base)', fontWeight: 'var(--font-weight-medium)' }}>
-                        Instant Payment
-                      </p>
-                      <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 'var(--mobile-font-small)', color: '#6b7280' }}>
-                        Uses PayShap and may cost more than standard EFT.
-                      </p>
+                  <div className="space-y-2">
+                    <Label style={{ fontFamily: 'Montserrat, sans-serif' }}>Transfer Speed</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        aria-pressed={!instantPaymentEnabled}
+                        onClick={() => {
+                          setInstantPaymentEnabled(false);
+                          setSelectedAccountType('eft');
+                        }}
+                        className={`rounded-xl border p-3 text-left transition min-h-[92px] ${
+                          !instantPaymentEnabled
+                            ? 'border-[#2D8CCA] bg-blue-50 shadow-sm'
+                            : 'border-gray-200 bg-white hover:border-[#2D8CCA]/40'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2 mb-2">
+                          <Building2 className={`w-4 h-4 ${!instantPaymentEnabled ? 'text-[#2D8CCA]' : 'text-gray-500'}`} />
+                          <span className={`text-[10px] rounded-full px-2 py-0.5 ${!instantPaymentEnabled ? 'bg-[#2D8CCA] text-white' : 'bg-gray-100 text-gray-500'}`}>
+                            Default
+                          </span>
+                        </div>
+                        <p className="font-semibold text-sm text-gray-900" style={{ fontFamily: 'Montserrat, sans-serif' }}>Standard EFT</p>
+                        <p className="text-xs text-gray-500 mt-1" style={{ fontFamily: 'Montserrat, sans-serif' }}>Normal bank transfer timing</p>
+                      </button>
+                      <button
+                        type="button"
+                        aria-pressed={instantPaymentEnabled}
+                        onClick={() => {
+                          setInstantPaymentEnabled(true);
+                          setSelectedAccountType('payshap');
+                        }}
+                        className={`rounded-xl border p-3 text-left transition min-h-[92px] ${
+                          instantPaymentEnabled
+                            ? 'border-[#2D8CCA] bg-blue-50 shadow-sm'
+                            : 'border-gray-200 bg-white hover:border-[#2D8CCA]/40'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2 mb-2">
+                          <Send className={`w-4 h-4 ${instantPaymentEnabled ? 'text-[#2D8CCA]' : 'text-gray-500'}`} />
+                          <span className={`text-[10px] rounded-full px-2 py-0.5 ${instantPaymentEnabled ? 'bg-[#2D8CCA] text-white' : 'bg-gray-100 text-gray-500'}`}>
+                            Faster
+                          </span>
+                        </div>
+                        <p className="font-semibold text-sm text-gray-900" style={{ fontFamily: 'Montserrat, sans-serif' }}>Instant Payment</p>
+                        <p className="text-xs text-gray-500 mt-1" style={{ fontFamily: 'Montserrat, sans-serif' }}>Faster bank transfer</p>
+                      </button>
                     </div>
-                    <Switch
-                      checked={instantPaymentEnabled}
-                      onCheckedChange={(checked) => {
-                        setInstantPaymentEnabled(checked);
-                        setSelectedAccountType(checked ? 'payshap' : 'eft');
-                      }}
-                    />
-                  </div>
-                  <div className="p-3 rounded-lg border border-gray-200 bg-gray-50">
-                    <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 'var(--mobile-font-small)', color: '#374151', margin: 0 }}>
-                      {isLoadingWalletBankQuote
-                        ? 'Calculating fee and receipt estimate...'
-                        : walletBankQuote
-                          ? `Fee: ${formatCurrency(walletBankQuote.feeAmount)}. Total debit: ${formatCurrency(walletBankQuote.totalDebit)}. ${walletBankQuote.settlementEstimate?.message || ''}`
-                          : instantPaymentEnabled
-                            ? 'Instant Payment fee will be shown before submission.'
-                            : 'Standard EFT fee is calculated before submission. Receiver timing depends on cutoff, weekends and public holidays.'}
-                    </p>
                   </div>
                   {/* Save as Beneficiary toggle */}
                   <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div>
-                      <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 'var(--mobile-font-base)', fontWeight: 'var(--font-weight-medium)' }}>
+                      <Label htmlFor="save-as-beneficiary" style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 'var(--mobile-font-base)', fontWeight: 'var(--font-weight-medium)' }}>
                         Save as Beneficiary
-                      </p>
+                      </Label>
                       <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 'var(--mobile-font-small)', color: '#6b7280' }}>
                         Keep this bank recipient for easy future payments
                       </p>
                     </div>
-                    <Switch checked={saveAsBeneficiary} onCheckedChange={setSaveAsBeneficiary} />
+                    <Switch id="save-as-beneficiary" checked={saveAsBeneficiary} onCheckedChange={setSaveAsBeneficiary} />
                   </div>
                 </>
               )}
@@ -2665,7 +2815,7 @@ export function SendMoneyPage() {
             <div className="flex gap-3 pt-4">
               <Button variant="outline" onClick={() => setShowPayNow(false)} className="flex-1" disabled={isProcessing}>Cancel</Button>
               <Button
-                onClick={handlePayNow}
+                onClick={() => handlePayNow()}
                 disabled={
                   !newBeneficiary.name ||
                   !(selectedAccountType === 'mymoolah' ? newBeneficiary.identifier : newBeneficiary.msisdn) ||
@@ -2749,6 +2899,27 @@ export function SendMoneyPage() {
         cancelText="Not now"
         type="info"
         beneficiaryName={beneficiaryForPayment?.name}
+      />
+
+      <ConfirmationModal
+        isOpen={showInstantFeeConfirmationModal}
+        onClose={closeInstantFeeConfirmation}
+        onConfirm={() => {
+          const flow = pendingInstantPaymentFlow;
+          setPendingInstantPaymentFlow(null);
+          setShowInstantFeeConfirmationModal(false);
+          if (flow === 'payNow') {
+            handlePayNow(true);
+          } else if (flow === 'savedBeneficiary') {
+            handlePayment(true);
+          }
+        }}
+        title="Confirm Instant Payment"
+        message={instantFeeConfirmationMessage}
+        confirmText="Accept fee"
+        cancelText="Decline"
+        type="info"
+        closeOnConfirm={false}
       />
 
       {/* Edit Beneficiary Modal */}
@@ -2919,13 +3090,15 @@ export function SendMoneyPage() {
                     }
                     
                     try {
+                      const selectedBank = SA_BANKS.find(bank => bank.name === editingBeneficiary.bankName);
                       // Update beneficiary via backend API
                       const updated = await beneficiaryService.createPaymentBeneficiary({
                         name: editingBeneficiary.name.trim(),
                         msisdn: editingBeneficiary.accountType === 'bank' ? undefined : (editingBeneficiary.msisdn || '').trim(),
                         accountType: editingBeneficiary.accountType,
                         bankName: editingBeneficiary.accountType === 'bank' ? editingBeneficiary.bankName?.trim() : undefined,
-                        accountNumber: editingBeneficiary.accountType === 'bank' ? editingBeneficiary.identifier.trim() : undefined
+                        accountNumber: editingBeneficiary.accountType === 'bank' ? editingBeneficiary.identifier.trim() : undefined,
+                        branchCode: editingBeneficiary.accountType === 'bank' ? selectedBank?.branchCode : undefined
                       });
                       
                       // Update local state

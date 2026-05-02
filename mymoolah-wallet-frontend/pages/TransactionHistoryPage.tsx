@@ -8,6 +8,7 @@ import { APP_CONFIG } from '../config/app-config';
 import { getTransactionIcon } from '../utils/transactionIcons.tsx';
 import { cleanTransactionDescription } from '../utils/transactionDisplay';
 import { TransactionDetailModal } from '../components/TransactionDetailModal';
+import { BrandSpinner } from '../components/common/LoadingSpinner';
 
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -659,18 +660,11 @@ export function TransactionHistoryPage() {
           {loading && transactions.length === 0 ? (
             <Card style={{ borderRadius: 'var(--mobile-border-radius)' }}>
               <CardContent style={{ padding: 'var(--mobile-padding)' }}>
-                <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mx-auto mb-3"></div>
-                  <p 
-                    style={{
-                      fontFamily: 'Montserrat, sans-serif',
-                      fontSize: 'var(--mobile-font-base)',
-                      color: '#6b7280'
-                    }}
-                  >
-                    Loading transactions...
-                  </p>
-                </div>
+                <BrandSpinner
+                  className="py-8"
+                  size={40}
+                  label="Loading transactions..."
+                />
               </CardContent>
             </Card>
           ) : filteredTransactions.length === 0 ? (

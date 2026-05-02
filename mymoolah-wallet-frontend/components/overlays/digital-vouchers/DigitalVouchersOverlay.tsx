@@ -7,6 +7,7 @@ import { VoucherSearch } from './VoucherSearch';
 import { ProductDetailModal } from './ProductDetailModal';
 import { apiService } from '../../../services/apiService';
 import { useAuth } from '../../../contexts/AuthContext';
+import { BrandSpinner } from '../../common/LoadingSpinner';
 
 export interface Voucher {
   id: string;
@@ -194,12 +195,11 @@ export function DigitalVouchersOverlay() {
       )}
 
       {isLoading && (
-        <div className="text-center py-8">
-          <div className="w-12 h-12 mx-auto mb-4 border-4 border-gray-200 border-t-[#86BE41] rounded-full animate-spin" />
-          <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '14px', color: '#6b7280' }}>
-            Loading retail vouchers...
-          </p>
-        </div>
+        <BrandSpinner
+          className="py-8"
+          size={48}
+          label="Loading retail vouchers..."
+        />
       )}
 
       {/* Favorites */}

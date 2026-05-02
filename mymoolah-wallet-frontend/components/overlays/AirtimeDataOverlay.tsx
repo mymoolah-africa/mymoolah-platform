@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Wifi, Smartphone, CheckCircle, Copy, Share, Download, Home, Globe, Loader2 } from 'lucide-react';
+import { ArrowLeft, Wifi, Smartphone, CheckCircle, Copy, Share, Download, Home, Globe } from 'lucide-react';
 
 // Supplier border colours — shown in UAT and Staging only
 const _viteMode: string = (import.meta as any).env?.MODE ?? 'production';
@@ -36,6 +36,7 @@ import { beneficiaryService as centralizedBeneficiaryService } from '../../servi
 import { unifiedBeneficiaryService } from '../../services/unifiedBeneficiaryService';
 import { GlobalPinModal } from './shared/GlobalPinModal';
 import { getNetworkIcon, getCategoryIcon } from '../ui/NetworkIcons';
+import { BrandSpinner } from '../common/LoadingSpinner';
 
 interface AirtimeDataBeneficiary extends Beneficiary {
   // Uses accountType from base Beneficiary interface
@@ -1139,26 +1140,11 @@ export function AirtimeDataOverlay() {
 
       {/* Loading step — shown while catalog is being fetched after beneficiary selection */}
       {currentStep === 'loading' && (
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '3rem 1rem',
-          gap: '1rem',
-        }}>
-          <Loader2 style={{ width: '32px', height: '32px', color: '#86BE41' }} className="animate-spin" />
-          <p style={{
-            fontFamily: 'Montserrat, sans-serif',
-            fontSize: '14px',
-            fontWeight: '500',
-            color: '#6b7280',
-            margin: 0,
-            textAlign: 'center',
-          }}>
-            Loading products for {selectedBeneficiary?.name || 'recipient'}…
-          </p>
-        </div>
+        <BrandSpinner
+          style={{ padding: '3rem 1rem' }}
+          size={40}
+          label={`Loading products for ${selectedBeneficiary?.name || 'recipient'}...`}
+        />
       )}
 
       {/* Step 2: Product Catalog - Allow browsing without beneficiary */}

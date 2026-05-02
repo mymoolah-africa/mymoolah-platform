@@ -8,6 +8,7 @@ import { Label } from '../../ui/label';
 import { Alert, AlertDescription } from '../../ui/alert';
 import { APP_CONFIG } from '../../../config/app-config';
 import { getToken as getSessionToken } from '../../../utils/authToken';
+import { BrandSpinner } from '../../common/LoadingSpinner';
 
 type VoucherType = '1voucher' | 'fnb' | 'flashpay';
 type Step = 'select' | 'pin' | 'processing' | 'success' | 'error';
@@ -305,20 +306,12 @@ export function TopupVoucherOverlay() {
 
       {/* ── Step 3: Processing ── */}
       {currentStep === 'processing' && (
-        <div style={{ textAlign: 'center', padding: '40px 0' }}>
-          <div style={{
-            width: '64px', height: '64px', margin: '0 auto 16px',
-            border: '4px solid #e5e7eb', borderTopColor: '#10b981',
-            borderRadius: '50%', animation: 'spin 1s linear infinite',
-          }} />
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-          <p style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 600, fontSize: '16px', color: '#111827' }}>
-            Redeeming your voucher...
-          </p>
-          <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '13px', color: '#6b7280', marginTop: '4px' }}>
-            Please wait while we process your deposit
-          </p>
-        </div>
+        <BrandSpinner
+          style={{ padding: '40px 0' }}
+          size={56}
+          label="Redeeming your voucher..."
+          subtitle="Please wait while we process your deposit"
+        />
       )}
 
       {/* ── Step 4: Success ── */}

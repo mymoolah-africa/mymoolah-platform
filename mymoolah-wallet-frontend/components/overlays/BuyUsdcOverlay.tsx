@@ -27,6 +27,7 @@ import { ErrorModal } from '../ui/ErrorModal';
 import { usdcService, type UsdcQuote } from '../../services/usdcService';
 import { unifiedBeneficiaryService, type UnifiedBeneficiary } from '../../services/unifiedBeneficiaryService';
 import { formatCurrency, beneficiaryService } from '../../services/overlayService';
+import { BrandSpinner } from '../common/LoadingSpinner';
 
 type Step = 'beneficiary' | 'amount' | 'confirm' | 'processing' | 'success';
 type LoadingState = 'idle' | 'loading' | 'success' | 'error';
@@ -335,22 +336,11 @@ export function BuyUsdcOverlay() {
       {currentStep === 'beneficiary' && (
         <div>
           {loadingState === 'loading' ? (
-            <div style={{
-              textAlign: 'center',
-              padding: '2rem',
-              color: '#6b7280'
-            }}>
-              <div style={{
-                width: '40px',
-                height: '40px',
-                border: '3px solid #e2e8f0',
-                borderTop: '3px solid #86BE41',
-                borderRadius: '50%',
-                animation: 'spin 1s linear infinite',
-                margin: '0 auto 1rem'
-              }} />
-              Loading recipients...
-            </div>
+            <BrandSpinner
+              style={{ padding: '2rem' }}
+              size={40}
+              label="Loading recipients..."
+            />
           ) : beneficiaries.length === 0 ? (
             <div style={{
               textAlign: 'center',
@@ -847,40 +837,12 @@ export function BuyUsdcOverlay() {
 
       {/* Step 4: Processing */}
       {currentStep === 'processing' && (
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: '60vh',
-          textAlign: 'center'
-        }}>
-          <div style={{
-            width: '60px',
-            height: '60px',
-            border: '4px solid #e2e8f0',
-            borderTop: '4px solid #9333ea',
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite',
-            marginBottom: '1.5rem'
-          }} />
-          <p style={{
-            fontFamily: 'Montserrat, sans-serif',
-            fontSize: '18px',
-            fontWeight: '600',
-            color: '#1f2937',
-            marginBottom: '8px'
-          }}>
-            Processing Transaction
-          </p>
-          <p style={{
-            fontFamily: 'Montserrat, sans-serif',
-            fontSize: '14px',
-            color: '#6b7280',
-            marginBottom: '4px'
-          }}>
-            Buying USDC and sending to recipient...
-          </p>
+        <BrandSpinner
+          style={{ minHeight: '60vh' }}
+          size={56}
+          label="Processing Transaction"
+          subtitle="Buying USDC and sending to recipient..."
+        >
           <p style={{
             fontFamily: 'Montserrat, sans-serif',
             fontSize: '12px',
@@ -888,7 +850,7 @@ export function BuyUsdcOverlay() {
           }}>
             This typically takes 1-5 minutes
           </p>
-        </div>
+        </BrandSpinner>
       )}
 
       {/* Step 5: Success */}

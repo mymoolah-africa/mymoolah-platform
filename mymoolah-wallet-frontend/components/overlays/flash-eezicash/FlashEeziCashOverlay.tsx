@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from '../../ui/alert';
 import { apiClient } from '../../../services/apiClient';
 import { APP_CONFIG } from '../../../config/app-config';
 import { getToken as getSessionToken } from '../../../utils/authToken';
+import { BrandSpinner } from '../../common/LoadingSpinner';
 
 interface FlashVoucherData {
   amount: number;
@@ -468,48 +469,16 @@ export function FlashEeziCashOverlay() {
         <div id="processing-description" className="sr-only">
           Your eeziCash voucher purchase is being processed. Please wait.
         </div>
+        <h2 id="processing-title" className="sr-only">
+          Processing Your Purchase
+        </h2>
 
-        <div className="text-center py-8">
-          <div style={{
-            width: '64px',
-            height: '64px',
-            margin: '0 auto 24px',
-            border: '4px solid #e2e8f0',
-            borderTop: '4px solid #86BE41',
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite'
-          }} />
-          
-          <h2 
-            id="processing-title"
-            style={{
-              fontFamily: 'Montserrat, sans-serif',
-              fontSize: '18px',
-              fontWeight: '700',
-              color: '#1f2937',
-              marginBottom: '8px'
-            }}
-          >
-            Processing Your Purchase
-          </h2>
-          
-          <p style={{
-            fontFamily: 'Montserrat, sans-serif',
-            fontSize: '14px',
-            color: '#6b7280'
-          }}>
-            Creating your eeziCash voucher...
-          </p>
-        </div>
-
-        <style>
-          {`
-            @keyframes spin {
-              0% { transform: rotate(0deg); }
-              100% { transform: rotate(360deg); }
-            }
-          `}
-        </style>
+        <BrandSpinner
+          className="py-8"
+          size={56}
+          label="Processing Your Purchase"
+          subtitle="Creating your eeziCash voucher..."
+        />
       </div>
     );
   }

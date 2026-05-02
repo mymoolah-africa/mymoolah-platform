@@ -8,6 +8,7 @@ import { Label } from '../../ui/label';
 import { Alert, AlertDescription } from '../../ui/alert';
 import { APP_CONFIG } from '../../../config/app-config';
 import { getToken as getSessionToken } from '../../../utils/authToken';
+import { BrandSpinner } from '../../common/LoadingSpinner';
 
 interface CashoutRequestData {
   original_amount: number;
@@ -475,18 +476,11 @@ export function CashoutEasyPayOverlay() {
 
       {/* Processing Step */}
       {currentStep === 'processing' && (
-        <div className="flex flex-col items-center justify-center py-12">
-          <div className="w-16 h-16 border-4 border-[#86BE41] border-t-transparent rounded-full animate-spin mb-6" />
-          <p style={{
-            fontFamily: 'Montserrat, sans-serif',
-            fontSize: 'var(--mobile-font-base)',
-            fontWeight: 'var(--font-weight-medium)',
-            color: '#6b7280',
-            textAlign: 'center'
-          }}>
-            Creating your cash-out voucher...
-          </p>
-        </div>
+        <BrandSpinner
+          className="py-12"
+          size={56}
+          label="Creating your cash-out voucher..."
+        />
       )}
 
       {/* Success Step */}

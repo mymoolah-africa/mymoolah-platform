@@ -330,6 +330,7 @@ class BeneficiaryService {
     accountType: 'mymoolah' | 'bank';
     bankName?: string;
     accountNumber?: string;
+    branchCode?: string;
   }): Promise<PaymentBeneficiary> {
     const serviceType = options.accountType === 'bank' ? 'bank' : 'mymoolah';
     
@@ -352,6 +353,7 @@ class BeneficiaryService {
             bankName: options.bankName,
             accountNumber: options.accountNumber,
             accountType: 'cheque',
+            branchCode: options.branchCode,
             isDefault: true
           }
         : {

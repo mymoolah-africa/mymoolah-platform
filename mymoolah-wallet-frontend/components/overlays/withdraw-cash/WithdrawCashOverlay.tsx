@@ -7,6 +7,7 @@ import { Input } from '../../ui/input';
 import { Label } from '../../ui/label';
 import { Alert, AlertDescription } from '../../ui/alert';
 import { apiService, ApiError, type OttPayoutProvider, type OttPayoutResult } from '../../../services/apiService';
+import { BrandSpinner } from '../../common/LoadingSpinner';
 
 type Step = 'details' | 'processing' | 'success' | 'error';
 
@@ -181,9 +182,12 @@ export function WithdrawCashOverlay() {
     return (
       <div role="dialog" aria-labelledby="withdraw-processing-title" style={{ padding: '1rem', fontFamily: 'Montserrat, sans-serif' }}>
         <div className="flex flex-col items-center justify-center text-center" style={{ minHeight: '65vh' }}>
-          <Loader2 className="w-14 h-14 animate-spin text-[#86BE41] mb-4" />
-          <h1 id="withdraw-processing-title" className="text-xl font-bold text-gray-900">Creating your cash PIN</h1>
-          <p className="text-sm text-gray-600 mt-2 max-w-xs">Please wait. Do not close this screen while we process the request.</p>
+          <BrandSpinner
+            size={56}
+            label="Creating your cash PIN"
+            subtitle="Please wait. Do not close this screen while we process the request."
+          />
+          <h1 id="withdraw-processing-title" className="sr-only">Creating your cash PIN</h1>
         </div>
       </div>
     );

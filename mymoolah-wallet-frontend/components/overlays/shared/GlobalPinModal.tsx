@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { X, Smartphone, Copy, CheckCircle, Globe, ChevronRight, Loader2 } from 'lucide-react';
+import { X, Smartphone, Copy, CheckCircle, Globe, ChevronRight } from 'lucide-react';
 import { Button } from '../../ui/button';
 import { apiService } from '../../../services/apiService';
 import { generateIdempotencyKey } from '../../../services/overlayService';
+import { BrandSpinner } from '../../common/LoadingSpinner';
 
 // Show supplier borders in UAT/Staging only
 const _viteMode: string = (import.meta as any).env?.MODE ?? 'production';
@@ -384,13 +385,11 @@ export function GlobalPinModal({
 
         {/* ── STEP: PROCESSING ── */}
         {step === 'processing' && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 0', gap: '16px' }}>
-            <Loader2 style={{ width: '40px', height: '40px', color: '#86BE41', animation: 'spin 1s linear infinite' }} />
-            <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '15px', color: '#6b7280' }}>
-              Processing your purchase…
-            </p>
-            <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-          </div>
+          <BrandSpinner
+            style={{ padding: '40px 0' }}
+            size={48}
+            label="Processing your purchase..."
+          />
         )}
 
         {/* ── STEP: SUCCESS ── */}

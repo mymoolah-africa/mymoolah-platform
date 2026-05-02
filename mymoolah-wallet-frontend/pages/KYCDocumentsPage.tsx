@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { APP_CONFIG } from '../config/app-config';
 import { getToken } from '../utils/authToken';
+import { BrandSpinner } from '../components/common/LoadingSpinner';
 
 type DocumentType = 'identity' | 'address';
 type DocumentStatus = 'pending' | 'uploaded' | 'processing' | 'verified' | 'rejected';
@@ -724,7 +725,7 @@ export function KYCDocumentsPage() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 animation: 'fadeIn 0.2s ease-out'
-              }}>
+              }} aria-busy="true">
                 <div style={{
                   background: '#ffffff',
                   borderRadius: 16,
@@ -735,33 +736,15 @@ export function KYCDocumentsPage() {
                   boxShadow: '0 12px 40px rgba(0,0,0,0.2)',
                   fontFamily: 'Montserrat, sans-serif'
                 }}>
-                  <div style={{
-                    width: 56,
-                    height: 56,
-                    margin: '0 auto 16px',
-                    border: '4px solid #e5e7eb',
-                    borderTopColor: '#2D8CCA',
-                    borderRadius: '50%',
-                    animation: 'spin 0.8s linear infinite'
-                  }} />
-                  <h3 style={{
-                    fontSize: 16,
-                    fontWeight: 700,
-                    color: '#1f2937',
-                    margin: '0 0 8px'
-                  }}>
-                    {processingPhase === 'uploading' ? 'Uploading Document...' : 'Verifying Your Identity'}
-                  </h3>
-                  <p style={{
-                    fontSize: 13,
-                    color: '#6b7280',
-                    margin: 0,
-                    lineHeight: 1.5
-                  }}>
-                    {processingPhase === 'uploading'
-                      ? 'Please wait while we upload your document.'
-                      : 'Please wait, we\'re processing your document. This may take a few moments.'}
-                  </p>
+                  <BrandSpinner
+                    size={56}
+                    label={processingPhase === 'uploading' ? 'Uploading Document...' : 'Verifying Your Identity'}
+                    subtitle={
+                      processingPhase === 'uploading'
+                        ? 'Please wait while we upload your document.'
+                        : 'Please wait, we\'re processing your document. This may take a few moments.'
+                    }
+                  />
                   {processingPhase === 'uploading' && (
                     <div style={{ marginTop: 16 }}>
                       <div style={{

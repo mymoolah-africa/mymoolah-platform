@@ -580,19 +580,36 @@ class UnifiedBeneficiaryService {
         throw new Error('Beneficiary not found');
       }
 
-      // Step 1: Remove from normalized table (source of truth)
-      const deleted = await BeneficiaryServiceAccount.update(
-        { isActive: false },
-        {
-          where: {
-            id: serviceId,
-            beneficiaryId: beneficiaryId,
-            serviceType: serviceType,
-            isActive: true
-          },
-          transaction: tx
-        }
-      );
+      // Step 1: Remove from normalized table (source of truth).
+      // Payment methods live in BeneficiaryPaymentMethod; VAS/utility services
+      // live in BeneficiaryServiceAccount.
+      const paymentMethodTypes = ['mymoolah', 'bank', 'eft', 'payshap', 'moolahmove', 'international_bank', 'mobile_money'];
+      if (paymentMethodTypes.includes(serviceType)) {
+        await BeneficiaryPaymentMethod.update(
+          { isActive: false },
+          {
+            where: {
+              id: serviceId,
+              beneficiaryId: beneficiaryId,
+              isActive: true
+            },
+            transaction: tx
+          }
+        );
+      } else {
+        await BeneficiaryServiceAccount.update(
+          { isActive: false },
+          {
+            where: {
+              id: serviceId,
+              beneficiaryId: beneficiaryId,
+              serviceType: serviceType,
+              isActive: true
+            },
+            transaction: tx
+          }
+        );
+      }
 
       // Step 2: Update legacy JSONB fields for backward compatibility
       const serviceField = this.getServiceField(serviceType);

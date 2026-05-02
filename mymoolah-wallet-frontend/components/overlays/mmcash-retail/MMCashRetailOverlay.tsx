@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Badge } from '../../ui/badge';
 import { Separator } from '../../ui/separator';
 import { Alert, AlertDescription } from '../../ui/alert';
+import { BrandSpinner } from '../../common/LoadingSpinner';
 
 interface MMCashVoucherData {
   amount: number;
@@ -555,48 +556,16 @@ export function MMCashRetailOverlay() {
         <div id="processing-description" className="sr-only">
           Your MMCash voucher creation is being processed. Please wait.
         </div>
+        <h2 id="processing-title" className="sr-only">
+          Creating Your Voucher
+        </h2>
 
-        <div className="text-center py-8">
-          <div style={{
-            width: '64px',
-            height: '64px',
-            margin: '0 auto 24px',
-            border: '4px solid #e2e8f0',
-            borderTop: '4px solid #86BE41',
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite'
-          }} />
-          
-          <h2 
-            id="processing-title"
-            style={{
-              fontFamily: 'Montserrat, sans-serif',
-              fontSize: '18px',
-              fontWeight: '700',
-              color: '#1f2937',
-              marginBottom: '8px'
-            }}
-          >
-            Creating Your Voucher
-          </h2>
-          
-          <p style={{
-            fontFamily: 'Montserrat, sans-serif',
-            fontSize: '14px',
-            color: '#6b7280'
-          }}>
-            Generating your MMCash voucher...
-          </p>
-        </div>
-
-        <style>
-          {`
-            @keyframes spin {
-              0% { transform: rotate(0deg); }
-              100% { transform: rotate(360deg); }
-            }
-          `}
-        </style>
+        <BrandSpinner
+          className="py-8"
+          size={56}
+          label="Creating Your Voucher"
+          subtitle="Generating your MMCash voucher..."
+        />
       </div>
     );
   }

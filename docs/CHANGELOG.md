@@ -1,5 +1,60 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-05-02 - Send Money Instant Payment UI
+
+### Summary
+Upgraded the wallet Send Money payment UI so bank transfers use a cleaner method-and-speed pattern instead of duplicated Instant Payment controls, and fixed the wallet toggle/saved-beneficiary experience.
+
+### Changes
+- Replaced the Pay Now top payment method grid with `MyMoolah`, `Bank Transfer`, and disabled `MoolahMove`.
+- Removed the duplicate top `Instant` tile and replaced the old instant-payment switch with two selectable `Transfer Speed` cards: `Standard EFT` and `Instant Payment`.
+- Applied the same transfer-speed card selector to saved bank beneficiary payments.
+- Removed fee/cost wording from the Send Money form itself, including the grey `Standard EFT fee is calculated before submission` message.
+- Added an Instant Payment confirmation popup that quotes the Instant Payment fee and total debit before submission when a bank recipient account is available.
+- Removed customer-facing `PayShap` wording from the Send Money page while preserving the internal `payshap` rail value for backend compatibility.
+- Restyled the shared wallet `Switch` primitive to a slim MyMoolah-green toggle with a visible white thumb and neutral off state.
+- Fixed Pay Now bank `Save as Beneficiary` behavior: selected recipients are kept, while one-time bank recipients are cleaned up after payment.
+- Added branch-code persistence for bank recipients created from Send Money, using the same universal branch codes as the Add Account modal.
+- Fixed `UnifiedBeneficiaryService.removeServiceFromBeneficiary` so removing a bank payment account deactivates `BeneficiaryPaymentMethod` rows, not only service-account rows.
+
+### Validation
+- `npm run build` in `mymoolah-wallet-frontend` passed.
+- `node --check services/UnifiedBeneficiaryService.js` passed.
+- Cursor lints on `SendMoneyPage.tsx` reported no linter errors.
+- Focused ESLint on `SendMoneyPage.tsx` still reports pre-existing unrelated lint debt in the legacy page.
+
+## 2026-05-02 - Retail voucher brand logos
+
+### Summary
+Updated the Buy Retail Vouchers frontend so newly uploaded PNG logos are used for additional third-party voucher brands.
+
+### Changes
+- Added logo mappings for Blu Voucher, FNB, Pick n Pay, Shoprite, Supabets, and YesPlay in the retail voucher grid cards.
+- Added the same logo mappings to the retail voucher purchase detail modal so the card and modal stay visually aligned.
+- Added tolerant brand/name matching for variants such as Blue/Blu, PnP/Pick n Pay, First National Bank/FNB, Checkers/Shoprite, Supa Bets/Supabets, and Yes Play/YesPlay.
+
+### Validation
+- `npm run build` in `mymoolah-wallet-frontend` passed.
+- Cursor lints on touched voucher files reported no linter errors.
+- Focused ESLint on the touched voucher files still reports pre-existing unrelated `any`/unused-variable lint debt.
+
+## 2026-05-02 - Branded MyMoolah loading spinner
+
+### Summary
+Added a reusable branded MyMoolah loading indicator for wallet processing states, using `logo3.svg` as a rotating status mark with accessible loading text.
+
+### Changes
+- Extended the existing wallet `LoadingSpinner` module with a reusable `BrandSpinner` component.
+- Replaced the KYC document upload and AI verification processing ring with the branded spinner while preserving the upload progress bar.
+- Applied the branded indicator to prominent wallet processing/loading states including auth loading, Withdraw Cash, retail voucher catalog/purchase, EasyPay cash-out/top-up, Flash eeziCash, MMCash retail, top-up voucher redemption, airtime/data catalog loading, USDC loading/processing, and transaction history loading.
+- Kept compact button-level loaders unchanged where the logo would be too small to read clearly.
+
+### Validation
+- `npm run build` in `mymoolah-wallet-frontend` passed.
+- `npx eslint components/common/LoadingSpinner.tsx --ext ts,tsx --report-unused-disable-directives --max-warnings 0` passed.
+- Cursor lints on touched frontend files reported no linter errors.
+- Full `npm run lint` still fails on pre-existing unrelated frontend lint debt across many files.
+
 ## 2026-05-02 - OTT webhook and pending-status contract alignment
 
 ### Summary

@@ -13,6 +13,7 @@ interface ConfirmationModalProps {
   cancelText?: string;
   type?: 'danger' | 'warning' | 'info';
   beneficiaryName?: string;
+  closeOnConfirm?: boolean;
 }
 
 export function ConfirmationModal({
@@ -24,7 +25,8 @@ export function ConfirmationModal({
   confirmText = 'Yes, remove',
   cancelText = 'Cancel',
   type = 'danger',
-  beneficiaryName
+  beneficiaryName,
+  closeOnConfirm = true
 }: ConfirmationModalProps) {
   if (!isOpen) return null;
 
@@ -185,7 +187,9 @@ export function ConfirmationModal({
             <Button
               onClick={() => {
                 onConfirm();
-                onClose();
+                if (closeOnConfirm) {
+                  onClose();
+                }
               }}
               style={{
                 flex: '1',
