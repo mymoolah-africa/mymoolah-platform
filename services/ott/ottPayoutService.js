@@ -51,9 +51,16 @@ function maskName(firstName, surname) {
 }
 
 function normalizeProviderStatus(status) {
-  const normalized = String(status || '').toLowerCase();
+  const raw = String(status || '').trim();
+  const normalized = raw.toLowerCase();
+  const numericStatus = Number(raw);
+  if (raw !== '' && Number.isFinite(numericStatus)) {
+    if (numericStatus === 100) return 'completed';
+    if (numericStatus === 98 || numericStatus === 99) return 'processing';
+    if (numericStatus <= 97) return 'failed';
+  }
   if (['completed', 'success', 'successful', 'paid', 'processed', 'payment successful'].includes(normalized)) return 'completed';
-  if (['failed', 'declined', 'rejected', 'error', 'failed at provider', '97'].includes(normalized)) return 'failed';
+  if (['failed', 'declined', 'rejected', 'error', 'failed at provider'].includes(normalized)) return 'failed';
   if (['reversed', 'refunded'].includes(normalized)) return 'reversed';
   if (['cancelled', 'canceled', 'expired'].includes(normalized)) return 'cancelled';
   if (['accepted', 'processing', 'pending', 'submitted', 'pending transaction'].includes(normalized)) return 'processing';
@@ -678,6 +685,25 @@ async function updatePayoutFromWebhook(payload = {}) {
   }
 
   await payment.update(updates);
+  if (refs.status === 'completed' && !payment.metadata?.ledgerPostedAt) {
+    try {
+      await postLedger(payment);
+    } catch (error) {
+      await payment.update({
+        status: 'ledger_post_failed',
+        rejectionReason: error.message,
+        metadata: {
+          ...(payment.metadata || {}),
+          ledgerError: error.message,
+          ledgerErrorAt: new Date().toISOString(),
+          ledgerErrorSource: 'ott_webhook_or_poll',
+        },
+      });
+      error.statusCode = 500;
+      error.code = 'OTT_LEDGER_POST_FAILED';
+      throw error;
+    }
+  }
   return { processed: true, payoutId: payment.payoutId, status: refs.status };
 }
 

@@ -306,6 +306,7 @@ OTT_API_KEY=
 OTT_WEBHOOK_SECRET=
 OTT_PORTAL_URL=https://test-payout-portal.ott-mobile.com
 OTT_WEBHOOK_PUBLIC_BASE_URL=https://staging.mymoolah.africa
+OTT_API_TIMEOUT_MS=60000
 OTT_HASH_PARAM_ORDER_JSON={}
 OTT_ENDPOINTS_JSON={}
 OTT_HASH_FIELD_NAME=hashcheck
@@ -317,7 +318,7 @@ LEDGER_ACCOUNT_OTT_FLOAT=1200-10-08
 Do not add these values to committed files. Names are placeholders for planning
 only and should be finalized during implementation. The current scaffold includes
 the May 2026 manual endpoint and hash-order defaults, allows env overrides, and
-fails closed when the feature flag, fee inputs, integration flag, or secrets are
+fails closed when the feature flag, fee inputs, integration flag, or API credentials are
 missing.
 
 ### 5.2 Authentication
@@ -377,10 +378,10 @@ partner-confirmed items before enabling wallet debits:
 | API key | Received by secure link | Used only for hash construction; never logged |
 | Exact paths for all named discovery endpoints | Confirmed from manual 2026-05-01 | Defaults in `ottClient.js`; configurable through `OTT_ENDPOINTS_JSON` |
 | Endpoint-specific hash parameter order | Confirmed from manual 2026-05-01 | Defaults in `ottClient.js`; configurable through `OTT_HASH_PARAM_ORDER_JSON` |
-| Worked hash examples / vectors | TBD | Unit tests use synthetic vectors until OTT examples are stored outside repo |
+| Webhook hash example / vector | Confirmed by Jaco 2026-05-01 | Webhook preimage is `merchantUniqueReference + message + status + transactionId + utctimestamp + apikey` |
 | Provider code list and limits | TBD via API/manual | Read-only checks before payout enablement |
-| Webhook payload schema and retry cadence | TBD | Webhook endpoint exists but fails closed without hash order + secret |
-| Status/error matrix | Partially confirmed from manual | Success/pending/auth/hash/provider-failure mapped; unknown statuses normalise to `processing` and require polling/recon |
+| Webhook payload schema | Confirmed by Jaco 2026-05-01 | Endpoint verifies `hashcheck` against the OTT API key; body `secret` is not used and is expected to be constant |
+| Status/error matrix | Partially confirmed by Jaco 2026-05-01 | `100` success, `98`/`99` pending, `97` and lower failed; unknown statuses normalise to `processing` and require polling/recon |
 | Settlement/reconciliation file format | TBD | Flexible adapter scaffold exists; final mapping requires OTT sample |
 
 Request signing must remain a pure function: concatenate POST parameter values
@@ -418,13 +419,23 @@ Framework rule:
 
 ### 5.5 Webhooks and status
 
-The manual exposes `VerifyWH` for webhook verification. The hash verification
-concept includes:
+Jaco Snyders confirmed the webhook body and status contract on 2026-05-01.
+The webhook hash preimage is:
 
-- Incoming webhook payload / request data.
-- Merchant unique reference.
-- Webhook secret.
-- API key.
+```text
+merchantUniqueReference + message + status + transactionId + utctimestamp + apikey
+```
+
+Confirmed status handling:
+
+- `100`: successful / completed.
+- `98` and `99`: pending; keep the MMTP transaction pending and resolve via webhook or `GetPaymentStatus`.
+- `97` and lower: failed.
+- The `secret` field in the body is not used and is expected to remain a constant value.
+
+OTT also confirmed RTC and PayShap upstream transactions can take up to 50 seconds
+to complete. MMTP therefore keeps the default OTT HTTP timeout at 60 seconds and
+still treats network timeouts as pending/unknown instead of failed.
 
 Framework rule:
 

@@ -79,6 +79,9 @@ describe('OTT payout service', () => {
     jest.clearAllMocks();
     process.env.OTT_PAYOUT_ENABLED = 'true';
     process.env.VAT_RATE = '0.15';
+    mockPayment.status = 'processing';
+    mockPayment.metadata = {};
+    mockPayment.webhookEventId = null;
     mockPayment.providerFeeAmount = 11.45;
     mockPayment.mmtpFeeAmount = 1.00;
     mockPayment.totalDebit = 112.45;
@@ -256,6 +259,52 @@ describe('OTT payout service', () => {
 
     expect(result).toEqual({ processed: false, duplicate: true, payoutId: 'OTT-TEST' });
     expect(mockPayment.update).not.toHaveBeenCalled();
+  });
+
+  it('maps OTT numeric statuses from partner webhook contract', () => {
+    expect(service.normalizeProviderStatus('100')).toBe('completed');
+    expect(service.normalizeProviderStatus('99')).toBe('processing');
+    expect(service.normalizeProviderStatus('98')).toBe('processing');
+    expect(service.normalizeProviderStatus('97')).toBe('failed');
+    expect(service.normalizeProviderStatus('42')).toBe('failed');
+  });
+
+  it('posts ledger when pending payout later completes via OTT webhook', async () => {
+    const result = await service.updatePayoutFromWebhook({
+      utctimestamp: '2025-12-11T13:31:15Z',
+      transactionId: '3460396',
+      merchantUniqueReference: 'MM-OTT-TEST',
+      message: 'Successful',
+      status: '100',
+    });
+
+    expect(mockPayment.update).toHaveBeenCalledWith(expect.objectContaining({
+      status: 'completed',
+      webhookEventId: '3460396',
+      ottPaymentReference: '3460396',
+      processedAt: expect.any(Date),
+    }));
+    expect(ledgerService.postJournalEntry).toHaveBeenCalledWith(expect.objectContaining({
+      reference: 'OTT-PAYOUT-OTT-TEST',
+    }));
+    expect(result).toEqual({ processed: true, payoutId: 'OTT-TEST', status: 'completed' });
+  });
+
+  it('keeps OTT webhook 98 and 99 states pending without reversing or posting ledger', async () => {
+    const result = await service.updatePayoutFromWebhook({
+      transactionId: '3460397',
+      merchantUniqueReference: 'MM-OTT-TEST',
+      message: 'Pending',
+      status: '99',
+    });
+
+    expect(mockPayment.update).toHaveBeenCalledWith(expect.objectContaining({
+      status: 'processing',
+      webhookEventId: '3460397',
+    }));
+    expect(mockWallet.credit).not.toHaveBeenCalled();
+    expect(ledgerService.postJournalEntry).not.toHaveBeenCalled();
+    expect(result).toEqual({ processed: true, payoutId: 'OTT-TEST', status: 'processing' });
   });
 
   it('validates official OTT recipient fields before wallet debit', async () => {

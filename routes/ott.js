@@ -115,10 +115,10 @@ async function buildVerifiedRecipient(req) {
 
 function verifyWebhookPayload(payload) {
   const config = getConfig();
-  if (!config.webhookSecret) {
-    const err = new Error('OTT webhook secret is not configured');
+  if (!config.apiKey) {
+    const err = new Error('OTT API key is required for webhook verification');
     err.statusCode = 503;
-    err.code = 'OTT_WEBHOOK_NOT_CONFIGURED';
+    err.code = 'OTT_WEBHOOK_API_KEY_NOT_CONFIGURED';
     throw err;
   }
 
@@ -135,7 +135,7 @@ function verifyWebhookPayload(payload) {
   delete signingPayload[config.hashFieldName];
   delete signingPayload.hash;
   delete signingPayload.Hash;
-  const expectedHash = buildRequestHash(signingPayload, order, `${config.webhookSecret}${config.apiKey || ''}`);
+  const expectedHash = buildRequestHash(signingPayload, order, config.apiKey);
 
   const expected = Buffer.from(expectedHash, 'hex');
   const received = Buffer.from(String(receivedHash), 'hex');

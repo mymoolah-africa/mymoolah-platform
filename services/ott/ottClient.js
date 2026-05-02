@@ -53,7 +53,7 @@ const DEFAULT_HASH_PARAM_ORDER = {
   ],
   getBalance: ['requestdate', 'yourUniqueReference'],
   verifyWebhook: ['requestdate', 'yourUniqueReference', 'whSecret'],
-  webhook: ['requestdate', 'yourUniqueReference'],
+  webhook: ['merchantUniqueReference', 'message', 'status', 'transactionId', 'utctimestamp'],
   getActiveProviders: ['requestdate', 'yourUniqueReference'],
   getPaymentStatus: ['requestdate', 'yourUniqueReference'],
   resendSms: ['requestdate', 'yourUniqueReference'],
@@ -110,7 +110,7 @@ function getConfig() {
     apiKey: process.env.OTT_API_KEY,
     webhookSecret: process.env.OTT_WEBHOOK_SECRET,
     hashFieldName: process.env.OTT_HASH_FIELD_NAME || 'hashcheck',
-    timeoutMs: Number(process.env.OTT_API_TIMEOUT_MS || 15000),
+    timeoutMs: Number(process.env.OTT_API_TIMEOUT_MS || 60000),
     endpoints: { ...DEFAULT_ENDPOINTS, ...endpointOverrides },
     hashParamOrder: { ...DEFAULT_HASH_PARAM_ORDER, ...hashParamOrder },
   };

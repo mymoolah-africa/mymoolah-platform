@@ -1,5 +1,10 @@
 const crypto = require('crypto');
-const { buildRequestHash, redact } = require('../services/ott/ottClient');
+const {
+  DEFAULT_HASH_PARAM_ORDER,
+  buildRequestHash,
+  getConfig,
+  redact,
+} = require('../services/ott/ottClient');
 
 describe('OTT client helpers', () => {
   it('builds SHA-256 request hash from ordered values plus API key', () => {
@@ -54,6 +59,29 @@ describe('OTT client helpers', () => {
 
   it('fails closed when endpoint hash order is missing', () => {
     expect(() => buildRequestHash({ amount: '10.00' }, [], 'key')).toThrow('hash parameter order');
+  });
+
+  it('uses Jaco-confirmed OTT webhook hash order', () => {
+    const payload = {
+      utctimestamp: '2025-12-11T13:31:15Z',
+      transactionId: '3460396',
+      merchantUniqueReference: 'Test123',
+      message: 'Pending',
+      status: '99',
+      secret: '00000000-0000-0000-0000-000000000000',
+    };
+    const apiKey = 'test-api-key';
+    const expected = crypto
+      .createHash('sha256')
+      .update('Test123Pending9934603962025-12-11T13:31:15Ztest-api-key', 'utf8')
+      .digest('hex');
+
+    expect(buildRequestHash(payload, DEFAULT_HASH_PARAM_ORDER.webhook, apiKey)).toBe(expected);
+  });
+
+  it('defaults OTT API timeout above provider 50 second completion window', () => {
+    delete process.env.OTT_API_TIMEOUT_MS;
+    expect(getConfig().timeoutMs).toBe(60000);
   });
 
   it('redacts credentials and PII-like fields before logging', () => {

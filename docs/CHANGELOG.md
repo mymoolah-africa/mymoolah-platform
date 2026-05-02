@@ -1,5 +1,23 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-05-02 - OTT webhook and pending-status contract alignment
+
+### Summary
+Aligned the OTT payout integration with Jaco Snyders' partner email confirming provider timeouts, pending states, webhook payload shape, webhook hash calculation, and status codes.
+
+### Changes
+- Increased the default OTT API timeout from 15 seconds to 60 seconds so synchronous calls can remain open beyond the provider-stated 50 second RTC/PayShap completion window.
+- Updated the OTT webhook hash order to `merchantUniqueReference + message + status + transactionId + utctimestamp + apiKey`.
+- Changed OTT webhook verification to validate against the API key hash contract from Jaco's example instead of requiring a separate webhook secret.
+- Mapped OTT statuses `100` to completed, `98` and `99` to processing, and `97` or lower to failed.
+- Ensured payouts that timed out and stayed pending can post the payout ledger when a later webhook or poll returns completed status.
+- Added deployment and environment defaults for `OTT_API_TIMEOUT_MS=60000`.
+
+### Validation
+- `node --check services/ott/ottClient.js services/ott/ottPayoutService.js routes/ott.js` passed.
+- `npm test -- --runInBand tests/ott-client.test.js tests/ott-payout-service.test.js` passed 19/19.
+- Cursor lints on touched OTT files and tests: no linter errors.
+
 ## 2026-05-01 - OTT payout diagnostics for Withdraw Cash
 
 ### Summary
