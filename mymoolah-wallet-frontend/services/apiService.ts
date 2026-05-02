@@ -1274,10 +1274,19 @@ class ApiService {
   /**
    * Send referral invite via SMS
    */
-  async sendReferralInvite(phoneNumber: string, language?: string): Promise<{ message: string; success: boolean }> {
+  async sendReferralInvite(phoneNumber: string, language?: string): Promise<{
+    message: string;
+    success: boolean;
+    title?: string;
+    smsSent?: boolean;
+    referralId?: number;
+  }> {
     const response = await this.request<{
       message: string;
       success: boolean;
+      title?: string;
+      smsSent?: boolean;
+      referralId?: number;
     }>('/api/v1/referrals/invite', {
       method: 'POST',
       body: JSON.stringify({ phoneNumber, language: language || 'en' }),

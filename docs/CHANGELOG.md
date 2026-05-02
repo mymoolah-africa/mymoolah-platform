@@ -1,5 +1,24 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-05-02 - Referral SMS outcome modal
+
+### Summary
+Added clear referral SMS result feedback so users see whether an invite was sent or why it was blocked.
+
+### Changes
+- Added structured, user-safe referral invite outcomes for success, missing/invalid phone number, self-referral, existing MyMoolah user, duplicate invite, SMS unavailable, and SMS provider send failure.
+- Changed `referralService.sendReferralInvite` so it only reports success after the SMS gateway send completes.
+- Reused pending referral rows that did not have `smsSentAt` so a failed/unconfigured earlier attempt can be retried without creating duplicate referral records.
+- Updated the wallet `ReferralPage` to show a branded modal for both success and failure outcomes instead of tiny inline success/error text.
+- Kept supplier details out of frontend responses; user-facing messages remain safe and retry-focused.
+
+### Validation
+- `npm run build` in `mymoolah-wallet-frontend` passed.
+- `npx eslint pages/ReferralPage.tsx --ext ts,tsx --report-unused-disable-directives --max-warnings 0` passed.
+- `node --check controllers/referralController.js services/referralService.js` passed.
+- Cursor lints on touched files reported no linter errors.
+- No database schema changes or migrations.
+
 ## 2026-05-02 - Send Money Instant Payment UI
 
 ### Summary

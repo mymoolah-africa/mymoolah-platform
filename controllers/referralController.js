@@ -105,7 +105,9 @@ class ReferralController {
       if (!phoneNumber) {
         return res.status(400).json({
           success: false,
-          error: 'Phone number is required'
+          errorCode: 'PHONE_REQUIRED',
+          title: 'Phone Number Required',
+          message: 'Please enter the phone number you want to invite.'
         });
       }
       
@@ -115,7 +117,9 @@ class ReferralController {
       if (!phoneNumber) {
         return res.status(400).json({
           success: false,
-          error: 'Invalid phone number format. Use format: 0821234567 or +27821234567'
+          errorCode: 'INVALID_PHONE',
+          title: 'Invalid Phone Number',
+          message: 'Please enter a valid South African mobile number, for example 082 123 4567.'
         });
       }
       
@@ -173,8 +177,9 @@ class ReferralController {
       
       res.json({
         success: true,
-        message: 'Referral invitation sent successfully',
-        ...result
+        ...result,
+        title: 'Invite Sent',
+        message: 'Your referral SMS was sent successfully.'
       });
     } catch (error) {
       console.error('[ReferralController] Error sending referral invite', {
@@ -182,10 +187,36 @@ class ReferralController {
         errorCode: error.code,
         userId: req.user?.id
       });
-      res.status(400).json({
+
+      const errorMap = {
+        REFERRAL_ALREADY_SENT: {
+          status: 409,
+          title: 'Invite Already Sent',
+          message: 'You have already sent a referral invite to this number. Please try another number.'
+        },
+        SMS_SERVICE_NOT_CONFIGURED: {
+          status: 503,
+          title: 'SMS Temporarily Unavailable',
+          message: 'We could not send the SMS right now. Please try again later.'
+        },
+        SMS_SEND_FAILED: {
+          status: 502,
+          title: 'SMS Could Not Be Sent',
+          message: 'The SMS provider could not send the invite right now. Please try again later.'
+        }
+      };
+      const mapped = errorMap[error.code] || {
+        status: 400,
+        title: 'Invite Not Sent',
+        message: 'Referral invite could not be sent. Please try again.'
+      };
+
+      res.status(error.statusCode || mapped.status).json({
         success: false,
-        error: 'Referral invite could not be sent. Please try again.',
-        errorCode: 'REFERRAL_INVITE_FAILED'
+        error: mapped.message,
+        errorCode: error.code || 'REFERRAL_INVITE_FAILED',
+        title: mapped.title,
+        message: mapped.message
       });
     }
   }

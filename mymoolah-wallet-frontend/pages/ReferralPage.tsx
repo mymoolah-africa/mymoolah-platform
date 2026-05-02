@@ -1,26 +1,29 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { 
   Users, 
   Copy, 
   TrendingUp, 
   Gift, 
-  ChevronRight,
   Check,
   MessageCircle,
   RefreshCw,
   AlertCircle,
-  UserCheck,
-  X
+  UserCheck
 } from 'lucide-react';
-import { apiService, ReferralDashboard } from '../services/apiService';
+import { ApiError, apiService, ReferralDashboard } from '../services/apiService';
 
-// Modal for displaying referral errors
-interface ErrorModal {
+// Modal for displaying referral SMS outcomes
+interface ReferralOutcomeModal {
   show: boolean;
   title: string;
   message: string;
-  type: 'self_referral' | 'user_exists' | 'error';
+  type: 'success' | 'warning' | 'error' | 'self_referral' | 'user_exists';
+}
+
+interface ReferralErrorPayload {
+  errorCode?: string;
+  title?: string;
+  message?: string;
 }
 
 // Format currency
@@ -36,16 +39,13 @@ const COMMISSION_RATES = [
 ];
 
 export function ReferralPage() {
-  const navigate = useNavigate();
   const [dashboard, setDashboard] = useState<ReferralDashboard | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [invitePhone, setInvitePhone] = useState('');
   const [inviteLoading, setInviteLoading] = useState(false);
-  const [inviteSuccess, setInviteSuccess] = useState<string | null>(null);
-  const [inviteError, setInviteError] = useState<string | null>(null);
-  const [errorModal, setErrorModal] = useState<ErrorModal>({ show: false, title: '', message: '', type: 'error' });
+  const [outcomeModal, setOutcomeModal] = useState<ReferralOutcomeModal>({ show: false, title: '', message: '', type: 'success' });
 
   // Fetch referral dashboard
   const fetchDashboard = async () => {
@@ -54,9 +54,9 @@ export function ReferralPage() {
     try {
       const data = await apiService.getReferralDashboard();
       setDashboard(data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error fetching referral dashboard:', err);
-      setError(err.message || 'Failed to load referral data');
+      setError(err instanceof Error ? err.message : 'Failed to load referral data');
     } finally {
       setIsLoading(false);
     }
@@ -82,43 +82,62 @@ export function ReferralPage() {
   const handleSendInvite = async () => {
     if (!invitePhone.trim()) return;
     setInviteLoading(true);
-    setInviteSuccess(null);
-    setInviteError(null);
     try {
       const result = await apiService.sendReferralInvite(invitePhone);
-      setInviteSuccess(result.message || 'Invite sent successfully!');
+      setOutcomeModal({
+        show: true,
+        title: result.title || 'Invite Sent',
+        message: result.message || 'Your referral SMS was sent successfully.',
+        type: 'success'
+      });
       setInvitePhone('');
-      setTimeout(() => setInviteSuccess(null), 3000);
-    } catch (err: any) {
-      // Check for specific error codes and show modal
-      const errorData = err.data || err;
+    } catch (err: unknown) {
+      const errorData = (err instanceof ApiError ? err.payload : {}) as ReferralErrorPayload;
+      const errorCode = errorData.errorCode;
+      const title = errorData.title || 'Invite Not Sent';
+      const message =
+        errorData.message ||
+        (err instanceof Error ? err.message : 'Referral invite could not be sent. Please try again.');
       
-      if (errorData.errorCode === 'SELF_REFERRAL') {
-        setErrorModal({
+      if (errorCode === 'SELF_REFERRAL') {
+        setOutcomeModal({
           show: true,
-          title: errorData.title || 'Self-Referral Not Allowed',
-          message: errorData.message || 'You cannot send a referral invite to yourself.',
+          title,
+          message,
           type: 'self_referral'
         });
         setInvitePhone('');
-      } else if (errorData.errorCode === 'USER_EXISTS') {
-        setErrorModal({
+      } else if (errorCode === 'USER_EXISTS') {
+        setOutcomeModal({
           show: true,
-          title: errorData.title || 'User Already Registered',
-          message: errorData.message || 'This phone number is already registered with MyMoolah.',
+          title,
+          message,
           type: 'user_exists'
         });
         setInvitePhone('');
+      } else if (errorCode === 'REFERRAL_ALREADY_SENT') {
+        setOutcomeModal({
+          show: true,
+          title,
+          message,
+          type: 'warning'
+        });
+        setInvitePhone('');
       } else {
-        setInviteError(err.message || 'Failed to send invite');
+        setOutcomeModal({
+          show: true,
+          title,
+          message,
+          type: 'error'
+        });
       }
     } finally {
       setInviteLoading(false);
     }
   };
 
-  const closeErrorModal = () => {
-    setErrorModal({ show: false, title: '', message: '', type: 'error' });
+  const closeOutcomeModal = () => {
+    setOutcomeModal({ show: false, title: '', message: '', type: 'success' });
   };
 
   if (isLoading) {
@@ -353,12 +372,6 @@ export function ReferralPage() {
             {inviteLoading ? 'Sending...' : 'Send'}
           </button>
         </div>
-        {inviteSuccess && (
-          <p style={{ marginTop: '8px', fontSize: '12px', color: '#16a34a' }}>{inviteSuccess}</p>
-        )}
-        {inviteError && (
-          <p style={{ marginTop: '8px', fontSize: '12px', color: '#dc2626' }}>{inviteError}</p>
-        )}
       </div>
 
       {/* Your Network */}
@@ -442,8 +455,8 @@ export function ReferralPage() {
         </div>
       </div>
 
-      {/* Error Modal */}
-      {errorModal.show && (
+      {/* Referral Outcome Modal */}
+      {outcomeModal.show && (
         <div style={{
           position: 'fixed',
           top: 0,
@@ -466,21 +479,30 @@ export function ReferralPage() {
             boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
             textAlign: 'center'
           }}>
-            {/* Icon based on error type */}
+            {/* Icon based on outcome type */}
             <div style={{
               width: '64px',
               height: '64px',
               borderRadius: '50%',
-              backgroundColor: errorModal.type === 'user_exists' ? '#fef3c7' : '#fee2e2',
+              backgroundColor:
+                outcomeModal.type === 'success' ? '#dcfce7' :
+                outcomeModal.type === 'user_exists' || outcomeModal.type === 'warning' ? '#fef3c7' :
+                '#fee2e2',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 16px'
             }}>
-              {errorModal.type === 'user_exists' ? (
+              {outcomeModal.type === 'success' ? (
+                <Check style={{ width: '32px', height: '32px', color: '#16a34a' }} />
+              ) : outcomeModal.type === 'user_exists' ? (
                 <UserCheck style={{ width: '32px', height: '32px', color: '#d97706' }} />
               ) : (
-                <AlertCircle style={{ width: '32px', height: '32px', color: '#dc2626' }} />
+                <AlertCircle style={{
+                  width: '32px',
+                  height: '32px',
+                  color: outcomeModal.type === 'warning' ? '#d97706' : '#dc2626'
+                }} />
               )}
             </div>
 
@@ -491,7 +513,7 @@ export function ReferralPage() {
               color: '#1f2937',
               marginBottom: '12px'
             }}>
-              {errorModal.title}
+              {outcomeModal.title}
             </h3>
 
             {/* Message */}
@@ -501,14 +523,14 @@ export function ReferralPage() {
               lineHeight: '1.5',
               marginBottom: '24px'
             }}>
-              {errorModal.message}
+              {outcomeModal.message}
             </p>
 
             {/* Close button */}
             <button
-              onClick={closeErrorModal}
+              onClick={closeOutcomeModal}
               style={{
-                backgroundColor: '#2D8CCA',
+                backgroundColor: outcomeModal.type === 'success' ? '#86BE41' : '#2D8CCA',
                 color: '#fff',
                 border: 'none',
                 borderRadius: '8px',

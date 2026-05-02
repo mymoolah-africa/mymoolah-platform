@@ -74,6 +74,7 @@ class ReferralService {
     
     // 2. Check if phone already referred (skip in UAT for testing)
     const skipValidation = process.env.REFERRAL_SKIP_VALIDATION === 'true';
+    let referral = null;
     
     if (!skipValidation) {
       const existingReferral = await Referral.findOne({
@@ -84,26 +85,35 @@ class ReferralService {
       });
       
       if (existingReferral) {
-        throw new Error('You have already referred this phone number');
+        if (existingReferral.status === 'pending' && !existingReferral.smsSentAt) {
+          referral = existingReferral;
+        } else {
+          const err = new Error('You have already referred this phone number');
+          err.code = 'REFERRAL_ALREADY_SENT';
+          err.statusCode = 409;
+          throw err;
+        }
       }
     }
     
     // 3. Get user's stable referral code
     const userCode = await this.generateReferralCode(userId);
 
-    // 4. Create invite-specific code derived from the stable code
-    const inviteCode = `${userCode}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
+    if (!referral) {
+      // 4. Create invite-specific code derived from the stable code
+      const inviteCode = `${userCode}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
 
-    // 5. Create referral record
-    const referral = await Referral.create({
-      referrerUserId: userId,
-      referralCode: inviteCode,
-      refereePhoneNumber: phoneNumber,
-      status: 'pending',
-      invitedAt: new Date(),
-      invitationChannel: 'sms',
-      signupBonusAmount: 50.00
-    });
+      // 5. Create referral record
+      referral = await Referral.create({
+        referrerUserId: userId,
+        referralCode: inviteCode,
+        refereePhoneNumber: phoneNumber,
+        status: 'pending',
+        invitedAt: new Date(),
+        invitationChannel: 'sms',
+        signupBonusAmount: 50.00
+      });
+    }
     
     // 6. Send SMS with the user's stable code (not the invite-specific one)
     try {
@@ -117,24 +127,34 @@ class ReferralService {
           : 'A friend';
 
         await smsService.sendReferralInvite(referrerName, phoneNumber, userCode, language);
-        await referral.update({ smsSentAt: new Date() });
+        await referral.update({ smsSentAt: new Date(), invitedAt: new Date() });
         console.log(`[referral] SMS sent to ${phoneNumber.substring(0, 6)}***`);
+        await this.incrementReferralCount(userId);
+
+        return {
+          success: true,
+          referralCode: userCode,
+          referralId: referral.id,
+          smsSent: true,
+          message: 'Referral invitation SMS sent successfully'
+        };
       } else {
         console.warn('[referral] SMS service not configured');
+        const err = new Error('SMS service is not configured');
+        err.code = 'SMS_SERVICE_NOT_CONFIGURED';
+        err.statusCode = 503;
+        throw err;
       }
     } catch (smsError) {
       console.error('[referral] SMS send failed:', smsError.message);
+      if (smsError.code) {
+        throw smsError;
+      }
+      const err = new Error('SMS gateway failed to send referral invite');
+      err.code = 'SMS_SEND_FAILED';
+      err.statusCode = 502;
+      throw err;
     }
-
-    // 7. Update user stats
-    await this.incrementReferralCount(userId);
-
-    return {
-      success: true,
-      referralCode: userCode,
-      referralId: referral.id,
-      message: 'Referral invitation will be sent via SMS'
-    };
   }
 
   /**
