@@ -179,14 +179,14 @@
 <hr>
 <h2>1. Executive Summary</h2>
 <p>This document addresses PASA&#39;s query regarding the withdrawal functionality within the MyMoolah wallet service, specifically the <strong>Cash-Out Network</strong> and <strong>Integrated Retail Network</strong> referenced in our TPPP business case.</p>
-<p><strong>Key clarification</strong>: MyMoolah does <strong>not</strong> operate its own cash-out or withdrawal infrastructure. The &quot;Cash-Out Network&quot; and &quot;Integrated Retail Network&quot; referenced in our business case describe <strong>third-party VAS product resale</strong> and <strong>partner integrations</strong> — not proprietary withdrawal mechanisms that would require additional Standard Bank sponsorship beyond the existing TPPP scope.</p>
+<p><strong>Key clarification</strong>: MyMoolah does <strong>not</strong> operate its own cash-out or withdrawal infrastructure. The &quot;Cash-Out Network&quot; and &quot;Integrated Retail Network&quot; referenced in our business case describe <strong>third-party cash-withdrawal partner access</strong> and <strong>partner integrations</strong> — not proprietary withdrawal mechanisms that would require additional Standard Bank sponsorship beyond the existing TPPP scope.</p>
 <hr>
-<h2>2. Cash-Out Network — Flash eeziCash Voucher (Resale Model)</h2>
+<h2>2. Cash-Out Network — Flash eeziCash Cash Withdrawal (TPPP Partner Model)</h2>
 <h3>2.1 What It Is</h3>
-<p>The &quot;Cash-Out Network&quot; referenced in our business case describes the <strong>resale of Flash eeziCash voucher PINs</strong>. MyMoolah is a <strong>registered reseller</strong> of Flash&#39;s prepaid voucher products via the <strong>Flash Partner API v4</strong>.</p>
+<p>The &quot;Cash-Out Network&quot; referenced in our business case describes the <strong>wallet cash withdrawal via Flash eeziCash</strong>. MyMoolah is a <strong>integrated partner</strong> of Flash&#39;s cash-withdrawal credential services via the <strong>Flash Partner API v4</strong>.</p>
 <ul>
 <li><strong>Flash</strong> (Pty) Ltd is itself a <strong>registered TPPP</strong> and holds the necessary licences and agreements with its retail agent network.</li>
-<li>MyMoolah purchases the eeziCash voucher product from Flash on behalf of the wallet user.</li>
+<li>MyMoolah purchases the eeziCash cash-withdrawal service from Flash on behalf of the wallet user.</li>
 <li><strong>Flash generates the PIN</strong> — MyMoolah does not generate, manage, or settle the cash redemption.</li>
 <li>The user redeems the PIN at any of Flash&#39;s <strong>~240,000 retail agent locations</strong> (Spar, Shoprite, PEP, independent traders, spaza shops, and freelance Flash agents) across South Africa.</li>
 <li>The cash dispensation is between the <strong>end-user and Flash&#39;s retail network</strong> — MyMoolah is not a party to the cash settlement.</li>
@@ -230,8 +230,8 @@
 </tbody></table>
 <h3>2.3 Flow Diagram — Flash eeziCash Cash-Out</h3>
 <pre><code>┌─────────────────────────────────────────────────────────────────────┐
-│                   FLASH eeziCASH VOUCHER FLOW                       │
-│                   (VAS Product Resale — Not a Banking Withdrawal)    │
+│                   FLASH eeziCASH CASH-WITHDRAWAL FLOW                       │
+│                   (TPPP Cash-Withdrawal Credential — Not Deposit-Taking)    │
 └─────────────────────────────────────────────────────────────────────┘
 
     ┌──────────┐         ┌──────────────┐         ┌─────────────┐
@@ -308,7 +308,7 @@
     │  the end-user and Flash&#39;s retail agent network.           │
     │  MyMoolah is NOT a party to the cash settlement.          │
     │  No payment instruction enters the banking clearing       │
-    │  system. This is a VAS product purchase and redemption.   │
+    │  system. This is a cash-withdrawal credential issuance and redemption.   │
     └──────────────────────────────────────────────────────────┘
 </code></pre>
 <h3>2.4 Ledger Treatment</h3>
@@ -539,7 +539,7 @@ CREDIT:  VAT Control (Liability)           R  1.04  (15% VAT on fee)
 <h2>4. Standard Bank Sponsorship — Position</h2>
 <h3>4.1 Answer to PASA Query</h3>
 <p><strong>Is additional Standard Bank sponsorship required for the withdrawal functionality?</strong></p>
-<p><strong>No.</strong> The &quot;withdrawal&quot; functionality described in the business case is the <strong>resale of Flash eeziCash voucher PINs</strong>, which is a <strong>Value-Added Service (VAS) product purchase</strong>, not a banking withdrawal or payment instruction through the clearing system. Specifically:</p>
+<p><strong>No.</strong> The &quot;withdrawal&quot; functionality described in the business case is the <strong>wallet cash withdrawal via Flash eeziCash</strong>, which is a <strong>Value-Added Service (VAS) product purchase</strong>, not a banking withdrawal or payment instruction through the clearing system. Specifically:</p>
 <ol>
 <li><p><strong>No payment instruction enters the banking clearing system</strong> — the wallet debit and Flash float settlement are internal ledger operations between MyMoolah and its VAS supplier (Flash).</p>
 </li>
@@ -547,9 +547,9 @@ CREDIT:  VAT Control (Liability)           R  1.04  (15% VAT on fee)
 </li>
 <li><p><strong>Flash is a registered TPPP</strong> — Flash holds its own PASA registration and manages its retail agent network under its own regulatory framework.</p>
 </li>
-<li><p><strong>The existing TPPP scope covers this</strong> — MyMoolah&#39;s TPPP registration with Standard Bank as sponsor covers wallet management and VAS product distribution. The eeziCash voucher is one of many VAS products (alongside airtime, data, electricity, bill payments) distributed through the same platform.</p>
+<li><p><strong>The existing TPPP scope covers this</strong> — MyMoolah&#39;s TPPP registration with Standard Bank as sponsor covers wallet management and VAS product distribution. The eeziCash is a Cash-Withdrawal Partner service (alongside airtime, data, electricity, bill payments) distributed through the same platform.</p>
 </li>
-<li><p><strong>Funds flow is B2B supplier settlement</strong> — MyMoolah pre-funds a float account with Flash. When a user purchases an eeziCash voucher, the wallet is debited and the Flash float is decremented. Periodic settlement between MyMoolah and Flash replenishes the float. This is standard B2B supplier settlement, not a consumer payment instruction.</p>
+<li><p><strong>Funds flow is B2B supplier settlement</strong> — MyMoolah pre-funds a float account with Flash. When a user initiates an eeziCash cash withdrawal, the wallet is debited and the Flash float is decremented. Periodic settlement between MyMoolah and Flash replenishes the float. This is standard B2B supplier settlement, not a consumer payment instruction.</p>
 </li>
 </ol>
 <h3>4.2 TPPP Application Document References</h3>

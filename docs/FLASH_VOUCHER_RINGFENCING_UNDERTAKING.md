@@ -34,7 +34,7 @@ MMTP undertakes that all funds credited to user wallets via Flash voucher redemp
 These funds shall **not** be permitted for:
 
 - eeziCash PIN purchases (cash withdrawal at retail points)
-- EasyPay cash-out vouchers (cash withdrawal at EasyPay retailers)
+- EasyPay cash-withdrawal references (cash withdrawal at EasyPay retailers)
 - Any other mechanism that converts the digital value back to physical cash
 
 ---
@@ -112,7 +112,7 @@ Wallet.prototype.canCashOut = function(amount) {
 
 This check is enforced at every cash-out endpoint:
 - eeziCash PIN purchase (app and USSD)
-- EasyPay cash-out voucher issuance
+- EasyPay cash-withdrawal credential issuance
 
 If a user with R500 total balance (R200 from Flash voucher deposits, R300 from bank deposits) attempts to cash out R400, the system rejects the transaction because only R300 is available for cash-out.
 
@@ -170,7 +170,7 @@ This undertaking extends to **any future Flash cash-in voucher or payment accept
 
 ### 5A. Alignment with POL-020 (20 April 2026)
 
-On 20 April 2026, MyMoolah adopted **POL-020 — Cash Withdrawal & Ring-Fencing of Own Funds**, which extends the same underlying mechanism (single-pool `wallets.restricted_balance`, wallet-level `canCashOut` guard, sub-liability account `2100-01-02`, and FIFO release on permitted non-cash spend) to cover **all own-money deposits** into MyMoolah wallets — not only Flash voucher cash-in. The effect is that the cash-withdrawal ban described in this undertaking remains absolute for Flash voucher deposits, and now sits inside a broader regulatory posture under which only **third-party credits** (salaries, disbursements, loans, P2P transfers) fund cash withdrawals through **any Cash-Withdrawal Partner** — eeziCash (Flash), EasyPay retail cash-withdrawal, Cliquefin / OTT cash-withdrawal vouchers, USSD cash-withdrawal, or any future equivalent. Policy reference: `docs/policies/20-Cash-Withdrawal-Policy.md`. Engineering reference: `docs/OWN_FUNDS_RINGFENCE_IMPLEMENTATION_PLAN.md`. No change to Flash voucher handling or settlement is implied by this alignment.
+On 20 April 2026, MyMoolah adopted **POL-020 — Cash Withdrawal & Ring-Fencing of Own Funds**, which extends the same underlying mechanism (single-pool `wallets.restricted_balance`, wallet-level `canCashOut` guard, sub-liability account `2100-01-02`, and FIFO release on permitted non-cash spend) to cover **all own-money deposits** into MyMoolah wallets — not only Flash voucher cash-in. The effect is that the cash-withdrawal ban described in this undertaking remains absolute for Flash voucher deposits, and now sits inside a broader regulatory posture under which only **third-party credits** (salaries, disbursements, loans, P2P transfers) fund cash withdrawals through **any Cash-Withdrawal Partner** — eeziCash (Flash), EasyPay retail cash-withdrawal, Cliquefin / OTT cash-withdrawal references, USSD cash-withdrawal, or any future equivalent. Policy reference: `docs/policies/20-Cash-Withdrawal-Policy.md`. Engineering reference: `docs/OWN_FUNDS_RINGFENCE_IMPLEMENTATION_PLAN.md`. No change to Flash voucher handling or settlement is implied by this alignment.
 
 The system is architecturally designed for extensibility:
 - The `restrictedFundsService.js` module handles all restriction logic centrally

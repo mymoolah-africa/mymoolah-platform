@@ -220,7 +220,7 @@ A: Some voucher types allow in-wallet redemption which credits your balance. Che
 
 ## 9. Wallet cash withdrawals
 
-MyMoolah cash withdrawals are delivered through **Cash-Withdrawal Partners** — third-party networks that accept a PIN, reference or voucher credential at their retailer, merchant or trader point and dispense the corresponding cash. Current and contemplated partners include **eeziCash (Flash Group)**, **EasyPay retail cash-withdrawal**, and **Cliquefin / OTT cash-withdrawal vouchers**, plus any future equivalent partner. The partner network varies by subsection below; the wallet-side rules (ring-fence, limits, FICA controls) are identical across every partner.
+MyMoolah cash withdrawals are delivered through **Cash-Withdrawal Partners** — third-party networks that accept a PIN, reference or voucher credential at their retailer, merchant or trader point and dispense the corresponding cash. Current and contemplated partners include **eeziCash (Flash Group)**, **EasyPay retail cash-withdrawal**, and **Cliquefin / OTT cash-withdrawal references**, plus any future equivalent partner. The partner network varies by subsection below; the wallet-side rules (ring-fence, limits, FICA controls) are identical across every partner.
 
 ### 9a. eeziCash (Flash) — wallet cash withdrawal (not the same as eeziPay airtime)
 
@@ -256,7 +256,7 @@ A: Yes. Per-transaction, daily, and monthly limits apply. These are shown in the
 A: South African banking law (the Banks Act 94 of 1990) reserves cash deposit-and-withdraw services for registered banks. MyMoolah is a licensed payment platform and not a bank. To stay compliant, we **ring-fence** any money you deposit from your own bank account (or self-load via NFC, 1Voucher or Flash Pay) so it can't be paid back out as physical cash. You can still use those funds freely for transfers, PayShap, bill payments, airtime, data, electricity, and merchant payments.
 
 **Q: Which deposits can I withdraw as cash?**
-A: Only **third-party credits** — money sent to you by someone else. Typical examples are salary from your employer, a wages or stokvel payment from a corporate disbursement, a loan disbursement, or a peer-to-peer transfer from another MyMoolah user. Those funds are eligible for cash withdrawal through any MyMoolah Cash-Withdrawal Partner — eeziCash (Flash), EasyPay retail cash-withdrawal, Cliquefin / OTT cash-withdrawal vouchers, and any future equivalent partner — subject to your KYC limits and the usual fees.
+A: Only **third-party credits** — money sent to you by someone else. Typical examples are salary from your employer, a wages or stokvel payment from a corporate disbursement, a loan disbursement, or a peer-to-peer transfer from another MyMoolah user. Those funds are eligible for cash withdrawal through any MyMoolah Cash-Withdrawal Partner — eeziCash (Flash), EasyPay retail cash-withdrawal, Cliquefin / OTT cash-withdrawal references, and any future equivalent partner — subject to your KYC limits and the usual fees.
 
 **Q: What is a ring-fenced balance?**
 A: It's the portion of your wallet balance that came from your **own money** (deposits from your own bank account, self-loaded NFC, or Flash/1Voucher top-ups). Your total wallet balance is displayed, but this ring-fenced portion cannot be used for a cash withdrawal. There is no separate "cash-available" figure shown in the app — if you try a cash withdrawal that exceeds what is available from third-party credits, you'll see an explanation screen.

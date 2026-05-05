@@ -538,7 +538,7 @@ Standardised EasyPay PIN/voucher expiry to 30 days across active code and docume
 ## 2026-04-28 - OTT Mobile integration framework
 
 ### Summary
-Created the banking-grade OTT Mobile integration framework for future implementation planning across OTT voucher resale, OTT cash withdrawal, bank ATM/cash-send payout, OTT voucher wallet top-up, loyalty, and future OTT/CliqueFin services.
+Created the banking-grade OTT Mobile integration framework for future implementation planning across OTT retail-retail-voucher resale, OTT cash withdrawal, bank ATM/cash-send payout, OTT voucher wallet top-up, loyalty, and future OTT/CliqueFin services.
 
 ### Documentation
 - Added `docs/integrations/OTT_MOBILE_INTEGRATION_FRAMEWORK.md`.
@@ -996,7 +996,7 @@ All new wiring is gated behind env-vars that default to `off`. To roll back afte
 ## 2026-04-16 - TPPP withdrawals: policies, security, FAQ, KB hub (v2.97.7)
 
 ### Summary
-Aligned major `docs/` artefacts with the **Apr 2026** legal and operational position on **eeziCash**: **wallet cash-withdrawal** under the TPPP/sponsor-bank framework (wallet debited before withdrawal credential; PIN is **not** VAS voucher resale). Updates span AML, transaction monitoring, fraud, KYC scope, information security logging, compliance review scope, sponsor brief, architecture, settlements, FAQ, AI support guides, README/index, `ZERO_SHORTCUTS_POLICY.md`, and `docs/security.md`.
+Aligned major `docs/` artefacts with the **Apr 2026** legal and operational position on **eeziCash**: **wallet cash-withdrawal** under the TPPP/sponsor-bank framework (wallet debited before withdrawal credential; PIN is **not** VAS retail-voucher resale). Updates span AML, transaction monitoring, fraud, KYC scope, information security logging, compliance review scope, sponsor brief, architecture, settlements, FAQ, AI support guides, README/index, `ZERO_SHORTCUTS_POLICY.md`, and `docs/security.md`.
 
 ### New
 - **`docs/WITHDRAWALS_COMPLIANCE_AND_KB.md`** — Single hub: regulatory characterisation, policy index, security/KB procedures, links to HTML flow pack.
@@ -1036,7 +1036,7 @@ Installed Vercel Labs `find-skills` via Skills CLI into `.agents/skills/find-ski
 ## 2026-04-14 - TPPP Withdrawal Flow Diagrams + Legal Correction Email (v2.97.5)
 
 ### Summary
-Created comprehensive TPPP withdrawal flow-diagram document and drafted legal correction email to Standard Bank (Shree). The prior email to PASA (25 Mar 2026) incorrectly characterised eeziCash as "resale of Flash eeziCash voucher PINs — a VAS product." This session corrected the legal position: eeziCash is a wallet cash-withdrawal mechanism within the TPPP/sponsor-bank framework. The PIN is a withdrawal credential, not a product.
+Created comprehensive TPPP withdrawal flow-diagram document and drafted legal correction email to Standard Bank (Shree). The prior email to PASA (25 Mar 2026) incorrectly characterised eeziCash as "wallet cash withdrawal via Flash eeziCash — a VAS product." This session corrected the legal position: eeziCash is a wallet cash-withdrawal mechanism within the TPPP/sponsor-bank framework. The PIN is a withdrawal credential, not a product.
 
 ### New Documentation
 - **`docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html`** (new) — 6 flow diagrams covering: eeziCash cash withdrawal, EFT withdrawal, PayShap withdrawal, EasyPay cash deposit, MobileMart VAS purchase, and integrated services overview. Includes double-entry ledger examples, role matrices (MMTP vs Flash vs SBSA), regulatory cross-references (NPS Act, SARB e-money paper, Banks Act, PASA TPPP Framework), and comparison tables distinguishing cash withdrawals from VAS purchases.
@@ -1044,7 +1044,7 @@ Created comprehensive TPPP withdrawal flow-diagram document and drafted legal co
 
 ### Legal Correction
 - Identified 14 problematic statements in 25 Mar 2026 email to PASA
-- Recharacterised eeziCash from "VAS voucher resale" to "wallet cash-withdrawal service"
+- Recharacterised eeziCash from "VAS retail-voucher resale" to "wallet cash-withdrawal service"
 - Key distinction: wallet debit occurs **before** PIN generation (withdrawal sequence, not purchase sequence)
 - Regulatory references: NPS Act 78/1998 s7, SARB Position Paper NPS 01/2009, Banks Act 94/1990
 
@@ -1304,7 +1304,7 @@ Implemented dual-layer ringfencing for Flash voucher deposits (1Voucher, FNB Vou
 - `services/restrictedFundsService.js` — `postVoucherDepositAndRestriction()`, `releaseRestrictedFunds()` centralized helpers
 
 ### Features
-- **Cash-out enforcement (3 channels BLOCKED):** eeziCash PIN (app + USSD), EasyPay cash-out voucher — restricted funds cannot be cashed out
+- **Cash-out enforcement (3 channels BLOCKED):** eeziCash PIN (app + USSD), EasyPay cash-withdrawal credential — restricted funds cannot be cashed out
 - **Restriction release (FIFO):** All allowed spend paths (VAS, QR, P2P, PayShap RPP, MoolahMove, EasyPay standalone) decrement `restricted_balance` and post release journal entries
 - **Deposit journal entries (previously missing):** `DR 1200-10-04 Flash Float / CR 2100-01-01 Client Float` + restriction tracking JE
 
@@ -2429,7 +2429,7 @@ Major PayShap RTP debugging session fixing multiple SBSA Pain.013 rejections, re
 - **Pain.013 DuePyblAmt**: Reverted to net amount — SBSA rejects when `DuePyblAmt == Amt` (`b3ca459e`).
 
 #### PASA TPPP Withdrawal Response (`51fdda88`)
-- **`docs/drafts/2026-03-25_shree-pasa-tppp-withdrawal-reply.md`**: Draft reply to Shree — cash-out = Flash eeziCash voucher resale (VAS), not banking withdrawal; no additional Standard Bank sponsorship required.
+- **`docs/drafts/2026-03-25_shree-pasa-tppp-withdrawal-reply.md`**: Draft reply to Shree — cash withdrawal = Flash eeziCash Cash-Withdrawal Partner flow under TPPP controls, not deposit-taking; no additional Standard Bank sponsorship required.
 - **`docs/drafts/2026-03-25_pasa-tppp-withdrawal-flow-diagrams.*`**: Supporting flow diagrams (MD, HTML, PDF) covering Flash eeziCash cash-out, EasyPay deposit, MobileMart bill payment, and integrated retail network.
 
 ### Testing

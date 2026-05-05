@@ -34,7 +34,7 @@ Major PayShap RTP debugging session fixing multiple SBSA Pain.013 issues (EDRIL 
 - **Ustrd not supported by SBSA**: SBSA Postman samples only include `Strd` in `RmtInf`, not `Ustrd`. Removed entirely.
 - **DuePyblAmt must differ from Amt**: SBSA rejects when `DuePyblAmt == Amt`. Must remain as net amount (amount - fee).
 - **PADCL priority over EBONF**: User-initiated decline (PADCL) was being masked by EBONF (batch failure) notification. Fixed notification priority.
-- **PASA withdrawal clarification**: Cash-out is Flash eeziCash voucher resale (VAS), not a banking withdrawal. No additional Standard Bank sponsorship required.
+- **PASA withdrawal clarification**: Cash withdrawal is a Flash eeziCash Cash-Withdrawal Partner flow under TPPP controls, not deposit-taking. No additional Standard Bank sponsorship required.
 
 ---
 
@@ -96,7 +96,7 @@ Major PayShap RTP debugging session fixing multiple SBSA Pain.013 issues (EDRIL 
 - **Ustrd is NOT supported** by SBSA in Pain.013. Do NOT add `RmtInf.Ustrd` — it will be rejected.
 - **DuePyblAmt must be less than Amt** — SBSA rejects when they're equal. Always use net amount (amount - fee).
 - **Per-bank account normalization**: Leading zeros are only stripped when the number exceeds the bank's max valid length. ABSA/Capitec max 10 digits; SBSA/FNB max 11.
-- **PASA TPPP withdrawal**: Shree queried PASA about withdrawal functionality. Response clarifies cash-out = Flash eeziCash voucher resale (VAS), not banking withdrawal. Supporting flow diagrams in `docs/drafts/`.
+- **PASA TPPP withdrawal**: Shree queried PASA about withdrawal functionality. Response clarifies cash withdrawal = Flash eeziCash Cash-Withdrawal Partner flow under TPPP controls, not deposit-taking. Supporting flow diagrams in `docs/drafts/`.
 - **Peach Payments is DECOMMISSIONED** — do NOT reactivate without André's explicit approval.
 
 ---

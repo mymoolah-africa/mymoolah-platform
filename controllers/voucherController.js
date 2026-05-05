@@ -160,7 +160,7 @@ const handleExpiredVouchers = async () => {
           continue; // Skip to next voucher
         }
 
-        // Check if this is a cash-out voucher - refund voucher + fee
+        // Check if this is a cash-withdrawal credential - refund voucher + fee
         const isCashoutVoucher = voucher.voucherType === 'easypay_cashout' || voucher.voucherType === 'easypay_cashout_active';
         
         if (isCashoutVoucher) {
@@ -199,7 +199,7 @@ const handleExpiredVouchers = async () => {
                 expiredAt: new Date().toISOString(),
                 refundAmount: totalRefund,
                 processedBy: 'auto_expiration_handler',
-                note: 'Cash-out voucher expired - full refund (voucher + fee)'
+                note: 'Cash-withdrawal reference expired - full refund (withdrawal amount + fee)'
               }
             }, { transaction: t });
 
@@ -270,7 +270,7 @@ const handleExpiredVouchers = async () => {
             }, { transaction: t });
           });
 
-          console.log(`✅ Processed expired cash-out voucher ${voucher.easyPayCode}: Refunded R${totalRefund} (Voucher: R${voucherAmount} + Fee: R${userFee})`);
+          console.log(`✅ Processed expired cash-withdrawal reference ${voucher.easyPayCode}: Refunded R${totalRefund} (Voucher: R${voucherAmount} + Fee: R${userFee})`);
           continue; // Skip to next voucher
         }
 
@@ -935,7 +935,7 @@ exports.issueEasyPayCashout = async (req, res) => {
         cashoutFloat.currentBalance = parseFloat(cashoutFloat.currentBalance) - amount;
         await cashoutFloat.save({ transaction: t });
 
-        // Create EasyPay cash-out voucher
+        // Create EasyPay cash-withdrawal credential
         const voucher = await Voucher.create({
           userId: req.user.id,
           voucherCode: easyPayCode,
@@ -1085,7 +1085,7 @@ exports.issueEasyPayCashout = async (req, res) => {
                 reference: voucherTransactionId
               });
             }
-            console.log('✅ Ledger entry posted for cash-out voucher');
+            console.log('✅ Ledger entry posted for cash-withdrawal reference');
           } else {
             console.warn('⚠️ Ledger posting skipped: missing required LEDGER_ACCOUNT_* env vars');
           }
@@ -1105,7 +1105,7 @@ exports.issueEasyPayCashout = async (req, res) => {
 
       res.status(201).json({
         success: true,
-        message: 'EasyPay cash-out voucher created successfully',
+        message: 'EasyPay cash-withdrawal reference created successfully',
         data: {
           easypay_code: voucher.easyPayCode,
           amount: voucher.originalAmount,
@@ -1118,12 +1118,12 @@ exports.issueEasyPayCashout = async (req, res) => {
         }
       });
     } catch (error) {
-      console.error('Error in EasyPay cash-out voucher creation:', error);
+      console.error('Error in EasyPay cash-withdrawal reference creation:', error);
       res.status(500).json({
         success: false,
         error: 'Request could not be completed',
         errorCode: 'EASYPAY_CASHOUT_DB_FAILED',
-        message: 'Cash-out voucher could not be created. Please try again.'
+        message: 'Cash-withdrawal reference could not be created. Please try again.'
       });
     }
   } catch (err) {
@@ -1706,7 +1706,7 @@ exports.processEasyPayCashoutSettlement = async (req, res) => {
       return sendErrorResponse(res, ERROR_CODES.INVALID_AMOUNT, `Amount must be between R50 and R3000. Received: R${settlementAmount}`, requestId);
     }
 
-    // Find the pending EasyPay cash-out voucher
+    // Find the pending EasyPay cash-withdrawal credential
     const voucher = await Voucher.findOne({
       where: {
         easyPayCode: easypay_code,
@@ -1730,7 +1730,7 @@ exports.processEasyPayCashoutSettlement = async (req, res) => {
         }
       }
       
-      return sendErrorResponse(res, ERROR_CODES.PIN_NOT_FOUND, 'EasyPay cash-out voucher not found', requestId);
+      return sendErrorResponse(res, ERROR_CODES.PIN_NOT_FOUND, 'EasyPay cash-withdrawal reference not found', requestId);
     }
     
     const expiryDays = parseInt(process.env.EASYPAY_PIN_EXPIRY_DAYS || '30', 10);
@@ -2459,10 +2459,10 @@ exports.cancelEasyPayVoucher = async (req, res) => {
 
     console.log(`✅ Found voucher: ${voucher.easyPayCode || voucher.voucherCode}, Status: ${voucher.status}, Amount: ${voucher.originalAmount}`);
 
-    // Check if this is a cash-out voucher - route to cash-out cancellation handler
+    // Check if this is a cash-withdrawal credential - route to cash-out cancellation handler
     const isCashoutVoucher = voucher.voucherType === 'easypay_cashout' || voucher.voucherType === 'easypay_cashout_active';
     if (isCashoutVoucher) {
-      console.log(`🔄 Routing cash-out voucher to cancelEasyPayCashout handler`);
+      console.log(`🔄 Routing cash-withdrawal reference to cancelEasyPayCashout handler`);
       // Call the cash-out cancellation handler
       return await exports.cancelEasyPayCashout(req, res);
     }
@@ -2775,7 +2775,7 @@ exports.cancelEasyPayCashout = async (req, res) => {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    // Find the cash-out voucher
+    // Find the cash-withdrawal credential
     const voucher = await Voucher.findOne({
       where: {
         id: voucherId,
@@ -2786,13 +2786,13 @@ exports.cancelEasyPayCashout = async (req, res) => {
     });
 
     if (!voucher) {
-      console.log(`❌ Cash-out voucher not found: ID=${voucherId}, User=${req.user.id}`);
-      return res.status(404).json({ 
-        error: 'Cash-out voucher not found or cannot be cancelled' 
+      console.log(`❌ Cash-withdrawal credential not found: ID=${voucherId}, User=${req.user.id}`);
+      return res.status(404).json({
+        error: 'Cash-withdrawal credential not found or cannot be cancelled'
       });
     }
 
-    console.log(`✅ Found cash-out voucher: ${voucher.easyPayCode}, Status: ${voucher.status}, Amount: ${voucher.originalAmount}`);
+    console.log(`✅ Found cash-withdrawal credential: ${voucher.easyPayCode}, Status: ${voucher.status}, Amount: ${voucher.originalAmount}`);
 
     // Check if voucher has already expired
     if (voucher.expiresAt && new Date() > voucher.expiresAt) {
@@ -2966,7 +2966,7 @@ exports.cancelEasyPayCashout = async (req, res) => {
           console.error('⚠️ Failed to post cancellation journal entry:', ledgerErr.message);
         }
 
-        console.log(`✅ Cash-out voucher cancelled: ${voucher.easyPayCode}, Refunded: R${totalRefund} (Voucher: R${voucherAmount} + Fee: R${userFee})`);
+        console.log(`✅ Cash-withdrawal credential cancelled: ${voucher.easyPayCode}, Refunded: R${totalRefund} (Voucher: R${voucherAmount} + Fee: R${userFee})`);
         
         return { voucherRefundId, feeRefundId };
       });
@@ -2978,7 +2978,7 @@ exports.cancelEasyPayCashout = async (req, res) => {
 
       res.json({
         success: true,
-        message: 'EasyPay cash-out voucher cancelled successfully',
+        message: 'EasyPay cash-withdrawal credential cancelled successfully',
         data: {
           voucherId: voucher.id,
           easyPayCode: voucher.easyPayCode,
@@ -2995,12 +2995,12 @@ exports.cancelEasyPayCashout = async (req, res) => {
       });
 
     } catch (error) {
-      console.error('Error cancelling EasyPay cash-out voucher:', error);
+      console.error('Error cancelling EasyPay cash-withdrawal credential:', error);
       res.status(500).json({
         success: false,
         error: 'Request could not be completed',
         errorCode: 'CASHOUT_CANCEL_DB_FAILED',
-        message: 'Cash-out voucher cancellation could not be completed. Please try again.'
+        message: 'Cash-withdrawal credential cancellation could not be completed. Please try again.'
       });
     }
 

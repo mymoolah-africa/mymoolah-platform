@@ -9,11 +9,11 @@
 
 ## 1. Regulatory characterisation (non-negotiable for external comms)
 
-**eeziCash (Flash partner channel)** is a **wallet cash-withdrawal service** operating within the **Third-Party Payment Provider (TPPP)** / sponsor-bank framework (Standard Bank), **not** “VAS voucher resale” or a standalone retail VAS product purchase.
+**eeziCash (Flash partner channel)** is a **wallet cash-withdrawal service** operating within the **Third-Party Payment Provider (TPPP)** / sponsor-bank framework (Standard Bank), **not** “VAS retail-voucher resale” or a standalone retail VAS product purchase.
 
 | Correct | Incorrect (do not use in PASA, sponsor-bank, or partner legal comms) |
 |--------|------------------------------------------------------------------------|
-| Wallet cash withdrawal; user debited **before** a withdrawal credential (PIN) is generated | “Resale of Flash eeziCash voucher PINs” as if the PIN were a VAS product sold to the end customer |
+| Wallet cash withdrawal; user debited **before** a withdrawal credential (PIN) is generated | “Resale of Flash eeziCash cash-withdrawal PINs” as if the PIN were a VAS product sold to the end customer |
 | PIN is a **withdrawal credential** for collection of cash at authorised retail | PIN described as a **VAS airtime/data product** |
 
 **Why it matters:** Misclassification mixes **NPS / e-money wallet** rules with **VAS retail** narratives and weakens AML/CFT, transaction monitoring, and sponsor oversight. The corrected position is aligned with:
@@ -23,7 +23,7 @@
 - Banks Act 94 of 1990 (sponsor bank context, s1 + s11 read with applicable Exemption Notices)  
 - PASA TPPP framework (where applicable)
 
-**Own-Funds ring-fence (20 April 2026).** Cash withdrawals through **any Cash-Withdrawal Partner** — current (eeziCash via Flash Group, EasyPay retail cash-withdrawal, Cliquefin / OTT cash-withdrawal vouchers, USSD cash-withdrawal) and any future partner — are **fundable only from Third-Party Funds** credited to the wallet. Own Funds (self-EFT, self-PayShap, NFC self-load, and voucher cash-in) are ring-fenced by policy and by system enforcement. See [`policies/20-Cash-Withdrawal-Policy.md`](policies/20-Cash-Withdrawal-Policy.md) and the Standard Bank letter [`policies/2026-04-20_StandardBank_CashWithdrawal_Policy_Letter.html`](policies/2026-04-20_StandardBank_CashWithdrawal_Policy_Letter.html).
+**Own-Funds ring-fence (20 April 2026).** Cash withdrawals through **any Cash-Withdrawal Partner** — current (eeziCash via Flash Group, EasyPay retail cash-withdrawal, Cliquefin / OTT cash-withdrawal references, USSD cash-withdrawal) and any future partner — are **fundable only from Third-Party Funds** credited to the wallet. Own Funds (self-EFT, self-PayShap, NFC self-load, and voucher cash-in) are ring-fenced by policy and by system enforcement. See [`policies/20-Cash-Withdrawal-Policy.md`](policies/20-Cash-Withdrawal-Policy.md) and the Standard Bank letter [`policies/2026-04-20_StandardBank_CashWithdrawal_Policy_Letter.html`](policies/2026-04-20_StandardBank_CashWithdrawal_Policy_Letter.html).
 
 ---
 
@@ -36,7 +36,7 @@ MyMoolah supports multiple **outbound** paths from the consumer wallet (each wit
 | **eeziCash (Flash Group)** | Partner-facilitated **cash** collection after wallet debit | Treat as **cash-withdrawal** typology in monitoring; PII redaction in logs per POPIA; double-entry audit trail; **fundable only from Third-Party Funds** under POL-020 |
 | **EasyPay retail cash-withdrawal** | Retail token / reference for cash | Existing EasyPay float (ledger account `1200-10-03` — historical name retained) and fee postings; CTR / structuring rules per FICA where cash thresholds apply; **fundable only from Third-Party Funds** under POL-020 |
 | **USSD cash-withdrawal** | Cash withdrawal initiated from the USSD menu, redeemed through any Cash-Withdrawal Partner | Same POL-020 ring-fence applies |
-| **Cliquefin / OTT cash-withdrawal voucher** | Partner-facilitated cash collection via OTT vouchers at retail brands and Flash-enabled traders | Treat as cash-withdrawal typology in monitoring; same POL-020 ring-fence; same CTR / structuring rules under FICA |
+| **Cliquefin / OTT cash-withdrawal credential** | Partner-facilitated cash collection via OTT vouchers at retail brands and Flash-enabled traders | Treat as cash-withdrawal typology in monitoring; same POL-020 ring-fence; same CTR / structuring rules under FICA |
 | **EFT / PayShap outbound** | Electronic transfer to bank / RTP | APP fraud typologies, velocity, PayShap-specific monitoring; usable from both Own Funds and Third-Party Funds |
 | **MobileMart VAS** | Airtime, data, electricity, bill pay | **Purchase** typology — not a substitute for eeziCash legal characterisation; usable from both Own Funds and Third-Party Funds |
 

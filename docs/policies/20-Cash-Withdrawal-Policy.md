@@ -17,13 +17,13 @@
 
 This policy establishes the legal and operational position of MyMoolah Treasury Platform (Pty) Ltd ("MMTP") regarding wallet **cash withdrawals**. Its primary purpose is to ensure that MMTP does **not**, in form or in substance, conduct "the business of a bank" as defined in section 1 of the Banks Act 94 of 1990 ("Banks Act"), and that all MMTP cash-withdrawal products remain within the scope of the Banks Act Exemption Notices applicable to non-bank payment and e-money schemes.
 
-It applies to every wallet **cash-withdrawal rail** supported by the platform, including cash-withdrawal vouchers and credentials issued via any **Cash-Withdrawal Partner**. Current and contemplated Cash-Withdrawal Partners include, without limitation:
+It applies to every wallet **cash-withdrawal rail** supported by the platform, including cash-withdrawal references and credentials issued via any **Cash-Withdrawal Partner**. Current and contemplated Cash-Withdrawal Partners include, without limitation:
 
 - **eeziCash** (Flash Group) — cash collection at Flash-enabled retailers against a PIN withdrawal credential
 - **EasyPay retail cash-withdrawal** — cash collection at EasyPay retailers against a reference/token credential
-- **Cliquefin / OTT cash-withdrawal vouchers** — cash collection at OTT-enabled retailers and Flash trader points against an OTT voucher credential
+- **Cliquefin / OTT cash-withdrawal references** — cash collection at OTT-enabled retailers and Flash trader points against an OTT voucher credential
 - **USSD cash-withdrawal** — wallet cash-withdrawal initiated via USSD channel, redeemed through any of the above partner networks
-- Any future cash-withdrawal, cash-dispense, or cash-equivalent-voucher mechanism integrated into the MMTP platform.
+- Any future cash-withdrawal, cash-dispense, or cash-equivalent credential mechanism integrated into the MMTP platform.
 
 It applies to every wallet holder, every inbound deposit rail, every MMTP employee, contractor, and every Cash-Withdrawal Partner and third-party service provider involved in the cash-withdrawal chain.
 
@@ -54,8 +54,8 @@ The central legal thesis of this policy is that, because **own funds** deposited
 | **Own Funds** | Any amount credited to a wallet from a source where the remitting account holder is, or is reasonably determined to be, the same natural person as the wallet holder (see §6). Includes self-EFT from the wallet holder's own bank account, self-initiated PayShap credits, self-loaded NFC/Halo deposits, and all voucher-based cash-in (1Voucher, FNB Voucher, Flash Pay). |
 | **Third-Party Funds** | Any amount credited to a wallet from a source where the remitter is a distinct legal or natural person (e.g. an employer paying salary, a corporate client's disbursement run, a loan disbursement, a P2P transfer from another wallet holder, a VAS commission credit). |
 | **Cash Withdrawal** | Any mechanism that converts digital wallet value into physical currency in the hands of the wallet holder or a bearer of a cash-redemption credential, at a merchant, retailer, trader, ATM, or other cash point. |
-| **Cash-Withdrawal Voucher / Credential** | A PIN, reference number, barcode, or token issued by MMTP (directly or via a Cash-Withdrawal Partner) that entitles the bearer to receive physical cash at a cash point. Examples: an eeziCash PIN, an EasyPay cash-withdrawal token, a Cliquefin / OTT cash-withdrawal voucher. |
-| **Cash-Withdrawal Partner** | A third-party service provider integrated into MMTP that accepts a Cash-Withdrawal Voucher at its retail/trader network and dispenses the corresponding cash. Current and contemplated partners include Flash Group (eeziCash), EasyPay, and Cliquefin (OTT). |
+| **Cash-Withdrawal Credential** | A PIN, reference number, barcode, or token issued by MMTP (directly or via a Cash-Withdrawal Partner) that entitles the bearer to receive physical cash at a cash point. Examples: an eeziCash PIN, an EasyPay cash-withdrawal token, a Cliquefin / OTT cash-withdrawal credential. |
+| **Cash-Withdrawal Partner** | A third-party service provider integrated into MMTP that accepts a Cash-Withdrawal Credential at its retail/trader network and dispenses the corresponding cash. Current and contemplated partners include Flash Group (eeziCash), EasyPay, and Cliquefin (OTT). |
 | **Ring-Fenced Balance** | The portion of the wallet balance classified as Own Funds (plus voucher deposits) and therefore not eligible to fund any Cash Withdrawal rail. Represented technically as `wallets.restricted_balance`. |
 | **Unrestricted Balance** | `balance − restricted_balance`. Only this portion may fund a Cash Withdrawal. |
 | **Sponsor Bank** | Standard Bank of South Africa Limited, under whose sponsorship MMTP operates in the National Payment System. |
@@ -92,9 +92,9 @@ Own Funds may **not** fund:
 
 - eeziCash PIN purchases (Flash Group) through all channels
 - EasyPay cash-withdrawal token/voucher issuance
-- Cliquefin / OTT cash-withdrawal voucher issuance
+- Cliquefin / OTT cash-withdrawal credential issuance
 - USSD cash-withdrawal via any Cash-Withdrawal Partner network
-- Any future cash-withdrawal, cash-dispense, or cash-equivalent-voucher mechanism
+- Any future cash-withdrawal, cash-dispense, or cash-equivalent credential mechanism
 
 ---
 
@@ -127,7 +127,7 @@ Own Funds may **not** fund:
 
 ## 7. System Controls
 
-7.1 **Wallet-level enforcement.** The method `Wallet.prototype.canCashOut` (a pre-existing internal identifier retained for code-level continuity) evaluates `balance − restricted_balance ≥ amount` before every cash-withdrawal debit. Every cash-withdrawal endpoint — eeziCash PIN purchase, EasyPay cash-withdrawal token issuance, Cliquefin / OTT cash-withdrawal voucher issuance, USSD cash-withdrawal, and any future equivalent — must route through this guard. A transaction that fails the check returns the standardised error code `WALLET.CASH_WITHDRAW_RESTRICTED` and triggers the user-facing modal.
+7.1 **Wallet-level enforcement.** The method `Wallet.prototype.canCashOut` (a pre-existing internal identifier retained for code-level continuity) evaluates `balance − restricted_balance ≥ amount` before every cash-withdrawal debit. Every cash-withdrawal endpoint — eeziCash PIN purchase, EasyPay cash-withdrawal token issuance, Cliquefin / OTT cash-withdrawal credential issuance, USSD cash-withdrawal, and any future equivalent — must route through this guard. A transaction that fails the check returns the standardised error code `WALLET.CASH_WITHDRAW_RESTRICTED` and triggers the user-facing modal.
 
 7.2 **Ledger-level enforcement.** Restriction is posted atomically with the deposit as a Journal Entry to the sub-liability account `2100-01-02` ("Client Float Liability — Restricted"). When a wallet spends Ring-Fenced funds on a permitted (non-cash) rail, a FIFO release Journal Entry reverses the restriction for the spent amount. Every entry is SHA-256 hash-chained and immutable.
 
@@ -176,7 +176,7 @@ A Cash Withdrawal attempt that would breach a count cap is rejected with error c
 
 ## 8. FICA / AML Alignment
 
-8.1 **CDD.** All MMTP wallet holders are FICA-verified at onboarding under POL-002 (KYC/CDD). The wallet holder is, in every case, the originating transactor for any Cash-Withdrawal Voucher issued from their wallet.
+8.1 **CDD.** All MMTP wallet holders are FICA-verified at onboarding under POL-002 (KYC/CDD). The wallet holder is, in every case, the originating transactor for any Cash-Withdrawal Credential issued from their wallet.
 
 8.2 **CTR / STR.** Cash Withdrawals are monitored against the R24,999.99 enhanced-review threshold and the R49,999.99 FICA Cash Threshold Report trigger. Velocity, structuring, channel-rotation, and rapid deposit-to-withdrawal patterns are enforced per §7.6 – §7.10 and routed into the POL-004 §5.2.8 rule family; qualifying cases produce a CTR filing via goAML and, where the pattern is suspicious rather than merely threshold-crossing, an STR filing.
 
@@ -225,9 +225,9 @@ A Cash Withdrawal attempt that would breach a count cap is rejected with error c
 
 ## Appendix A — Worked Examples
 
-**Example A1 — Own-deposit blocked.** User A has R0 in their wallet. User A transfers R1,000 from their Capitec account (same name) into their MMTP wallet via SBSA deposit-notification rail. The classifier name-matches the remitter against the FICA-verified wallet-holder name, scores 0.97, and tags the deposit `own_funds`. Wallet state: `balance = R1,000`, `restricted_balance = R1,000`, unrestricted = R0. User A attempts to issue an R500 cash-withdrawal voucher (via any Cash-Withdrawal Partner — eeziCash, EasyPay, or Cliquefin / OTT). The wallet-level guard returns `allowed = false`. The user sees the restriction modal. The funds remain available for PayShap, VAS, bill payments, etc.
+**Example A1 — Own-deposit blocked.** User A has R0 in their wallet. User A transfers R1,000 from their Capitec account (same name) into their MMTP wallet via SBSA deposit-notification rail. The classifier name-matches the remitter against the FICA-verified wallet-holder name, scores 0.97, and tags the deposit `own_funds`. Wallet state: `balance = R1,000`, `restricted_balance = R1,000`, unrestricted = R0. User A attempts to issue an R500 cash-withdrawal credential (via any Cash-Withdrawal Partner — eeziCash, EasyPay, or Cliquefin / OTT). The wallet-level guard returns `allowed = false`. The user sees the restriction modal. The funds remain available for PayShap, VAS, bill payments, etc.
 
-**Example A2 — Salary credit cash-withdrawal allowed.** User B's employer, Acme (Pty) Ltd, runs a payroll disbursement through the MMTP Disbursement Rail, crediting R5,000 to User B's wallet. The rail classifies the credit as `third_party_credit` by rail identity; no name-match needed. Wallet state: `balance = R5,000`, `restricted_balance = R0`, unrestricted = R5,000. User B issues an R500 cash-withdrawal voucher and collects cash at a participating Cash-Withdrawal Partner retailer or trader. Permitted.
+**Example A2 — Salary credit cash-withdrawal allowed.** User B's employer, Acme (Pty) Ltd, runs a payroll disbursement through the MMTP Disbursement Rail, crediting R5,000 to User B's wallet. The rail classifies the credit as `third_party_credit` by rail identity; no name-match needed. Wallet state: `balance = R5,000`, `restricted_balance = R0`, unrestricted = R5,000. User B issues an R500 cash-withdrawal credential and collects cash at a participating Cash-Withdrawal Partner retailer or trader. Permitted.
 
 **Example A3 — Mixed balance, FIFO release.** User C holds `balance = R1,500` of which `restricted_balance = R1,000` (own deposit) and R500 is from a P2P transfer from another wallet holder (third-party credit). User C spends R800 on electricity (a permitted non-cash rail). The release logic first reduces `restricted_balance` by min(R1,000, R800) = R800 (FIFO within the Ring-Fenced pool). Post-spend state: `balance = R700`, `restricted_balance = R200`, unrestricted = R500. User C may now withdraw cash up to R500 through any Cash-Withdrawal Partner.
 
@@ -240,7 +240,7 @@ A Cash Withdrawal attempt that would breach a count cap is rejected with error c
 | Version | Date | Author | Changes |
 |---|---|---|---|
 | 1.0 | 20 April 2026 | MyMoolah Compliance | Initial issue. Establishes the Own-Funds ring-fence, the name-match classification mechanism (single-pool `restricted_balance`), the no-Cash-Available UX rule, and the tri-party FICA-protocol proposal. |
-| 1.1 | 20 April 2026 | MyMoolah Compliance | Terminology alignment: adopted "Cash Withdrawal" (not "cash-out") as the canonical term throughout; introduced the generic "Cash-Withdrawal Partner" category covering eeziCash (Flash), EasyPay, and Cliquefin / OTT cash-withdrawal vouchers; widened the multi-party FICA protocol to cover all Cash-Withdrawal Partners in addition to the sponsor bank. No change to the substantive ring-fence rule or classification mechanism. |
+| 1.1 | 20 April 2026 | MyMoolah Compliance | Terminology alignment: adopted "Cash Withdrawal" (not "cash-out") as the canonical term throughout; introduced the generic "Cash-Withdrawal Partner" category covering eeziCash (Flash), EasyPay, and Cliquefin / OTT cash-withdrawal references; widened the multi-party FICA protocol to cover all Cash-Withdrawal Partners in addition to the sponsor bank. No change to the substantive ring-fence rule or classification mechanism. |
 | 1.2 | 20 April 2026 | MyMoolah Compliance | Added §7.6 – §7.11 — count-based velocity caps per tier (Tier 1: 2/60 m, 3/24 h, 15/month; Tier 2: 3/60 m, 5/24 h, 30/month), FICA-aligned aggregation triggers (R24,999.99 review; R49,999.99 CTR auto-file), structuring detection, channel-rotation detection, step-up and pending-review mechanics, and a staged-enforcement clause. §8.2 updated to reference the new rule family. Thresholds mirrored in `config/kycTierLimits.js` and `config/cashWithdrawalVelocity.js`. No change to the Own-Funds ring-fence rule. |
 | 1.3 | 20 April 2026 | MyMoolah Compliance | Legal-characterisation alignment: replaced "sponsor-bank trust posture" and "sponsor-bank-held trust account" with "sponsor-bank-held segregated account" in the §5 regulatory framework table, to consistently reflect MyMoolah's legal position that customer float is held in segregated accounts at the sponsor bank (not trust accounts). No change to the substantive ring-fencing, segregation, or reconciliation controls. |
 

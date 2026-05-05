@@ -232,7 +232,7 @@ export function TransactPage() {
         {
           id: 'flash-eezicash',
           title: 'Flash eeziCash',
-          description: 'Legacy direct Flash cash voucher flow',
+          description: 'Legacy direct Flash cash-withdrawal PIN flow',
           icon: <DollarSign className="w-6 h-6" />,
           route: '/flash-eezicash-overlay',
           available: true,

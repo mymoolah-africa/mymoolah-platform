@@ -169,7 +169,7 @@ export function CashoutEasyPayOverlay() {
       
       if (!response.ok) {
         const errorText = await response.text();
-        let errorMessage = 'Failed to create cash-out voucher';
+        let errorMessage = 'Failed to create cash-withdrawal reference';
         try {
           const errorJson = JSON.parse(errorText);
           errorMessage = errorJson.error || errorMessage;
@@ -192,7 +192,7 @@ export function CashoutEasyPayOverlay() {
       
     } catch (error: any) {
       console.error('Cash-out request error:', error);
-      setErrorMessage(error?.message || 'We couldn\'t create your cash-out voucher. Please try again.');
+      setErrorMessage(error?.message || 'We couldn\'t create your cash-withdrawal credential. Please try again.');
       setCurrentStep('error');
     } finally {
       setIsSubmitting(false);
@@ -258,9 +258,9 @@ export function CashoutEasyPayOverlay() {
             color: '#6b7280',
             marginTop: '4px'
           }}>
-            {currentStep === 'form' ? 'Create cash-out voucher' : 
+            {currentStep === 'form' ? 'Create cash-withdrawal reference' :
              currentStep === 'processing' ? 'Processing request...' :
-             currentStep === 'success' ? 'Cash-out voucher created' : 'Request failed'}
+             currentStep === 'success' ? 'Cash-withdrawal reference created' : 'Request failed'}
           </p>
         </div>
       </div>
@@ -276,7 +276,7 @@ export function CashoutEasyPayOverlay() {
               fontSize: 'var(--mobile-font-small)',
               color: '#1e40af'
             }}>
-              <strong>How it works:</strong> Create a cash-out voucher, visit any EasyPay store, show the PIN, and receive cash.
+              <strong>How it works:</strong> Create a cash-withdrawal reference, visit any EasyPay store, show the PIN, and receive cash.
             </AlertDescription>
           </Alert>
 
@@ -402,7 +402,7 @@ export function CashoutEasyPayOverlay() {
                       fontSize: 'var(--mobile-font-small)',
                       color: '#6b7280'
                     }}>
-                      Voucher Amount
+                      Withdrawal Amount
                     </span>
                     <span style={{
                       fontFamily: 'Montserrat, sans-serif',
@@ -469,7 +469,7 @@ export function CashoutEasyPayOverlay() {
               opacity: !pricing || isSubmitting || !!errors.balance ? 0.6 : 1
             }}
           >
-            {isSubmitting ? 'Creating Voucher...' : 'Create Cash-out Voucher'}
+            {isSubmitting ? 'Creating Reference...' : 'Create Cash-Withdrawal Reference'}
           </Button>
         </div>
       )}
@@ -479,7 +479,7 @@ export function CashoutEasyPayOverlay() {
         <BrandSpinner
           className="py-12"
           size={56}
-          label="Creating your cash-out voucher..."
+          label="Creating your cash-withdrawal reference..."
         />
       )}
 
@@ -498,7 +498,7 @@ export function CashoutEasyPayOverlay() {
               textAlign: 'center',
               marginBottom: '8px'
             }}>
-              Cash-out Voucher Created!
+              Cash-Withdrawal PIN Created!
             </h2>
             <p style={{
               fontFamily: 'Montserrat, sans-serif',
@@ -567,7 +567,7 @@ export function CashoutEasyPayOverlay() {
                 <li>Visit any EasyPay store</li>
                 <li>Show this 14-digit PIN</li>
                 <li>Receive R{pricing?.voucherAmount.toFixed(2)} in cash</li>
-                <li>Voucher expires in 30 days if not used</li>
+                <li>Reference expires in 30 days if not used</li>
               </ol>
             </AlertDescription>
           </Alert>
@@ -584,7 +584,7 @@ export function CashoutEasyPayOverlay() {
                 fontWeight: 'var(--font-weight-medium)'
               }}
             >
-              View in Vouchers
+              View Details
             </Button>
             <Button
               onClick={handleReset}
@@ -624,7 +624,7 @@ export function CashoutEasyPayOverlay() {
               color: '#6b7280',
               textAlign: 'center'
             }}>
-              {errorMessage || 'We couldn\'t create your cash-out voucher. Please try again.'}
+              {errorMessage || 'We couldn\'t create your cash-withdrawal credential. Please try again.'}
             </p>
           </div>
 

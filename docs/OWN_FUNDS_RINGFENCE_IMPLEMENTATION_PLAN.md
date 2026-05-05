@@ -11,7 +11,7 @@
 
 ## 0. Goal
 
-Extend the existing restricted-balance machinery (built for Flash voucher deposits) so that **a wallet holder's own-money deposits are ring-fenced against cash withdrawal**, while **third-party credits (wages, loans, bulk disbursements, P2P credits)** remain eligible for cash withdrawal through any MyMoolah **Cash-Withdrawal Partner** — currently eeziCash (Flash Group), EasyPay retail cash-withdrawal, Cliquefin / OTT cash-withdrawal vouchers, USSD cash-withdrawal, and any successor partner.
+Extend the existing restricted-balance machinery (built for Flash voucher deposits) so that **a wallet holder's own-money deposits are ring-fenced against cash withdrawal**, while **third-party credits (wages, loans, bulk disbursements, P2P credits)** remain eligible for cash withdrawal through any MyMoolah **Cash-Withdrawal Partner** — currently eeziCash (Flash Group), EasyPay retail cash-withdrawal, Cliquefin / OTT cash-withdrawal references, USSD cash-withdrawal, and any successor partner.
 
 This plan does **not** change the existing Flash voucher ring-fence; it composes on top of it using the same `wallets.restricted_balance` column and the same `canCashOut`/release machinery.
 
@@ -25,7 +25,7 @@ This plan does **not** change the existing Flash voucher ring-fence; it composes
 | Balance model | **Single pool** — reuse `wallets.restricted_balance`; carry source in metadata. |
 | UX for blocked cash withdrawal | Modal only; **no Cash-Available figure** surfaced. |
 | Historical data | Best-effort classification backfill to `metadata`; do **not** retrospectively adjust `restricted_balance`. |
-| Scope of enforcement | All existing cash-withdrawal exits (eeziCash PIN, EasyPay retail cash-withdrawal, USSD cash-withdrawal, and the upcoming Cliquefin / OTT cash-withdrawal voucher rail) + any future Cash-Withdrawal Partner. |
+| Scope of enforcement | All existing cash-withdrawal exits (eeziCash PIN, EasyPay retail cash-withdrawal, USSD cash-withdrawal, and the upcoming Cliquefin / OTT cash-withdrawal credential rail) + any future Cash-Withdrawal Partner. |
 
 ---
 
@@ -244,7 +244,7 @@ Script: `scripts/backfill-deposit-fund-origin.js` (dry-run + execute modes).
 - SBSA PayShap RTP with missing debtor name → unknown → restricted.
 - Disbursement rail credit → balance up, restricted unchanged, cash withdrawal allowed.
 - Flash voucher redemption → balance up, restricted up (existing behaviour preserved).
-- Every cash-withdrawal endpoint — eeziCash PIN, EasyPay retail cash-withdrawal, Cliquefin / OTT cash-withdrawal voucher, USSD cash-withdrawal — returns `WALLET.CASH_WITHDRAW_RESTRICTED` when `unrestricted < amount`.
+- Every cash-withdrawal endpoint — eeziCash PIN, EasyPay retail cash-withdrawal, Cliquefin / OTT cash-withdrawal credential, USSD cash-withdrawal — returns `WALLET.CASH_WITHDRAW_RESTRICTED` when `unrestricted < amount`.
 - PayShap RPP outbound with restricted funds → `releaseRestrictedFunds` runs FIFO and reduces `restricted_balance`.
 
 ### 9.3 Ledger
@@ -301,7 +301,7 @@ Coverage target: ≥ 90% on `depositClassificationService` and `utils/nameMatch`
 - *Integration points (every cash-withdrawal endpoint must route through the evaluator):*
   - `controllers/voucherController.issueEasyPayCashout`
   - `controllers/voucherController.purchaseCashOutPin` (eeziCash)
-  - Any Cliquefin / OTT cash-withdrawal voucher endpoint on onboarding
+  - Any Cliquefin / OTT cash-withdrawal credential endpoint on onboarding
   - USSD cash-withdrawal flow in `services/ussdMenuService.js`
   - `Wallet.prototype.canCashOut` calls the velocity evaluator after the ring-fence check; a non-`allow` decision surfaces the appropriate outcome to the caller.
 - *New error codes:*

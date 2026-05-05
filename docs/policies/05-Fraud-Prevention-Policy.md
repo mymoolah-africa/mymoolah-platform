@@ -26,7 +26,7 @@ This policy applies to all fraud risks arising from the operation of the MyMoola
 - PayShap Real-Time Payments (RTP) via Standard Bank South Africa
 - USDC stablecoin cross-border remittances
 - NFC-initiated cash deposits
-- **Wallet-initiated cash withdrawals** via **Cash-Withdrawal Partners** (currently eeziCash via Flash Group, EasyPay retail cash-withdrawal, Cliquefin / OTT cash-withdrawal vouchers, USSD cash-withdrawal, and any future partner)
+- **Wallet-initiated cash withdrawals** via **Cash-Withdrawal Partners** (currently eeziCash via Flash Group, EasyPay retail cash-withdrawal, Cliquefin / OTT cash-withdrawal references, USSD cash-withdrawal, and any future partner)
 - Referral programme and promotional reward systems
 - Internal operations, including employee and contractor access
 

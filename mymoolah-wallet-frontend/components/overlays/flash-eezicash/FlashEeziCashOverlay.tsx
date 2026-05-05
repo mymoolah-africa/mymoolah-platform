@@ -200,7 +200,7 @@ export function FlashEeziCashOverlay() {
       
       if (!token) {
         console.error('❌ Flash eeziCash: No token in response:', transaction);
-        throw new Error('No voucher token received from Flash API');
+        throw new Error('No cash-withdrawal PIN received from Flash API');
       }
       
       setVoucherToken(token);
@@ -224,7 +224,7 @@ export function FlashEeziCashOverlay() {
     }
   };
 
-  // Copy voucher code
+  // Copy cash PIN
   const handleCopyCode = async () => {
     try {
       await navigator.clipboard.writeText(voucherToken);
@@ -247,7 +247,7 @@ export function FlashEeziCashOverlay() {
         aria-describedby="success-description"
       >
         <div id="success-description" className="sr-only">
-          Your eeziCash voucher has been successfully purchased and is ready for cash-out at Flash traders.
+          Your eeziCash cash-withdrawal PIN has been created and is ready to use at Flash traders.
         </div>
 
         {/* Header */}
@@ -274,7 +274,7 @@ export function FlashEeziCashOverlay() {
               color: '#1f2937'
             }}
           >
-            Voucher Created
+            Cash PIN Created
           </h1>
           
           <div style={{ width: '44px' }}></div>
@@ -301,7 +301,7 @@ export function FlashEeziCashOverlay() {
                   fontWeight: '700',
                   color: '#ffffff'
                 }}>
-                  eeziCash Voucher Ready
+                  eeziCash PIN Ready
                 </CardTitle>
                 <p style={{
                   fontFamily: 'Montserrat, sans-serif',
@@ -317,7 +317,7 @@ export function FlashEeziCashOverlay() {
           
           <CardContent style={{ padding: '1rem' }}>
             <div className="space-y-4">
-              {/* Voucher Code */}
+              {/* Cash PIN */}
               <div style={{
                 padding: '1rem',
                 backgroundColor: '#f8fafe',
@@ -330,7 +330,7 @@ export function FlashEeziCashOverlay() {
                     fontSize: '12px',
                     color: '#6b7280'
                   }}>
-                    Voucher Code
+                    Cash PIN
                   </Label>
                   <p style={{
                     fontFamily: 'Monaco, monospace',
@@ -426,7 +426,7 @@ export function FlashEeziCashOverlay() {
                       margin: 0
                     }}>
                       <li>Visit any participating Flash trader</li>
-                      <li>Present your voucher code: {voucherToken}</li>
+                      <li>Present your cash PIN: {voucherToken}</li>
                       <li>Provide valid ID for verification</li>
                       <li>Receive your cash (R{pricing?.faceValue})</li>
                     </ol>
@@ -467,7 +467,7 @@ export function FlashEeziCashOverlay() {
         aria-describedby="processing-description"
       >
         <div id="processing-description" className="sr-only">
-          Your eeziCash voucher purchase is being processed. Please wait.
+          Your eeziCash cash-withdrawal request is being processed. Please wait.
         </div>
         <h2 id="processing-title" className="sr-only">
           Processing Your Purchase
@@ -477,7 +477,7 @@ export function FlashEeziCashOverlay() {
           className="py-8"
           size={56}
           label="Processing Your Purchase"
-          subtitle="Creating your eeziCash voucher..."
+          subtitle="Creating your eeziCash cash-withdrawal PIN..."
         />
       </div>
     );
@@ -491,7 +491,7 @@ export function FlashEeziCashOverlay() {
       aria-describedby="overlay-description"
     >
       <div id="overlay-description" className="sr-only">
-        Purchase an eeziCash voucher for cash-out at Flash traders.
+        Create an eeziCash cash-withdrawal PIN for use at Flash traders.
       </div>
 
       {/* Header */}
@@ -537,7 +537,7 @@ export function FlashEeziCashOverlay() {
             color: '#6b7280',
             margin: 0
           }}>
-            Purchase voucher for instant cash-out
+            Create a cash PIN for instant cash withdrawal
           </p>
         </div>
       </div>
@@ -550,7 +550,7 @@ export function FlashEeziCashOverlay() {
           fontSize: 'var(--mobile-font-small)',
           color: '#1e40af'
         }}>
-          <strong>How it works:</strong> Create a cash-out voucher, visit any Flash trader, show the PIN, and receive cash.
+          <strong>How it works:</strong> Create a cash-withdrawal credential, visit any Flash trader, show the PIN, and receive cash.
         </AlertDescription>
       </Alert>
 
@@ -611,7 +611,7 @@ export function FlashEeziCashOverlay() {
             fontWeight: '700',
             color: '#1f2937'
           }}>
-            Create eeziCash Voucher
+            Create eeziCash Cash PIN
           </CardTitle>
         </CardHeader>
 
@@ -627,7 +627,7 @@ export function FlashEeziCashOverlay() {
                 color: '#1f2937'
               }}
             >
-              Voucher Amount *
+              Withdrawal Amount *
             </Label>
             
             {/* Quick Amount Buttons */}

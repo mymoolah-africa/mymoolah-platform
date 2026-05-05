@@ -34,7 +34,7 @@ Implemented a reusable branded MyMoolah wallet loading indicator using `logo3.sv
 - `mymoolah-wallet-frontend/components/overlays/withdraw-cash/WithdrawCashOverlay.tsx` - Updated cash PIN processing state.
 - `mymoolah-wallet-frontend/components/overlays/digital-vouchers/DigitalVouchersOverlay.tsx` - Updated retail voucher catalog loading state.
 - `mymoolah-wallet-frontend/components/overlays/digital-vouchers/ProductDetailModal.tsx` - Updated retail voucher purchase processing state.
-- `mymoolah-wallet-frontend/components/overlays/cashout-easypay/CashoutEasyPayOverlay.tsx` - Updated cash-out voucher processing state.
+- `mymoolah-wallet-frontend/components/overlays/cashout-easypay/CashoutEasyPayOverlay.tsx` - Updated cash-withdrawal reference processing state.
 - `mymoolah-wallet-frontend/components/overlays/topup-easypay/TopupEasyPayOverlay.tsx` - Updated top-up request processing state.
 - `mymoolah-wallet-frontend/components/overlays/shared/GlobalPinModal.tsx` - Updated global PIN purchase processing state.
 - `mymoolah-wallet-frontend/components/overlays/AirtimeDataOverlay.tsx` - Updated product catalog loading state.

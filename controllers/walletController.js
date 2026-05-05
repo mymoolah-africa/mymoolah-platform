@@ -559,7 +559,7 @@ class WalletController {
         // No adjustment needed - transaction.amount is already grossAmount
         
         // For cash-out transactions: show voucher amount only (fee is separate transaction)
-        // Cash-out voucher amount is already correct (negative for debit), no adjustment needed
+        // Cash-withdrawal amount is already correct (negative for debit), no adjustment needed
         // Fee transaction will be filtered out in Recent Transactions
         
         return {

@@ -20,9 +20,9 @@ Thank you for reverting with PASA's query. Please find our response below, along
 
 Additional Standard Bank sponsorship is **not required** for the "withdrawal" (cash-out) functionality described in our business case. Here is why:
 
-The cash-out function within MyMoolah is the **resale of Flash eeziCash voucher PINs** — a Value-Added Service (VAS) product, not a banking withdrawal or payment instruction through the clearing system.
+The cash-out function within MyMoolah is a **wallet cash withdrawal via Flash eeziCash** under the TPPP / sponsor-bank framework, not deposit-taking or a public deposit repayment service.
 
-- MyMoolah purchases the eeziCash voucher product from **Flash (Pty) Ltd** via their **Flash Partner API v4** on behalf of the wallet user.
+- MyMoolah purchases the eeziCash cash-withdrawal service from **Flash (Pty) Ltd** via their **Flash Partner API v4** on behalf of the wallet user.
 - **Flash generates the PIN** — MyMoolah does not generate, manage, or settle the cash redemption.
 - The user redeems the PIN at any of Flash's approximately **240,000 retail agent locations** across South Africa (Spar, Shoprite, PEP, independent traders, spaza shops, and freelance Flash agents).
 - The cash dispensation occurs between the **end-user and Flash's retail agent network** — MyMoolah is not a party to the cash settlement.
@@ -35,13 +35,13 @@ This is functionally identical to how MyMoolah distributes airtime, data, and ot
 
 **2. Cash-Out Network (referenced in business case)**
 
-The "unparalleled access to over 200,000 formal and informal retail points for cash withdrawals" refers to **Flash's retail agent network**, which MyMoolah accesses as a reseller of Flash's eeziCash voucher product:
+The "unparalleled access to over 200,000 formal and informal retail points for cash withdrawals" refers to **Flash's retail agent network**, which MyMoolah accesses as a reseller of Flash's eeziCash cash-withdrawal service:
 
 **How it works:**
 
 1. User selects "Cash Out" in the MyMoolah wallet app and chooses an amount (e.g. R200).
 2. MyMoolah debits the user's wallet (R200 + service fee) and records a double-entry ledger journal.
-3. MyMoolah calls the **Flash Partner API** to purchase an eeziCash voucher.
+3. MyMoolah calls the **Flash Partner API** to request an eeziCash cash-withdrawal credential.
 4. **Flash generates a PIN** (e.g. EZ-1234-5678-9012) and returns it to MyMoolah.
 5. The PIN is displayed to the user in the app.
 6. The user visits **any Flash retail agent** (~240,000 locations nationwide) and presents the PIN.

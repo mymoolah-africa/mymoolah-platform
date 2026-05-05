@@ -25,7 +25,7 @@ Given MyMoolah's USDC cross-border capability (via VALR) and MoolahMove internat
 This policy applies to:
 
 - All customers, counterparties, and beneficial owners of MyMoolah accounts.
-- All transactions processed through the MyMoolah platform, including domestic wallet transfers, **wallet-initiated cash withdrawals** via **Cash-Withdrawal Partners** (currently eeziCash via Flash Group, EasyPay retail cash-withdrawal, Cliquefin / OTT cash-withdrawal vouchers, USSD cash-withdrawal, and any future partner), PayShap real-time payments, VAS purchases, NFC deposits, USDC cross-border transfers, and MoolahMove international payments.
+- All transactions processed through the MyMoolah platform, including domestic wallet transfers, **wallet-initiated cash withdrawals** via **Cash-Withdrawal Partners** (currently eeziCash via Flash Group, EasyPay retail cash-withdrawal, Cliquefin / OTT cash-withdrawal references, USSD cash-withdrawal, and any future partner), PayShap real-time payments, VAS purchases, NFC deposits, USDC cross-border transfers, and MoolahMove international payments.
 - All employees, contractors, and third-party service providers.
 - All jurisdictions in which MyMoolah operates or to which it facilitates fund flows.
 - Both the originator and beneficiary of every transaction, where identifiable.

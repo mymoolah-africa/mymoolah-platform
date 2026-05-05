@@ -26,7 +26,7 @@ This policy applies to:
 
 - All prospective and existing customers of the MyMoolah platform, including individual consumers, business entities, and agent accounts.
 - All channels through which customer onboarding occurs (mobile application at wallet.mymoolah.africa, API integrations).
-- All MyMoolah products requiring identity verification, including digital wallet, **wallet-initiated cash withdrawals** via **Cash-Withdrawal Partners** (currently eeziCash via Flash Group, EasyPay retail cash-withdrawal, Cliquefin / OTT cash-withdrawal vouchers, USSD cash-withdrawal, and any future partner), VAS, PayShap, USDC cross-border transfers, and NFC deposits.
+- All MyMoolah products requiring identity verification, including digital wallet, **wallet-initiated cash withdrawals** via **Cash-Withdrawal Partners** (currently eeziCash via Flash Group, EasyPay retail cash-withdrawal, Cliquefin / OTT cash-withdrawal references, USSD cash-withdrawal, and any future partner), VAS, PayShap, USDC cross-border transfers, and NFC deposits.
 - All employees, contractors, and third-party service providers involved in the customer identification and verification process.
 - The entire customer lifecycle — from onboarding through ongoing monitoring to relationship termination.
 

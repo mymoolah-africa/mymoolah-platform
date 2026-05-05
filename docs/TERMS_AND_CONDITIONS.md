@@ -92,7 +92,7 @@ By accessing, registering, or using the MyMoolah Treasury Platform ("Platform"),
 
 ### 4.4 **Cash Withdrawals and Ring-Fencing of Own Funds**
 
-This clause governs cash withdrawals through any Cash-Withdrawal Partner integrated with the Platform. Current and contemplated Cash-Withdrawal Partners include eeziCash (Flash Group), EasyPay retail cash-withdrawal, Cliquefin / OTT cash-withdrawal vouchers, USSD cash-withdrawal initiated through any such partner network, and any successor or replacement cash-withdrawal rail. This clause implements the MyMoolah Cash Withdrawal & Ring-Fencing of Own Funds Policy (POL-020), available on request.
+This clause governs cash withdrawals through any Cash-Withdrawal Partner integrated with the Platform. Current and contemplated Cash-Withdrawal Partners include eeziCash (Flash Group), EasyPay retail cash-withdrawal, Cliquefin / OTT cash-withdrawal references, USSD cash-withdrawal initiated through any such partner network, and any successor or replacement cash-withdrawal rail. This clause implements the MyMoolah Cash Withdrawal & Ring-Fencing of Own Funds Policy (POL-020), available on request.
 
 - **4.4.1 Two categories of wallet funds.** Every amount credited to your wallet is classified at the moment of credit as either:
   - **Own Funds** — funds credited from a source where the remitting account holder is the same natural person as you, the FICA-verified wallet holder. This includes transfers from your own bank account, self-initiated PayShap credits into your wallet, NFC self-loads, and voucher-based cash-in (for example 1Voucher, FNB Voucher, Flash Pay); or

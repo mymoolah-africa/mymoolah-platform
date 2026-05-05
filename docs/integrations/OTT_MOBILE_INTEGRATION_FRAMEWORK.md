@@ -120,7 +120,7 @@ change quickly.
 - Existing supplier frameworks support catalog, supplier failover, circuit
   breakers, float monitoring, idempotency, and reconciliation adapters.
 - The cash-withdrawal policy already names Cliquefin / OTT as a contemplated
-  cash-withdrawal voucher partner.
+  cash-withdrawal credential partner.
 - A dedicated OTT Payout scaffold now exists (`services/ott/`, `routes/ott.js`,
   `models/OttPayout.js`, `OttAdapter`) but is disabled by default and must not
   be treated as production-ready until the contract gates in §5.3.1 are closed.
@@ -142,7 +142,7 @@ Important drift warning:
 
 ## 4. OTT Products and MMTP Classification
 
-### 4.1 OTT voucher resale
+### 4.1 OTT retail voucher sale
 
 MMTP sells an OTT voucher to a wallet user.
 
@@ -167,7 +167,7 @@ Preferred MMTP primitives to verify:
 
 Open dependency:
 
-- Confirm whether OTT voucher resale is supported by the Payout API, a separate
+- Confirm whether OTT retail voucher sale is supported by the Payout API, a separate
   voucher API, a portal batch process, or a different product catalogue API.
 
 ### 4.2 OTT voucher cash withdrawal
@@ -473,7 +473,7 @@ code verification:
   - Status lifecycle.
 
 - `services/ott/ottVoucherService.js`
-  - Voucher resale and redemption, only if OTT confirms the relevant API.
+  - Retail voucher sale and redemption, only if OTT confirms the relevant API.
 
 - `routes/ott.js`
   - Authenticated wallet endpoints for user-initiated actions.
@@ -504,7 +504,7 @@ credentials and partner-confirmed hash order are configured.
 
 Reuse after verification:
 
-- Product catalog and variants for OTT voucher resale.
+- Product catalog and variants for OTT retail voucher sale.
 - `vasSupplierExecutor` only if the flow is product purchase-like.
 - `supplierFailoverService` only if multiple suppliers can fulfil the same
   logical product.
@@ -538,7 +538,7 @@ Before code:
 - Create an idempotent migration for the ledger account.
 - Create or update `SupplierFloat` row for OTT.
 - Decide whether separate floats are required:
-  - OTT voucher resale.
+  - OTT retail voucher sale.
   - OTT payout / cash-send.
   - OTT wallet top-up receivable.
   - OTT loyalty rewards, if monetary.
@@ -548,7 +548,7 @@ Likely account range:
 - `1200-10-08` OTT Payout Float Account, subject to Finance approval and
   migration `20260429_02_create_ott_payouts.js`.
 
-### 7.2 Voucher resale journal concept
+### 7.2 Retail voucher sale journal concept
 
 For a user buying an OTT voucher:
 
@@ -789,7 +789,7 @@ Candidate scope:
 - Reversal/failed payout handling.
 - Ledger and reconciliation.
 
-### Phase 3 - OTT voucher resale
+### Phase 3 - OTT retail voucher sale
 
 Candidate scope:
 
@@ -799,7 +799,7 @@ Candidate scope:
 - Supplier transaction tracking.
 - Commission/VAT treatment.
 
-Only if official voucher resale API is confirmed.
+Only if official retail voucher API is confirmed.
 
 ### Phase 4 - OTT voucher wallet top-up
 
@@ -846,7 +846,7 @@ confirmed.
 2. Which provider codes map to Nedbank, ABSA Cashsend, PayShap, RTC, EFT, and
    any OTT voucher cash-out rail?
 3. Which provider supports ATM cash-send specifically?
-4. Are OTT voucher resale and OTT voucher redemption exposed through this Payout
+4. Are OTT retail voucher sale and OTT voucher redemption exposed through this Payout
    API or separate APIs?
 5. Provide OTT voucher denomination rules, min/max, expiry, cancellation, and
    resend behaviour.
@@ -920,7 +920,7 @@ gates:
 2. Payout/Cash Send UAT.
 3. Webhook and status reconciliation.
 4. Ledger and VAT migrations.
-5. Voucher resale.
+5. Retail voucher sale.
 6. Voucher top-up with restricted-balance handling.
 7. Loyalty, only after separate API/compliance confirmation.
 

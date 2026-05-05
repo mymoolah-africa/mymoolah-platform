@@ -23,7 +23,7 @@ Hardened the EasyPay V5 `transactions.reference` migration after UAT failed with
 - [x] Confirmed UAT migrations completed successfully after the repair.
 - [x] Added `scripts/repair-table-ownership.js` as the permanent dry-run-first ownership audit/repair tool for future owner-only migration failures.
 - [x] Clarified `scripts/grant-migration-privileges.js` because grants do not satisfy PostgreSQL table ownership requirements.
-- [x] Documented legacy EasyPay cash-out voucher code as tech debt instead of mixing that cleanup into the migration repair.
+- [x] Documented legacy EasyPay cash-withdrawal reference code as tech debt instead of mixing that cleanup into the migration repair.
 - [x] Updated changelog and handover documentation.
 
 ---
@@ -45,7 +45,7 @@ Hardened the EasyPay V5 `transactions.reference` migration after UAT failed with
 - `docs/CHANGELOG.md` - Added the migration hardening entry.
 - `docs/AGENT_HANDOVER.md` - Updated latest status and next-agent context.
 - `docs/DATABASE_CONNECTION_GUIDE.md` - Documented ownership repair commands.
-- `docs/CURSOR_2.0_RULES_FINAL.md` - Added tech debt note for legacy EasyPay cash-out voucher code.
+- `docs/CURSOR_2.0_RULES_FINAL.md` - Added tech debt note for legacy EasyPay cash-withdrawal reference code.
 - `docs/session_logs/2026-04-29_2020_easypay-reference-migration-hardening.md` - This session log.
 
 ---
@@ -79,7 +79,7 @@ The migration now checks `information_schema.columns` for `transactions.referenc
 - [ ] After UAT succeeds, run staging migration and complete EasyPay V5 disposable full-flow verification.
 - [ ] Run `node scripts/repair-table-ownership.js uat` in Codespaces to audit whether any other UAT public objects still have ownership drift.
 - [ ] If the UAT ownership audit is clean or repaired, consider the same dry-run audit for staging before future DDL work.
-- [ ] Schedule a dedicated EasyPay cleanup pass for legacy cash-out voucher code.
+- [ ] Schedule a dedicated EasyPay cleanup pass for legacy cash-withdrawal credential code.
 
 ---
 
@@ -92,7 +92,7 @@ The migration now checks `information_schema.columns` for `transactions.referenc
 
 ## Questions/Unresolved Items
 - Does UAT already have both `transactions.reference` and `idx_transactions_reference`, or only the column?
-- Should legacy cash-out voucher code be removed, archived, or retained only for historical row cancellation/refund handling?
+- Should legacy cash-withdrawal credential code be removed, archived, or retained only for historical row cancellation/refund handling?
 
 ---
 

@@ -174,7 +174,7 @@ All application logs shall use structured JSON format. Logs must include: timest
 
 All authentication events, authorisation decisions, data access, and administrative actions shall be logged with immutable timestamps. Audit logs shall be retained for a minimum of five years in compliance with financial record-keeping requirements.
 
-**Cash-withdrawal flows:** Wallet debits for **cash withdrawal** through any **Cash-Withdrawal Partner** (eeziCash via Flash Group, EasyPay retail cash-withdrawal, Cliquefin / OTT cash-withdrawal vouchers, USSD cash-withdrawal, and any future partner) are high-impact events. Logs shall record **non-PII** correlation identifiers (transaction IDs, idempotency keys, internal user IDs) sufficient for fraud and AML investigation. Full narrative flows for engineering and compliance review: `docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html` and `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md`.
+**Cash-withdrawal flows:** Wallet debits for **cash withdrawal** through any **Cash-Withdrawal Partner** (eeziCash via Flash Group, EasyPay retail cash-withdrawal, Cliquefin / OTT cash-withdrawal references, USSD cash-withdrawal, and any future partner) are high-impact events. Logs shall record **non-PII** correlation identifiers (transaction IDs, idempotency keys, internal user IDs) sufficient for fraud and AML investigation. Full narrative flows for engineering and compliance review: `docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html` and `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md`.
 
 ### 10.3 Monitoring and Alerting
 

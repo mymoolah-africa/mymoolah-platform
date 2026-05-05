@@ -174,7 +174,7 @@ Migrations: ALWAYS use `./scripts/run-migrations-master.sh [uat|staging]` — ne
 - Personal responses NEVER cached (POPIA compliance)
 - Self-learning: unknown questions auto-saved to KB as `isActive=false` for admin review
 - Embed KB: `npm run embed:kb` (run after adding new KB entries)
-- **Withdrawals / eeziCash wording:** KB and FAQ must follow `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md` and `docs/FAQ_MASTER.md` §9 — eeziCash = **wallet cash withdrawal** (TPPP), not VAS voucher resale.
+- **Withdrawals / eeziCash wording:** KB and FAQ must follow `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md` and `docs/FAQ_MASTER.md` §9 — eeziCash = **wallet cash withdrawal** (TPPP), not VAS retail-voucher resale.
 
 ---
 
@@ -189,7 +189,7 @@ This section must be maintained by every agent. Flag issues here so future agent
 | `aiSupportService.js` references `gpt-5` | `services/aiSupportService.js:1187,1558` | Medium — will crash if called | Archive the file |
 | Conversation history in-memory only | `services/ragService.js` | Medium — lost on restart, not scalable | Migrate to Redis for horizontal scaling (Phase 3) |
 | npm audit: 25 vulnerabilities (2 critical) | `package.json` | Medium | Run `npm audit fix` when stable |
-| Legacy EasyPay cash-out voucher code remains after V5 cash-in pivot | `controllers/voucherController.js`, `models/voucherModel.js`, `routes/vouchers.js` | Medium — inactive/legacy branches can confuse future EasyPay cash-in work or be accidentally re-exposed | Run a dedicated EasyPay cleanup pass to separate retained historical voucher support from deprecated cash-out paths; do not mix with migration repairs |
+| Legacy EasyPay cash-withdrawal reference code remains after V5 cash-in pivot | `controllers/voucherController.js`, `models/voucherModel.js`, `routes/vouchers.js` | Medium — inactive/legacy branches can confuse future EasyPay cash-in work or be accidentally re-exposed | Run a dedicated EasyPay cleanup pass to separate retained historical voucher support from deprecated cash-out paths; do not mix with migration repairs |
 | RTP statement fallback safety layer not implemented | `services/standardbank/sbsaStatementService.js`, `services/standardbankRtpService.js`, future RTP-specific audit design | Medium — phase-1 duplicate-proof H2H fallback now covers RPP/PayShapID/plain inbound PayShap credits, but RTP paid callbacks have separate fee/net-credit accounting and must not reuse the deposit fallback blindly | Design a separate RTP fallback with fee/pass-through handling, RTP request linkage, and audit checks before any RTP statement `TRF` line can credit a wallet. |
 | COA needs dedicated input VAT and bank/payment fee split | `docs/CHART_OF_ACCOUNTS.md`, future migration, H2H statement reconciliation code | Medium — mixing input/output VAT or treating supplier-payment fees as generic bank charges would weaken VAT and margin reporting | Add/migrate `1300-20-01` VAT Input Recoverable, `5000-10-03` SBSA PayShap RPP/RTP fee CoS, `5000-10-04` EFT Supplier Payment Fee CoS, and `5100-01-01` Bank Charges Expense before automating statement fee postings. |
 

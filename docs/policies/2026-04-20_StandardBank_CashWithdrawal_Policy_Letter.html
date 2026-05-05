@@ -361,7 +361,7 @@
     The policy operationalises a structural separation between a wallet holder&rsquo;s <em>own funds</em> (ring-fenced and
     never withdrawable as cash) and <em>third-party funds</em> received for the wallet holder (the only balance eligible
     for cash collection through any MyMoolah Cash-Withdrawal Partner &mdash; currently eeziCash (Flash Group), EasyPay
-    retail cash-withdrawal, and Cliquefin / OTT cash-withdrawal vouchers, and any future equivalent rail). In our respectful submission this
+    retail cash-withdrawal, and Cliquefin / OTT cash-withdrawal references, and any future equivalent rail). In our respectful submission this
     structure places MyMoolah firmly outside the definition of &ldquo;the business of a bank&rdquo; in section&nbsp;1 read with
     section&nbsp;11 of the Banks Act 94 of 1990, and is consistent with the SARB Position Paper on Electronic Money
     (NPS&nbsp;01/2020) and with the sponsor-bank segregation posture it contemplates.
@@ -386,7 +386,7 @@
     PayShap, EFT, bill payments, airtime, data, electricity and other value-added services, QR merchant payments, NFC
     spend, and non-cash digital vouchers &mdash; but they may not, under any circumstance, be converted to physical cash
     via any MyMoolah Cash-Withdrawal Partner &mdash; eeziCash (Flash Group), EasyPay retail cash-withdrawal,
-    Cliquefin / OTT cash-withdrawal vouchers, USSD cash-withdrawal, or any successor rail. The restriction is absolute; MyMoolah
+    Cliquefin / OTT cash-withdrawal references, USSD cash-withdrawal, or any successor rail. The restriction is absolute; MyMoolah
     operates no override that would permit Own Funds to be paid out as cash.
   </p>
   <p>
@@ -439,7 +439,7 @@
     <tbody>
       <tr>
         <td>Wallet-level enforcement</td>
-        <td>Every cash-withdrawal endpoint &mdash; eeziCash PIN purchase, EasyPay cash-withdrawal token, Cliquefin / OTT cash-withdrawal voucher, USSD cash-withdrawal, and any future equivalent Cash-Withdrawal Partner &mdash; routes through the wallet-level guard <code>Wallet.canCashOut()</code> (an internal code identifier retained for continuity), which asserts <code>balance&nbsp;&minus;&nbsp;restricted_balance&nbsp;&ge;&nbsp;amount</code> before debiting. Failure returns a standardised restriction response to the app; no Cash-Available figure is surfaced to the user.</td>
+        <td>Every cash-withdrawal endpoint &mdash; eeziCash PIN purchase, EasyPay cash-withdrawal token, Cliquefin / OTT cash-withdrawal credential, USSD cash-withdrawal, and any future equivalent Cash-Withdrawal Partner &mdash; routes through the wallet-level guard <code>Wallet.canCashOut()</code> (an internal code identifier retained for continuity), which asserts <code>balance&nbsp;&minus;&nbsp;restricted_balance&nbsp;&ge;&nbsp;amount</code> before debiting. Failure returns a standardised restriction response to the app; no Cash-Available figure is surfaced to the user.</td>
       </tr>
       <tr>
         <td>Ledger-level enforcement</td>
@@ -469,7 +469,7 @@
 
   <p>
     We wish to raise proactively a characteristic common to every cash-withdrawal product currently supported &mdash;
-    eeziCash (Flash Group), EasyPay retail cash-withdrawal, and Cliquefin / OTT cash-withdrawal vouchers &mdash;
+    eeziCash (Flash Group), EasyPay retail cash-withdrawal, and Cliquefin / OTT cash-withdrawal references &mdash;
     which we expect Standard Bank&rsquo;s Compliance function to identify: redemption at the merchant, retailer or trader
     point occurs on the presentation of a PIN or reference token, <strong>without an independent identity verification of
     the physical cash recipient at the point of dispense</strong>. We have assessed this characteristic under our FICA Risk Management and

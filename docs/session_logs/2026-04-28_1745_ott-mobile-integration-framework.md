@@ -10,7 +10,7 @@
 ## Session Summary
 
 Created a banking-grade, documentation-first framework for future OTT Mobile
-integration planning. The framework covers OTT voucher resale, OTT voucher wallet
+integration planning. The framework covers OTT retail voucher sale, OTT voucher wallet
 top-up, OTT cash withdrawal, bank ATM/cash-send payout, OTT Loyalty, API
 auth/hash model, ledger/VAT controls, compliance, reconciliation, rollout phases,
 and partner questions.
@@ -57,7 +57,7 @@ added. This session created planning and continuity documentation only.
 ## Issues Encountered
 
 - The Zoho API manual is password protected and could not be read through static fetch, so a read-only browser sub-agent authenticated and confirmed the content was accessible.
-- The Payout API appears payout-oriented; voucher resale, voucher top-up, and loyalty may require separate OTT APIs. The framework marks these as partner dependencies instead of assuming support.
+- The Payout API appears payout-oriented; retail voucher sale, voucher top-up, and loyalty may require separate OTT APIs. The framework marks these as partner dependencies instead of assuming support.
 - Existing MMTP patterns include some drift risks, such as stale EasyPay docs/route references and draft ledger helpers. The framework warns against blind reuse.
 
 ---
@@ -91,7 +91,7 @@ added. This session created planning and continuity documentation only.
 
 ## Questions/Unresolved Items
 
-- Are OTT voucher resale and OTT voucher redemption/top-up exposed through the Payout API or a separate OTT Voucher API?
+- Are OTT retail voucher sale and OTT voucher redemption/top-up exposed through the Payout API or a separate OTT Voucher API?
 - Which provider codes map to Nedbank, ABSA Cashsend, PayShap, RTC, EFT, and ATM cash-send?
 - What is the official OTT webhook schema, retry schedule, and verification process?
 - What settlement/reconciliation file or API report will OTT provide?

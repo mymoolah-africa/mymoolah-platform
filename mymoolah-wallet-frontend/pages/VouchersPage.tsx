@@ -710,7 +710,7 @@ export function VouchersPage() {
     return code.replace(/\s/g, '').replace(/\D/g, '');
   };
 
-  // Copy voucher code to clipboard
+  // Copy cash PIN to clipboard
   const handleCopyCode = async (voucher: MMVoucher) => {
     try {
       const formattedCode = formatVoucherCodeForDisplay(voucher);
@@ -1027,7 +1027,7 @@ export function VouchersPage() {
       `;
       let successMessage;
       if (isCashout) {
-        successMessage = `Settlement simulated! Cash-out voucher redeemed.`;
+        successMessage = `Settlement simulated! Cash-withdrawal credential redeemed.`;
       } else if (isStandalone) {
         successMessage = `Settlement simulated! EasyPay voucher redeemed at merchant.`;
       } else {
@@ -1624,7 +1624,7 @@ export function VouchersPage() {
                           </div>
                         </div>
 
-                        {/* Voucher Code - Dual Display for EasyPay */}
+                        {/* Cash PIN - Dual Display for EasyPay */}
                         <div style={{ marginBottom: '12px' }}>
                           {(() => {
                             const formattedCode = formatVoucherCodeForDisplay(voucher);
@@ -1711,7 +1711,7 @@ export function VouchersPage() {
                                 transition: 'color 0.2s ease',
                                 fontFamily: 'Montserrat, sans-serif'
                               }}
-                              aria-label="Copy voucher code"
+                              aria-label="Copy cash PIN"
                             >
                               {copiedCode === voucher.voucherCode ? 
                                 <Check style={{ width: '14px', height: '14px' }} /> : 
@@ -2075,7 +2075,7 @@ export function VouchersPage() {
                         }}
                       >
                         {sellVoucherType === 'mm_voucher' && 'MyMoolah vouchers use 16 digits in format: XXXX XXXX XXXX XXXX'}
-                        {sellVoucherType === 'easypay_voucher' && 'EasyPay cash-out vouchers are not retail vouchers. They are reserved for the EasyPay cash-out journey.'}
+                        {sellVoucherType === 'easypay_voucher' && 'EasyPay cash-withdrawal references are not retail vouchers. They are reserved for the EasyPay cash-out journey.'}
                         {sellVoucherType === 'third_party_voucher' && 'Supplier retail vouchers are bought under Buy Retail Vouchers, not created here.'}
                       </p>
                     </AlertDescription>
@@ -2143,7 +2143,7 @@ export function VouchersPage() {
               </CardHeader>
               <CardContent style={{ padding: '24px' }}>
                 <div style={{ display: 'grid', gap: '16px' }}>
-                  {/* Voucher Code Input */}
+                  {/* Cash PIN Input */}
                   <div>
                     <Label 
                       style={{
@@ -2155,7 +2155,7 @@ export function VouchersPage() {
                         display: 'block'
                       }}
                     >
-                      Voucher Code or EasyPay Number
+                      Cash PIN or EasyPay Number
                     </Label>
                     <Input
                       type="text"
@@ -2563,7 +2563,7 @@ export function VouchersPage() {
                       // Export functionality - create CSV of filtered vouchers
                       // Ensure expiry follows business rules: 96h for EasyPay pending; 12 months for MMVoucher
                       const csvContent = "data:text/csv;charset=utf-8," 
-                        + "Voucher Code,Type,Status,Amount,Currency,Created Date,Expiry Date,Description\n"
+                        + "Cash PIN,Type,Status,Amount,Currency,Created Date,Expiry Date,Description\n"
                         + filteredVouchers.map(v => {
                           const createdMs = new Date(v.createdDate).getTime();
                           const computedExpiry = (v.status === 'pending_payment' && v.type === 'easypay_voucher')
@@ -2801,7 +2801,7 @@ export function VouchersPage() {
                           </div>
                         </div>
 
-                        {/* Voucher Code - Dual Display for EasyPay */}
+                        {/* Cash PIN - Dual Display for EasyPay */}
                         <div style={{ marginBottom: '12px' }}>
                           {(() => {
                             const formattedCode = formatVoucherCodeForDisplay(voucher);
@@ -2888,7 +2888,7 @@ export function VouchersPage() {
                                 transition: 'color 0.2s ease',
                                 fontFamily: 'Montserrat, sans-serif'
                               }}
-                              aria-label="Copy voucher code"
+                              aria-label="Copy cash PIN"
                             >
                               {copiedCode === voucher.voucherCode ? 
                                 <Check style={{ width: '14px', height: '14px' }} /> : 
@@ -3087,7 +3087,7 @@ export function VouchersPage() {
                   </Badge>
                 </div>
 
-                {/* Voucher Code - Only show for non-EasyPay vouchers */}
+                {/* Cash PIN - Only show for non-EasyPay vouchers */}
                 {selectedVoucher.type !== 'easypay_voucher' && (
                   <div style={{ marginBottom: '16px' }}>
                     <Label 
@@ -3100,7 +3100,7 @@ export function VouchersPage() {
                         display: 'block'
                       }}
                     >
-                      Voucher Code
+                      Cash PIN
                     </Label>
                     <div 
                       style={{
@@ -3461,7 +3461,7 @@ export function VouchersPage() {
               {successModalData?.title}
             </h2>
 
-            {/* Voucher Code (if applicable) */}
+            {/* Cash PIN (if applicable) */}
             {successModalData?.voucherCode && (
               <div 
                 style={{
@@ -3483,7 +3483,7 @@ export function VouchersPage() {
                     letterSpacing: '0.5px'
                   }}
                 >
-                  {successModalData.type === 'easypay' ? 'EasyPay Number' : 'Voucher Code'}
+                  {successModalData.type === 'easypay' ? 'EasyPay Number' : 'Cash PIN'}
                 </p>
                 <p 
                   style={{
@@ -3645,7 +3645,7 @@ export function VouchersPage() {
                       <li>
                         Refund R {
                           (() => {
-                            // For cash-out vouchers, refund includes voucher amount + transaction fee (R8.00)
+                            // For cash-withdrawal references, refund includes voucher amount + transaction fee (R8.00)
                             const isCashout = voucherToCancel.voucherType === 'easypay_cashout' || voucherToCancel.voucherType === 'easypay_cashout_active';
                             if (isCashout) {
                               const voucherAmount = voucherToCancel.originalAmount || 0;
