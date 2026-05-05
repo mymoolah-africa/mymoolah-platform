@@ -1,5 +1,21 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-05-05 - OTT commercial volume forecast
+
+### Summary
+Created an official one-page MyMoolah x OTT 36-month transaction volume forecast for OTT commercial rate discussions.
+
+### Changes
+- Added `docs/integrations/OTT_COMMERCIAL_VOLUME_FORECAST.html` as a polished self-contained HTML artefact for partner sharing.
+- Forecast shows monthly transaction count and face value only, excluding commissions, fees, rebates, revenue share, VAT, settlement charges, failed transactions, and reversals.
+- Updated the forecast to reflect MyMoolah's target-market betting-wallet top-up behaviour across recycled wallet inflows, EWA, salary/wage disbursements, PayShap inflows, OTT vouchers, and OTT merchant spend.
+- Kept Amazon Gift Card excluded from commercial assumptions until OTT confirms provider availability.
+
+### Validation
+- HTML parsed successfully with Python `HTMLParser`.
+- Cursor lints on the generated HTML reported no linter errors.
+- No runtime code, database schema, migrations, or production configuration changed.
+
 ## 2026-05-02 - Referral SMS outcome modal
 
 ### Summary

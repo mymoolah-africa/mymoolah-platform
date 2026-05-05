@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MyMoolah x OTT 36-Month Transaction Volume Forecast</title>
+  <meta name="description" content="Official MyMoolah 36-month OTT transaction count and face-value forecast based on market research, target client segments, and planned product rollout.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --green: #86BE41;
+      --blue: #2D8CCA;
+      --ink: #17212B;
+      --muted: #5D6B78;
+      --soft: #EEF4EA;
+      --line: #DCE5D7;
+      --paper: #FFFFFF;
+      --wash: #F7FAF4;
+      --amber: #A66B00;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: #EAF0E7;
+      color: var(--ink);
+      font-family: "Source Sans 3", sans-serif;
+      line-height: 1.45;
+    }
+
+    main {
+      width: min(1120px, calc(100% - 32px));
+      margin: 28px auto;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      overflow: hidden;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 28px;
+      padding: 34px 38px 28px;
+      background:
+        radial-gradient(circle at top right, rgba(134, 190, 65, 0.18), transparent 34%),
+        linear-gradient(135deg, #FFFFFF 0%, #F7FBF4 100%);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      width: fit-content;
+      padding: 6px 12px;
+      border: 1px solid rgba(134, 190, 65, 0.45);
+      border-radius: 999px;
+      color: #31551B;
+      background: rgba(134, 190, 65, 0.13);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    h1, h2, h3 {
+      margin: 0;
+      font-family: "Montserrat", sans-serif;
+      letter-spacing: -0.03em;
+    }
+
+    h1 {
+      max-width: 720px;
+      margin-top: 16px;
+      font-size: clamp(34px, 5vw, 58px);
+      line-height: 0.98;
+    }
+
+    .subtitle {
+      max-width: 700px;
+      margin: 16px 0 0;
+      color: var(--muted);
+      font-size: 18px;
+    }
+
+    .hero-panel {
+      align-self: stretch;
+      display: grid;
+      align-content: center;
+      gap: 14px;
+      padding: 24px;
+      border: 1px solid rgba(45, 140, 202, 0.22);
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.72);
+    }
+
+    .scenario {
+      color: var(--blue);
+      font-family: "Montserrat", sans-serif;
+      font-size: 14px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .scenario-copy {
+      margin: 0;
+      color: var(--ink);
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1.18;
+    }
+
+    .note {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .stat {
+      padding: 24px 22px;
+      background: var(--paper);
+    }
+
+    .stat small {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .stat strong {
+      display: block;
+      margin-top: 8px;
+      color: var(--ink);
+      font-family: "Montserrat", sans-serif;
+      font-size: clamp(24px, 3.3vw, 34px);
+      line-height: 1;
+    }
+
+    .stat span {
+      display: block;
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .content {
+      padding: 30px 38px 36px;
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      align-items: end;
+      margin-bottom: 18px;
+    }
+
+    .section-head h2 {
+      font-size: clamp(24px, 3vw, 34px);
+    }
+
+    .section-head p {
+      max-width: 470px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 15px;
+      text-align: right;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+    }
+
+    table {
+      width: 100%;
+      min-width: 980px;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th {
+      padding: 14px 12px;
+      background: #F1F6EE;
+      color: #31551B;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-align: right;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    th:first-child,
+    td:first-child {
+      text-align: left;
+    }
+
+    td {
+      padding: 15px 12px;
+      border-top: 1px solid var(--line);
+      color: var(--ink);
+      font-weight: 600;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    tbody tr:nth-child(even) td {
+      background: #FBFCFA;
+    }
+
+    tbody tr.total td {
+      background: #EAF4E4;
+      color: #203B11;
+      font-family: "Montserrat", sans-serif;
+      font-weight: 800;
+    }
+
+    .rail {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      white-space: normal;
+    }
+
+    .rail span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .pill-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-top: 24px;
+    }
+
+    .pill-card {
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--wash);
+    }
+
+    .pill-card h3 {
+      color: var(--ink);
+      font-size: 15px;
+    }
+
+    .pill-card p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .band {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin-top: 24px;
+    }
+
+    .callout {
+      padding: 20px;
+      border-radius: 20px;
+      background: #F6FAF2;
+      border: 1px solid rgba(134, 190, 65, 0.34);
+    }
+
+    .callout h3 {
+      color: #31551B;
+      font-size: 18px;
+    }
+
+    .callout p,
+    .footer p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .footer {
+      padding: 18px 38px 26px;
+      border-top: 1px solid var(--line);
+      background: #FBFCFA;
+    }
+
+    .footer strong {
+      color: var(--ink);
+    }
+
+    @media (max-width: 900px) {
+      main {
+        width: min(100% - 18px, 1120px);
+        margin: 9px auto;
+        border-radius: 18px;
+      }
+
+      .hero,
+      .band {
+        grid-template-columns: 1fr;
+      }
+
+      .stats,
+      .pill-row {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .section-head {
+        display: block;
+      }
+
+      .section-head p {
+        margin-top: 8px;
+        text-align: left;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .hero,
+      .content,
+      .footer {
+        padding-left: 20px;
+        padding-right: 20px;
+      }
+
+      .stats,
+      .pill-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media print {
+      body {
+        background: #FFFFFF;
+      }
+
+      main {
+        width: 100%;
+        margin: 0;
+        border: none;
+        border-radius: 0;
+      }
+
+      .hero {
+        background: #FFFFFF;
+      }
+
+      .table-wrap {
+        overflow: visible;
+      }
+
+      table {
+        min-width: 0;
+        font-size: 11px;
+      }
+
+      th,
+      td {
+        padding: 8px 7px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero" aria-labelledby="page-title">
+      <div>
+        <div class="eyebrow">Confidential commercial planning</div>
+        <h1 id="page-title">MyMoolah x OTT 36-Month Transaction Volume Forecast</h1>
+        <p class="subtitle">
+          An official market-research forecast of monthly transaction count and face value expected to route through OTT as MyMoolah scales partner payouts, wallet payments, cash withdrawal, and VAS products.
+        </p>
+      </div>
+      <aside class="hero-panel" aria-label="Forecast positioning">
+        <div class="scenario">Forecast position</div>
+        <p class="scenario-copy">Research-led commercial planning forecast, face-value only.</p>
+        <p class="note">
+          Figures are face value only. They exclude commissions, fees, rebates, revenue share, VAT, settlement charges, failed transactions, and reversals.
+        </p>
+      </aside>
+    </section>
+
+    <section class="stats" aria-label="Key forecast milestones">
+      <div class="stat">
+        <small>Month 12</small>
+        <strong>145.5k</strong>
+        <span>monthly transactions, R47.1m face value</span>
+      </div>
+      <div class="stat">
+        <small>Month 18</small>
+        <strong>399k</strong>
+        <span>monthly transactions, R121.7m face value</span>
+      </div>
+      <div class="stat">
+        <small>Month 24</small>
+        <strong>1.07m</strong>
+        <span>monthly transactions, R314.5m face value</span>
+      </div>
+      <div class="stat">
+        <small>Month 36</small>
+        <strong>2.92m</strong>
+        <span>monthly transactions, R880.0m face value</span>
+      </div>
+    </section>
+
+    <section class="content" aria-labelledby="forecast-title">
+      <div class="section-head">
+        <h2 id="forecast-title">36-Month Monthly Run-Rate Forecast</h2>
+        <p>
+          Assumes all eligible payout rails are routed through OTT, Amazon Gift Card is excluded until provider availability is confirmed, and production provider mappings are validated separately.
+        </p>
+      </div>
+
+      <div class="table-wrap">
+        <table aria-label="Transaction and face-value forecast by OTT product rail">
+          <thead>
+            <tr>
+              <th>Product / rail</th>
+              <th>Avg face value</th>
+              <th>12 mo tx</th>
+              <th>12 mo value</th>
+              <th>18 mo tx</th>
+              <th>18 mo value</th>
+              <th>24 mo tx</th>
+              <th>24 mo value</th>
+              <th>36 mo tx</th>
+              <th>36 mo value</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="rail">Sports betting disbursements<span>Operator payout migration</span></span></td>
+              <td>R650-R700</td>
+              <td>30k</td>
+              <td>R19.5m</td>
+              <td>70k</td>
+              <td>R45.5m</td>
+              <td>150k</td>
+              <td>R101.3m</td>
+              <td>350k</td>
+              <td>R245.0m</td>
+            </tr>
+            <tr>
+              <td><span class="rail">EWA disbursements<span>Earned wage advances</span></span></td>
+              <td>R750-R800</td>
+              <td>7.5k</td>
+              <td>R5.6m</td>
+              <td>20k</td>
+              <td>R15.0m</td>
+              <td>50k</td>
+              <td>R38.8m</td>
+              <td>150k</td>
+              <td>R120.0m</td>
+            </tr>
+            <tr>
+              <td><span class="rail">Wallet cash withdrawals<span>Formal and informal retail</span></span></td>
+              <td>R350-R400</td>
+              <td>8k</td>
+              <td>R2.8m</td>
+              <td>20k</td>
+              <td>R7.0m</td>
+              <td>50k</td>
+              <td>R18.8m</td>
+              <td>150k</td>
+              <td>R60.0m</td>
+            </tr>
+            <tr>
+              <td><span class="rail">PayShap payments<span>Primarily banking-detail based</span></span></td>
+              <td>R450-R500</td>
+              <td>12k</td>
+              <td>R5.4m</td>
+              <td>30k</td>
+              <td>R13.5m</td>
+              <td>80k</td>
+              <td>R38.0m</td>
+              <td>250k</td>
+              <td>R125.0m</td>
+            </tr>
+            <tr>
+              <td><span class="rail">Gift cards<span>Amazon excluded until confirmed</span></span></td>
+              <td>R150-R200</td>
+              <td>5k</td>
+              <td>R0.8m</td>
+              <td>12k</td>
+              <td>R1.9m</td>
+              <td>30k</td>
+              <td>R5.3m</td>
+              <td>90k</td>
+              <td>R18.0m</td>
+            </tr>
+            <tr>
+              <td><span class="rail">PnP / Shoprite vouchers<span>Grocery payment use case</span></span></td>
+              <td>R220-R275</td>
+              <td>8k</td>
+              <td>R1.8m</td>
+              <td>22k</td>
+              <td>R5.1m</td>
+              <td>60k</td>
+              <td>R15.0m</td>
+              <td>180k</td>
+              <td>R49.5m</td>
+            </tr>
+            <tr>
+              <td><span class="rail">OTT vouchers / betting top-ups<span>Recycled wallet inflows, betting-wallet top-ups, OTT merchant spend</span></span></td>
+              <td>~R150</td>
+              <td>75k</td>
+              <td>R11.3m</td>
+              <td>225k</td>
+              <td>R33.8m</td>
+              <td>650k</td>
+              <td>R97.5m</td>
+              <td>1.75m</td>
+              <td>R262.5m</td>
+            </tr>
+            <tr class="total">
+              <td>Total monthly run-rate</td>
+              <td></td>
+              <td>145.5k</td>
+              <td>R47.1m</td>
+              <td>399k</td>
+              <td>R121.7m</td>
+              <td>1.07m</td>
+              <td>R314.5m</td>
+              <td>2.92m</td>
+              <td>R880.0m</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pill-row" aria-label="Forecast basis">
+        <article class="pill-card">
+          <h3>Market-informed</h3>
+          <p>Built from South African demand signals across betting payouts, EWA, cash access, PayShap, gift cards, and grocery vouchers.</p>
+        </article>
+        <article class="pill-card">
+          <h3>Partner-led ramp</h3>
+          <p>Assumes signed clients migrate eligible disbursements and wallet users adopt cash-out, PayShap, and voucher journeys over time.</p>
+        </article>
+        <article class="pill-card">
+          <h3>Provider-controlled</h3>
+          <p>Production provider IDs, active lists, limits, and unavailable SKUs must be confirmed from the OTT live environment.</p>
+        </article>
+        <article class="pill-card">
+          <h3>Face-value only</h3>
+          <p>No commissions, pricing, fees, VAT, rebates, or revenue-share assumptions are included in the forecast table.</p>
+        </article>
+      </div>
+
+      <div class="band">
+        <article class="callout">
+          <h3>Commercial purpose</h3>
+          <p>
+            MyMoolah is requesting tiered payout pricing and strong VAS terms based on the expected scale of transaction count and face value routed through OTT rails.
+          </p>
+        </article>
+        <article class="callout">
+          <h3>Operational confidence</h3>
+          <p>
+            Forecast execution assumes webhook retries, pending statuses, GetPaymentStatus recovery, idempotent processing, daily reports, and environment-specific provider mapping remain aligned.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <p>
+        <strong>Prepared for OTT commercial discussion.</strong> This indicative forecast is based on planned MyMoolah product rollout, target client segments, and market-informed adoption assumptions over 12, 18, 24, and 36 months.
+      </p>
+    </footer>
+  </main>
+</body>
+</html>

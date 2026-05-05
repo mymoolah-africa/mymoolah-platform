@@ -5,6 +5,7 @@
 **Classification**: Internal - Banking-Grade Integration Planning  
 **Provider**: OTT Mobile Technologies (Pty) Ltd  
 **Related group**: CliqueFin  
+**Commercial forecast artefact**: `docs/integrations/OTT_COMMERCIAL_VOLUME_FORECAST.html`
 
 ---
 
@@ -101,6 +102,7 @@ public URLs are transient and should be limited to internal smoke tests.
 - `middleware/idempotency.js`
 - `services/reconciliation/adapters/EasyPayAdapter.js`
 - `services/reconciliation/adapters/ZapperAdapter.js`
+- `docs/integrations/OTT_COMMERCIAL_VOLUME_FORECAST.html` - partner-facing 36-month transaction count and face-value forecast for OTT rate discussions. The forecast excludes commissions, fees, rebates, revenue share, VAT, settlement charges, failed transactions, and reversals.
 
 ---
 
