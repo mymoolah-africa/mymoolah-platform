@@ -28,6 +28,16 @@ const mockPayment = {
   update: jest.fn(),
 };
 
+const mockSupplierFloat = {
+  supplierId: 'OTT',
+  ledgerAccountCode: '1200-10-08',
+  status: 'active',
+  isActive: true,
+  currentBalance: '1000.00',
+  metadata: {},
+  update: jest.fn(),
+};
+
 const mockCommercialTerm = {
   supplierCode: 'OTT',
   providerCode: '112',
@@ -54,6 +64,7 @@ const mockModels = {
     findOne: jest.fn(),
   },
   Transaction: { create: jest.fn(), update: jest.fn(), findOne: jest.fn() },
+  SupplierFloat: { findOne: jest.fn() },
   SupplierCommercialTerm: { findOne: jest.fn() },
   TaxTransaction: { findOne: jest.fn(), create: jest.fn(), update: jest.fn() },
 };
@@ -63,6 +74,7 @@ const mockPerformPayout = jest.fn();
 jest.mock('../models', () => mockModels);
 jest.mock('../services/ledgerService', () => ({
   postJournalEntry: jest.fn().mockResolvedValue({}),
+  getAccountBalanceByCode: jest.fn().mockResolvedValue(890.04),
 }));
 jest.mock('../services/ott/ottClient', () => ({
   OttClient: jest.fn().mockImplementation(() => ({
@@ -82,6 +94,7 @@ describe('OTT payout service', () => {
     mockPayment.status = 'processing';
     mockPayment.metadata = {};
     mockPayment.webhookEventId = null;
+    mockPayment.reversedAt = null;
     mockPayment.providerFeeAmount = 11.45;
     mockPayment.mmtpFeeAmount = 1.00;
     mockPayment.totalDebit = 112.45;
@@ -94,6 +107,7 @@ describe('OTT payout service', () => {
     mockModels.Transaction.create.mockResolvedValue({});
     mockModels.Transaction.update.mockResolvedValue([2]);
     mockModels.Transaction.findOne.mockResolvedValue({ transactionId: 'OTT-FEE-OTT-TEST' });
+    mockModels.SupplierFloat.findOne.mockResolvedValue(mockSupplierFloat);
     mockModels.SupplierCommercialTerm.findOne.mockResolvedValue(mockCommercialTerm);
     mockModels.TaxTransaction.findOne.mockResolvedValue(null);
     mockModels.TaxTransaction.create.mockResolvedValue({});
@@ -102,6 +116,8 @@ describe('OTT payout service', () => {
     mockWallet.debit.mockResolvedValue(mockWallet);
     mockWallet.credit.mockResolvedValue(mockWallet);
     mockPayment.update.mockResolvedValue(mockPayment);
+    mockSupplierFloat.metadata = {};
+    mockSupplierFloat.update.mockResolvedValue(mockSupplierFloat);
     mockPerformPayout.mockResolvedValue({
       status: 200,
       data: {
@@ -112,6 +128,7 @@ describe('OTT payout service', () => {
       request: { yourUniqueReference: 'MM-OTT-TEST' },
     });
     ledgerService.postJournalEntry.mockResolvedValue({});
+    ledgerService.getAccountBalanceByCode.mockResolvedValue(890.04);
   });
 
   afterEach(() => {
@@ -287,6 +304,21 @@ describe('OTT payout service', () => {
     expect(ledgerService.postJournalEntry).toHaveBeenCalledWith(expect.objectContaining({
       reference: 'OTT-PAYOUT-OTT-TEST',
     }));
+    expect(ledgerService.getAccountBalanceByCode).toHaveBeenCalledWith('1200-10-08');
+    expect(mockModels.SupplierFloat.findOne).toHaveBeenCalledWith({
+      where: {
+        supplierId: 'OTT',
+        ledgerAccountCode: '1200-10-08',
+        status: 'active',
+        isActive: true,
+      },
+    });
+    expect(mockSupplierFloat.update).toHaveBeenCalledWith(expect.objectContaining({
+      currentBalance: '890.04',
+      metadata: expect.objectContaining({
+        lastLedgerSyncSource: 'ott_payout_posted',
+      }),
+    }));
     expect(result).toEqual({ processed: true, payoutId: 'OTT-TEST', status: 'completed' });
   });
 
@@ -305,6 +337,37 @@ describe('OTT payout service', () => {
     expect(mockWallet.credit).not.toHaveBeenCalled();
     expect(ledgerService.postJournalEntry).not.toHaveBeenCalled();
     expect(result).toEqual({ processed: true, payoutId: 'OTT-TEST', status: 'processing' });
+  });
+
+  it('syncs OTT supplier float after reversal ledger posts', async () => {
+    mockPayment.metadata = { ledgerPostedAt: '2026-05-05T15:00:00.000Z' };
+    mockPayment.reversedAt = null;
+    ledgerService.getAccountBalanceByCode.mockResolvedValue(1000);
+
+    const result = await service.updatePayoutFromWebhook({
+      transactionId: '3460398',
+      merchantUniqueReference: 'MM-OTT-TEST',
+      message: 'Provider failed',
+      status: '97',
+    });
+
+    expect(mockWallet.credit).toHaveBeenCalledWith(112.45, 'credit', { transaction: mockTransaction });
+    expect(ledgerService.postJournalEntry).toHaveBeenCalledWith(expect.objectContaining({
+      reference: 'OTT-PAYOUT-REV-OTT-TEST',
+    }));
+    expect(ledgerService.getAccountBalanceByCode).toHaveBeenCalledWith('1200-10-08');
+    expect(mockSupplierFloat.update).toHaveBeenCalledWith(expect.objectContaining({
+      currentBalance: '1000.00',
+      metadata: expect.objectContaining({
+        lastLedgerSyncSource: 'ott_payout_reversed',
+      }),
+    }));
+    expect(result).toEqual({
+      processed: true,
+      payoutId: 'OTT-TEST',
+      status: 'failed',
+      reversed: true,
+    });
   });
 
   it('validates official OTT recipient fields before wallet debit', async () => {

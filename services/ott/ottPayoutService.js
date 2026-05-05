@@ -187,6 +187,59 @@ function reverseLedgerLines(lines) {
   }));
 }
 
+async function syncOttSupplierFloatBalance({ context = 'ott_payout_ledger_sync' } = {}) {
+  if (!db.SupplierFloat) return null;
+
+  const ottFloatCode = process.env.LEDGER_ACCOUNT_OTT_FLOAT || '1200-10-08';
+  const ledgerBalance = await ledgerService.getAccountBalanceByCode(ottFloatCode);
+  if (ledgerBalance === null) return null;
+
+  let supplierFloat = await db.SupplierFloat.findOne({
+    where: {
+      supplierId: 'OTT',
+      ledgerAccountCode: ottFloatCode,
+      status: 'active',
+      isActive: true,
+    },
+  });
+
+  if (!supplierFloat) {
+    supplierFloat = await db.SupplierFloat.findOne({
+      where: {
+        ledgerAccountCode: ottFloatCode,
+        status: 'active',
+        isActive: true,
+      },
+    });
+  }
+
+  if (!supplierFloat) return null;
+
+  await supplierFloat.update({
+    currentBalance: roundMoney(ledgerBalance).toFixed(2),
+    metadata: {
+      ...(supplierFloat.metadata || {}),
+      lastLedgerSyncAt: new Date().toISOString(),
+      lastLedgerSyncSource: context,
+    },
+  });
+
+  return supplierFloat;
+}
+
+async function recordSupplierFloatSyncWarning(payment, error, context) {
+  console.error(`Failed to sync OTT SupplierFloat balance after ${context}:`, error.message);
+  if (!payment || typeof payment.update !== 'function') return;
+  await payment.update({
+    metadata: {
+      ...(payment.metadata || {}),
+      supplierFloatSyncWarning: error.message,
+      supplierFloatSyncWarningAt: new Date().toISOString(),
+      supplierFloatSyncWarningSource: context,
+    },
+  });
+}
+
 function toSafePayout(payment) {
   if (!payment) return null;
   const plain = typeof payment.toJSON === 'function' ? payment.toJSON() : payment;
@@ -275,6 +328,11 @@ async function postLedger(payment) {
       ledgerReference: `OTT-PAYOUT-${payment.payoutId}`,
     },
   });
+  try {
+    await syncOttSupplierFloatBalance({ context: 'ott_payout_posted' });
+  } catch (error) {
+    await recordSupplierFloatSyncWarning(payment, error, 'ott_payout_posted');
+  }
   await postPayoutFeeTaxTransaction(payment);
   return entry;
 }
@@ -373,6 +431,11 @@ async function postReversalLedger(payment, reason) {
       reversalLedgerReference: `OTT-PAYOUT-REV-${payment.payoutId}`,
     },
   });
+  try {
+    await syncOttSupplierFloatBalance({ context: 'ott_payout_reversed' });
+  } catch (error) {
+    await recordSupplierFloatSyncWarning(payment, error, 'ott_payout_reversed');
+  }
   await refundPayoutFeeTaxTransaction(payment, reason);
   return entry;
 }
@@ -719,6 +782,7 @@ module.exports = {
   isUnknownProviderOutcome,
   postPayoutFeeTaxTransaction,
   refundPayoutFeeTaxTransaction,
+  syncOttSupplierFloatBalance,
   normalizeProviderStatus,
   toSafePayout,
 };

@@ -1,7 +1,7 @@
 # MyMoolah Treasury Platform — Chart of Accounts
 
-**Last Updated**: 2026-05-01
-**Document Version**: 1.0.0
+**Last Updated**: 2026-05-05
+**Document Version**: 1.0.1
 **Classification**: Internal — Banking-Grade Financial Architecture
 **Owner**: MyMoolah Treasury / Finance
 
@@ -63,7 +63,8 @@ and receivables. Normal side: **debit** (increases on debit, decreases on credit
 
 | Code | Name | Normal | Migration | Used By | Notes |
 |------|------|--------|-----------|---------|-------|
-| `1100-01-01` | Standard Bank Current Account | debit | `20260207120003`, `20260224_03` | walletController, rtpService, rppService, overlayServices, backfill scripts | Primary operating bank account; all external fund movements clear through here |
+| `1100-01-01` | SBSA Treasury Account | debit | `20260207120003`, `20260224_03` | walletController, rtpService, rppService, overlayServices, backfill scripts | MyMoolah Treasury account for treasury transactions, wallet/client-float backing, supplier-float prefunding, and external payment rails |
+| `1100-01-02` | SBSA Business Operating Account | debit | **NEEDS MIGRATION** | manual Finance journals | MyMoolah daily operations account for salaries and operating spend; receives earned MMTP fees/commissions swept from Treasury after recognition; never use for client or supplier floats |
 | `1100-02-01` | SBSA Statement Reconciliation Account | debit | `20260405_01` | `sbsaStatementService.js` (`SBSA_MAIN_ACCOUNT_CODE`) | MT940/MT942 statement balance tracking; env var `SBSA_MAIN_ACCOUNT_CODE` defaults to this code |
 | `1200-01-01` | Client Float — General | debit | `20260224_03` | — | General-purpose client float pool (not currently posted to; reserved) |
 | `1200-05-01` | Interchange Receivable | debit | `20260224_03` | — | PayShap interchange (reserved for future use) |
@@ -77,6 +78,13 @@ and receivables. Normal side: **debit** (increases on debit, decreases on credit
 | `1200-10-08` | OTT Payout Float Account | debit | `20260429_02` | `ottPayoutService.js` | OTT Payout / cash-send principal plus provider pass-through fee clearing; disabled by default until OTT UAT approval |
 | `1200-10-10` | NFC Deposit Float Account | debit | `20260224_03`, `20260210_03` | `nfcDepositService.js` | NFC acquiring float (Halo Dot Phase 1) |
 | `1300-20-01` | VAT Input Recoverable | debit | `20260501_01` | planned bank/supplier fee accounting | Dedicated input VAT asset for claimable VAT on supplier/bank tax invoices; do not mix with output VAT payable in `2300-10-01` |
+
+**SBSA bank account control model**
+
+- `1100-01-01` is the MyMoolah Treasury account. Use it for Treasury transactions, client-float backing, partner/supplier float prefunding, PayShap/RTP movements, and other treasury rails.
+- `1100-01-02` is the MyMoolah business operating account. Use it for daily operations such as salaries, rent, SaaS, and other business operating costs.
+- All supplier floats, including `1200-10-08` OTT Payout Float Account, are funded from `1100-01-01`.
+- Earned MMTP transaction fees and commissions may be swept from `1100-01-01` to `1100-01-02` once the revenue and VAT entries have been recognized in the ledger. The cash sweep itself is an asset-to-asset transfer; the income statement revenue remains in the relevant `4xxx-xx-xx` revenue account.
 
 ### 2.2 Liabilities (2xxx-xx-xx)
 
@@ -201,7 +209,7 @@ No commission JE — MMTP earns zero. Cash handling cost absorbed as operating e
 
 | | Account | Code | DR | CR |
 |---|---------|------|-----|-----|
-| DR | Standard Bank Current Account | 1100-01-01 | R{batchTotal} | |
+| DR | SBSA Treasury Account | 1100-01-01 | R{batchTotal} | |
 | CR | EasyPay Top-up Float | 1200-10-02 | | R{batchTotal} |
 
 Reference: `EP-SETTLE-{batchRef}-{date}`
@@ -218,7 +226,7 @@ SBSA charges R5.75 VAT-inclusive per transaction — full pass-through to user. 
 ```
 Reference: SBSA-RTP-{rtpId}
 
-DR  1100-01-01  Standard Bank Current Account    R10.00    (gross inflow)
+DR  1100-01-01  SBSA Treasury Account            R10.00    (gross inflow)
 CR  2100-01-01  Client Float Liability            R4.25    (net to wallet)
 CR  2200-02-01  Supplier Clearing Account         R5.75    (SBSA fee payable/pass-through, VAT incl)
 ```
@@ -234,7 +242,7 @@ MMTP charges user: principal + SBSA pass-through fee + MM markup. The SBSA fee i
 Reference: SBSA-RPP-{transferId}
 
 DR  2100-01-01  Client Float Liability           R66.75  (principal + SBSA fee + MMTP markup)
-CR  1100-01-01  Standard Bank Current Account    R60.00  (principal outflow to beneficiary)
+CR  1100-01-01  SBSA Treasury Account            R60.00  (principal outflow to beneficiary)
 CR  2200-02-01  Supplier Clearing Account        R5.75   (SBSA fee payable/pass-through, VAT incl)
 CR  4000-20-01  Transaction Fee Revenue          R0.87   (MMTP markup ex-VAT)
 CR  2300-10-01  VAT Control Account              R0.13   (VAT on MMTP markup only)
@@ -263,7 +271,7 @@ input VAT with `2300-10-01` output VAT payable.
 ```
 DR  5000-10-04  CoS: EFT Supplier Payment Fees    R8.09
 DR  1300-20-01  VAT Input Recoverable             R1.21
-CR  1100-01-01  Standard Bank Current Account     R9.30
+CR  1100-01-01  SBSA Treasury Account             R9.30
 ```
 
 **Example — general monthly bank charge (R182.42 VAT incl):**
@@ -271,7 +279,7 @@ CR  1100-01-01  Standard Bank Current Account     R9.30
 ```
 DR  5100-01-01  Bank Charges Expense              R158.63
 DR  1300-20-01  VAT Input Recoverable             R23.79
-CR  1100-01-01  Standard Bank Current Account     R182.42
+CR  1100-01-01  SBSA Treasury Account             R182.42
 ```
 
 If tax invoice support is not available yet, post VAT-inclusive to the relevant
@@ -394,7 +402,7 @@ Director injects capital into MMTP via bank transfer.
 ```
 Reference: DIRECTOR-LOAN-{date}
 
-DR  1100-01-01  Standard Bank Current Account    R{amount}
+DR  1100-01-01  SBSA Treasury Account            R{amount}
 CR  2400-01-01  A Botes Loan Account             R{amount}
 ```
 
@@ -461,12 +469,94 @@ CR  2300-10-01  VAT Control Account              R0.05     (VAT on SMS fee)
 ### 3.14 Supplier Float Top-Up
 
 MMTP tops up a supplier float via bank transfer (e.g., MobileMart R2,500 prepayment).
+Supplier floats are funded from the SBSA Treasury Account (`1100-01-01`), not the
+SBSA Business Operating Account (`1100-01-02`).
 
 ```
 Reference: FLOAT-TOPUP-{supplier}-{date}
 
 DR  1200-10-XX  Supplier Float Account           R{amount}
-CR  1100-01-01  Standard Bank Current Account    R{amount}
+CR  1100-01-01  SBSA Treasury Account            R{amount}
+```
+
+### 3.14.1 OTT Production Float Funding
+
+For live OTT production testing, André transferred R1,000.00 from the MyMoolah
+business operating bank account into the Treasury account, then paid the same
+R1,000.00 into the OTT float account.
+
+This is an internal funding and supplier-float prepayment flow:
+
+- No user wallet is credited or debited.
+- No `2100-01-01` Client Float Liability entry is created.
+- No revenue, expense, commission, or VAT entry is created.
+- If the MyMoolah business operating bank account is ledger-tracked, use
+  `1100-01-02` after migration. Until then, Finance must retain bank evidence
+  and avoid posting this leg to an unrelated liability such as director loan.
+
+**JE1 — Business operating account to Treasury account:**
+
+```
+Reference: TREASURY-FUND-OTT-20260505
+
+DR  1100-01-01  SBSA Treasury Account               R1,000.00
+CR  1100-01-02  SBSA Business Operating Account      R1,000.00
+```
+
+**JE2 — Treasury account to OTT production float:**
+
+```
+Reference: FLOAT-TOPUP-OTT-20260505
+
+DR  1200-10-08  OTT Payout Float Account             R1,000.00
+CR  1100-01-01  SBSA Treasury Account               R1,000.00
+```
+
+**Net consolidated effect if both bank accounts are ledger-tracked:**
+
+```
+DR  1200-10-08  OTT Payout Float Account             R1,000.00
+CR  1100-01-02  SBSA Business Operating Account      R1,000.00
+```
+
+`1200-10-08` now represents prefunded OTT buying power for controlled production
+cash-send / VAS tests. It must be reconciled against OTT portal/API balance,
+`ott_payouts`, supplier transactions, and bank proof of payment before wider
+production enablement.
+
+Production operational runbook:
+
+```bash
+node scripts/load-ott-production-float.js --production
+node scripts/load-ott-production-float.js --production --apply --confirm-production
+```
+
+The script defaults to dry-run. The apply path posts the JE2 Treasury-to-OTT
+float journal through `ledgerService.postJournalEntry()`, then syncs the existing
+OTT `supplier_floats` row from ledger balance and sets `minimumBalance` to
+`R100.00` for low-balance warning coverage during controlled live tests.
+Completed OTT payouts credit `1200-10-08` and refresh the supplier-float mirror
+from the ledger so `FloatBalanceMonitoringService` can alert from the same
+operational balance used by other supplier floats.
+
+### 3.14.2 Earned Revenue / Commission Sweep To Business Ops
+
+When MMTP-owned transaction fees, markups, or commissions are earned, revenue is
+recognized in the relevant `4xxx-xx-xx` revenue account with VAT posted to
+`2300-10-01` where applicable. After recognition, Finance may sweep the earned
+cash from the SBSA Treasury Account (`1100-01-01`) to the SBSA Business Operating
+Account (`1100-01-02`) as MyMoolah business income available for daily operating
+costs.
+
+The sweep is a cash movement between two MMTP bank asset accounts. It must not be
+used for client float, supplier float prefunding, or unrecognized pass-through
+amounts.
+
+```
+Reference: REVENUE-SWEEP-{period}
+
+DR  1100-01-02  SBSA Business Operating Account      R{earnedAmount}
+CR  1100-01-01  SBSA Treasury Account               R{earnedAmount}
 ```
 
 ### 3.15 Unallocated Deposit (Suspense)
@@ -476,7 +566,7 @@ Bank deposit received but reference cannot be matched to a user.
 ```
 Reference: SBSA-UNALLOC-{transactionId}
 
-DR  1100-01-01  Standard Bank Current Account    R{amount}
+DR  1100-01-01  SBSA Treasury Account            R{amount}
 CR  2600-01-01  Unallocated Deposits / Suspense  R{amount}
 ```
 
@@ -510,7 +600,7 @@ The following maps MMTP's internal CoA to Mojaloop settlement concepts.
 | Mojaloop Concept | MMTP Account(s) | Description |
 |------------------|-----------------|-------------|
 | DFSP Position Account | `2100-01-01` Client Float Liability | Net position of all user obligations |
-| DFSP Settlement Account | `1100-01-01` Standard Bank Current | Actual bank funds backing positions |
+| DFSP Settlement Account | `1100-01-01` SBSA Treasury | Actual bank funds backing positions |
 | Hub Reconciliation | `2200-02-01` Supplier Clearing | Inter-participant clearing |
 | Participant NDC (Net Debit Cap) | Wallet balance check | No overdrafts — enforced at `Wallet.debit()` with `SELECT FOR UPDATE` |
 | Settlement Window | Recon runs (`recon_runs` table) | Daily T+1 reconciliation per supplier |
@@ -657,8 +747,8 @@ developed in parallel. Claim the next available code within your range.
 
 | Range | Category | Allocation | Status |
 |-------|----------|------------|--------|
-| `1100-01-xx` | Bank Accounts | Standard Bank, reconciliation | **LIVE** (01 current, 02 statement recon) |
-| `1100-02-xx` | Bank Accounts — Partner Rails | TCIB corridor clearing, future banks | Reserved |
+| `1100-01-xx` | Bank Accounts | Standard Bank and MMTP operating bank accounts | **LIVE / NEEDS MIGRATION** (01 Treasury current, 02 Business Operating pending migration) |
+| `1100-02-xx` | Bank Accounts — Partner Rails / Reconciliation | SBSA statement reconciliation, TCIB corridor clearing, future banks | **LIVE / Reserved** (01 statement recon) |
 | `1200-01-xx` | Client Float — General | General-purpose | **LIVE** (01 general) |
 | `1200-05-xx` | Receivables | Interchange, merchant receivables | **LIVE** (01 interchange) |
 | `1200-10-01..10` | Supplier / Partner Floats | VAS, payment, NFC floats | **LIVE** (01–07, 10 allocated) |
@@ -707,7 +797,7 @@ sensible defaults. This allows per-environment overrides without code changes.
 |---------|---------|---------|---------|
 | `LEDGER_ACCOUNT_CLIENT_FLOAT` | `2100-01-01` | Client Float Liability | walletController, requestController, overlayServices, flashController, referralPayoutService, productPurchaseService, standardbankRtpService, standardbankRppService, standardbankDepositNotificationService |
 | `LEDGER_ACCOUNT_CLIENT_FLOAT_RESTRICTED` | `2100-01-02` | Client Float — Restricted | restrictedFundsService |
-| `LEDGER_ACCOUNT_BANK` | `1100-01-01` | Standard Bank Current Account | standardbankRtpService, standardbankRppService, standardbankDepositNotificationService |
+| `LEDGER_ACCOUNT_BANK` | `1100-01-01` | SBSA Treasury Account | standardbankRtpService, standardbankRppService, standardbankDepositNotificationService |
 | `LEDGER_ACCOUNT_UNALLOCATED` | `2600-01-01` | Unallocated Deposits / Suspense | standardbankDepositNotificationService |
 | `LEDGER_ACCOUNT_REFERRAL_PAYABLE` | `2200-03-01` | Referral Commission Payable | referralPayoutService |
 | `LEDGER_ACCOUNT_PAYSHAP_SBSA_CLEARING` | `2200-02-01` | Supplier Clearing Account | standardbankRppService and standardbankRtpService pass-through SBSA fee payable |
@@ -971,7 +1061,7 @@ Mojaloop-aligned reference codes (e.g., `10100`, `20100`). These are
 
 | Skill Reference | MMTP Code | Account |
 |-----------------|-----------|---------|
-| 10100 (Settlement Bank) | `1100-01-01` | Standard Bank Current Account |
+| 10100 (Settlement Bank) | `1100-01-01` | SBSA Treasury Account |
 | 10200 (Float Holding) | `1200-01-01` | Client Float — General |
 | 10500 (USDC Custody) | `1200-10-06` | DT Mercury / VALR Float |
 | 10700 (EasyPay Clearing) | `1200-10-02` / `1200-10-03` | EasyPay Top-up / Cash-out |

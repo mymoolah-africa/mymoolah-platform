@@ -58,7 +58,7 @@ Read these before making financial assertions:
 ## Core Account Anchors
 
 Always verify real account rows before coding. Common anchors:
-- `1100-01-01` — Standard Bank Current Account.
+- `1100-01-01` — SBSA Treasury Account.
 - `1200-10-04` / `1200-10-05` — Flash / MobileMart supplier float.
 - `2100-01-01` — User Wallet ZAR client float liability.
 - `2200-02-01` — SBSA / supplier clearing for pass-through fees.

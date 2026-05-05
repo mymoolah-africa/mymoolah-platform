@@ -1,5 +1,24 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-05-05 - OTT production float funding COA journals
+
+### Summary
+Documented the correct Chart of Accounts treatment for the R1,000 live OTT production float funding and clarified the two SBSA bank accounts used by MyMoolah.
+
+### Changes
+- Updated `docs/CHART_OF_ACCOUNTS.md` to name `1100-01-01` as the SBSA Treasury Account and `1100-01-02` as the SBSA Business Operating Account.
+- Added the two-account control model: floats and treasury rails use `1100-01-01`; daily operations and salaries use `1100-01-02`.
+- Added a specific OTT production float funding journal template: business operating account to Treasury, then Treasury to `1200-10-08` OTT Payout Float.
+- Added an earned revenue / commission sweep template from `1100-01-01` Treasury to `1100-01-02` Business Ops after revenue and VAT have been recognized.
+- Clarified that the R1,000 OTT float funding creates no wallet/client-float, revenue, commission, expense, or VAT posting.
+- Added `scripts/load-ott-production-float.js`, a guarded production runbook script that defaults to dry-run and requires `--apply --confirm-production` before posting the Treasury-to-OTT float journal.
+- Updated `services/ott/ottPayoutService.js` so completed OTT payouts and reversal ledger postings refresh the existing OTT `SupplierFloat.currentBalance` from ledger balance, keeping low-balance warnings accurate.
+- Set the OTT low-balance runbook threshold to `R100.00` for controlled production tests.
+- After dry-run and André approval, posted production JE2 with reference `FLOAT-TOPUP-OTT-20260505-001`: DR `1200-10-08` `R1,000.00` / CR `1100-01-01` `R1,000.00`; verified OTT `SupplierFloat.currentBalance` `R1,000.00` and `minimumBalance` `R100.00`.
+
+### Validation
+- Focused OTT payout service tests passed, syntax checks passed, lints passed, production dry-run passed after refreshing the production proxy, production apply completed after André approval, and read-only post-apply verification passed.
+
 ## 2026-05-05 - OTT commercial volume forecast
 
 ### Summary
