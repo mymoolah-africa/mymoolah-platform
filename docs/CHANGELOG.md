@@ -1,5 +1,19 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-05-05 - Uber / Eats governance handover
+
+### Summary
+Documented the production voucher-catalog finding that MobileMart Uber and Uber Eats products exist but are hidden by Product Catalog Governance, and recorded the intended future customer-facing treatment as one `Uber / Eats` card.
+
+### Changes
+- Updated `docs/PRODUCT_CATALOG_GOVERNANCE.md` with the six MobileMart Uber / Uber Eats mapping IDs found in production and their current hidden state (`draft` / `unpublished`).
+- Recorded the decision to group Uber and Uber Eats under one customer-facing `Uber / Eats` card with a stable canonical key such as `uber-eats`.
+- Added a warning not to publish the generic Flash `R20 - R200 Gift Card` rows until their raw snapshots confirm the actual brand.
+- Updated `docs/integrations/OTT_MOBILE_INTEGRATION_FRAMEWORK.md` with a morning handover note for OTT production integration, including the production webhook, Secret Manager-only credential handling, controlled live-test gating, and the separation between MobileMart Uber / Eats governance and OTT production products.
+
+### Validation
+- Documentation-only update. No runtime code, database schema, migrations, production writes, or wallet-debit tests were changed.
+
 ## 2026-05-05 - OTT production float funding COA journals
 
 ### Summary

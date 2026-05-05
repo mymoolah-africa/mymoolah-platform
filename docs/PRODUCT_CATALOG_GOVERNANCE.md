@@ -32,6 +32,21 @@ Publish status is separate:
 
 When enabled, `/api/v1/overlay/vouchers/catalog` filters voucher cards against approved and published governance mappings. Pending, rejected, suspended, retired, and unmapped supplier SKUs are excluded from wallet responses.
 
+## Pending Production Review - Uber / Eats
+Production verification on 2026-05-05 confirmed that MobileMart Uber and Uber Eats voucher variants exist in `product_catalog_mappings`, but remain hidden because their governance mappings are still `review_status = draft` and `publish_status = unpublished`.
+
+Known MobileMart mappings to review together:
+- `545` - `Uber Eats R200`
+- `551` - `Uber R50`
+- `562` - `Uber Eats R50`
+- `570` - `Uber R100`
+- `611` - `Uber Eats R100`
+- `626` - `Uber R200`
+
+Customer-facing decision: implement one grouped card named `Uber / Eats`, not separate Uber and Uber Eats cards. The recognizer should treat Uber and Uber Eats as one canonical retail voucher brand, with a stable key such as `uber-eats`, and all approved MobileMart denominations should appear under that single card.
+
+Do not approve the generic Flash rows returned by the same search (`R20 - R200 Gift Card`) until their raw snapshot confirms the real brand. Generic raw names are not sufficient for wallet publication.
+
 ## Admin Procedure
 1. Open Admin Portal -> Catalog Governance.
 2. Run `Backfill Queue` after migration to create draft mappings from active supplier variants.

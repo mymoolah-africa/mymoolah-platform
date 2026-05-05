@@ -84,6 +84,35 @@ Use the deployed staging URL for OTT partner testing because it is stable,
 auditable, TLS-terminated, and uses staging Secret Manager values. Codespaces
 public URLs are transient and should be limited to internal smoke tests.
 
+### 2.5 Production integration parking note - 2026-05-05
+
+Production OTT credentials have been stored in Google Secret Manager for the
+`mymoolah-db` project, with matching staging secret names because the deployment
+tooling expects environment-specific variables. The production API username is
+`MYMOOLAHPOL`; password and API key values must remain secret and must only be
+read from Secret Manager.
+
+The production webhook André should configure in the OTT production portal is:
+
+```text
+https://api-mm.mymoolah.africa/api/v1/ott/webhook
+```
+
+Because OTT currently provides one production portal only, do not add a staging
+webhook to the optional production webhook field unless OTT confirms isolation
+semantics and André approves the risk.
+
+Before controlled production testing resumes in the morning:
+
+1. Keep `OTT_PAYOUT_ENABLED=false` except during an explicitly approved live
+   test window.
+2. Reconfirm the production provider list and provider limits from the live OTT
+   API.
+3. Reconcile the OTT portal/API balance against `1200-10-08` after each test.
+4. Keep the MobileMart Uber / Uber Eats catalog issue separate from OTT
+   production integration: those are MobileMart retail voucher mappings hidden
+   by Product Catalog Governance, not OTT production products.
+
 ### 2.3 MMTP references
 
 - `docs/CHART_OF_ACCOUNTS.md`
