@@ -8,6 +8,7 @@ const { recogniseVoucherBrand } = require('../voucherCatalogBrandService');
 
 const KNOWN_PROVIDER_CLASSIFICATION = {
   '2': { providerType: 'payout', serviceFamily: 'cash_send', customerFacing: false },
+  '4': { providerType: 'payout', serviceFamily: 'cash_send', customerFacing: true },
   '10': { providerType: 'payout', serviceFamily: 'cash_send', customerFacing: true },
   '3': { providerType: 'voucher', serviceFamily: 'voucher', customerFacing: true },
   '60': { providerType: 'voucher', serviceFamily: 'voucher', customerFacing: true },
@@ -18,6 +19,7 @@ const KNOWN_PROVIDER_CLASSIFICATION = {
   '76': { providerType: 'mock', serviceFamily: 'mock', customerFacing: false, isMock: true },
   '78': { providerType: 'mock', serviceFamily: 'mock', customerFacing: false, isMock: true },
   '112': { providerType: 'payout', serviceFamily: 'cash_send', customerFacing: true },
+  '67': { providerType: 'payout', serviceFamily: 'cash_send', customerFacing: true },
   '127': { providerType: 'payout', serviceFamily: 'payshap', customerFacing: false },
   '140': { providerType: 'electricity', serviceFamily: 'electricity', customerFacing: false },
   '141': { providerType: 'gift_card', serviceFamily: 'voucher', customerFacing: false },
@@ -26,9 +28,9 @@ const KNOWN_PROVIDER_CLASSIFICATION = {
   '157': { providerType: 'gift_card', serviceFamily: 'voucher', customerFacing: true },
 };
 
-const APPROVED_PAYOUT_PROVIDER_CODES = new Set(['10', '112']);
+const HELD_PROVIDER_CODES = new Set(['141', '146']);
+const APPROVED_PAYOUT_PROVIDER_CODES = new Set(['4', '10', '67', '112']);
 const APPROVED_CATALOG_PROVIDER_CODES = new Set(['68', '69', '156', '157']);
-const APPROVED_CATALOG_KEYS = new Set(['pick-n-pay', 'shoprite-checkers']);
 const DEFAULT_OTT_VAS_COMMISSION_TERMS = Object.freeze({
   commercialType: 'commission',
   grossCommissionPct: 1.00,
@@ -70,22 +72,27 @@ function providerNameOf(provider = {}) {
 
 function classifyProvider(provider = {}) {
   const code = providerCodeOf(provider);
-  const known = KNOWN_PROVIDER_CLASSIFICATION[code];
-  if (known) return known;
-
   const providerName = providerNameOf(provider);
-  const recognisedVoucher = recogniseVoucherBrand(providerName);
-  if (recognisedVoucher.recognition === 'mapped' && recognisedVoucher.isGiftCard) {
-    return { providerType: 'gift_card', serviceFamily: 'voucher', customerFacing: true };
-  }
-  if (recognisedVoucher.recognition === 'mapped' && APPROVED_CATALOG_KEYS.has(recognisedVoucher.catalogKey)) {
-    return { providerType: 'voucher', serviceFamily: 'voucher', customerFacing: true };
-  }
-
   const name = providerName.toLowerCase();
   if (name.includes('mock') || name.includes('test')) {
     return { providerType: 'mock', serviceFamily: 'mock', customerFacing: false, isMock: true };
   }
+
+  if (HELD_PROVIDER_CODES.has(code)) {
+    return KNOWN_PROVIDER_CLASSIFICATION[code];
+  }
+
+  const recognisedVoucher = recogniseVoucherBrand(providerName);
+  if (recognisedVoucher.recognition === 'mapped' && recognisedVoucher.isGiftCard) {
+    return { providerType: 'gift_card', serviceFamily: 'voucher', customerFacing: true };
+  }
+  if (recognisedVoucher.recognition === 'mapped') {
+    return { providerType: 'voucher', serviceFamily: 'voucher', customerFacing: true };
+  }
+
+  const known = KNOWN_PROVIDER_CLASSIFICATION[code];
+  if (known) return known;
+
   if (name.includes('electricity')) {
     return { providerType: 'electricity', serviceFamily: 'electricity', customerFacing: true };
   }
@@ -108,9 +115,9 @@ function hasConfiguredPayoutEconomics(term) {
 function isApprovedCatalogProvider({ providerCode, providerName, providerType } = {}) {
   if (!['voucher', 'gift_card'].includes(providerType)) return false;
   if (APPROVED_CATALOG_PROVIDER_CODES.has(String(providerCode))) return true;
+  if (HELD_PROVIDER_CODES.has(String(providerCode))) return false;
   const recognisedVoucher = recogniseVoucherBrand(providerName);
-  return recognisedVoucher.recognition === 'mapped' &&
-    (recognisedVoucher.isGiftCard || APPROVED_CATALOG_KEYS.has(recognisedVoucher.catalogKey));
+  return recognisedVoucher.recognition === 'mapped';
 }
 
 function hasConfiguredCatalogEconomics(policy) {
@@ -182,7 +189,11 @@ async function upsertProviderMetadata({ provider, limits = [], transaction } = {
   if (existing) {
     const hasPayoutEconomics = hasConfiguredPayoutEconomics(existing);
     const isApprovedPayout = APPROVED_PAYOUT_PROVIDER_CODES.has(providerCode);
-    const providerType = existing.providerType === 'unknown' ? classification.providerType : existing.providerType;
+    const shouldReclassify = existing.providerType === 'unknown' || (existing.isMock && !classification.isMock);
+    const providerType = shouldReclassify ? classification.providerType : existing.providerType;
+    const serviceFamily = shouldReclassify || existing.serviceFamily === 'unknown'
+      ? classification.serviceFamily
+      : existing.serviceFamily;
     const catalogPatch = approvedCatalogTermPatch({ providerCode, providerName, providerType });
     const isApprovedCatalog = isApprovedCatalogProvider({
       providerCode,
@@ -200,7 +211,7 @@ async function upsertProviderMetadata({ provider, limits = [], transaction } = {
     await existing.update({
       providerName,
       providerType,
-      serviceFamily: existing.serviceFamily === 'unknown' ? classification.serviceFamily : existing.serviceFamily,
+      serviceFamily,
       ...(catalogPatch.commercialType ? {
         commercialType: catalogPatch.commercialType,
         grossCommissionPct: catalogPatch.grossCommissionPct,
@@ -211,7 +222,7 @@ async function upsertProviderMetadata({ provider, limits = [], transaction } = {
       isCustomerFacing: classification.providerType === 'payout'
         ? Boolean(existing.isCustomerFacing && isApprovedPayout && hasPayoutEconomics)
         : Boolean((existing.isCustomerFacing || catalogPatch.isCustomerFacing) && isApprovedCatalog),
-      isMock: Boolean(existing.isMock || classification.isMock),
+      isMock: Boolean(classification.isMock),
       metadata,
     }, { transaction });
     return existing;

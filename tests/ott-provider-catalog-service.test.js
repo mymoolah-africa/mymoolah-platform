@@ -74,13 +74,18 @@ describe('OTT provider catalog service', () => {
 
   it('classifies known payout, voucher, electricity, gift-card, and mock providers', () => {
     expect(service.classifyProvider({ providerCode: '112', providerName: 'ABSA CashSend' }).providerType).toBe('payout');
+    expect(service.classifyProvider({ providerCode: '67', providerName: 'ABSA CashSend' }).providerType).toBe('payout');
     expect(service.classifyProvider({ providerCode: '10', providerName: 'Nedbank Cardless Cash Send' }).providerType).toBe('payout');
+    expect(service.classifyProvider({ providerCode: '4', providerName: 'Nedbank Cardless Withdrawal' }).providerType).toBe('payout');
     expect(service.classifyProvider({ providerCode: '2', providerName: 'Standard Bank Instant Money' }).customerFacing).toBe(false);
     expect(service.classifyProvider({ providerCode: '127', providerName: 'PayShap Account' }).customerFacing).toBe(false);
     expect(service.classifyProvider({ providerCode: '68', providerName: 'PicknPay Voucher' }).providerType).toBe('voucher');
     expect(service.classifyProvider({ providerCode: '140', providerName: 'Electricity Token' }).providerType).toBe('electricity');
     expect(service.classifyProvider({ providerCode: '141', providerName: 'AMAZON Gift Card' }).providerType).toBe('gift_card');
     expect(service.classifyProvider({ providerCode: '2001', providerName: 'OTT Mobile Gift Cards | KFC' }).providerType).toBe('gift_card');
+    expect(service.classifyProvider({ providerCode: '78', providerName: 'OTT Mobile Gift Cards | Ackermans' }).providerType).toBe('gift_card');
+    expect(service.classifyProvider({ providerCode: '94', providerName: 'OTT Mobile Gift Cards | Roccomamas' }).providerType).toBe('gift_card');
+    expect(service.classifyProvider({ providerCode: '29', providerName: 'Uber and Uber Eats' }).providerType).toBe('voucher');
     expect(service.classifyProvider({ providerCode: '71', providerName: 'Mock Provider' }).isMock).toBe(true);
   });
 

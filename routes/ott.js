@@ -11,7 +11,7 @@ const { OttClient, buildRequestHash, getConfig } = require('../services/ott/ottC
 const db = require('../models');
 
 const router = express.Router();
-const APPROVED_CASH_PAYOUT_PROVIDER_CODES = new Set(['10', '112']);
+const APPROVED_CASH_PAYOUT_PROVIDER_CODES = new Set(['4', '10', '67', '112']);
 const ottPayoutLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 10,

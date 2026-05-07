@@ -53,7 +53,7 @@ const VOUCHER_BRAND_TABLE = [
   { match: /spur/i, brand: 'Spur', catalogKey: 'spur', icon: '🥩', category: 'food', desc: 'Spur gift card', isGiftCard: true },
   { match: /mcdonald'?s/i, brand: 'McDonald\'s', catalogKey: 'mcdonalds', icon: '🍔', category: 'food', desc: 'McDonald\'s gift card', isGiftCard: true },
   { match: /burger\s*king/i, brand: 'Burger King', catalogKey: 'burger-king', icon: '🍔', category: 'food', desc: 'Burger King gift card', isGiftCard: true },
-  { match: /rocomamas/i, brand: 'RocoMamas', catalogKey: 'rocomamas', icon: '🍔', category: 'food', desc: 'RocoMamas gift card', isGiftCard: true },
+  { match: /rocc?omamas/i, brand: 'RocoMamas', catalogKey: 'rocomamas', icon: '🍔', category: 'food', desc: 'RocoMamas gift card', isGiftCard: true },
   { match: /starbucks/i, brand: 'Starbucks', catalogKey: 'starbucks', icon: '☕', category: 'food', desc: 'Starbucks gift card', isGiftCard: true },
   { match: /panarottis/i, brand: 'Panarottis', catalogKey: 'panarottis', icon: '🍕', category: 'food', desc: 'Panarottis gift card', isGiftCard: true },
   { match: /mugg\s*&?\s*bean|mugg\s+and\s+bean/i, brand: 'Mugg & Bean', catalogKey: 'mugg-and-bean', icon: '☕', category: 'food', desc: 'Mugg & Bean gift card', isGiftCard: true },

@@ -6,7 +6,7 @@ const ledgerService = require('../ledgerService');
 const { OttClient, redact } = require('./ottClient');
 const { getPayoutFeePolicy } = require('./ottCommercialTermsService');
 
-const APPROVED_CASH_PAYOUT_PROVIDER_CODES = new Set(['10', '112']);
+const APPROVED_CASH_PAYOUT_PROVIDER_CODES = new Set(['4', '10', '67', '112']);
 
 function roundMoney(value) {
   return Number(Number(value || 0).toFixed(2));
