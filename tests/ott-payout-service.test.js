@@ -311,6 +311,19 @@ describe('OTT payout service', () => {
     expect(ledgerService.postJournalEntry).toHaveBeenCalledWith(expect.objectContaining({
       reference: 'OTT-PAYOUT-OTT-TEST',
     }));
+    expect(mockModels.Transaction.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'completed',
+        failureReason: null,
+      }),
+      expect.objectContaining({
+        where: expect.objectContaining({
+          reference: 'MM-OTT-TEST',
+          type: 'withdraw',
+          status: ['pending', 'processing'],
+        }),
+      })
+    );
     expect(ledgerService.getAccountBalanceByCode).toHaveBeenCalledWith('1200-10-08');
     expect(mockModels.SupplierFloat.findOne).toHaveBeenCalledWith({
       where: {
@@ -326,6 +339,33 @@ describe('OTT payout service', () => {
         lastLedgerSyncSource: 'ott_payout_posted',
       }),
     }));
+    expect(result).toEqual({ processed: true, payoutId: 'OTT-TEST', status: 'completed' });
+  });
+
+  it('marks the wallet withdrawal completed when OTT completes after ledger was already posted', async () => {
+    mockPayment.metadata = { ledgerPostedAt: '2026-05-07T15:45:27.226Z' };
+
+    const result = await service.updatePayoutFromWebhook({
+      transactionId: '3460400',
+      merchantUniqueReference: 'MM-OTT-TEST',
+      message: 'Successful',
+      status: '100',
+    });
+
+    expect(ledgerService.postJournalEntry).not.toHaveBeenCalled();
+    expect(mockModels.Transaction.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'completed',
+        failureReason: null,
+      }),
+      expect.objectContaining({
+        where: expect.objectContaining({
+          reference: 'MM-OTT-TEST',
+          type: 'withdraw',
+          status: ['pending', 'processing'],
+        }),
+      })
+    );
     expect(result).toEqual({ processed: true, payoutId: 'OTT-TEST', status: 'completed' });
   });
 

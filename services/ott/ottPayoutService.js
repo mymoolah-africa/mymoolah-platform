@@ -348,7 +348,23 @@ async function postLedger(payment) {
     await recordSupplierFloatSyncWarning(payment, error, 'ott_payout_posted');
   }
   await postPayoutFeeTaxTransaction(payment);
+  if (payment.status === 'completed') {
+    await markPayoutWalletTransactionCompleted(payment);
+  }
   return entry;
+}
+
+async function markPayoutWalletTransactionCompleted(payment) {
+  return db.Transaction.update({
+    status: 'completed',
+    failureReason: null,
+  }, {
+    where: {
+      reference: payment.uniqueReferenceId,
+      type: 'withdraw',
+      status: ['pending', 'processing'],
+    },
+  });
 }
 
 async function postPayoutFeeTaxTransaction(payment) {
@@ -762,23 +778,28 @@ async function updatePayoutFromWebhook(payload = {}) {
   }
 
   await payment.update(updates);
-  if (refs.status === 'completed' && !payment.metadata?.ledgerPostedAt) {
-    try {
-      await postLedger(payment);
-    } catch (error) {
-      await payment.update({
-        status: 'ledger_post_failed',
-        rejectionReason: error.message,
-        metadata: {
-          ...(payment.metadata || {}),
-          ledgerError: error.message,
-          ledgerErrorAt: new Date().toISOString(),
-          ledgerErrorSource: 'ott_webhook_or_poll',
-        },
-      });
-      error.statusCode = 500;
-      error.code = 'OTT_LEDGER_POST_FAILED';
-      throw error;
+  if (refs.status === 'completed') {
+    if (!payment.metadata?.ledgerPostedAt) {
+      payment.status = refs.status;
+      try {
+        await postLedger(payment);
+      } catch (error) {
+        await payment.update({
+          status: 'ledger_post_failed',
+          rejectionReason: error.message,
+          metadata: {
+            ...(payment.metadata || {}),
+            ledgerError: error.message,
+            ledgerErrorAt: new Date().toISOString(),
+            ledgerErrorSource: 'ott_webhook_or_poll',
+          },
+        });
+        error.statusCode = 500;
+        error.code = 'OTT_LEDGER_POST_FAILED';
+        throw error;
+      }
+    } else {
+      await markPayoutWalletTransactionCompleted(payment);
     }
   }
   return { processed: true, payoutId: payment.payoutId, status: refs.status };

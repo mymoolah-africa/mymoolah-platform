@@ -1,5 +1,25 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-05-07 - OTT live ABSA production smoke
+
+### Summary
+Completed the controlled live production ABSA CashSend smoke transaction for wallet user `0825571055` using OTT live provider code `67`.
+
+### Changes
+- Ran a real production ABSA CashSend for R50.00 cash value plus the R13.00 flat transaction fee.
+- OTT returned success with payment reference `4802148`; payout `OTT-1778168722483-7f5897b7` is `completed`.
+- Fixed a stale wallet display status issue in `services/ott/ottPayoutService.js`: when OTT later confirms `completed` after the payout ledger was already posted, the related wallet withdrawal row is now promoted from `processing` to `completed`.
+- Added focused Jest coverage for that completed-after-ledger-posted status transition.
+- Corrected the single production smoke-test withdrawal row to `completed` after confirming the payout and ledger were complete.
+
+### Validation
+- Production wallet rows now show the ABSA payout as separate completed rows: R50.00 withdraw and R13.00 transaction fee.
+- Production journal `OTT-PAYOUT-OTT-1778168722483-7f5897b7` balances exactly: R63.00 debits and R63.00 credits.
+- OTT float account `1200-10-08` moved from R1,000.00 to R938.55; `supplier_floats.currentBalance` also reads R938.55.
+- VAT evidence exists for the MMTP fee: base R1.35, output VAT R0.20, total R1.55.
+- `npx jest tests/ott-payout-service.test.js --runInBand` passed 16/16 with pre-existing Jest config warnings only.
+- Cursor lints on `services/ott/ottPayoutService.js` and `tests/ott-payout-service.test.js` reported no linter errors.
+
 ## 2026-05-07 - OTT gift-card catalog sync fix
 
 ### Summary
