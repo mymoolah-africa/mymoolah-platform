@@ -2,6 +2,127 @@ const { Wallet, Transaction, User } = require('../models');
 const notificationService = require('../services/notificationService');
 const { getLimitsForTier } = require('../config/kycTierLimits');
 
+const OTT_PAYOUT_PROVIDER_LABELS = {
+  '112': 'ABSA CashSend',
+  '10': 'Nedbank Cardless Withdrawal',
+};
+
+function asMoney(value) {
+  return Math.round((Math.abs(parseFloat(value || 0)) + Number.EPSILON) * 100) / 100;
+}
+
+function getOttPayoutProviderLabelFromRow(row = {}) {
+  const metadata = row.metadata || {};
+  const providerCode = String(
+    metadata.providerCode ||
+    ''
+  );
+
+  if (OTT_PAYOUT_PROVIDER_LABELS[providerCode]) return OTT_PAYOUT_PROVIDER_LABELS[providerCode];
+
+  const description = `${row.description || ''}`.toLowerCase();
+  if (description.includes('absa')) return OTT_PAYOUT_PROVIDER_LABELS['112'];
+  if (description.includes('nedbank')) return OTT_PAYOUT_PROVIDER_LABELS['10'];
+
+  return 'Cash payout';
+}
+
+function sanitizeOttPayoutDisplayRows(rows = []) {
+  const providerLabelsByPayoutId = new Map();
+  rows.forEach((tx) => {
+    const metadata = tx.metadata || {};
+    if (!metadata.ottPayoutId) return;
+    const providerLabel = getOttPayoutProviderLabelFromRow(tx);
+    if (providerLabel !== 'Cash payout') {
+      providerLabelsByPayoutId.set(String(metadata.ottPayoutId), providerLabel);
+    }
+  });
+
+  return rows.map((tx) => {
+    const metadata = tx.metadata || {};
+    if (!metadata.ottPayoutId) return tx;
+
+    const providerLabel = providerLabelsByPayoutId.get(String(metadata.ottPayoutId)) || getOttPayoutProviderLabelFromRow(tx);
+    const transactionId = String(tx.transactionId || '');
+
+    if (tx.type === 'refund' || transactionId.startsWith('OTT-REV-')) {
+      return {
+        ...tx,
+        description: `Withdraw Cash refund - ${providerLabel}`,
+        metadata: {
+          ...metadata,
+          safeOttPayoutDescription: true,
+        },
+      };
+    }
+
+    if (tx.type === 'fee' || transactionId.startsWith('OTT-FEE-')) {
+      return {
+        ...tx,
+        description: 'Transaction fee',
+        metadata: {
+          ...metadata,
+          safeOttPayoutDescription: true,
+        },
+      };
+    }
+
+    return {
+      ...tx,
+      description: `Withdraw Cash - ${providerLabel}`,
+      metadata: {
+        ...metadata,
+        safeOttPayoutDescription: true,
+      },
+    };
+  });
+}
+
+function dashboardRelationKeys(tx = {}) {
+  const metadata = tx.metadata || {};
+  const keys = new Set();
+  const transactionId = String(tx.transactionId || '');
+
+  if (tx.reference) keys.add(`ref:${tx.reference}`);
+  if (metadata.ottPayoutId) keys.add(`ott:${metadata.ottPayoutId}`);
+  if (metadata.vasTransactionId) keys.add(`vas:${metadata.vasTransactionId}`);
+  if (metadata.voucherId) keys.add(`voucher:${metadata.voucherId}`);
+  if (metadata.usdcSendGroupId) keys.add(`usdc:${metadata.usdcSendGroupId}`);
+  if (metadata.payshapType === 'rpp') keys.add(`rpp:${transactionId.replace(/^RPP-FEE-/, '').replace(/^RPP-/, '')}`);
+  if (metadata.payshapType === 'rtp') keys.add(`rtp:${transactionId.replace(/^RTP-FEE-/, '').replace(/^RTP-/, '')}`);
+
+  return keys;
+}
+
+function isDashboardMainTransaction(tx = {}) {
+  const metadata = tx.metadata || {};
+  if ((tx.type || '').toLowerCase() === 'fee') return false;
+  if (metadata.isTopUpFee || metadata.isCashoutFee || metadata.isFlashCashoutFee || metadata.isEasyPayVoucherFee) return false;
+  if (metadata.isCashoutFeeRefund || metadata.isEasyPayVoucherFeeRefund) return false;
+  if (metadata.lineType === 'usdc_fee') return false;
+  if (metadata.payshapType && (tx.type || '').toLowerCase() === 'fee') return false;
+  return true;
+}
+
+function selectDashboardLineItemRows(rows = [], mainLimit = 10) {
+  const selectedIds = new Set();
+  const selectedRelationKeys = new Set();
+  let mainCount = 0;
+
+  rows.forEach((tx) => {
+    if (mainCount >= mainLimit || !isDashboardMainTransaction(tx)) return;
+    selectedIds.add(tx.transactionId || `id_${tx.id}`);
+    dashboardRelationKeys(tx).forEach((key) => selectedRelationKeys.add(key));
+    mainCount += 1;
+  });
+
+  return rows.filter((tx) => {
+    if (selectedIds.has(tx.transactionId || `id_${tx.id}`)) return true;
+    const keys = dashboardRelationKeys(tx);
+    return Array.from(keys).some((key) => selectedRelationKeys.has(key));
+  });
+}
+
 class WalletController {
   constructor() {
     // No need to instantiate models as they're already singletons
@@ -548,7 +669,7 @@ class WalletController {
 
       // Transform to trimmed payload with banking-grade type mapping
       const transformStart = Date.now();
-      const normalizedRows = transactions.map((t) => {
+      const normalizedRows = sanitizeOttPayoutDisplayRows(transactions.map((t) => {
         const metadata = t.metadata || {};
         let displayAmount = parseFloat(t.amount || 0);
         const isOttPayoutFee =
@@ -580,310 +701,7 @@ class WalletController {
           receiverWalletId: t.receiverWalletId || null,
           metadata: metadata
         };
-      });
-
-      // CRITICAL: For cash-out refund transactions in Recent Transactions (dashboard):
-      // Combine voucher refund + fee refund into ONE transaction showing total refund
-      if (isDashboard) {
-        const cashoutRefundGroups = new Map();
-        const epVoucherRefundGroups = new Map();
-        const usdcSendGroups = new Map();
-        const rppGroups = new Map(); // PayShap RPP: group principal + fee into one combined row
-        const rtpGroups = new Map(); // PayShap RTP: group principal + fee into one net credit row
-        const ottPayoutGroups = new Map(); // OTT cash withdrawal: group face value + fees into one dashboard row
-        const otherTransactions = [];
-        
-        normalizedRows.forEach(tx => {
-          const metadata = tx.metadata || {};
-          const desc = (tx.description || '').toLowerCase();
-          
-          // Check if this is a cash-out refund transaction
-          if (tx.type === 'refund' && 
-              (metadata.isCashoutVoucherRefund || metadata.isCashoutFeeRefund) &&
-              metadata.voucherId) {
-            // Group by voucherId (both refunds have the same voucherId)
-            const groupKey = metadata.voucherId;
-            
-            if (!cashoutRefundGroups.has(groupKey)) {
-              cashoutRefundGroups.set(groupKey, {
-                voucherRefund: null,
-                feeRefund: null,
-                createdAt: tx.createdAt
-              });
-            }
-            
-            const group = cashoutRefundGroups.get(groupKey);
-            if (metadata.isCashoutVoucherRefund) {
-              group.voucherRefund = tx;
-            } else if (metadata.isCashoutFeeRefund) {
-              group.feeRefund = tx;
-            }
-          } else if (tx.type === 'refund' && 
-              (metadata.isEasyPayVoucherRefund || metadata.isEasyPayVoucherFeeRefund) &&
-              metadata.voucherId) {
-            // Check if this is an EasyPay voucher refund transaction
-            const groupKey = metadata.voucherId;
-            
-            if (!epVoucherRefundGroups.has(groupKey)) {
-              epVoucherRefundGroups.set(groupKey, {
-                voucherRefund: null,
-                feeRefund: null,
-                createdAt: tx.createdAt
-              });
-            }
-            
-            const group = epVoucherRefundGroups.get(groupKey);
-            if (metadata.isEasyPayVoucherRefund) {
-              group.voucherRefund = tx;
-            } else if (metadata.isEasyPayVoucherFeeRefund) {
-              group.feeRefund = tx;
-            }
-          } else {
-            otherTransactions.push(tx);
-          }
-        });
-        
-        // Combine grouped refunds into single transactions
-        const combinedRefunds = [];
-        
-        // Process cash-out refunds
-        cashoutRefundGroups.forEach((group, groupKey) => {
-          if (group.voucherRefund && group.feeRefund) {
-            // Combine both refunds into one transaction
-            const totalRefund = parseFloat(group.voucherRefund.amount) + parseFloat(group.feeRefund.amount);
-            combinedRefunds.push({
-              ...group.voucherRefund,
-              amount: totalRefund,
-              description: `Cash-out @ EasyPay cancelled - refund: ${group.voucherRefund.metadata?.voucherCode || ''}`,
-              metadata: {
-                ...group.voucherRefund.metadata,
-                combinedRefund: true,
-                voucherRefundAmount: parseFloat(group.voucherRefund.amount),
-                feeRefundAmount: parseFloat(group.feeRefund.amount),
-                totalRefundAmount: totalRefund
-              }
-            });
-          } else if (group.voucherRefund) {
-            // Only voucher refund found (shouldn't happen, but handle gracefully)
-            combinedRefunds.push(group.voucherRefund);
-          } else if (group.feeRefund) {
-            // Only fee refund found (shouldn't happen, but handle gracefully)
-            combinedRefunds.push(group.feeRefund);
-          }
-        });
-        
-        // Process EasyPay voucher refunds
-        epVoucherRefundGroups.forEach((group, groupKey) => {
-          if (group.voucherRefund && group.feeRefund) {
-            // Combine both refunds into one transaction
-            const totalRefund = parseFloat(group.voucherRefund.amount) + parseFloat(group.feeRefund.amount);
-            combinedRefunds.push({
-              ...group.voucherRefund,
-              amount: totalRefund,
-              description: `EasyPay Voucher refund: ${group.voucherRefund.metadata?.voucherCode || ''}`,
-              metadata: {
-                ...group.voucherRefund.metadata,
-                combinedRefund: true,
-                voucherRefundAmount: parseFloat(group.voucherRefund.amount),
-                feeRefundAmount: parseFloat(group.feeRefund.amount),
-                totalRefundAmount: totalRefund
-              }
-            });
-          } else if (group.voucherRefund) {
-            // Only voucher refund found (shouldn't happen, but handle gracefully)
-            combinedRefunds.push(group.voucherRefund);
-          } else if (group.feeRefund) {
-            // Only fee refund found (shouldn't happen, but handle gracefully)
-            combinedRefunds.push(group.feeRefund);
-          }
-        });
-        
-        // Replace normalizedRows with combined refunds + other transactions
-        normalizedRows.length = 0;
-        normalizedRows.push(...combinedRefunds, ...otherTransactions);
-        // Re-sort by createdAt DESC
-        normalizedRows.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-        // Recent Transactions (Dashboard): Combine Flash Eezi Cash and EasyPay cash-out (face + fee) into ONE row showing total
-        // Transaction History (limit > 10) is unchanged and continues to show two lines (face + fee)
-        // CRITICAL: Iterate over otherTransactions only - combinedRefunds are already final and must not be re-processed
-        // (re-processing caused EPVOUCHER-REF/EXP duplicates in otherForRecent)
-        const flashCashoutGroups = new Map();
-        const easypayCashoutGroups = new Map();
-        const voucherTopupGroups = new Map();
-        const otherForRecent = [];
-        otherTransactions.forEach((tx) => {
-          const metadata = tx.metadata || {};
-          // OTT cash withdrawal: group face value + provider/MMTP fee into ONE dashboard row.
-          // Transaction History (limit > 10) intentionally keeps the split lines.
-          if (metadata.ottPayoutId && (tx.transactionId || '').startsWith('OTT-')) {
-            const key = String(metadata.ottPayoutId);
-            if (!ottPayoutGroups.has(key)) ottPayoutGroups.set(key, { main: null, fee: null });
-            const g = ottPayoutGroups.get(key);
-            if (tx.type === 'fee' || (tx.transactionId || '').startsWith('OTT-FEE-')) g.fee = tx;
-            else g.main = tx;
-            return;
-          }
-          // Flash voucher top-up: group by vasTransactionId (main has isVoucherTopupAmount, fee has isTopUpFee)
-          if (metadata.isVoucherTopup && (metadata.isVoucherTopupAmount || metadata.isTopUpFee)) {
-            const key = metadata.vasTransactionId;
-            if (!key) { otherForRecent.push(tx); return; }
-            if (!voucherTopupGroups.has(key)) voucherTopupGroups.set(key, { main: null, fee: null });
-            const g = voucherTopupGroups.get(key);
-            if (metadata.isVoucherTopupAmount) g.main = tx;
-            else if (metadata.isTopUpFee) g.fee = tx;
-            return;
-          }
-          // EasyPay V5 deposit: group by vasTransactionId (main has isEasyPayDepositAmount, fee has isEasyPayDepositFee)
-          if (metadata.isEasyPayDeposit && (metadata.isEasyPayDepositAmount || metadata.isEasyPayDepositFee)) {
-            const key = metadata.vasTransactionId;
-            if (!key) { otherForRecent.push(tx); return; }
-            if (!voucherTopupGroups.has(key)) voucherTopupGroups.set(key, { main: null, fee: null });
-            const g = voucherTopupGroups.get(key);
-            if (metadata.isEasyPayDepositAmount) g.main = tx;
-            else if (metadata.isEasyPayDepositFee) g.fee = tx;
-            return;
-          }
-          // Flash Eezi Cash: group by vasTransactionId (main has isFlashCashoutAmount, fee has isFlashCashoutFee)
-          if (metadata.isFlashCashoutAmount || metadata.isFlashCashoutFee) {
-            const key = metadata.vasTransactionId;
-            if (!key) { otherForRecent.push(tx); return; }
-            if (!flashCashoutGroups.has(key)) flashCashoutGroups.set(key, { main: null, fee: null });
-            const g = flashCashoutGroups.get(key);
-            if (metadata.isFlashCashoutAmount) g.main = tx;
-            else if (metadata.isFlashCashoutFee) g.fee = tx;
-            return;
-          }
-          // EasyPay cash-out: group by voucherId (main has isCashoutVoucherAmount, fee has isCashoutFee)
-          if ((metadata.isCashoutVoucherAmount || metadata.isCashoutFee) && metadata.voucherId && metadata.voucherType === 'easypay_cashout') {
-            const key = String(metadata.voucherId);
-            if (!easypayCashoutGroups.has(key)) easypayCashoutGroups.set(key, { main: null, fee: null });
-            const g = easypayCashoutGroups.get(key);
-            if (metadata.isCashoutVoucherAmount) g.main = tx;
-            else if (metadata.isCashoutFee) g.fee = tx;
-            return;
-          }
-          // USDC Send: group by usdcSendGroupId (usdc_value + usdc_fee) into ONE row with total debit
-          if (metadata.transactionType === 'usdc_send' && metadata.usdcSendGroupId) {
-            const key = String(metadata.usdcSendGroupId);
-            if (!usdcSendGroups.has(key)) usdcSendGroups.set(key, { valueRow: null, feeRow: null });
-            const g = usdcSendGroups.get(key);
-            if (metadata.lineType === 'usdc_value') g.valueRow = tx;
-            else if (metadata.lineType === 'usdc_fee') g.feeRow = tx;
-            return;
-          }
-          // PayShap RPP: group principal + fee into ONE row showing total debit
-          // Principal transactionId: RPP-{merchantTransactionId}, fee transactionId: RPP-FEE-{merchantTransactionId}
-          if (metadata.payshapType === 'rpp') {
-            const rppKey = tx.type === 'fee'
-              ? (tx.transactionId || '').replace(/^RPP-FEE-/, '')
-              : (tx.transactionId || '').replace(/^RPP-/, '');
-            if (!rppKey) { otherForRecent.push(tx); return; }
-            if (!rppGroups.has(rppKey)) rppGroups.set(rppKey, { principal: null, fee: null });
-            const g = rppGroups.get(rppKey);
-            if (tx.type === 'fee') g.fee = tx;
-            else g.principal = tx;
-            return;
-          }
-          // PayShap RTP: group principal + fee into ONE row showing net credit
-          // Principal transactionId: RTP-{merchantTransactionId}, fee transactionId: RTP-FEE-{merchantTransactionId}
-          if (metadata.payshapType === 'rtp') {
-            const rtpKey = tx.type === 'fee'
-              ? (tx.transactionId || '').replace(/^RTP-FEE-/, '')
-              : (tx.transactionId || '').replace(/^RTP-/, '');
-            if (!rtpKey) { otherForRecent.push(tx); return; }
-            if (!rtpGroups.has(rtpKey)) rtpGroups.set(rtpKey, { principal: null, fee: null });
-            const g = rtpGroups.get(rtpKey);
-            if (tx.type === 'fee') g.fee = tx;
-            else g.principal = tx;
-            return;
-          }
-          otherForRecent.push(tx);
-        });
-        const combinedUsdcRows = [];
-        usdcSendGroups.forEach((group) => {
-          const valueRow = group.valueRow;
-          const feeRow = group.feeRow;
-          const totalAmount = (parseFloat(valueRow?.amount || 0) + parseFloat(feeRow?.amount || 0));
-          const mainRow = valueRow || feeRow;
-          if (mainRow) {
-            combinedUsdcRows.push({
-              ...mainRow,
-              amount: totalAmount,
-              description: mainRow.description || 'USDC Send',
-              metadata: { ...(mainRow.metadata || {}), combinedUsdc: true, totalDebit: totalAmount }
-            });
-          }
-        });
-        const combinedVoucherTopupRows = [];
-        voucherTopupGroups.forEach((g) => {
-          if (g.main && g.fee) {
-            const netAmount = parseFloat(g.main.amount) + parseFloat(g.fee.amount);
-            combinedVoucherTopupRows.push({ ...g.main, amount: netAmount, metadata: { ...(g.main.metadata || {}), combinedTopup: true } });
-          } else if (g.main) combinedVoucherTopupRows.push(g.main);
-          else if (g.fee) combinedVoucherTopupRows.push(g.fee);
-        });
-        const combinedCashoutRows = [];
-        flashCashoutGroups.forEach((g) => {
-          if (g.main && g.fee) {
-            const totalAmount = parseFloat(g.main.amount) + parseFloat(g.fee.amount);
-            combinedCashoutRows.push({ ...g.main, amount: totalAmount });
-          } else if (g.main) combinedCashoutRows.push(g.main);
-          else if (g.fee) combinedCashoutRows.push(g.fee);
-        });
-        easypayCashoutGroups.forEach((g) => {
-          if (g.main && g.fee) {
-            const totalAmount = parseFloat(g.main.amount) + parseFloat(g.fee.amount);
-            combinedCashoutRows.push({ ...g.main, amount: totalAmount });
-          } else if (g.main) combinedCashoutRows.push(g.main);
-          else if (g.fee) combinedCashoutRows.push(g.fee);
-        });
-        const combinedRppRows = [];
-        rppGroups.forEach((g) => {
-          if (g.principal && g.fee) {
-            const totalAmount = parseFloat(g.principal.amount) + parseFloat(g.fee.amount);
-            combinedRppRows.push({ ...g.principal, amount: totalAmount, metadata: { ...(g.principal.metadata || {}), combinedRpp: true, rppFeeAmount: parseFloat(g.fee.amount) } });
-          } else if (g.principal) combinedRppRows.push(g.principal);
-          else if (g.fee) combinedRppRows.push(g.fee);
-        });
-        const combinedRtpRows = [];
-        rtpGroups.forEach((g) => {
-          if (g.principal && g.fee) {
-            // Net credit = principal (positive) + fee (negative), e.g. 10 + (-5.75) = 4.25
-            const netAmount = parseFloat(g.principal.amount) + parseFloat(g.fee.amount);
-            combinedRtpRows.push({
-              ...g.principal,
-              amount: netAmount,
-              description: g.principal.description || 'Request to Pay',
-              metadata: { ...(g.principal.metadata || {}), combinedRtp: true, rtpFeeAmount: parseFloat(g.fee.amount) }
-            });
-          } else if (g.principal) combinedRtpRows.push(g.principal);
-          else if (g.fee) combinedRtpRows.push(g.fee);
-        });
-        const combinedOttPayoutRows = [];
-        ottPayoutGroups.forEach((g) => {
-          if (g.main && g.fee) {
-            const faceValue = Math.abs(parseFloat(g.main.amount || 0));
-            const feeAmount = Math.abs(parseFloat(g.fee.amount || 0));
-            const totalDebit = faceValue + feeAmount;
-            combinedOttPayoutRows.push({
-              ...g.main,
-              amount: totalDebit,
-              metadata: {
-                ...(g.main.metadata || {}),
-                combinedOttPayout: true,
-                ottFaceValue: faceValue,
-                ottFeeAmount: feeAmount,
-                totalDebit,
-              },
-            });
-          } else if (g.main) combinedOttPayoutRows.push(g.main);
-          else if (g.fee) combinedOttPayoutRows.push(g.fee);
-        });
-        normalizedRows.length = 0;
-        normalizedRows.push(...combinedRefunds, ...combinedVoucherTopupRows, ...combinedCashoutRows, ...combinedUsdcRows, ...combinedRppRows, ...combinedRtpRows, ...combinedOttPayoutRows, ...otherForRecent);
-        normalizedRows.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-      }
+      }));
 
       // CRITICAL FIX: Deduplicate by transaction ID to prevent duplicates
       const uniqueTransactions = new Map();
@@ -943,26 +761,15 @@ class WalletController {
           return false;
         }
         
-        // Dashboard: Exclude Transaction Fees (for top-up, cash-out, Flash Eezi Cash, EasyPay voucher, and PayShap RPP)
-        // Also exclude individual fee refunds (they're combined with voucher refund)
-        // Transactions page: Keep Transaction Fees (shows two lines: face + fee)
-        if (isDashboard && (
-          desc === 'transaction fee' ||
-          (tx.metadata && (tx.metadata.isTopUpFee || tx.metadata.isCashoutFee || tx.metadata.isFlashCashoutFee || tx.metadata.isEasyPayVoucherFee)) ||
-          (tx.metadata && tx.metadata.isCashoutFeeRefund && !tx.metadata.combinedRefund) || // Exclude individual cash-out fee refunds (already combined)
-          (tx.metadata && tx.metadata.isEasyPayVoucherFeeRefund && !tx.metadata.combinedRefund) || // Exclude individual EasyPay voucher fee refunds (already combined)
-          (tx.type === 'fee' && tx.metadata && tx.metadata.payshapType === 'rpp') || // RPP fee already combined into principal row
-          (tx.type === 'fee' && tx.metadata && tx.metadata.payshapType === 'rtp') // RTP fee already combined into principal row
-        )) {
-          return false;
-        }
-        
         // Keep all customer-facing transactions
         return true;
       });
 
-      // Limit filtered results to requested limit (especially for dashboard)
-      const limitedRows = filteredRows.slice(0, requestedLimit);
+      // Dashboard: show the latest 10 main transactions plus linked fee/refund rows.
+      // Transaction History keeps the usual paginated raw line-item limit.
+      const limitedRows = isDashboard
+        ? selectDashboardLineItemRows(filteredRows, requestedLimit)
+        : filteredRows.slice(0, requestedLimit);
 
       // Generate next cursor for pagination (based on original transactions, not filtered)
       const nextCursor = transactions.length > 0 ? 
@@ -1341,4 +1148,12 @@ class WalletController {
   }
 }
 
-module.exports = new WalletController();
+const walletController = new WalletController();
+walletController._private = {
+  sanitizeOttPayoutDisplayRows,
+  getOttPayoutProviderLabelFromRow,
+  selectDashboardLineItemRows,
+  isDashboardMainTransaction,
+};
+
+module.exports = walletController;

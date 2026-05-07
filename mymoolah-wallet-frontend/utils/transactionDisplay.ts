@@ -9,6 +9,23 @@ export function cleanTransactionDescription(transaction: TransactionDisplayInput
   if (!description) return 'Transaction';
 
   const metadata = transaction.metadata || {};
+  const providerCode = String(metadata.providerCode || '');
+  const providerLabel =
+    providerCode === '112' ? 'ABSA CashSend' :
+    providerCode === '10' ? 'Nedbank Cardless Withdrawal' :
+    description.toLowerCase().includes('absa') ? 'ABSA CashSend' :
+    description.toLowerCase().includes('nedbank') ? 'Nedbank Cardless Withdrawal' :
+    'Cash payout';
+
+  if (metadata.combinedOttPayoutRefund || /^ott payout reversal:/i.test(description)) {
+    return `Withdraw Cash refund - ${providerLabel}`;
+  }
+
+  if (metadata.combinedOttPayout || metadata.ottPayoutId) {
+    if (description.toLowerCase() === 'transaction fee') return 'Transaction fee';
+    return `Withdraw Cash - ${providerLabel}`;
+  }
+
   const isBankOriginDeposit =
     transaction.type === 'deposit' ||
     transaction.type === 'money_in' ||

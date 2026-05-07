@@ -1,5 +1,23 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-05-07 - Dashboard recent transactions line-item fix
+
+### Summary
+Changed wallet Dashboard Recent Transactions to show customer-facing line items separately, matching Transaction History: transaction value, transaction fees, and refunds remain distinct rows while the dashboard still includes the latest 10 main transactions plus related fee/refund rows.
+
+### Changes
+- Removed dashboard-only combined display rows for OTT payouts, Flash/EasyPay cash-out, voucher top-up, USDC, RPP, and RTP transaction groups.
+- Stopped dashboard filtering of customer-facing transaction fee rows; internal accounting rows such as VAT, revenue, and float credits remain hidden.
+- Added dashboard selection logic in `controllers/walletController.js` that returns up to 10 non-fee/non-linked main rows plus related fee/refund rows by shared metadata/reference keys.
+- Kept OTT payout descriptions safe per row: `Withdraw Cash - ABSA CashSend`, `Transaction fee`, and `Withdraw Cash refund - Nedbank Cardless Withdrawal`, without combining amounts.
+- Added defensive frontend cleanup in `mymoolah-wallet-frontend/utils/transactionDisplay.ts` so old/raw OTT reversal text is still displayed safely if encountered.
+- Added focused coverage in `tests/wallet-ott-display.test.js` for separate OTT payout/fee rows, safe Nedbank reversal descriptions, and the 10-main-plus-linked-fees dashboard rule.
+
+### Validation
+- `node --check controllers/walletController.js` passed.
+- `npx jest tests/wallet-ott-display.test.js --runInBand --forceExit` passed 3/3, with pre-existing Jest config warnings only.
+- No database migration, ledger correction, or production write was performed.
+
 ## 2026-05-07 - OTT staging payout validation
 
 ### Summary
