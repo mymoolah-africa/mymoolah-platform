@@ -14,35 +14,7 @@ const { getStagingClient, closeAll } = require('./db-connection-helper');
 const { recogniseVoucherBrand } = require('../services/voucherCatalogBrandService');
 
 const APPROVED_SUPPLIER_PRODUCT_IDS = Object.freeze(['OTT-68', 'OTT-69', 'OTT-156', 'OTT-157']);
-const APPROVED_NAME_PATTERN = [
-  'pick\\s*(?:n|and)?\\s*pay',
-  'picknpay',
-  '\\bpnp\\b',
-  'shoprite',
-  'checkers',
-  'nando',
-  '\\bkfc\\b',
-  'hungry\\s*lion',
-  'fishaways',
-  'rocomamas',
-  'wimpy',
-  'steers',
-  'starbucks',
-  'spur',
-  'panarottis',
-  'mugg\\s*&?\\s*bean',
-  'john\\s*dory',
-  'dis[\\s-]?chem',
-  'debonairs',
-  'burger\\s*king',
-  'boxer',
-  'ackermans',
-  'ticketmaster',
-  'netcare\\s*plus',
-  'netcareplus',
-].join('|');
-
-const EXCLUDED_NAME_PATTERN = 'amazon|payshap|airtime|standard\\s*bank|takealot|electricity';
+const APPROVED_RETAIL_CATALOG_KEYS = new Set(['pick-n-pay', 'shoprite-checkers']);
 
 function parseArgs(argv) {
   const flags = new Set(argv);
@@ -65,6 +37,16 @@ function canonicalFields(rawName) {
     recognition: recognised.recognition,
     catalogKey: recognised.catalogKey,
   };
+}
+
+function isApprovedOttCatalogCandidate(row) {
+  const supplierProductId = row.product_supplier_id || row.variant_supplier_id;
+  if (APPROVED_SUPPLIER_PRODUCT_IDS.includes(supplierProductId)) return true;
+
+  const rawName = row.product_name || row.provider || supplierProductId;
+  const recognised = recogniseVoucherBrand(rawName);
+  return recognised.recognition === 'mapped' &&
+    (recognised.isGiftCard || APPROVED_RETAIL_CATALOG_KEYS.has(recognised.catalogKey));
 }
 
 async function loadCandidates(client) {
@@ -95,16 +77,9 @@ async function loadCandidates(client) {
       AND p.status = 'active'
       AND pv.status = 'active'
       AND p.type::text = 'voucher'
-      AND (
-        p."supplierProductId" = ANY($2::text[])
-        OR p.name ~* $3
-        OR COALESCE(pv.provider, '') ~* $3
-      )
-      AND p.name !~* $4
-      AND COALESCE(pv.provider, '') !~* $4
     ORDER BY p.name, pv.id;
-  `, ['OTT', APPROVED_SUPPLIER_PRODUCT_IDS, APPROVED_NAME_PATTERN, EXCLUDED_NAME_PATTERN]);
-  return result.rows;
+  `, ['OTT']);
+  return result.rows.filter(isApprovedOttCatalogCandidate);
 }
 
 async function applyCandidate(client, row) {

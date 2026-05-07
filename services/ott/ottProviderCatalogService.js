@@ -4,6 +4,7 @@ const { Op } = require('sequelize');
 const db = require('../../models');
 const { OttClient } = require('./ottClient');
 const { commissionPolicyFromTerm } = require('./ottCommercialTermsService');
+const { recogniseVoucherBrand } = require('../voucherCatalogBrandService');
 
 const KNOWN_PROVIDER_CLASSIFICATION = {
   '2': { providerType: 'payout', serviceFamily: 'cash_send', customerFacing: false },
@@ -27,7 +28,14 @@ const KNOWN_PROVIDER_CLASSIFICATION = {
 
 const APPROVED_PAYOUT_PROVIDER_CODES = new Set(['10', '112']);
 const APPROVED_CATALOG_PROVIDER_CODES = new Set(['68', '69', '156', '157']);
-const APPROVED_CATALOG_NAME_PATTERN = /pick\s*(?:n|and)?\s*pay|picknpay|\bpnp\b|shoprite|checkers|nando'?s|kfc|hungry\s*lion|fishaways|rocomamas|wimpy|steers|starbucks|spur|panarottis|mugg\s*&?\s*bean|mugg\s+and\s+bean|john\s*dory'?s|dis[\s-]?chem|debonairs|burger\s*king|boxer|ackermans|ticketmaster|netcare\s*plus|netcareplus/i;
+const APPROVED_CATALOG_KEYS = new Set(['pick-n-pay', 'shoprite-checkers']);
+const DEFAULT_OTT_VAS_COMMISSION_TERMS = Object.freeze({
+  commercialType: 'commission',
+  grossCommissionPct: 1.00,
+  serviceFeePct: 0.30,
+  netCommissionPct: 0.70,
+  monthlySwitchingFeePct: 0.30,
+});
 
 function asArray(value) {
   if (Array.isArray(value)) return value;
@@ -65,7 +73,16 @@ function classifyProvider(provider = {}) {
   const known = KNOWN_PROVIDER_CLASSIFICATION[code];
   if (known) return known;
 
-  const name = providerNameOf(provider).toLowerCase();
+  const providerName = providerNameOf(provider);
+  const recognisedVoucher = recogniseVoucherBrand(providerName);
+  if (recognisedVoucher.recognition === 'mapped' && recognisedVoucher.isGiftCard) {
+    return { providerType: 'gift_card', serviceFamily: 'voucher', customerFacing: true };
+  }
+  if (recognisedVoucher.recognition === 'mapped' && APPROVED_CATALOG_KEYS.has(recognisedVoucher.catalogKey)) {
+    return { providerType: 'voucher', serviceFamily: 'voucher', customerFacing: true };
+  }
+
+  const name = providerName.toLowerCase();
   if (name.includes('mock') || name.includes('test')) {
     return { providerType: 'mock', serviceFamily: 'mock', customerFacing: false, isMock: true };
   }
@@ -91,7 +108,9 @@ function hasConfiguredPayoutEconomics(term) {
 function isApprovedCatalogProvider({ providerCode, providerName, providerType } = {}) {
   if (!['voucher', 'gift_card'].includes(providerType)) return false;
   if (APPROVED_CATALOG_PROVIDER_CODES.has(String(providerCode))) return true;
-  return APPROVED_CATALOG_NAME_PATTERN.test(String(providerName || ''));
+  const recognisedVoucher = recogniseVoucherBrand(providerName);
+  return recognisedVoucher.recognition === 'mapped' &&
+    (recognisedVoucher.isGiftCard || APPROVED_CATALOG_KEYS.has(recognisedVoucher.catalogKey));
 }
 
 function hasConfiguredCatalogEconomics(policy) {
@@ -112,6 +131,18 @@ function normalizeLimit(limit = {}) {
     minAmount: cents(limit.minAmount || limit.MinAmount || limit.minimum || limit.min, 100),
     maxAmount: cents(limit.maxAmount || limit.MaxAmount || limit.maximum || limit.max, 500000),
     raw: limit,
+  };
+}
+
+function approvedCatalogTermPatch({ providerCode, providerName, providerType } = {}) {
+  if (!isApprovedCatalogProvider({ providerCode, providerName, providerType })) return {};
+  return {
+    ...DEFAULT_OTT_VAS_COMMISSION_TERMS,
+    isCustomerFacing: true,
+    metadata: {
+      economicTermsMissing: false,
+      commercialTermsSource: 'ott_agreement_3_5_default_vas_commission',
+    },
   };
 }
 
@@ -151,10 +182,12 @@ async function upsertProviderMetadata({ provider, limits = [], transaction } = {
   if (existing) {
     const hasPayoutEconomics = hasConfiguredPayoutEconomics(existing);
     const isApprovedPayout = APPROVED_PAYOUT_PROVIDER_CODES.has(providerCode);
+    const providerType = existing.providerType === 'unknown' ? classification.providerType : existing.providerType;
+    const catalogPatch = approvedCatalogTermPatch({ providerCode, providerName, providerType });
     const isApprovedCatalog = isApprovedCatalogProvider({
       providerCode,
       providerName,
-      providerType: existing.providerType === 'unknown' ? classification.providerType : existing.providerType,
+      providerType,
     });
     const metadata = {
       ...(existing.metadata || {}),
@@ -162,19 +195,33 @@ async function upsertProviderMetadata({ provider, limits = [], transaction } = {
       activeProvider: provider,
       limits: limit.raw,
       ...(classification.providerType === 'payout' && !hasPayoutEconomics ? { economicTermsMissing: true } : {}),
+      ...(catalogPatch.metadata || {}),
     };
     await existing.update({
       providerName,
-      providerType: existing.providerType === 'unknown' ? classification.providerType : existing.providerType,
+      providerType,
       serviceFamily: existing.serviceFamily === 'unknown' ? classification.serviceFamily : existing.serviceFamily,
+      ...(catalogPatch.commercialType ? {
+        commercialType: catalogPatch.commercialType,
+        grossCommissionPct: catalogPatch.grossCommissionPct,
+        serviceFeePct: catalogPatch.serviceFeePct,
+        netCommissionPct: catalogPatch.netCommissionPct,
+        monthlySwitchingFeePct: catalogPatch.monthlySwitchingFeePct,
+      } : {}),
       isCustomerFacing: classification.providerType === 'payout'
         ? Boolean(existing.isCustomerFacing && isApprovedPayout && hasPayoutEconomics)
-        : Boolean(existing.isCustomerFacing && isApprovedCatalog),
+        : Boolean((existing.isCustomerFacing || catalogPatch.isCustomerFacing) && isApprovedCatalog),
       isMock: Boolean(existing.isMock || classification.isMock),
       metadata,
     }, { transaction });
     return existing;
   }
+
+  const catalogPatch = approvedCatalogTermPatch({
+    providerCode,
+    providerName,
+    providerType: classification.providerType,
+  });
 
   return db.SupplierCommercialTerm.create({
     supplierId: supplier.id,
@@ -183,10 +230,16 @@ async function upsertProviderMetadata({ provider, limits = [], transaction } = {
     providerName,
     providerType: classification.providerType,
     serviceFamily: classification.serviceFamily,
-    commercialType: classification.providerType === 'payout' ? 'fixed_fee' : 'none',
+    commercialType: classification.providerType === 'payout'
+      ? 'fixed_fee'
+      : (catalogPatch.commercialType || 'none'),
     fixedFeeVatRate: Number(process.env.VAT_RATE || 0.15),
     fixedFeeIsVatExclusive: true,
-    isCustomerFacing: false,
+    grossCommissionPct: catalogPatch.grossCommissionPct,
+    serviceFeePct: catalogPatch.serviceFeePct,
+    netCommissionPct: catalogPatch.netCommissionPct,
+    monthlySwitchingFeePct: catalogPatch.monthlySwitchingFeePct,
+    isCustomerFacing: Boolean(catalogPatch.isCustomerFacing),
     isMock: Boolean(classification.isMock),
     isActive: true,
     effectiveFrom: new Date().toISOString().slice(0, 10),
@@ -194,7 +247,8 @@ async function upsertProviderMetadata({ provider, limits = [], transaction } = {
       lastProviderSyncAt: new Date().toISOString(),
       activeProvider: provider,
       limits: limit.raw,
-      economicTermsMissing: true,
+      economicTermsMissing: !catalogPatch.isCustomerFacing,
+      ...(catalogPatch.metadata || {}),
     },
   }, { transaction });
 }

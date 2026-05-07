@@ -80,6 +80,7 @@ describe('OTT provider catalog service', () => {
     expect(service.classifyProvider({ providerCode: '68', providerName: 'PicknPay Voucher' }).providerType).toBe('voucher');
     expect(service.classifyProvider({ providerCode: '140', providerName: 'Electricity Token' }).providerType).toBe('electricity');
     expect(service.classifyProvider({ providerCode: '141', providerName: 'AMAZON Gift Card' }).providerType).toBe('gift_card');
+    expect(service.classifyProvider({ providerCode: '2001', providerName: 'OTT Mobile Gift Cards | KFC' }).providerType).toBe('gift_card');
     expect(service.classifyProvider({ providerCode: '71', providerName: 'Mock Provider' }).isMock).toBe(true);
   });
 
@@ -132,6 +133,34 @@ describe('OTT provider catalog service', () => {
       commercialType: 'fixed_fee',
       isCustomerFacing: false,
       metadata: expect.objectContaining({ economicTermsMissing: true }),
+    }), { transaction: mockTransaction });
+  });
+
+  it('creates approved OTT gift-card providers with standard VAS commission terms', async () => {
+    mockModels.SupplierCommercialTerm.findOne.mockResolvedValue(null);
+    mockModels.SupplierCommercialTerm.create.mockResolvedValue({ id: 100, providerCode: '2001' });
+
+    await service.upsertProviderMetadata({
+      provider: { providerCode: '2001', providerName: 'OTT Mobile Gift Cards | KFC' },
+      limits: [{ providerCode: '2001', minAmount: 5, maxAmount: 5000 }],
+      transaction: mockTransaction,
+    });
+
+    expect(mockModels.SupplierCommercialTerm.create).toHaveBeenCalledWith(expect.objectContaining({
+      providerCode: '2001',
+      providerName: 'OTT Mobile Gift Cards | KFC',
+      providerType: 'gift_card',
+      serviceFamily: 'voucher',
+      commercialType: 'commission',
+      grossCommissionPct: 1,
+      serviceFeePct: 0.3,
+      netCommissionPct: 0.7,
+      monthlySwitchingFeePct: 0.3,
+      isCustomerFacing: true,
+      metadata: expect.objectContaining({
+        economicTermsMissing: false,
+        commercialTermsSource: 'ott_agreement_3_5_default_vas_commission',
+      }),
     }), { transaction: mockTransaction });
   });
 });

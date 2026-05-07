@@ -1,5 +1,23 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-05-07 - OTT gift-card catalog sync fix
+
+### Summary
+Fixed the reason the new wallet `Gift Cards` card only showed two OTT brands: the OTT provider sync only had seeded commercial terms for Nando's and Dis-Chem, so other portal-active gift-card providers were discovered as non-customer-facing and never imported into the shared voucher catalog.
+
+### Changes
+- Updated `services/ott/ottProviderCatalogService.js` so live OTT providers recognized by the central `voucherCatalogBrandService` as gift cards receive the standard OTT VAS commission terms and become importable customer-facing catalog products.
+- Removed duplicated gift-card allowlist logic from the staging governance helper; `scripts/stage-ott-catalog-governance.js` now filters candidates through the same central brand recognizer used by the wallet and OTT sync.
+- Added focused coverage proving an unknown live OTT gift-card provider such as `OTT Mobile Gift Cards | KFC` is classified as `gift_card` and seeded with the standard 1.00% gross / 0.30% OTT service fee / 0.70% net commission policy.
+
+### Validation
+- `node --check services/ott/ottProviderCatalogService.js scripts/stage-ott-catalog-governance.js` passed.
+- `npx jest tests/ott-provider-catalog-service.test.js tests/voucherCatalogBrandService.test.js --runInBand --forceExit` passed 43/43, with pre-existing Jest config warnings only.
+- Cursor lints on touched code and test files reported no linter errors.
+- André approved staging-only catalog application. After refreshing a stale staging Cloud SQL proxy, `node scripts/ott-sync-providers.js --staging --import-catalog` succeeded: 16 providers read, 1 limits row read, 16 providers upserted, and 4 catalog products imported/published in staging (`OTT-156` Nando's, `OTT-157` Dis-Chem, `OTT-68` Pick n Pay, `OTT-69` Shoprite / Checkers).
+- `node scripts/audit-ott-production-catalog.js --staging` confirmed staging has 4 active OTT voucher products and 4 approved/published OTT governance mappings. The OTT active-provider API response still does not expose the other portal screenshot brands such as KFC, Steers, Wimpy, or Burger King to the credentials available in this session, so those brands require OTT/account activation or confirmed provider codes before MMTP can sell them.
+- No production database write, production catalog import, production governance publication, wallet debit, or production transaction was performed.
+
 ## 2026-05-07 - Gift Cards wallet entry point
 
 ### Summary
