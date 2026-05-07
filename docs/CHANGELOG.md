@@ -1,5 +1,19 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-05-07 - MobileMart SFTP email handover
+
+### Summary
+Captured the current MobileMart SFTP/reconciliation status after reviewing Jarod Ramos' email thread, session logs, integration docs, and recent SFTP/MobileMart commits.
+
+### Changes
+- Added a session log confirming the MobileMart SFTP endpoint, Jarod key handling, and Fulcrum v1.1 parser are already documented as ready on the MyMoolah side.
+- Recorded that the active blocker is MobileMart choosing a single static egress-IP delivery path, not a new MyMoolah development task.
+- Confirmed the email-only next step: ask MobileMart to choose between scheduled upload from their Fulcrum server, Power Automate Desktop inside their network, or a MobileMart-owned Azure relay with static outbound IP.
+- Reconfirmed that whitelisting the 62 shared Microsoft Power Automate cloud IP ranges remains declined for audit/security reasons.
+
+### Validation
+- Documentation-only update. No runtime code, database schema, migrations, secrets, production configuration, or SFTP firewall rules were changed.
+
 ## 2026-05-05 - Uber / Eats governance handover
 
 ### Summary
