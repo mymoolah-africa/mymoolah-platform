@@ -102,4 +102,30 @@ describe('ProductCatalogGovernanceService', () => {
       toPublishStatus: 'published',
     });
   });
+
+  test('published mapping lookup only requests approved and published voucher rows', async () => {
+    const mapping = new FakeMapping({
+      id: 4,
+      reviewStatus: 'approved',
+      publishStatus: 'published',
+      canonicalName: 'Nando\'s Gift Card',
+      canonicalBrand: 'Nando\'s',
+      category: 'food',
+      description: 'Nando\'s gift card',
+    });
+    const { service } = buildService(mapping);
+    service.ProductCatalogMapping.findAll.mockResolvedValue([mapping]);
+
+    const result = await service.getPublishedMappings({ productType: 'voucher' });
+
+    expect(service.ProductCatalogMapping.findAll).toHaveBeenCalledWith({
+      where: {
+        productType: 'voucher',
+        reviewStatus: 'approved',
+        publishStatus: 'published',
+      },
+      order: [['canonicalName', 'ASC']],
+    });
+    expect(result).toEqual([expect.objectContaining({ canonicalBrand: 'Nando\'s' })]);
+  });
 });

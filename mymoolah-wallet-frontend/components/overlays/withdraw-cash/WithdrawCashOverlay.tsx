@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Input } from '../../ui/input';
 import { Label } from '../../ui/label';
 import { Alert, AlertDescription } from '../../ui/alert';
-import { apiService, ApiError, type OttPayoutProvider, type OttPayoutResult } from '../../../services/apiService';
+import { apiService, ApiError, type OttPayoutProvider, type OttPayoutQuote, type OttPayoutResult } from '../../../services/apiService';
 import { BrandSpinner } from '../../common/LoadingSpinner';
 
 type Step = 'details' | 'processing' | 'success' | 'error';
@@ -29,18 +29,10 @@ function formatOttPayoutError(error: ApiError): string {
 
 const FALLBACK_PROVIDERS: CashProvider[] = [
   {
-    providerCode: '2',
-    providerName: 'Standard Bank Instant Money',
-    helper: 'You will receive a Standard Bank SMS with the PIN and instructions.',
-    available: true,
-    minAmount: WALLET_MIN_CASH_AMOUNT,
-    maxAmount: WALLET_MAX_CASH_AMOUNT,
-  },
-  {
     providerCode: '112',
     providerName: 'ABSA CashSend',
     helper: 'You will receive an ABSA SMS with the PIN and instructions.',
-    available: true,
+    available: false,
     minAmount: WALLET_MIN_CASH_AMOUNT,
     maxAmount: WALLET_MAX_CASH_AMOUNT,
   },
@@ -48,16 +40,15 @@ const FALLBACK_PROVIDERS: CashProvider[] = [
     providerCode: '10',
     providerName: 'Nedbank Cardless Cash Send',
     helper: 'You will receive a Nedbank SMS with the cash PIN and instructions.',
-    available: true,
+    available: false,
     minAmount: WALLET_MIN_CASH_AMOUNT,
     maxAmount: WALLET_MAX_CASH_AMOUNT,
   },
 ];
 
 const CASH_PROVIDER_ALIASES: Record<string, string[]> = {
-  '2': ['2', 'standard', 'instant money'],
   '112': ['112', 'absa', 'cashsend'],
-  '10': ['10', 'nedbank', 'cardless'],
+  '10': ['10', 'nedbank', 'cardless', 'cardless withdrawal'],
 };
 
 function formatRand(value: number): string {
@@ -74,7 +65,11 @@ export function WithdrawCashOverlay() {
   const [step, setStep] = useState<Step>('details');
   const [error, setError] = useState('');
   const [isLoadingProviders, setIsLoadingProviders] = useState(false);
+  const [providerLoadError, setProviderLoadError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [quote, setQuote] = useState<OttPayoutQuote | null>(null);
+  const [quoteError, setQuoteError] = useState('');
+  const [isLoadingQuote, setIsLoadingQuote] = useState(false);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -82,8 +77,9 @@ export function WithdrawCashOverlay() {
     const loadProviders = async () => {
       try {
         setIsLoadingProviders(true);
+        setProviderLoadError('');
         const activeProviders = await apiService.getOttPayoutProviders();
-        if (!mounted || activeProviders.length === 0) return;
+        if (!mounted) return;
 
         const cashProviders = FALLBACK_PROVIDERS.map((fallback) => {
           const live = activeProviders.find((provider) => {
@@ -99,8 +95,10 @@ export function WithdrawCashOverlay() {
         setProviders(cashProviders);
         const firstAvailable = cashProviders.find((provider) => provider.available);
         if (firstAvailable) setSelectedProviderCode(firstAvailable.providerCode);
+        if (!firstAvailable) setProviderLoadError('Cash PIN providers are not available right now. Please try again later.');
       } catch (err) {
-        console.warn('Could not load OTT cash providers, using configured fallback providers', err);
+        console.warn('Could not load OTT cash providers', err);
+        if (mounted) setProviderLoadError('Cash PIN providers are not available right now. Please try again later.');
       } finally {
         if (mounted) setIsLoadingProviders(false);
       }
@@ -132,7 +130,51 @@ export function WithdrawCashOverlay() {
     if (amountNumber > effectiveMaxAmount) {
       return `Maximum amount is ${formatRand(effectiveMaxAmount)}.`;
     }
+    if (isLoadingQuote) {
+      return 'Checking the fee before you continue.';
+    }
+    if (quoteError) {
+      return quoteError;
+    }
+    if (!quote) {
+      return 'We must check the fee before you continue.';
+    }
     return '';
+  }, [amountNumber, effectiveMaxAmount, effectiveMinAmount, isLoadingQuote, quote, quoteError, selectedProvider]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const canQuote = selectedProvider?.available &&
+      Number.isFinite(amountNumber) &&
+      amountNumber >= effectiveMinAmount &&
+      amountNumber <= effectiveMaxAmount;
+
+    setQuote(null);
+    setQuoteError('');
+    if (!canQuote) {
+      setIsLoadingQuote(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setIsLoadingQuote(true);
+    const timer = window.setTimeout(async () => {
+      try {
+        const nextQuote = await apiService.quoteOttPayout(amountNumber, selectedProvider.providerCode);
+        if (!cancelled) setQuote(nextQuote);
+      } catch {
+        if (!cancelled) setQuoteError('We could not check the fee for this cash provider. Please try again.');
+      } finally {
+        if (!cancelled) setIsLoadingQuote(false);
+      }
+    }, 350);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
   }, [amountNumber, effectiveMaxAmount, effectiveMinAmount, selectedProvider]);
 
   const pollIfNeeded = async (payout: OttPayoutResult): Promise<OttPayoutResult> => {
@@ -289,6 +331,12 @@ export function WithdrawCashOverlay() {
               Checking available providers...
             </div>
           )}
+          {!isLoadingProviders && providerLoadError && (
+            <Alert className="border-amber-200 bg-amber-50">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-sm text-amber-700">{providerLoadError}</AlertDescription>
+            </Alert>
+          )}
           {providers.map((provider) => (
             <button
               key={provider.providerName}
@@ -304,7 +352,7 @@ export function WithdrawCashOverlay() {
                   <p className="font-semibold text-gray-900">{provider.providerName}</p>
                   <p className="text-xs text-gray-600 mt-1">{provider.helper}</p>
                 </div>
-                <span className="text-xs font-semibold text-gray-500">{provider.available ? 'Available' : 'Soon'}</span>
+                <span className="text-xs font-semibold text-gray-500">{provider.available ? 'Available' : 'Unavailable'}</span>
               </div>
             </button>
           ))}
@@ -356,6 +404,35 @@ export function WithdrawCashOverlay() {
           <AlertTriangle className="h-4 w-4 text-red-600" />
           <AlertDescription className="text-sm text-red-700">{error}</AlertDescription>
         </Alert>
+      )}
+
+      {selectedProvider?.available && amountNumber >= effectiveMinAmount && amountNumber <= effectiveMaxAmount && (
+        <Card className="mb-4">
+          <CardContent className="space-y-2 p-4">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-600">Cash amount</span>
+              <span className="font-semibold">{formatRand(amountNumber)}</span>
+            </div>
+            {isLoadingQuote && (
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Checking fee...
+              </div>
+            )}
+            {quote && !isLoadingQuote && (
+              <>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600">Transaction fee</span>
+                  <span className="font-semibold">R{(quote.providerFeeAmount + quote.mmtpFeeAmount).toFixed(2)}</span>
+                </div>
+                <div className="flex items-center justify-between border-t border-gray-100 pt-2 text-base">
+                  <span className="font-semibold text-gray-900">Total from wallet</span>
+                  <span className="font-bold text-gray-900">R{quote.totalDebit.toFixed(2)}</span>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       <div

@@ -113,6 +113,60 @@ Before controlled production testing resumes in the morning:
    production integration: those are MobileMart retail voucher mappings hidden
    by Product Catalog Governance, not OTT production products.
 
+### 2.6 Production catalog readiness update - 2026-05-07
+
+The OTT production catalog readiness implementation added a repeatable read-only
+audit command:
+
+```bash
+node scripts/audit-ott-production-catalog.js --staging
+node scripts/audit-ott-production-catalog.js --production
+```
+
+The command uses `scripts/db-connection-helper.js` and SELECT-only queries. It
+does not call OTT live APIs, import catalog products, publish governance mappings,
+enable payouts, debit wallets, or write production data.
+
+Current read-only findings:
+
+1. Staging and production have OTT commercial terms for Standard Bank Instant
+   Money `2`, ABSA CashSend `112`, PayShap Account `127`, OTT voucher rows,
+   Pick n Pay `68`, Shoprite `69`, Nando's `156`, and Dis-Chem `157`.
+2. Staging and production currently have no imported OTT `products`,
+   `product_variants`, or OTT `product_catalog_mappings`.
+3. Production OTT supplier float `1200-10-08` remains funded at `R1,000.00`
+   with low-balance threshold `R100.00`; staging has the float row but no
+   balance.
+4. André's 2026-05-07 OTT portal screenshots confirm the active-provider set
+   includes ABSA CashSend, Nedbank Cardless Withdrawal, Shoprite Vouchers, Uber
+   and Uber Eats, PayShap Account, and multiple OTT Mobile Gift Card brands such
+   as RocoMamas, Wimpy, Steers, Starbucks, Spur, Panarottis, Nando's, Mugg &
+   Bean, KFC, John Dory's, Hungry Lion, Fishaways, Dis-Chem, Debonairs Pizza,
+   Burger King, Boxer, Ackermans, Ticketmaster, and NetcarePlus.
+5. Contractually, MyMoolah may expose cash-send / payout only for ABSA and
+   Nedbank at this stage. Standard Bank Instant Money must remain hidden until
+   Standard Bank approves the service for MyMoolah.
+6. PayShap `127` remains deliberately excluded from wallet frontend exposure in
+   this phase.
+7. Nedbank Cardless Withdrawal is portal-active and contractually allowed, and
+   MMTP staging terms now use the approved R13.00 incl VAT customer fee, but
+   the 2026-05-07 controlled staging submit was rejected by OTT with
+   `Provider is not authorised on this account :MyMoolah (Pty) Ltd`. Do not
+   expose or retest Nedbank until OTT confirms provider `10` is enabled for the
+   MyMoolah account.
+8. Amazon Gift Card `141` remains on hold because the prior UAT test showed
+   provider-side errors.
+
+Customer-facing placement decision:
+
+- Gift cards, Pick n Pay, and Shoprite / Checkers belong under Buy Retail
+  Vouchers and must be exposed only through Product Catalog Governance.
+- ABSA CashSend and Nedbank cardless cash belong under Withdraw
+  Cash, because lower-literacy users understand the outcome as getting cash with
+  an SMS PIN, not sending money to a bank account.
+- Standard Bank Instant Money, OTT PayShap, and OTT airtime are not wired to
+  frontend surfaces in this phase.
+
 ### 2.3 MMTP references
 
 - `docs/CHART_OF_ACCOUNTS.md`

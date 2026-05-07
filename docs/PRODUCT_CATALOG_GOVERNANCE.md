@@ -32,6 +32,26 @@ Publish status is separate:
 
 When enabled, `/api/v1/overlay/vouchers/catalog` filters voucher cards against approved and published governance mappings. Pending, rejected, suspended, retired, and unmapped supplier SKUs are excluded from wallet responses.
 
+## OTT Production Catalog Readiness - 2026-05-07
+Read-only staging and production audits confirmed that OTT commercial terms exist but no OTT `products`, `product_variants`, or OTT governance mappings are currently imported in staging or production. Use `scripts/audit-ott-production-catalog.js` before any rollout to verify the current state without writing to the database.
+
+Current candidate rows for governance review after an approved import:
+- `OTT-68` - Pick n Pay voucher (`provider_code = 68`)
+- `OTT-69` - Shoprite / Checkers voucher (`provider_code = 69`)
+- Portal-active OTT gift-card brands from André's 2026-05-07 screenshots, including RocoMamas, Wimpy, Steers, Starbucks, Spur, Panarottis, Nando's, Mugg & Bean, KFC, John Dory's, Hungry Lion, Fishaways, Dis-Chem, Debonairs Pizza, Burger King, Boxer, Ackermans, Ticketmaster, and NetcarePlus.
+
+Current hold/exclusion rules:
+- `OTT-141` Amazon Gift Card remains on hold because UAT returned provider-side failures.
+- `OTT-127` PayShap Account must not be published or wired to wallet catalog/front-end surfaces in this phase.
+- Standard Bank Instant Money must remain hidden until Standard Bank approves the service for MyMoolah.
+- Nedbank Cardless Withdrawal is contractually allowed and active in the OTT portal, but quote/submit must remain unavailable until finance-approved commercial terms are configured; do not infer terms from ABSA.
+- Any generic OTT voucher or gift-card row must be reviewed against the raw snapshot before publication.
+
+Customer-facing grouping:
+- Show `Pick n Pay` as its own card.
+- Show `Shoprite / Checkers` as one clear grocery voucher card unless OTT supplies separate confirmed Checkers-only SKUs later.
+- Show fast-food gift cards as brand-specific cards, for example `Nando's`, `KFC`, `Steers`, `Wimpy`, `Debonairs`, `Spur`, `McDonald's`, or `Burger King`, only after raw OTT provider names confirm those brands.
+
 ## Pending Production Review - Uber / Eats
 Production verification on 2026-05-05 confirmed that MobileMart Uber and Uber Eats voucher variants exist in `product_catalog_mappings`, but remain hidden because their governance mappings are still `review_status = draft` and `publish_status = unpublished`.
 

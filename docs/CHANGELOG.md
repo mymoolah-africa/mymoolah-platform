@@ -1,5 +1,45 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-05-07 - OTT staging payout validation
+
+### Summary
+Ran André-approved controlled staging wallet-debit payout tests for ABSA and Nedbank using wallet user `0825571055`, R50.00 cash amount plus the R13.00 flat transaction fee per provider.
+
+### Changes
+- Applied an André-approved staging-only profile correction for verified user `+278****1055`, setting missing `users.idType` to `south_african_id` so the verified-recipient guard remains intact.
+- ABSA CashSend provider `112` completed successfully in staging: R50.00 amount, R13.00 fee, R63.00 total debit, OTT payment reference `118386`.
+- Nedbank Cardless Withdrawal provider `10` was attempted but OTT staging rejected the provider with `Provider is not authorised on this account :MyMoolah (Pty) Ltd`.
+- Confirmed MMTP fail-safe behavior for the Nedbank rejection: payout `OTT-1778146545512-0600df80` was marked `reversed`, withdrawal and fee transactions were reversed, and refund transaction `OTT-REV-OTT-1778146545512-0600df80` restored the full R63.00.
+- André supplied customer/partner-side evidence: ABSA payout notification plus Absa CashSend PIN SMS arrived for `OTT_CashSend_118386`, and OTT sent the matching Nedbank payout-failure email for `MM-OTT-1778146545512-0600df80`.
+- Updated handover/session documentation to show that Nedbank now needs partner-side account enablement before another controlled test.
+
+### Validation
+- ABSA payout `OTT-1778146534980-f2ff7a1e` polled to `completed`.
+- ABSA journal `OTT-PAYOUT-OTT-1778146534980-f2ff7a1e` balances exactly: R63.00 debit and R63.00 credit.
+- Staging wallet `WAL-1` ended at balance R53,357.70 and restricted balance R0.00 after the ABSA debit and Nedbank reversal/refund.
+- No production write was performed.
+
+## 2026-05-07 - OTT production catalog readiness
+
+### Summary
+Implemented the OTT production catalog readiness plan without production writes: added a reusable read-only audit script, tightened voucher/gift-card brand recognition, and hardened the wallet Withdraw Cash experience so cash providers require live availability, contract approval, and fee quote confirmation before submit.
+
+### Changes
+- Added `scripts/audit-ott-production-catalog.js`, a SELECT-only staging/production audit using `scripts/db-connection-helper.js` to report OTT commercial terms, imported products, governance mappings, and `1200-10-08` float status.
+- Confirmed the current production allowlist candidates from DB terms and André's OTT portal screenshots: Pick n Pay `68`, Shoprite / Checkers `69`, portal-active gift-card brands, ABSA CashSend `112`, and Nedbank Cardless Withdrawal.
+- Kept Standard Bank Instant Money hidden because Standard Bank must approve the service for MyMoolah before customer exposure. Kept OTT PayShap `127` excluded from wallet exposure for this phase and marked Amazon `141` as hold because UAT provider tests failed previously.
+- Documented that Nedbank is portal-active and contractually allowed, but quote/submit must remain gated until finance-approved commercial terms are configured; the wallet no longer presents hardcoded fallback providers as available when discovery fails.
+- Added brand recognition for portal-active OTT gift-card names including Nando's, KFC, Hungry Lion, Fishaways, RocoMamas, Wimpy, Steers, Starbucks, Spur, Panarottis, Mugg & Bean, John Dory's, Debonairs Pizza, Burger King, Dis-Chem, Boxer, Ackermans, Ticketmaster, and NetcarePlus, while preserving Pick n Pay and `Shoprite / Checkers` recognition.
+- Updated `WithdrawCashOverlay` to require a successful fee quote before enabling submission and to show cash amount, transaction fee, and total wallet debit.
+- Added focused tests for new voucher recognition, OTT provider classification for provider `10`, and governance published-mapping filtering.
+
+### Validation
+- `node --check scripts/audit-ott-production-catalog.js && node --check services/voucherCatalogBrandService.js && node --check services/ott/ottProviderCatalogService.js` passed.
+- `npx jest tests/voucherCatalogBrandService.test.js tests/ott-provider-catalog-service.test.js tests/productCatalogGovernanceService.test.js --runInBand --forceExit` passed 39/39, with pre-existing Jest config warnings only.
+- `npm run build` in `mymoolah-wallet-frontend` passed.
+- Cursor lints on touched files reported no linter errors.
+- `node scripts/audit-ott-production-catalog.js --staging` and `--production` completed read-only; no catalog import, governance publication, payout enablement, wallet debit, or production write was performed.
+
 ## 2026-05-07 - MobileMart SFTP email handover
 
 ### Summary

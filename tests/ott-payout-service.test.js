@@ -48,9 +48,9 @@ const mockCommercialTerm = {
   fixedFeeExVat: '9.96',
   fixedFeeVatRate: '0.1500',
   fixedFeeIsVatExclusive: true,
-  mmtpFeeExVat: '0.87',
-  reversalFeeExVat: '10.00',
-  effectiveFrom: '2026-05-01',
+  mmtpFeeExVat: '1.34',
+  reversalFeeExVat: '9.96',
+  effectiveFrom: '2026-05-07',
   effectiveTo: null,
   metadata: { source: 'agreement_3_2' },
 };
@@ -96,8 +96,8 @@ describe('OTT payout service', () => {
     mockPayment.webhookEventId = null;
     mockPayment.reversedAt = null;
     mockPayment.providerFeeAmount = 11.45;
-    mockPayment.mmtpFeeAmount = 1.00;
-    mockPayment.totalDebit = 112.45;
+    mockPayment.mmtpFeeAmount = 1.55;
+    mockPayment.totalDebit = 113.00;
     mockTransaction.commit.mockResolvedValue();
     mockTransaction.rollback.mockResolvedValue();
     mockModels.sequelize.transaction.mockResolvedValue(mockTransaction);
@@ -165,6 +165,12 @@ describe('OTT payout service', () => {
       .rejects.toMatchObject({ code: 'OTT_PAYOUT_DISABLED', statusCode: 403 });
   });
 
+  it('rejects payout providers outside the ABSA and Nedbank contract scope', async () => {
+    await expect(service.quoteOttPayout({ amount: 100, providerCode: '2' }))
+      .rejects.toMatchObject({ code: 'OTT_PAYOUT_PROVIDER_NOT_APPROVED', statusCode: 400 });
+    expect(mockModels.SupplierCommercialTerm.findOne).not.toHaveBeenCalled();
+  });
+
   it('debits only after unrestricted cash-out guard passes and calls OTT with internal reference', async () => {
     const result = await service.submitOttPayout({
       userId: 7,
@@ -182,21 +188,22 @@ describe('OTT payout service', () => {
       idempotencyKey: 'idem-1',
     });
 
-    expect(mockWallet.canCashOut).toHaveBeenCalledWith(112.45, { kycTier: undefined });
-    expect(mockWallet.debit).toHaveBeenCalledWith(112.45, 'debit', { transaction: mockTransaction });
+    expect(mockWallet.canCashOut).toHaveBeenCalledWith(113.00, { kycTier: undefined });
+    expect(mockWallet.debit).toHaveBeenCalledWith(113.00, 'debit', { transaction: mockTransaction });
     expect(mockModels.OttPayout.create).toHaveBeenCalledWith(
       expect.objectContaining({
         uniqueReferenceId: expect.stringMatching(/^MM-OTT-/),
         providerCode: '112',
         idempotencyKey: 'idem-1',
-        totalDebit: 112.45,
+        totalDebit: 113.00,
         feeSnapshot: expect.objectContaining({
           feePolicy: expect.objectContaining({
             source: 'supplier_commercial_terms',
             providerFeeExVat: 9.96,
             providerFeeAmount: 11.45,
-            mmtpFeeExVat: 0.87,
-            mmtpFeeAmount: 1.00,
+            mmtpFeeExVat: 1.34,
+            mmtpFeeAmount: 1.55,
+            totalFeeAmount: 13.00,
           }),
         }),
       }),
@@ -206,7 +213,7 @@ describe('OTT payout service', () => {
       expect.objectContaining({
         type: 'withdraw',
         amount: 100,
-        fee: 12.45,
+        fee: 13.00,
       }),
       { transaction: mockTransaction }
     );
@@ -214,7 +221,7 @@ describe('OTT payout service', () => {
       expect.objectContaining({
         transactionId: expect.stringMatching(/^OTT-FEE-OTT-/),
         type: 'fee',
-        amount: -12.45,
+        amount: -13.00,
         description: 'Transaction fee',
       }),
       { transaction: mockTransaction }
@@ -231,13 +238,13 @@ describe('OTT payout service', () => {
         mobile: '+27825571055',
       }),
     }));
-    expect(result.totalDebit).toBe(112.45);
+    expect(result.totalDebit).toBe(113.00);
     expect(mockModels.TaxTransaction.create).toHaveBeenCalledWith(expect.objectContaining({
       originalTransactionId: expect.stringMatching(/^OTT-FEE-OTT-/),
       taxType: 'vat',
-      baseAmount: 0.87,
-      taxAmount: 0.13,
-      totalAmount: 1,
+      baseAmount: 1.35,
+      taxAmount: 0.20,
+      totalAmount: 1.55,
       transactionType: 'ott_payout_fee',
       vatDirection: 'output',
       supplierCode: 'OTT',
@@ -351,7 +358,7 @@ describe('OTT payout service', () => {
       status: '97',
     });
 
-    expect(mockWallet.credit).toHaveBeenCalledWith(112.45, 'credit', { transaction: mockTransaction });
+    expect(mockWallet.credit).toHaveBeenCalledWith(113.00, 'credit', { transaction: mockTransaction });
     expect(ledgerService.postJournalEntry).toHaveBeenCalledWith(expect.objectContaining({
       reference: 'OTT-PAYOUT-REV-OTT-TEST',
     }));
@@ -404,7 +411,7 @@ describe('OTT payout service', () => {
       idempotencyKey: 'idem-failed',
     });
 
-    expect(mockWallet.credit).toHaveBeenCalledWith(112.45, 'credit', { transaction: mockTransaction });
+    expect(mockWallet.credit).toHaveBeenCalledWith(113.00, 'credit', { transaction: mockTransaction });
     expect(mockModels.Transaction.update).toHaveBeenCalledWith(
       expect.objectContaining({
         status: 'reversed',
@@ -446,7 +453,7 @@ describe('OTT payout service', () => {
       status: 'processing',
       outcomeUnknown: true,
       requiresPolling: true,
-      totalDebit: 112.45,
+      totalDebit: 113.00,
     }));
     expect(mockWallet.credit).not.toHaveBeenCalled();
     expect(mockPayment.update).toHaveBeenCalledWith(expect.objectContaining({

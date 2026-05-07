@@ -29,9 +29,9 @@ describe('OTT commercial terms service', () => {
       fixedFeeExVat: '9.96',
       fixedFeeVatRate: '0.1500',
       fixedFeeIsVatExclusive: true,
-      mmtpFeeExVat: '0.87',
-      reversalFeeExVat: '10.00',
-      effectiveFrom: '2026-05-01',
+      mmtpFeeExVat: '1.34',
+      reversalFeeExVat: '9.96',
+      effectiveFrom: '2026-05-07',
       effectiveTo: null,
       metadata: { source: 'agreement_3_2' },
     });
@@ -43,9 +43,10 @@ describe('OTT commercial terms service', () => {
       providerCode: '112',
       providerFeeExVat: 9.96,
       providerFeeAmount: 11.45,
-      mmtpFeeExVat: 0.87,
-      mmtpFeeAmount: 1.00,
-      reversalFeeExVat: 10.00,
+      mmtpFeeExVat: 1.34,
+      mmtpFeeAmount: 1.55,
+      totalFeeAmount: 13.00,
+      reversalFeeExVat: 9.96,
     }));
   });
 
@@ -54,5 +55,26 @@ describe('OTT commercial terms service', () => {
 
     await expect(service.getPayoutFeePolicy({ providerCode: '999' }))
       .rejects.toMatchObject({ code: 'OTT_FEE_POLICY_MISSING', statusCode: 500 });
+  });
+
+  it('fails closed when payout terms were synced without fee economics', async () => {
+    mockModels.SupplierCommercialTerm.findOne.mockResolvedValue({
+      supplierCode: 'OTT',
+      providerCode: '10',
+      providerName: 'Nedbank Cardless Withdrawal',
+      providerType: 'payout',
+      serviceFamily: 'cash_send',
+      commercialType: 'fixed_fee',
+      fixedFeeExVat: null,
+      fixedFeeVatRate: '0.1500',
+      fixedFeeIsVatExclusive: true,
+      mmtpFeeExVat: null,
+      effectiveFrom: '2026-05-07',
+      effectiveTo: null,
+      metadata: { economicTermsMissing: true },
+    });
+
+    await expect(service.getPayoutFeePolicy({ providerCode: '10' }))
+      .rejects.toMatchObject({ code: 'OTT_FEE_POLICY_INCOMPLETE', statusCode: 500 });
   });
 });

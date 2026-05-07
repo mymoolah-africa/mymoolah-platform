@@ -6,7 +6,8 @@ const { OttClient } = require('./ottClient');
 const { commissionPolicyFromTerm } = require('./ottCommercialTermsService');
 
 const KNOWN_PROVIDER_CLASSIFICATION = {
-  '2': { providerType: 'payout', serviceFamily: 'cash_send', customerFacing: true },
+  '2': { providerType: 'payout', serviceFamily: 'cash_send', customerFacing: false },
+  '10': { providerType: 'payout', serviceFamily: 'cash_send', customerFacing: true },
   '3': { providerType: 'voucher', serviceFamily: 'voucher', customerFacing: true },
   '60': { providerType: 'voucher', serviceFamily: 'voucher', customerFacing: true },
   '68': { providerType: 'voucher', serviceFamily: 'voucher', customerFacing: true },
@@ -16,13 +17,17 @@ const KNOWN_PROVIDER_CLASSIFICATION = {
   '76': { providerType: 'mock', serviceFamily: 'mock', customerFacing: false, isMock: true },
   '78': { providerType: 'mock', serviceFamily: 'mock', customerFacing: false, isMock: true },
   '112': { providerType: 'payout', serviceFamily: 'cash_send', customerFacing: true },
-  '127': { providerType: 'payout', serviceFamily: 'payshap', customerFacing: true },
-  '140': { providerType: 'electricity', serviceFamily: 'electricity', customerFacing: true },
-  '141': { providerType: 'gift_card', serviceFamily: 'voucher', customerFacing: true },
-  '146': { providerType: 'gift_card', serviceFamily: 'voucher', customerFacing: true },
+  '127': { providerType: 'payout', serviceFamily: 'payshap', customerFacing: false },
+  '140': { providerType: 'electricity', serviceFamily: 'electricity', customerFacing: false },
+  '141': { providerType: 'gift_card', serviceFamily: 'voucher', customerFacing: false },
+  '146': { providerType: 'gift_card', serviceFamily: 'voucher', customerFacing: false },
   '156': { providerType: 'gift_card', serviceFamily: 'voucher', customerFacing: true },
   '157': { providerType: 'gift_card', serviceFamily: 'voucher', customerFacing: true },
 };
+
+const APPROVED_PAYOUT_PROVIDER_CODES = new Set(['10', '112']);
+const APPROVED_CATALOG_PROVIDER_CODES = new Set(['68', '69', '156', '157']);
+const APPROVED_CATALOG_NAME_PATTERN = /pick\s*(?:n|and)?\s*pay|picknpay|\bpnp\b|shoprite|checkers|nando'?s|kfc|hungry\s*lion|fishaways|rocomamas|wimpy|steers|starbucks|spur|panarottis|mugg\s*&?\s*bean|mugg\s+and\s+bean|john\s*dory'?s|dis[\s-]?chem|debonairs|burger\s*king|boxer|ackermans|ticketmaster|netcare\s*plus|netcareplus/i;
 
 function asArray(value) {
   if (Array.isArray(value)) return value;
@@ -76,6 +81,26 @@ function classifyProvider(provider = {}) {
   return { providerType: 'unknown', serviceFamily: 'unknown', customerFacing: false };
 }
 
+function hasConfiguredPayoutEconomics(term) {
+  if (!term || term.providerType !== 'payout' || term.commercialType !== 'fixed_fee') return false;
+  const fixedFee = Number(term.fixedFeeExVat);
+  const mmtpFee = Number(term.mmtpFeeExVat);
+  return Number.isFinite(fixedFee) && fixedFee > 0 && Number.isFinite(mmtpFee) && mmtpFee > 0;
+}
+
+function isApprovedCatalogProvider({ providerCode, providerName, providerType } = {}) {
+  if (!['voucher', 'gift_card'].includes(providerType)) return false;
+  if (APPROVED_CATALOG_PROVIDER_CODES.has(String(providerCode))) return true;
+  return APPROVED_CATALOG_NAME_PATTERN.test(String(providerName || ''));
+}
+
+function hasConfiguredCatalogEconomics(policy) {
+  if (!policy || policy.commercialType !== 'commission') return false;
+  const grossCommission = Number(policy.grossCommissionPct);
+  const netCommission = Number(policy.netCommissionPct);
+  return Number.isFinite(grossCommission) && grossCommission > 0 && Number.isFinite(netCommission) && netCommission >= 0;
+}
+
 function cents(value, fallback) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return fallback;
@@ -124,17 +149,27 @@ async function upsertProviderMetadata({ provider, limits = [], transaction } = {
   });
 
   if (existing) {
+    const hasPayoutEconomics = hasConfiguredPayoutEconomics(existing);
+    const isApprovedPayout = APPROVED_PAYOUT_PROVIDER_CODES.has(providerCode);
+    const isApprovedCatalog = isApprovedCatalogProvider({
+      providerCode,
+      providerName,
+      providerType: existing.providerType === 'unknown' ? classification.providerType : existing.providerType,
+    });
     const metadata = {
       ...(existing.metadata || {}),
       lastProviderSyncAt: new Date().toISOString(),
       activeProvider: provider,
       limits: limit.raw,
+      ...(classification.providerType === 'payout' && !hasPayoutEconomics ? { economicTermsMissing: true } : {}),
     };
     await existing.update({
       providerName,
       providerType: existing.providerType === 'unknown' ? classification.providerType : existing.providerType,
       serviceFamily: existing.serviceFamily === 'unknown' ? classification.serviceFamily : existing.serviceFamily,
-      isCustomerFacing: Boolean(existing.isCustomerFacing || classification.customerFacing),
+      isCustomerFacing: classification.providerType === 'payout'
+        ? Boolean(existing.isCustomerFacing && isApprovedPayout && hasPayoutEconomics)
+        : Boolean(existing.isCustomerFacing && isApprovedCatalog),
       isMock: Boolean(existing.isMock || classification.isMock),
       metadata,
     }, { transaction });
@@ -151,7 +186,7 @@ async function upsertProviderMetadata({ provider, limits = [], transaction } = {
     commercialType: classification.providerType === 'payout' ? 'fixed_fee' : 'none',
     fixedFeeVatRate: Number(process.env.VAT_RATE || 0.15),
     fixedFeeIsVatExclusive: true,
-    isCustomerFacing: classification.customerFacing,
+    isCustomerFacing: false,
     isMock: Boolean(classification.isMock),
     isActive: true,
     effectiveFrom: new Date().toISOString().slice(0, 10),
@@ -186,6 +221,8 @@ async function importCatalogTerm(term, limits = [], transaction) {
   const policy = commissionPolicyFromTerm(term);
   if (!policy || !policy.isCustomerFacing || policy.isMock) return { skipped: true, reason: 'not_customer_facing' };
   if (!['voucher', 'electricity', 'gift_card'].includes(policy.providerType)) return { skipped: true, reason: 'not_catalog_provider' };
+  if (!isApprovedCatalogProvider(policy)) return { skipped: true, reason: 'not_approved_for_staging' };
+  if (!hasConfiguredCatalogEconomics(policy)) return { skipped: true, reason: 'economic_terms_missing' };
 
   const supplier = await ensureOttSupplier(transaction);
   const limit = normalizeLimit(findLimitForProvider(limits, policy.providerCode));

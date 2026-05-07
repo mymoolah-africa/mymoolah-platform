@@ -11,6 +11,7 @@ const { OttClient, buildRequestHash, getConfig } = require('../services/ott/ottC
 const db = require('../models');
 
 const router = express.Router();
+const APPROVED_CASH_PAYOUT_PROVIDER_CODES = new Set(['10', '112']);
 const ottPayoutLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 10,
@@ -160,6 +161,32 @@ function buildReadOnlyOttPayload(req, purpose) {
   };
 }
 
+function ottProviderCodeOf(provider = {}) {
+  return String(
+    provider.providerCode ||
+    provider.ProviderCode ||
+    provider.code ||
+    provider.id ||
+    provider.providerId ||
+    ''
+  ).trim();
+}
+
+function filterApprovedCashProviders(data) {
+  if (Array.isArray(data)) {
+    return data.filter((provider) => APPROVED_CASH_PAYOUT_PROVIDER_CODES.has(ottProviderCodeOf(provider)));
+  }
+  if (!data || typeof data !== 'object') return data;
+
+  const next = { ...data };
+  for (const key of ['providers', 'Providers', 'data', 'Data']) {
+    if (Array.isArray(next[key])) {
+      next[key] = filterApprovedCashProviders(next[key]);
+    }
+  }
+  return next;
+}
+
 router.get('/health', (req, res) => {
   res.json({
     success: true,
@@ -177,7 +204,7 @@ router.post('/providers', [
   try {
     const client = new OttClient();
     const response = await client.getActiveProviders(buildReadOnlyOttPayload(req, 'providers'));
-    return res.json({ success: true, data: response.data });
+    return res.json({ success: true, data: filterApprovedCashProviders(response.data) });
   } catch (err) {
     return handleError(res, err, req);
   }
@@ -190,7 +217,7 @@ router.post('/provider-limits', [
   try {
     const client = new OttClient();
     const response = await client.getActiveProviderLimits(buildReadOnlyOttPayload(req, 'limits'));
-    return res.json({ success: true, data: response.data });
+    return res.json({ success: true, data: filterApprovedCashProviders(response.data) });
   } catch (err) {
     return handleError(res, err, req);
   }
@@ -334,5 +361,11 @@ router.post('/webhook', async (req, res) => {
     return handleError(res, err, req);
   }
 });
+
+router._private = {
+  filterApprovedCashProviders,
+  ottProviderCodeOf,
+  verifyWebhookPayload,
+};
 
 module.exports = router;

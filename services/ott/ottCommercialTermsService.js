@@ -4,7 +4,8 @@ const { Op } = require('sequelize');
 const db = require('../../models');
 
 function roundMoney(value) {
-  return Number(Number(value || 0).toFixed(2));
+  const numeric = Number(value || 0);
+  return Math.round((numeric + Number.EPSILON) * 100) / 100;
 }
 
 function toNumber(value, fallback = 0) {
@@ -66,6 +67,23 @@ function termToPlain(term) {
   return typeof term.toJSON === 'function' ? term.toJSON() : term;
 }
 
+function requireConfiguredAmount(policy, field, { allowZero = false } = {}) {
+  if (policy[field] === null || policy[field] === undefined || policy[field] === '') {
+    const err = new Error(`OTT payout commercial term ${field} is missing for provider ${policy.providerCode}`);
+    err.statusCode = 500;
+    err.code = 'OTT_FEE_POLICY_INCOMPLETE';
+    throw err;
+  }
+  const amount = roundMoney(policy[field]);
+  if (!Number.isFinite(amount) || amount < 0 || (!allowZero && amount === 0)) {
+    const err = new Error(`OTT payout commercial term ${field} is invalid for provider ${policy.providerCode}`);
+    err.statusCode = 500;
+    err.code = 'OTT_FEE_POLICY_INCOMPLETE';
+    throw err;
+  }
+  return amount;
+}
+
 async function getPayoutFeePolicy({ providerCode, asOfDate } = {}) {
   const term = await findActiveCommercialTerm({
     supplierCode: 'OTT',
@@ -83,12 +101,15 @@ async function getPayoutFeePolicy({ providerCode, asOfDate } = {}) {
 
   const policy = termToPlain(term);
   const vatRate = toNumber(policy.fixedFeeVatRate, toNumber(process.env.VAT_RATE, 0.15));
-  const providerFeeExVat = roundMoney(policy.fixedFeeExVat);
+  const providerFeeExVat = requireConfiguredAmount(policy, 'fixedFeeExVat');
+  const mmtpFeeExVat = requireConfiguredAmount(policy, 'mmtpFeeExVat');
   const providerFeeAmount = policy.fixedFeeIsVatExclusive === false
     ? providerFeeExVat
     : roundMoney(providerFeeExVat * (1 + vatRate));
-  const mmtpFeeExVat = roundMoney(policy.mmtpFeeExVat);
-  const mmtpFeeAmount = roundMoney(mmtpFeeExVat * (1 + vatRate));
+  const totalFeeAmount = policy.fixedFeeIsVatExclusive === false
+    ? roundMoney(providerFeeExVat + mmtpFeeExVat)
+    : roundMoney((providerFeeExVat + mmtpFeeExVat) * (1 + vatRate));
+  const mmtpFeeAmount = roundMoney(totalFeeAmount - providerFeeAmount);
 
   return {
     source: 'supplier_commercial_terms',
@@ -105,6 +126,7 @@ async function getPayoutFeePolicy({ providerCode, asOfDate } = {}) {
     providerFeeAmount,
     mmtpFeeExVat,
     mmtpFeeAmount,
+    totalFeeAmount,
     reversalFeeExVat: roundMoney(policy.reversalFeeExVat),
     fixedFeeIsVatExclusive: policy.fixedFeeIsVatExclusive !== false,
     metadata: policy.metadata || {},

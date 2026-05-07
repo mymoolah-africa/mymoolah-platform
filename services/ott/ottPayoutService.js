@@ -6,6 +6,8 @@ const ledgerService = require('../ledgerService');
 const { OttClient, redact } = require('./ottClient');
 const { getPayoutFeePolicy } = require('./ottCommercialTermsService');
 
+const APPROVED_CASH_PAYOUT_PROVIDER_CODES = new Set(['10', '112']);
+
 function roundMoney(value) {
   return Number(Number(value || 0).toFixed(2));
 }
@@ -21,6 +23,17 @@ function requireEnabled() {
     err.code = 'OTT_PAYOUT_DISABLED';
     throw err;
   }
+}
+
+function requireApprovedCashPayoutProvider(providerCode) {
+  const normalized = String(providerCode || '').trim();
+  if (!APPROVED_CASH_PAYOUT_PROVIDER_CODES.has(normalized)) {
+    const err = new Error('This cash provider is not available for MyMoolah yet');
+    err.statusCode = 400;
+    err.code = 'OTT_PAYOUT_PROVIDER_NOT_APPROVED';
+    throw err;
+  }
+  return normalized;
 }
 
 function sanitizeText(value, max = 80) {
@@ -283,10 +296,11 @@ async function quoteOttPayout({ amount, providerCode }) {
     err.code = 'PROVIDER_REQUIRED';
     throw err;
   }
-  const feePolicy = await getPayoutFeePolicy({ providerCode });
+  const approvedProviderCode = requireApprovedCashPayoutProvider(providerCode);
+  const feePolicy = await getPayoutFeePolicy({ providerCode: approvedProviderCode });
   return {
     amount: numericAmount,
-    providerCode,
+    providerCode: approvedProviderCode,
     currency: 'ZAR',
     providerFeeAmount: feePolicy.providerFeeAmount,
     mmtpFeeAmount: feePolicy.mmtpFeeAmount,
@@ -785,4 +799,5 @@ module.exports = {
   syncOttSupplierFloatBalance,
   normalizeProviderStatus,
   toSafePayout,
+  requireApprovedCashPayoutProvider,
 };
