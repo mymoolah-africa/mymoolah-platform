@@ -59,7 +59,7 @@ function AppContent() {
   const showBottomNavigation = !pagesWithoutNavigation.includes(location.pathname);
   
   // Pages that should show the top banner (main app pages)
-  const pagesWithTopBanner = ['/dashboard', '/send-money', '/buy-usdc', '/transact', '/qr-payment', '/vouchers', '/profile', '/transactions', '/wallet-settings', '/request-money', '/services', '/support', '/feedback', '/electricity', '/bill-payments', '/referrals', '/airtime-data-overlay', '/electricity-overlay', '/bill-payment-overlay', '/flash-eezicash-overlay', '/mmcash-retail-overlay', '/withdraw-cash-overlay', '/atm-cashsend-overlay', '/topup-easypay', '/cashout-easypay', '/vouchers-overlay', '/tap-to-add-money', '/add-money-eft', '/topup-voucher', '/kyc', '/kyc/documents', '/kyc/status'];
+  const pagesWithTopBanner = ['/dashboard', '/send-money', '/buy-usdc', '/transact', '/qr-payment', '/vouchers', '/profile', '/transactions', '/wallet-settings', '/request-money', '/services', '/support', '/feedback', '/electricity', '/bill-payments', '/referrals', '/airtime-data-overlay', '/electricity-overlay', '/bill-payment-overlay', '/flash-eezicash-overlay', '/mmcash-retail-overlay', '/withdraw-cash-overlay', '/atm-cashsend-overlay', '/topup-easypay', '/cashout-easypay', '/vouchers-overlay', '/gift-cards-overlay', '/tap-to-add-money', '/add-money-eft', '/topup-voucher', '/kyc', '/kyc/documents', '/kyc/status'];
   const showTopBanner = pagesWithTopBanner.includes(location.pathname);
 
   useLayoutEffect(() => {
@@ -146,6 +146,7 @@ function AppContent() {
             <Route path="/topup-easypay" element={<ProtectedRoute><TopupEasyPayOverlay /></ProtectedRoute>} />
             <Route path="/cashout-easypay" element={<ProtectedRoute><CashoutEasyPayPage /></ProtectedRoute>} />
             <Route path="/vouchers-overlay" element={<ProtectedRoute><DigitalVouchersOverlay /></ProtectedRoute>} />
+            <Route path="/gift-cards-overlay" element={<ProtectedRoute><DigitalVouchersOverlay mode="gift-cards" /></ProtectedRoute>} />
             <Route path="/tap-to-add-money" element={<ProtectedRoute><TapToAddMoneyOverlay /></ProtectedRoute>} />
             <Route path="/add-money-eft" element={<ProtectedRoute><AddMoneyEftOverlay /></ProtectedRoute>} />
             <Route path="/topup-voucher" element={<ProtectedRoute><TopupVoucherOverlay /></ProtectedRoute>} />

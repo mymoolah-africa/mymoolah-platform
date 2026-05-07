@@ -309,10 +309,20 @@ export function TransactPage() {
           badgeType: 'success'
         },
         {
+          id: 'gift-cards-overlay',
+          title: 'Gift Cards',
+          description: 'Food, coffee, entertainment and shopping gifts',
+          icon: <Gift className="w-6 h-6" />,
+          route: '/gift-cards-overlay',
+          available: true,
+          badge: 'New',
+          badgeType: 'success'
+        },
+        {
           id: 'vouchers-overlay',
           title: 'Buy Retail Vouchers',
-          description: 'Retail, food, gaming and shopping vouchers',
-          icon: <Gift className="w-6 h-6" />,
+          description: 'Groceries, betting and retail vouchers',
+          icon: <Ticket className="w-6 h-6" />,
           route: '/vouchers-overlay',
           available: true,
           badge: 'Hot',

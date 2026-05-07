@@ -1,5 +1,24 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-05-07 - Gift Cards wallet entry point
+
+### Summary
+Added a dedicated `Gift Cards` card to the wallet Buy section so OTT gift-card brands can be discovered separately from the broader retail voucher catalog while still using the same secure voucher catalog and purchase flow.
+
+### Changes
+- Added `Gift Cards` to `mymoolah-wallet-frontend/pages/TransactPage.tsx` under `Buy`.
+- Added `/gift-cards-overlay` in `mymoolah-wallet-frontend/App.tsx`, reusing `DigitalVouchersOverlay` in gift-card mode.
+- Centralized gift-card classification in `services/voucherCatalogBrandService.js`; `/api/v1/overlay/vouchers/catalog` now returns `isGiftCard`, and `DigitalVouchersOverlay` filters on that shared flag instead of duplicating brand lists.
+- Kept `Buy Retail Vouchers` as the broader groceries, betting, and retail voucher entry point.
+- Updated voucher search copy for gift-card mode.
+
+### Validation
+- `node --check services/voucherCatalogBrandService.js routes/overlayServices.js` passed.
+- `npx jest tests/voucherCatalogBrandService.test.js --runInBand --forceExit` passed 39/39, with pre-existing Jest config warnings only.
+- `npm run build` in `mymoolah-wallet-frontend` passed.
+- Cursor lints on touched wallet files reported no linter errors.
+- No backend purchase logic, database schema, ledger, payout, or production data changed.
+
 ## 2026-05-07 - Dashboard recent transactions line-item fix
 
 ### Summary

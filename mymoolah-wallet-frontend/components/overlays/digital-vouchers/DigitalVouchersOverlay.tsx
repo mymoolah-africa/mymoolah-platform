@@ -25,9 +25,12 @@ export interface Voucher {
   description: string;
   supplierCode?: string;
   commission?: number;
+  isGiftCard?: boolean;
   available: boolean;
   denominations: number[];
 }
+
+type VoucherOverlayMode = 'retail' | 'gift-cards';
 
 function voucherBrandSlug(value: any): string {
   return String(value || 'voucher')
@@ -43,12 +46,28 @@ function buildRetailVoucherId(voucher: any, index: number): string {
   return brandSlug ? `retail-voucher-${brandSlug}` : `retail-voucher-${index}`;
 }
 
-export function DigitalVouchersOverlay() {
+function isGiftCardVoucher(voucher: Voucher): boolean {
+  return voucher.isGiftCard === true;
+}
+
+interface DigitalVouchersOverlayProps {
+  mode?: VoucherOverlayMode;
+}
+
+export function DigitalVouchersOverlay({ mode = 'retail' }: DigitalVouchersOverlayProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const isGiftCardsMode = mode === 'gift-cards';
+  const screenTitle = isGiftCardsMode ? 'Gift Cards' : 'Buy Retail Vouchers';
+  const listTitle = isGiftCardsMode ? 'All Gift Cards' : 'All Retail Vouchers';
+  const emptyTitle = isGiftCardsMode ? 'No gift cards found' : 'No retail vouchers found';
+  const loadingLabel = isGiftCardsMode ? 'Loading gift cards...' : 'Loading retail vouchers...';
   const favoritesKey = useMemo(
-    () => (user?.id ? `voucher_favorites_${user.id}` : 'voucher_favorites_guest'),
-    [user?.id]
+    () => {
+      const prefix = isGiftCardsMode ? 'gift_card_favorites' : 'voucher_favorites';
+      return user?.id ? `${prefix}_${user.id}` : `${prefix}_guest`;
+    },
+    [isGiftCardsMode, user?.id]
   );
 
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
@@ -59,6 +78,11 @@ export function DigitalVouchersOverlay() {
   const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [favorites, setFavorites] = useState<string[]>([]);
+  const emptyDescription = searchQuery
+    ? 'Try a different search term'
+    : isGiftCardsMode
+      ? 'Gift cards will appear here once available'
+      : 'Vouchers will appear here once available';
 
   useEffect(() => {
     loadVouchers();
@@ -85,15 +109,17 @@ export function DigitalVouchersOverlay() {
         description: v.description || '',
         supplierCode: v.supplierCode,
         commission: v.commission,
+        isGiftCard: v.isGiftCard === true,
         available: v.available !== false,
         denominations: Array.isArray(v.denominations) ? v.denominations : []
       }));
-      setVouchers(loaded);
-      setFilteredVouchers(loaded);
+      const visible = isGiftCardsMode ? loaded.filter(isGiftCardVoucher) : loaded;
+      setVouchers(visible);
+      setFilteredVouchers(visible);
 
       // Load favorites and prune stale IDs that no longer match any voucher
-      const loadedIds = new Set(loaded.map(v => v.id));
-      const loadedByBrandSlug = new Map(loaded.map(v => [voucherBrandSlug(v.catalogKey || v.brand || v.name), v.id]));
+      const loadedIds = new Set(visible.map(v => v.id));
+      const loadedByBrandSlug = new Map(visible.map(v => [voucherBrandSlug(v.catalogKey || v.brand || v.name), v.id]));
       const stored = typeof window !== 'undefined' ? localStorage.getItem(favoritesKey) : null;
       let favs: string[] = [];
       try { favs = stored ? JSON.parse(stored) : []; } catch { favs = []; }
@@ -177,7 +203,7 @@ export function DigitalVouchersOverlay() {
           Back
         </Button>
         <h1 style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '20px', fontWeight: '600', color: '#1f2937' }}>
-          Buy Retail Vouchers
+          {screenTitle}
         </h1>
         <div style={{ width: '40px' }} />
       </div>
@@ -186,6 +212,8 @@ export function DigitalVouchersOverlay() {
         searchQuery={searchQuery}
         onSearch={handleSearch}
         onClear={() => { setSearchQuery(''); setFilteredVouchers(vouchers); }}
+        placeholder={isGiftCardsMode ? 'Search gift cards...' : 'Search retail vouchers...'}
+        ariaLabel={isGiftCardsMode ? 'Search gift cards by name or description' : 'Search retail vouchers by name or description'}
       />
 
       {error && (
@@ -198,7 +226,7 @@ export function DigitalVouchersOverlay() {
         <BrandSpinner
           className="py-8"
           size={48}
-          label="Loading retail vouchers..."
+          label={loadingLabel}
         />
       )}
 
@@ -234,7 +262,7 @@ export function DigitalVouchersOverlay() {
       {!isLoading && otherVouchers.length > 0 && (
         <div className="mb-6">
           <h2 style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '16px', fontWeight: '600', color: '#1f2937', marginBottom: '12px' }}>
-            {searchQuery ? 'Search Results' : 'All Retail Vouchers'}
+            {searchQuery ? 'Search Results' : listTitle}
           </h2>
           <div className="grid grid-cols-3 gap-3">
             {otherVouchers.map(v => (
@@ -256,10 +284,10 @@ export function DigitalVouchersOverlay() {
         <div className="text-center py-12">
           <div className="text-4xl mb-3">🔍</div>
           <h3 style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '16px', fontWeight: '600', color: '#1f2937', marginBottom: '8px' }}>
-            No retail vouchers found
+            {emptyTitle}
           </h3>
           <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '14px', color: '#6b7280' }}>
-            {searchQuery ? 'Try a different search term' : 'Vouchers will appear here once available'}
+            {emptyDescription}
           </p>
         </div>
       )}

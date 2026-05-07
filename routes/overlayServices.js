@@ -3640,6 +3640,7 @@ router.get('/vouchers/catalog', auth, async (req, res) => {
           icon: recognised.icon,
           category: recognised.category,
           description: recognised.desc,
+          isGiftCard: Boolean(recognised.isGiftCard),
           recognition: recognised.recognition,
           variants: []
         });
@@ -3756,6 +3757,7 @@ router.get('/vouchers/catalog', auth, async (req, res) => {
         category: group.category,
         icon: group.icon,
         description: group.description,
+        isGiftCard: group.isGiftCard,
         supplierCode: bestSupplier,
         commission: bestComm,
         minAmount: minAmt,
@@ -3800,6 +3802,7 @@ router.get('/vouchers/catalog', auth, async (req, res) => {
             brand: mapping.canonicalBrand || voucher.brand,
             category: mapping.category || voucher.category,
             description: mapping.description || voucher.description,
+            isGiftCard: voucher.isGiftCard,
             icon: mapping.iconKey || voucher.icon,
             logoKey: mapping.logoKey || voucher.logoKey,
             riskTier: mapping.riskTier,

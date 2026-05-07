@@ -51,4 +51,17 @@ describe('voucherCatalogBrandService', () => {
     expect(recognised.recognition).toBe('fallback');
     expect(recognised.catalogKey).toBe(buildCatalogKey(recognised.brand));
   });
+
+  test.each([
+    'OTT Mobile Gift Cards | Nandos',
+    'KFC Gift Card',
+    'OTT Mobile Gift Cards | Rocomamas',
+    'Dis-Chem Gift Card',
+    'TICKETMASTER VARIABLE R50 - R5000',
+    'NetcarePlus Virtual GP Voucher 1 Consultation',
+  ])('marks %s as a gift card for wallet filtering', (rawName) => {
+    const recognised = recogniseVoucherBrand(rawName);
+
+    expect(recognised.isGiftCard).toBe(true);
+  });
 });

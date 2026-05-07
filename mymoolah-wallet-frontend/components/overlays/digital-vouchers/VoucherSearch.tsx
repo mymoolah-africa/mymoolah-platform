@@ -6,9 +6,17 @@ interface VoucherSearchProps {
   searchQuery: string;
   onSearch: (query: string) => void;
   onClear: () => void;
+  placeholder?: string;
+  ariaLabel?: string;
 }
 
-export function VoucherSearch({ searchQuery, onSearch, onClear }: VoucherSearchProps) {
+export function VoucherSearch({
+  searchQuery,
+  onSearch,
+  onClear,
+  placeholder = 'Search retail vouchers...',
+  ariaLabel = 'Search retail vouchers by name or description',
+}: VoucherSearchProps) {
   return (
     <div className="mb-6">
       <div className="relative">
@@ -17,7 +25,7 @@ export function VoucherSearch({ searchQuery, onSearch, onClear }: VoucherSearchP
         </div>
         <Input
           type="text"
-          placeholder="Search retail vouchers..."
+          placeholder={placeholder}
           value={searchQuery}
           onChange={(e) => onSearch(e.target.value)}
           style={{
@@ -30,7 +38,7 @@ export function VoucherSearch({ searchQuery, onSearch, onClear }: VoucherSearchP
             border: '1px solid #e2e8f0',
             backgroundColor: '#ffffff'
           }}
-          aria-label="Search retail vouchers by name or description"
+          aria-label={ariaLabel}
         />
         {searchQuery && (
           <button
