@@ -1,5 +1,25 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-05-08 - Staging OTT gift-card parity
+
+### Summary
+Aligned Staging with the intended OTT model: the same live OTT endpoints, services, products, and transaction capability as Production, with separation by Staging DB/test users.
+
+### Changes
+- Updated `scripts/deploy-backend.sh` so Staging no longer hardcodes the OTT test endpoint by default.
+- Staging now defaults to `OTT_PAYOUT_ENABLED=true`, `OTT_LIVE_INTEGRATION=true`, `OTT_TEST_INTEGRATION=false`, `OTT_API_BASE_URL=https://payoutapi.ott-mobile.com`, and `OTT_PORTAL_URL=https://payout-portal.ott-mobile.com`.
+- Ran Staging-only OTT provider/catalog sync using Secret Manager staging OTT credentials against the live OTT API and imported the live gift-card catalog into the Staging DB.
+- Deployed Staging backend and wallet separately with tag `20260508_v2`, then redeployed Staging backend with tag `20260508_v3` after André clarified that live Staging transactions must be enabled.
+
+### Validation
+- Read-only Cloud Run audit before deploy confirmed Staging was still on `https://test-payoutapi.ott-mobile.com`; Production was on `https://payoutapi.ott-mobile.com`.
+- Read-only DB comparison before sync showed Staging had 2 active gift-card brands and Production had 18.
+- After Staging sync, DB comparison showed both environments have the same 18 active gift-card brands.
+- `bash -n scripts/deploy-backend.sh` passed and Cursor lints reported no errors on the deploy script.
+- Final deployed Staging backend revision `mymoolah-backend-staging-00538-n4n` now has `OTT_PAYOUT_ENABLED=true`, `OTT_LIVE_INTEGRATION=true`, `OTT_TEST_INTEGRATION=false`, `OTT_API_BASE_URL=https://payoutapi.ott-mobile.com`, and DB isolation through `mymoolah_staging`.
+- Deployed Staging wallet revision `mymoolah-wallet-staging-00128-5cj`.
+- Authenticated `/api/v1/overlay/vouchers/catalog` checks returned 18 gift-card brands in Staging and the same 18 in Production after the live-transaction redeploy. Production was not deployed or changed.
+
 ## 2026-05-08 - Gift Cards bottom navigation fix
 
 ### Summary

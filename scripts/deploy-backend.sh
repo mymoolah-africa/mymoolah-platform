@@ -43,11 +43,13 @@ if [ "$ENVIRONMENT" == "staging" ]; then
   STAGING_FLAG="true"
   # SBSA: Callbacks must hit same backend that created the RTP (staging DB ≠ production DB)
   SBSA_CALLBACK_BASE_URL="https://staging.mymoolah.africa"
-  OTT_PAYOUT_ENABLED_VAL="false"
-  OTT_LIVE_INTEGRATION_VAL="false"
-  OTT_TEST_INTEGRATION_VAL="true"
-  OTT_API_BASE_URL_VAL="https://test-payoutapi.ott-mobile.com"
-  OTT_PORTAL_URL_VAL="https://test-payout-portal.ott-mobile.com"
+  # Staging uses the same live partner APIs/services/products as Production,
+  # isolated by Staging DB/test users and staging callback origins.
+  OTT_PAYOUT_ENABLED_VAL="${OTT_PAYOUT_ENABLED:-true}"
+  OTT_LIVE_INTEGRATION_VAL="${OTT_LIVE_INTEGRATION:-true}"
+  OTT_TEST_INTEGRATION_VAL="${OTT_TEST_INTEGRATION:-false}"
+  OTT_API_BASE_URL_VAL="${OTT_API_BASE_URL:-https://payoutapi.ott-mobile.com}"
+  OTT_PORTAL_URL_VAL="${OTT_PORTAL_URL:-https://payout-portal.ott-mobile.com}"
 else
   CORS_ORIGINS="https://wallet.mymoolah.africa"
   STAGING_FLAG="false"
