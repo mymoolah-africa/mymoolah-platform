@@ -1,5 +1,20 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-05-08 - Gift Cards bottom navigation fix
+
+### Summary
+Fixed the wallet `Gift Cards` routed page so the bottom sticky navigation appears like the other wallet overlay pages.
+
+### Changes
+- Added `/gift-cards-overlay` to the bottom navigation visibility allowlist in `BottomNavigation.tsx`.
+- Replaced two duplicated inline route arrays inside `BottomNavigation.tsx` with one shared `BOTTOM_NAV_VISIBLE_PATHS` constant to reduce drift for future routed overlays.
+- Confirmed `App.tsx` already included `/gift-cards-overlay` in the top-banner route list; the missing banner was caused by the nested `BottomNavigation` route gate.
+
+### Validation
+- `npm run build` in `mymoolah-wallet-frontend` passed.
+- Cursor lints on `mymoolah-wallet-frontend/components/BottomNavigation.tsx` reported no linter errors.
+- Read-only staging/prod catalog comparison could not be completed locally because `gcloud` Secret Manager access needs re-authentication.
+
 ## 2026-05-07 - OTT live ABSA production smoke
 
 ### Summary

@@ -180,6 +180,37 @@ const defaultNavItems: NavItem[] = [
   }
 ];
 
+const BOTTOM_NAV_VISIBLE_PATHS = [
+  '/dashboard',
+  '/send-money',
+  '/buy-usdc',
+  '/transact',
+  '/qr-payment',
+  '/vouchers',
+  '/vouchers-overlay',
+  '/gift-cards-overlay',
+  '/profile',
+  '/transactions',
+  '/wallet-settings',
+  '/request-money',
+  '/services',
+  '/electricity',
+  '/bill-payments',
+  '/support',
+  '/airtime-data-overlay',
+  '/electricity-overlay',
+  '/bill-payment-overlay',
+  '/flash-eezicash-overlay',
+  '/mmcash-retail-overlay',
+  '/withdraw-cash-overlay',
+  '/atm-cashsend-overlay',
+  '/tap-to-add-money',
+  '/topup-easypay',
+  '/cashout-easypay',
+  '/add-money-eft',
+  '/topup-voucher',
+];
+
 export function BottomNavigation() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -201,7 +232,7 @@ export function BottomNavigation() {
 
         // Only fetch settings if we're on a page that shows bottom navigation
         const currentPath = location.pathname;
-        const shouldShowNav = ['/dashboard', '/send-money', '/buy-usdc', '/transact', '/qr-payment', '/vouchers', '/vouchers-overlay', '/profile', '/transactions', '/wallet-settings', '/request-money', '/services', '/electricity', '/bill-payments', '/support', '/airtime-data-overlay', '/electricity-overlay', '/bill-payment-overlay', '/flash-eezicash-overlay', '/mmcash-retail-overlay', '/withdraw-cash-overlay', '/atm-cashsend-overlay', '/tap-to-add-money', '/topup-easypay', '/cashout-easypay', '/add-money-eft', '/topup-voucher'].includes(currentPath);
+        const shouldShowNav = BOTTOM_NAV_VISIBLE_PATHS.includes(currentPath);
         
         if (!shouldShowNav) {
           setQuickAccessServices(['airtime-data', 'vouchers']);
@@ -304,7 +335,7 @@ export function BottomNavigation() {
   const activeTab = getActiveTabId();
 
   // Check if we should show the bottom navigation
-  const showBottomNav = ['/dashboard', '/send-money', '/buy-usdc', '/transact', '/qr-payment', '/vouchers', '/vouchers-overlay', '/profile', '/transactions', '/wallet-settings', '/request-money', '/services', '/electricity', '/bill-payments', '/support', '/airtime-data-overlay', '/electricity-overlay', '/bill-payment-overlay', '/flash-eezicash-overlay', '/mmcash-retail-overlay', '/withdraw-cash-overlay', '/atm-cashsend-overlay', '/topup-easypay', '/cashout-easypay', '/tap-to-add-money', '/add-money-eft', '/topup-voucher'].includes(location.pathname);
+  const showBottomNav = BOTTOM_NAV_VISIBLE_PATHS.includes(location.pathname);
   
   if (!showBottomNav) return null;
 
