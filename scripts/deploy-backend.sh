@@ -170,6 +170,11 @@ build_secrets_args() {
   # Field-level encryption keys (POPIA: AES-256-GCM for PII, HMAC-SHA256 for blind indexes)
   base="${base},FIELD_ENCRYPTION_KEY=FIELD_ENCRYPTION_KEY:latest,FIELD_HMAC_KEY=FIELD_HMAC_KEY:latest"
 
+  # SMS gateway credentials used by referral invites and OTP delivery.
+  # Keep these bound on every Cloud Run revision; otherwise smsService.isConfigured()
+  # returns false and /api/v1/referrals/invite reports SMS_SERVICE_NOT_CONFIGURED.
+  base="${base},MYMOBILEAPI_USERNAME=mymobileapi-client-id:latest,MYMOBILEAPI_PASSWORD=mymobileapi-api-secret:latest"
+
   for name in "easypay-api-key${ext}" "openai-api-key${ext}" "valr-api-key${ext}" "valr-api-secret${ext}" "ott-api-username${ext}" "ott-api-password${ext}" "ott-api-key${ext}" "ott-webhook-secret${ext}"; do
     if gcloud secrets describe "${name}" --project="${PROJECT_ID}" >/dev/null 2>&1; then
       case "${name}" in

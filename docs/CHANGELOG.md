@@ -1,5 +1,24 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-05-10 - Referral SMS secret binding fix
+
+### Summary
+Restored referral SMS invites by ensuring backend Cloud Run revisions keep the MyMobileAPI credentials bound from Secret Manager, then applied the binding update to both Staging and Production.
+
+### Changes
+- Updated `scripts/deploy-backend.sh` so `MYMOBILEAPI_USERNAME` and `MYMOBILEAPI_PASSWORD` are included in backend `--set-secrets` bindings.
+- Documented the MyMobileAPI SMS environment variables in `env.template` without adding real credentials.
+- Confirmed the referral error path: `/api/v1/referrals/invite` calls `referralService.sendReferralInvite()`, which returns `SMS_SERVICE_NOT_CONFIGURED` when `smsService.isConfigured()` cannot see those two environment variables.
+- With André's approval, updated Cloud Run secret bindings directly for `mymoolah-backend-staging` and `mymoolah-backend-production`.
+
+### Validation
+- `bash -n scripts/deploy-backend.sh` passed.
+- `node --check services/smsService.js services/referralService.js controllers/referralController.js` passed.
+- Cursor lints on touched files and referral/SMS code paths reported no linter errors.
+- Staging revision `mymoolah-backend-staging-00545-rfp` and production revision `mymoolah-backend-production-00206-mxh` are serving 100% traffic.
+- Cloud Run describe confirmed both services bind `MYMOBILEAPI_USERNAME` to `mymobileapi-client-id` and `MYMOBILEAPI_PASSWORD` to `mymobileapi-api-secret`.
+- No referral logic, SMS message content, database schema, ledger, wallet frontend, or production data changed.
+
 ## 2026-05-10 - Voucher / Gift Card split
 
 ### Summary
