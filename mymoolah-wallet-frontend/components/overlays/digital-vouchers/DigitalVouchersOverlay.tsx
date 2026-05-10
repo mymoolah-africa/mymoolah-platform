@@ -30,9 +30,29 @@ export interface Voucher {
   denominations: number[];
 }
 
+interface VoucherCatalogItem {
+  catalogKey?: unknown;
+  purchaseProductId?: unknown;
+  productId?: unknown;
+  variantId?: unknown;
+  name?: unknown;
+  brand?: unknown;
+  category?: unknown;
+  minAmount?: unknown;
+  maxAmount?: unknown;
+  isVariable?: unknown;
+  icon?: unknown;
+  description?: unknown;
+  supplierCode?: unknown;
+  commission?: unknown;
+  isGiftCard?: unknown;
+  available?: unknown;
+  denominations?: unknown;
+}
+
 type VoucherOverlayMode = 'retail' | 'gift-cards';
 
-function voucherBrandSlug(value: any): string {
+function voucherBrandSlug(value: unknown): string {
   return String(value || 'voucher')
     .toLowerCase()
     .trim()
@@ -41,13 +61,17 @@ function voucherBrandSlug(value: any): string {
     .replace(/^-+|-+$/g, '');
 }
 
-function buildRetailVoucherId(voucher: any, index: number): string {
+function buildRetailVoucherId(voucher: VoucherCatalogItem, index: number): string {
   const brandSlug = voucherBrandSlug(voucher.catalogKey || voucher.brand || voucher.name);
   return brandSlug ? `retail-voucher-${brandSlug}` : `retail-voucher-${index}`;
 }
 
 function isGiftCardVoucher(voucher: Voucher): boolean {
   return voucher.isGiftCard === true;
+}
+
+function isRetailVoucher(voucher: Voucher): boolean {
+  return !isGiftCardVoucher(voucher);
 }
 
 interface DigitalVouchersOverlayProps {
@@ -93,27 +117,27 @@ export function DigitalVouchersOverlay({ mode = 'retail' }: DigitalVouchersOverl
       setIsLoading(true);
       setError(null);
       const response = await apiService.getVouchers();
-      const loaded: Voucher[] = (response.vouchers || []).map((v: any, index: number) => ({
+      const loaded: Voucher[] = (response.vouchers || []).map((v: VoucherCatalogItem, index: number) => ({
         id: buildRetailVoucherId(v, index),
-        catalogKey: v.catalogKey,
-        purchaseProductId: v.purchaseProductId || v.productId,
-        productId: v.productId,
-        variantId: v.variantId,
-        name: v.name || 'Voucher',
-        brand: v.brand || v.name || 'Voucher',
-        category: v.category || 'other',
-        minAmount: v.minAmount || 0,
-        maxAmount: v.maxAmount || 0,
+        catalogKey: typeof v.catalogKey === 'string' ? v.catalogKey : undefined,
+        purchaseProductId: typeof v.purchaseProductId === 'number' ? v.purchaseProductId : typeof v.productId === 'number' ? v.productId : undefined,
+        productId: typeof v.productId === 'number' ? v.productId : undefined,
+        variantId: typeof v.variantId === 'number' ? v.variantId : undefined,
+        name: String(v.name || 'Voucher'),
+        brand: String(v.brand || v.name || 'Voucher'),
+        category: String(v.category || 'other'),
+        minAmount: Number(v.minAmount || 0),
+        maxAmount: Number(v.maxAmount || 0),
         isVariable: !!v.isVariable,
-        icon: v.icon || '🎁',
-        description: v.description || '',
-        supplierCode: v.supplierCode,
-        commission: v.commission,
+        icon: String(v.icon || '🎁'),
+        description: String(v.description || ''),
+        supplierCode: typeof v.supplierCode === 'string' ? v.supplierCode : undefined,
+        commission: typeof v.commission === 'number' ? v.commission : undefined,
         isGiftCard: v.isGiftCard === true,
         available: v.available !== false,
         denominations: Array.isArray(v.denominations) ? v.denominations : []
       }));
-      const visible = isGiftCardsMode ? loaded.filter(isGiftCardVoucher) : loaded;
+      const visible = isGiftCardsMode ? loaded.filter(isGiftCardVoucher) : loaded.filter(isRetailVoucher);
       setVouchers(visible);
       setFilteredVouchers(visible);
 
@@ -137,7 +161,11 @@ export function DigitalVouchersOverlay({ mode = 'retail' }: DigitalVouchersOverl
         localStorage.setItem(favoritesKey, JSON.stringify(pruned));
       }
     } catch {
-      setError('We could not load retail vouchers right now. Please check your connection and try again.');
+      setError(
+        isGiftCardsMode
+          ? 'We could not load gift cards right now. Please check your connection and try again.'
+          : 'We could not load retail vouchers right now. Please check your connection and try again.'
+      );
     } finally {
       setIsLoading(false);
     }
