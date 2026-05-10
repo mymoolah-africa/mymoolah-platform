@@ -57,6 +57,7 @@ describe('voucherCatalogBrandService', () => {
     'KFC Gift Card',
     'OTT Mobile Gift Cards | Rocomamas',
     'Dis-Chem Gift Card',
+    'OTT Mobile Gift Cards | Boxer',
     'TICKETMASTER VARIABLE R50 - R5000',
     'NetcarePlus Virtual GP Voucher 1 Consultation',
   ])('marks %s as a gift card for wallet filtering', (rawName) => {

@@ -3568,11 +3568,11 @@ const {
  * @route   GET /api/v1/overlay/vouchers/catalog
  * @desc    Get voucher catalog — grouped by brand, deduped (highest commission), sorted A-Z
  * @access  Private
- * @query   { q, category }
+ * @query   { q, category, isGiftCard }
  */
 router.get('/vouchers/catalog', auth, async (req, res) => {
   try {
-    const { q, category } = req.query;
+    const { q, category, isGiftCard } = req.query;
     const { ProductVariant, Product, Supplier } = require('../models');
     const ProductCatalogService = require('../services/productCatalogService');
     const catalogService = new ProductCatalogService();
@@ -3811,6 +3811,15 @@ router.get('/vouchers/catalog', auth, async (req, res) => {
           };
         })
         .filter(Boolean);
+    }
+
+    if (typeof isGiftCard === 'string') {
+      const normalizedGiftCardFilter = isGiftCard.toLowerCase();
+      if (normalizedGiftCardFilter === 'true') {
+        result = result.filter(v => v.isGiftCard === true);
+      } else if (normalizedGiftCardFilter === 'false') {
+        result = result.filter(v => v.isGiftCard !== true);
+      }
     }
 
     if (q) {

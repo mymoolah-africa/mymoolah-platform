@@ -116,7 +116,7 @@ export function DigitalVouchersOverlay({ mode = 'retail' }: DigitalVouchersOverl
     try {
       setIsLoading(true);
       setError(null);
-      const response = await apiService.getVouchers();
+      const response = await apiService.getVouchers(undefined, undefined, isGiftCardsMode);
       const loaded: Voucher[] = (response.vouchers || []).map((v: VoucherCatalogItem, index: number) => ({
         id: buildRetailVoucherId(v, index),
         catalogKey: typeof v.catalogKey === 'string' ? v.catalogKey : undefined,

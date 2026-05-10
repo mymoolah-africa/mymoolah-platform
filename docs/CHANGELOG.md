@@ -7,12 +7,14 @@ Made the wallet `Buy Retail Vouchers` and `Gift Cards` pages mutually exclusive 
 
 ### Changes
 - Updated `mymoolah-wallet-frontend/components/overlays/digital-vouchers/DigitalVouchersOverlay.tsx` so retail mode now excludes `isGiftCard === true` products.
+- Added an `isGiftCard=true|false` filter to `/api/v1/overlay/vouchers/catalog` and wired the wallet to request the correct catalog side for each page.
 - Kept gift-card mode filtered to `isGiftCard === true`, preserving the backend-owned classification from `services/voucherCatalogBrandService.js`.
 - Fixed gift-card mode load failure copy so `/gift-cards-overlay` says `gift cards` instead of `retail vouchers`.
 - Preserved the existing shared voucher catalog API, purchase modal, supplier execution, ledger, and database model.
 
 ### Validation
-- `npx jest tests/voucherCatalogBrandService.test.js --runInBand` passed 39/39.
+- `node --check routes/overlayServices.js` passed.
+- `npx jest tests/voucherCatalogBrandService.test.js --runInBand` passed 40/40.
 - Targeted ESLint on `DigitalVouchersOverlay.tsx` passed.
 - `npm run build` in `mymoolah-wallet-frontend` passed.
 - Cursor lints on the edited overlay reported no linter errors.

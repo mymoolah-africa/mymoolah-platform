@@ -20,7 +20,7 @@ function generateIdempotencyKey(): string {
 }
 
 // Types
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   message?: string;
@@ -171,6 +171,28 @@ export interface QRPaymentResult {
   reference: string;
   qrCode?: string;
   merchant?: QRMerchant;
+}
+
+export interface VoucherCatalogResponseItem {
+  [key: string]: unknown;
+}
+
+export interface VoucherCatalogCategory {
+  id: string;
+  name: string;
+}
+
+interface VoucherCatalogApiPayload {
+  vouchers?: VoucherCatalogResponseItem[];
+  categories?: VoucherCatalogCategory[];
+  total?: number;
+}
+
+interface VoucherCatalogApiResponse {
+  data?: VoucherCatalogApiPayload;
+  vouchers?: VoucherCatalogResponseItem[];
+  categories?: VoucherCatalogCategory[];
+  total?: number;
 }
 
 // Airtime Types
@@ -800,15 +822,16 @@ class ApiService {
     return Array.from(merged.values());
   }
 
-  async getVouchers(query?: string, category?: string): Promise<{ vouchers: any[]; categories?: any[]; total?: number }> {
+  async getVouchers(query?: string, category?: string, isGiftCard?: boolean): Promise<{ vouchers: VoucherCatalogResponseItem[]; categories?: VoucherCatalogCategory[]; total?: number }> {
     try {
       const params = new URLSearchParams();
       if (query) params.append('q', query);
       if (category) params.append('category', category);
+      if (typeof isGiftCard === 'boolean') params.append('isGiftCard', String(isGiftCard));
       const qs = params.toString();
       const url = `/api/v1/overlay/vouchers/catalog${qs ? `?${qs}` : ''}`;
-      const response = await this.request<any>(url);
-      const payload = response?.data?.data ?? response?.data ?? response;
+      const response = await this.request<VoucherCatalogApiResponse>(url);
+      const payload = response.data?.data ?? response.data;
       return {
         vouchers: payload?.vouchers || [],
         categories: payload?.categories || [],
