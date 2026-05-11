@@ -2,7 +2,7 @@
 'use strict';
 
 /**
- * Reconcile and optionally apply the OTT authorised-provider allowlist in Staging.
+ * Reconcile and optionally apply the OTT authorised-provider allowlist.
  *
  * Dry-run by default. Uses Jaco's workbook when available, plus the ABSA 67
  * correction in config/ott-authorized-providers.json. Apply mode is
@@ -15,20 +15,26 @@ require('dotenv').config();
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { getStagingClient, closeAll } = require('./db-connection-helper');
+const { getStagingClient, getProductionClient, closeAll } = require('./db-connection-helper');
 const { OttClient } = require('../services/ott/ottClient');
 const {
   loadAuthorizedProviders,
   normalizeCode,
   nameMatches,
+  providerTypeMatches,
 } = require('../services/ott/ottAuthorizedProviderPolicy');
 
 const DEFAULT_WORKBOOK_PATH = path.join(os.homedir(), 'Downloads', 'Payout Provider List.xlsx');
 
 function parseArgs(argv) {
   const flags = new Set(argv);
-  if (!flags.has('--staging')) {
-    throw new Error('Use --staging to confirm this helper targets Staging only.');
+  const isStaging = flags.has('--staging');
+  const isProduction = flags.has('--production');
+  if (isStaging === isProduction) {
+    throw new Error('Choose exactly one target: --staging or --production.');
+  }
+  if (isProduction && !flags.has('--confirm-production')) {
+    throw new Error('Production authorised-provider sync requires --production --confirm-production.');
   }
   const workbookArgIndex = argv.indexOf('--workbook');
   const workbookPath = workbookArgIndex >= 0 ? argv[workbookArgIndex + 1] : DEFAULT_WORKBOOK_PATH;
@@ -40,6 +46,7 @@ function parseArgs(argv) {
   }
   return {
     apply: flags.has('--apply'),
+    environment: isProduction ? 'production' : 'staging',
     skipApi: flags.has('--skip-api'),
     workbookPath: fs.existsSync(workbookPath) ? workbookPath : null,
   };
@@ -68,7 +75,7 @@ function findAuthorizedInList(records, { providerCode, providerName, providerTyp
   const type = String(providerType || '').trim().toLowerCase();
   return records.find((record) => {
     if (record.code !== code) return false;
-    if (type && record.providerType !== 'unknown' && record.providerType !== type) return false;
+    if (type && !providerTypeMatches(record.providerType, type)) return false;
     return nameMatches(record.name, providerName);
   }) || null;
 }
@@ -227,7 +234,7 @@ function categorize({ authorisedProviders, apiProviders, dbState }) {
   };
 }
 
-async function applyNonDestructiveSync(client, report) {
+async function applyNonDestructiveSync(client, report, environment) {
   const unsupportedCodes = report.dbStale.map((row) => row.providerCode);
   const unsupportedSupplierProductIds = report.unsupportedCatalogProducts
     .map((row) => row.supplierProductId)
@@ -236,6 +243,7 @@ async function applyNonDestructiveSync(client, report) {
     authorisedProviderSync: {
       source: 'sync-ott-authorized-products',
       status: 'hidden_by_jaco_allowlist',
+      environment,
       syncedAt: new Date().toISOString(),
     },
   });
@@ -303,10 +311,10 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   const authorisedProviders = loadAuthorizedProviders({
     workbookPath: args.workbookPath,
-    environment: 'staging',
+    environment: args.environment,
   });
   const apiState = await fetchOttApiProviders(args.skipApi);
-  const client = await getStagingClient();
+  const client = await (args.environment === 'production' ? getProductionClient() : getStagingClient());
 
   try {
     const dbState = await loadDbState(client);
@@ -317,7 +325,7 @@ async function main() {
     });
     const output = {
       generatedAt: new Date().toISOString(),
-      environment: 'staging',
+      environment: args.environment,
       mode: args.apply ? 'apply' : 'dry-run',
       source: {
         workbookPath: args.workbookPath,
@@ -333,7 +341,7 @@ async function main() {
     };
 
     if (args.apply) {
-      output.applied = await applyNonDestructiveSync(client, report);
+      output.applied = await applyNonDestructiveSync(client, report, args.environment);
     }
 
     console.log(JSON.stringify(output, null, 2));

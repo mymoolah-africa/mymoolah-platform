@@ -12,6 +12,15 @@
       "source": "jaco_email_absa_correction"
     },
     {
+      "code": "2",
+      "name": "Standard Bank Instant Money",
+      "providerType": "payout",
+      "serviceFamily": "cash_send",
+      "customerFacing": false,
+      "environments": ["production", "staging", "uat"],
+      "source": "standard_bank_partner_approval_gate"
+    },
+    {
       "code": "4",
       "name": "Nedbank Cardless Withdrawal",
       "providerType": "payout",

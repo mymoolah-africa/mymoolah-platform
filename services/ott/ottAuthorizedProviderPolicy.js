@@ -34,6 +34,14 @@ function nameMatches(authorizedName, providerName) {
   return expected === actual || expected.includes(actual) || actual.includes(expected);
 }
 
+function providerTypeMatches(authorizedType, requestedType) {
+  const expected = normalizeText(authorizedType).replace(/\s+/g, '_');
+  const requested = normalizeText(requestedType).replace(/\s+/g, '_');
+  if (!requested || expected === 'unknown') return true;
+  if (expected === requested) return true;
+  return CATALOG_TYPES.has(expected) && CATALOG_TYPES.has(requested);
+}
+
 function normalizeProviderRecord(record = {}, defaults = {}) {
   const code = normalizeCode(
     record.code ||
@@ -153,7 +161,7 @@ function findAuthorizedProvider({ providerCode, providerName, providerType, envi
   const candidates = loadAuthorizedProviders({ environment: env }).filter((record) => record.code === code);
   const typeNormalized = providerType ? normalizeText(providerType).replace(/\s+/g, '_') : null;
   return candidates.find((record) => {
-    if (typeNormalized && record.providerType !== 'unknown' && record.providerType !== typeNormalized) return false;
+    if (typeNormalized && !providerTypeMatches(record.providerType, typeNormalized)) return false;
     return nameMatches(record.name, providerName);
   }) || null;
 }
@@ -195,5 +203,6 @@ module.exports = {
   normalizeCode,
   normalizeText,
   parseWorkbookRows,
+  providerTypeMatches,
   authorizedProviderCodes,
 };

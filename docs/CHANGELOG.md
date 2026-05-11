@@ -1,5 +1,26 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-05-11 - OTT Production authorised catalog rollout
+
+### Summary
+Applied the approved non-destructive OTT authorised-provider policy to Production and added wallet logic to hide the `Gift Cards` tile when there are zero approved gift-card catalog rows, while preserving `/gift-cards-overlay` for future enablement.
+
+### Changes
+- Generalised `scripts/sync-ott-authorized-products.js` and `scripts/stage-ott-catalog-governance.js` for explicit `--production --confirm-production` dry-run/apply flows using `getProductionClient()`.
+- Added a Standard Bank approval-gate record to `config/ott-authorized-providers.json` so workbook rows cannot make Standard Bank Instant Money customer-facing before documented partner approval.
+- Treated authorised catalog `voucher` and `gift_card` provider types as compatible for policy matching while keeping payout types separate.
+- Production apply hid 21 unsupported OTT commercial terms, deactivated 19 unsupported OTT products/variants, and approved/published Production governance mapping `1842` for `OTT-20` Shoprite / Checkers.
+- Updated `TransactPage.tsx` to request the gift-card catalog count and hide only the `Gift Cards` tile when that count is zero; the route and overlay remain unchanged.
+
+### Validation
+- Production dry-runs were reviewed before apply.
+- `node --check services/ott/ottAuthorizedProviderPolicy.js scripts/sync-ott-authorized-products.js scripts/stage-ott-catalog-governance.js` passed.
+- `npx jest tests/ott-provider-catalog-service.test.js tests/ott-payout-service.test.js tests/ott-routes.test.js tests/voucherCatalogBrandService.test.js tests/productCatalogGovernanceService.test.js --runInBand --forceExit` passed 67/67.
+- `npm run build` in `mymoolah-wallet-frontend` passed.
+- Cursor lints on touched files reported no linter errors.
+- Read-only Production audit confirmed one approved/published OTT voucher governance mapping and OTT float `1200-10-08` at R877.10.
+- Production backend and wallet deploy revision details: pending deploy step.
+
 ## 2026-05-11 - OTT authorised product synchronization
 
 ### Summary

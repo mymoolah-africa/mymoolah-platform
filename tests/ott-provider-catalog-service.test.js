@@ -182,5 +182,12 @@ describe('OTT provider catalog service', () => {
       providerType: 'voucher',
       environment: 'staging',
     })).toBe(false);
+    expect(policy.isApprovedCashPayoutProvider({
+      providerCode: '2',
+      providerName: 'Standard Bank Instant Money',
+      environment: 'production',
+    })).toBe(false);
+    expect(policy.providerTypeMatches('voucher', 'gift_card')).toBe(true);
+    expect(policy.providerTypeMatches('payout', 'gift_card')).toBe(false);
   });
 });

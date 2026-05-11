@@ -64,6 +64,7 @@ export function TransactPage() {
   const [loadingService, setLoadingService] = useState<string | null>(null);
   const [trendingProducts, setTrendingProducts] = useState<VASProduct[]>([]);
   const [bestDeals, setBestDeals] = useState<VASProduct[]>([]);
+  const [giftCardApprovedCount, setGiftCardApprovedCount] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Check for watch-to-earn query param and auto-open modal (from Quick Access Services)
@@ -90,6 +91,14 @@ export function TransactPage() {
         // Load best deals for airtime
         const airtimeDeals = await apiService.compareSuppliers('airtime');
         setBestDeals(airtimeDeals.bestDeals || []);
+
+        try {
+          const giftCards = await apiService.getVouchers(undefined, undefined, true);
+          setGiftCardApprovedCount(giftCards.total ?? giftCards.vouchers.length);
+        } catch (giftCardError) {
+          console.warn('Gift card catalog count unavailable:', giftCardError);
+          setGiftCardApprovedCount(null);
+        }
         
       } catch (err) {
         console.error('Error loading TransactPage data:', err);
@@ -316,7 +325,8 @@ export function TransactPage() {
           route: '/gift-cards-overlay',
           available: true,
           badge: 'New',
-          badgeType: 'success'
+          badgeType: 'success',
+          hidden: giftCardApprovedCount === 0
         },
         {
           id: 'vouchers-overlay',

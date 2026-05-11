@@ -2,9 +2,10 @@
 'use strict';
 
 /**
- * Staging-only OTT catalog governance helper.
+ * OTT catalog governance helper.
  *
- * Dry-run by default. Use --staging --apply after the OTT catalog import has run
+ * Dry-run by default. Use --staging --apply or
+ * --production --confirm-production --apply after the OTT catalog import has run
  * to create/update and publish only the approved OTT voucher/gift-card mappings.
  */
 
@@ -13,7 +14,7 @@ require('dotenv').config();
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { getStagingClient, closeAll } = require('./db-connection-helper');
+const { getStagingClient, getProductionClient, closeAll } = require('./db-connection-helper');
 const { recogniseVoucherBrand } = require('../services/voucherCatalogBrandService');
 const { isApprovedCatalogProvider } = require('../services/ott/ottAuthorizedProviderPolicy');
 
@@ -21,19 +22,28 @@ const DEFAULT_WORKBOOK_PATH = path.join(os.homedir(), 'Downloads', 'Payout Provi
 
 function parseArgs(argv) {
   const flags = new Set(argv);
-  if (!flags.has('--staging')) {
-    throw new Error('Use --staging to confirm this helper targets staging only.');
+  const isStaging = flags.has('--staging');
+  const isProduction = flags.has('--production');
+  if (isStaging === isProduction) {
+    throw new Error('Choose exactly one target: --staging or --production.');
+  }
+  if (isProduction && !flags.has('--confirm-production')) {
+    throw new Error('Production governance publication requires --production --confirm-production.');
   }
   const workbookIndex = argv.indexOf('--workbook');
   const workbookPath = workbookIndex >= 0 ? argv[workbookIndex + 1] : DEFAULT_WORKBOOK_PATH;
   if (workbookIndex >= 0 && !workbookPath) {
     throw new Error('--workbook requires a file path.');
   }
+  if (workbookIndex >= 0 && !fs.existsSync(workbookPath)) {
+    throw new Error(`Workbook not found: ${workbookPath}`);
+  }
   if (workbookPath && fs.existsSync(workbookPath)) {
     process.env.OTT_AUTHORIZED_PROVIDERS_WORKBOOK = workbookPath;
   }
   return {
     apply: flags.has('--apply'),
+    environment: isProduction ? 'production' : 'staging',
   };
 }
 
@@ -50,7 +60,7 @@ function canonicalFields(rawName) {
   };
 }
 
-function isApprovedOttCatalogCandidate(row) {
+function isApprovedOttCatalogCandidate(row, environment) {
   const supplierProductId = row.product_supplier_id || row.variant_supplier_id;
   const providerCode = String(supplierProductId || '').replace(/^OTT-/i, '');
 
@@ -61,11 +71,11 @@ function isApprovedOttCatalogCandidate(row) {
     providerCode,
     providerName: rawName,
     providerType: recognised.isGiftCard ? 'gift_card' : 'voucher',
-    environment: 'staging',
+    environment,
   });
 }
 
-async function loadCandidates(client) {
+async function loadCandidates(client, environment) {
   const result = await client.query(`
     SELECT
       pv.id AS variant_id,
@@ -95,10 +105,10 @@ async function loadCandidates(client) {
       AND p.type::text = 'voucher'
     ORDER BY p.name, pv.id;
   `, ['OTT']);
-  return result.rows.filter(isApprovedOttCatalogCandidate);
+  return result.rows.filter((row) => isApprovedOttCatalogCandidate(row, environment));
 }
 
-async function applyCandidate(client, row) {
+async function applyCandidate(client, row, environment) {
   const rawName = row.product_name || row.provider || row.product_supplier_id;
   const canonical = canonicalFields(rawName);
   const rawSnapshot = {
@@ -127,7 +137,7 @@ async function applyCandidate(client, row) {
       $6, $7, $8::jsonb, $9, $10, $11,
       $12, $13, 'medium', 'approved', 'published',
       'system', 'system@mymoolah.africa', 'system', 'system@mymoolah.africa',
-      NOW(), NOW(), 'OTT staging approved allowlist', $14::jsonb, NOW(), NOW()
+      NOW(), NOW(), $15, $14::jsonb, NOW(), NOW()
     )
     ON CONFLICT (supplier_code, supplier_product_id, product_type)
     DO UPDATE SET
@@ -147,7 +157,7 @@ async function applyCandidate(client, row) {
       checker_user_id = 'system',
       checker_user_email = 'system@mymoolah.africa',
       approved_at = NOW(),
-      reason = 'OTT staging approved allowlist',
+      reason = EXCLUDED.reason,
       metadata = COALESCE(product_catalog_mappings.metadata, '{}'::jsonb) || EXCLUDED.metadata,
       "updatedAt" = NOW()
     RETURNING id, review_status, publish_status;
@@ -169,8 +179,10 @@ async function applyCandidate(client, row) {
       source: 'stage-ott-catalog-governance',
       catalogKey: canonical.catalogKey,
       recognition: canonical.recognition,
+      environment,
       approvedAt: new Date().toISOString(),
     }),
+    `OTT ${environment} approved allowlist`,
   ]);
 
   await client.query(`
@@ -182,7 +194,7 @@ async function applyCandidate(client, row) {
     VALUES (
       $1, 'approved', 'system', 'system@mymoolah.africa', 'system',
       $2, 'approved', $3, 'published',
-      'OTT staging approved allowlist', $4::jsonb, NOW(), NOW()
+      $5, $4::jsonb, NOW(), NOW()
     );
   `, [
     mapping.rows[0].id,
@@ -192,20 +204,22 @@ async function applyCandidate(client, row) {
       supplierProductId: row.product_supplier_id,
       rawName,
       catalogKey: canonical.catalogKey,
+      environment,
     }),
+    `OTT ${environment} approved allowlist`,
   ]);
 
   return { ...row, ...canonical, mappingId: mapping.rows[0].id, applied: true };
 }
 
 async function main() {
-  const { apply } = parseArgs(process.argv.slice(2));
-  const client = await getStagingClient();
+  const { apply, environment } = parseArgs(process.argv.slice(2));
+  const client = await (environment === 'production' ? getProductionClient() : getStagingClient());
   try {
-    const candidates = await loadCandidates(client);
+    const candidates = await loadCandidates(client, environment);
     const output = {
       generatedAt: new Date().toISOString(),
-      environment: 'staging',
+      environment,
       mode: apply ? 'apply' : 'dry-run',
       candidates: candidates.map((row) => ({
         supplierProductId: row.product_supplier_id,
@@ -223,7 +237,7 @@ async function main() {
       await client.query('BEGIN');
       try {
         for (const candidate of candidates) {
-          output.applied.push(await applyCandidate(client, candidate));
+          output.applied.push(await applyCandidate(client, candidate, environment));
         }
         await client.query('COMMIT');
       } catch (error) {
@@ -242,7 +256,7 @@ async function main() {
 main().catch((error) => {
   console.error(JSON.stringify({
     success: false,
-    error: 'OTT_STAGING_GOVERNANCE_FAILED',
+    error: 'OTT_CATALOG_GOVERNANCE_FAILED',
     message: error.message,
   }, null, 2));
   process.exitCode = 1;
