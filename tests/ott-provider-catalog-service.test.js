@@ -21,8 +21,8 @@ const mockVariant = {
 };
 const mockTerm = {
   supplierCode: 'OTT',
-  providerCode: '68',
-  providerName: 'PicknPay Voucher',
+  providerCode: '20',
+  providerName: 'Shoprite Vouchers',
   providerType: 'voucher',
   serviceFamily: 'voucher',
   commercialType: 'commission',
@@ -56,6 +56,7 @@ jest.mock('../services/ott/ottClient', () => ({
 }));
 
 const service = require('../services/ott/ottProviderCatalogService');
+const policy = require('../services/ott/ottAuthorizedProviderPolicy');
 
 describe('OTT provider catalog service', () => {
   beforeEach(() => {
@@ -82,7 +83,10 @@ describe('OTT provider catalog service', () => {
     expect(service.classifyProvider({ providerCode: '68', providerName: 'PicknPay Voucher' }).providerType).toBe('voucher');
     expect(service.classifyProvider({ providerCode: '140', providerName: 'Electricity Token' }).providerType).toBe('electricity');
     expect(service.classifyProvider({ providerCode: '141', providerName: 'AMAZON Gift Card' }).providerType).toBe('gift_card');
-    expect(service.classifyProvider({ providerCode: '2001', providerName: 'OTT Mobile Gift Cards | KFC' }).providerType).toBe('gift_card');
+    expect(service.classifyProvider({ providerCode: '2001', providerName: 'OTT Mobile Gift Cards | KFC' })).toMatchObject({
+      providerType: 'gift_card',
+      customerFacing: false,
+    });
     expect(service.classifyProvider({ providerCode: '78', providerName: 'OTT Mobile Gift Cards | Ackermans' }).providerType).toBe('gift_card');
     expect(service.classifyProvider({ providerCode: '94', providerName: 'OTT Mobile Gift Cards | Roccomamas' }).providerType).toBe('gift_card');
     expect(service.classifyProvider({ providerCode: '29', providerName: 'Uber and Uber Eats' }).providerType).toBe('voucher');
@@ -91,16 +95,16 @@ describe('OTT provider catalog service', () => {
 
   it('imports customer-facing OTT voucher terms with net commission and audit split', async () => {
     const result = await service.importOttCatalogProducts({
-      limits: [{ providerCode: '68', minAmount: 10, maxAmount: 1000 }],
+      limits: [{ providerCode: '20', minAmount: 10, maxAmount: 1000 }],
       transaction: mockTransaction,
     });
 
-    expect(result).toEqual([expect.objectContaining({ imported: true, providerCode: '68' })]);
+    expect(result).toEqual([expect.objectContaining({ imported: true, providerCode: '20' })]);
     expect(mockModels.ProductVariant.findOrCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         transaction: mockTransaction,
         defaults: expect.objectContaining({
-          supplierProductId: 'OTT-68',
+          supplierProductId: 'OTT-20',
           commission: 0.7,
           pricing: expect.objectContaining({
             defaultCommissionRate: 0.7,
@@ -141,7 +145,7 @@ describe('OTT provider catalog service', () => {
     }), { transaction: mockTransaction });
   });
 
-  it('creates approved OTT gift-card providers with standard VAS commission terms', async () => {
+  it('keeps API-only OTT gift-card providers hidden without standard commission terms', async () => {
     mockModels.SupplierCommercialTerm.findOne.mockResolvedValue(null);
     mockModels.SupplierCommercialTerm.create.mockResolvedValue({ id: 100, providerCode: '2001' });
 
@@ -156,16 +160,27 @@ describe('OTT provider catalog service', () => {
       providerName: 'OTT Mobile Gift Cards | KFC',
       providerType: 'gift_card',
       serviceFamily: 'voucher',
-      commercialType: 'commission',
-      grossCommissionPct: 1,
-      serviceFeePct: 0.3,
-      netCommissionPct: 0.7,
-      monthlySwitchingFeePct: 0.3,
-      isCustomerFacing: true,
+      commercialType: 'none',
+      isCustomerFacing: false,
       metadata: expect.objectContaining({
-        economicTermsMissing: false,
-        commercialTermsSource: 'ott_agreement_3_5_default_vas_commission',
+        economicTermsMissing: true,
       }),
     }), { transaction: mockTransaction });
+  });
+
+  it('parses workbook rows and applies the ABSA 67 config correction', () => {
+    const authorisedCodes = policy.loadAuthorizedProviders({ environment: 'staging' }).map((provider) => provider.code);
+    expect(authorisedCodes).toContain('67');
+    expect(policy.isApprovedCashPayoutProvider({
+      providerCode: '67',
+      providerName: 'ABSA CashSend',
+      environment: 'staging',
+    })).toBe(true);
+    expect(policy.isApprovedCatalogProvider({
+      providerCode: '68',
+      providerName: 'PicknPay Voucher',
+      providerType: 'voucher',
+      environment: 'staging',
+    })).toBe(false);
   });
 });

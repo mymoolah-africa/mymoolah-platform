@@ -3,6 +3,15 @@
 
 require('dotenv').config({ path: process.env.ENV_FILE || '.env' });
 
+function applyWorkbookArg(argv) {
+  const workbookIndex = argv.indexOf('--workbook');
+  if (workbookIndex >= 0) {
+    const workbookPath = argv[workbookIndex + 1];
+    if (!workbookPath) throw new Error('--workbook requires a file path.');
+    process.env.OTT_AUTHORIZED_PROVIDERS_WORKBOOK = workbookPath;
+  }
+}
+
 function configureDatabaseTarget(argv) {
   const requested = new Set(argv);
   if (!requested.has('--staging') && !requested.has('--production') && !requested.has('--uat')) return 'default';
@@ -34,7 +43,9 @@ function configureDatabaseTarget(argv) {
 let db;
 
 async function main() {
-  const environment = configureDatabaseTarget(process.argv.slice(2));
+  const argv = process.argv.slice(2);
+  applyWorkbookArg(argv);
+  const environment = configureDatabaseTarget(argv);
   db = require('../models');
   const { syncOttProviders } = require('../services/ott/ottProviderCatalogService');
   const importCatalog = process.argv.includes('--import-catalog');

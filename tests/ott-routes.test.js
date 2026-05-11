@@ -26,11 +26,12 @@ jest.mock('../services/ott/ottClient', () => ({
 const ottRoutes = require('../routes/ott');
 
 describe('OTT routes helpers', () => {
-  test('filters read-only provider payloads to ABSA and Nedbank only', () => {
+  test('filters read-only provider payloads to authorised cash providers only', () => {
     const result = ottRoutes._private.filterApprovedCashProviders({
       Providers: [
         { ProviderCode: '2', ProviderName: 'Standard Bank Instant Money' },
         { ProviderCode: '10', ProviderName: 'Nedbank Cardless Withdrawal' },
+        { ProviderCode: '67', ProviderName: 'ABSA CashSend' },
         { ProviderCode: '112', ProviderName: 'ABSA CashSend' },
         { ProviderCode: '127', ProviderName: 'PayShap Account' },
       ],
@@ -38,6 +39,7 @@ describe('OTT routes helpers', () => {
 
     expect(result.Providers).toEqual([
       { ProviderCode: '10', ProviderName: 'Nedbank Cardless Withdrawal' },
+      { ProviderCode: '67', ProviderName: 'ABSA CashSend' },
       { ProviderCode: '112', ProviderName: 'ABSA CashSend' },
     ]);
   });

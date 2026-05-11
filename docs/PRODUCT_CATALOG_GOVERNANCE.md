@@ -32,6 +32,26 @@ Publish status is separate:
 
 When enabled, `/api/v1/overlay/vouchers/catalog` filters voucher cards against approved and published governance mappings. Pending, rejected, suspended, retired, and unmapped supplier SKUs are excluded from wallet responses.
 
+## OTT Authorised Product Sync - 2026-05-11
+Staging now uses Jaco Snyders' active-provider spreadsheet/email list as the customer-facing OTT source of truth. The synchronisation tooling is:
+
+```bash
+node scripts/sync-ott-authorized-products.js --staging
+node scripts/sync-ott-authorized-products.js --staging --apply
+node scripts/stage-ott-catalog-governance.js --staging
+node scripts/stage-ott-catalog-governance.js --staging --apply
+```
+
+`scripts/sync-ott-authorized-products.js` is dry-run by default and Staging-only. It parses `~/Downloads/Payout Provider List.xlsx` when present, overlays the ABSA CashSend `67` correction from Jaco's email, compares against OTT API discovery plus Staging DB state, and only performs non-destructive hides/unpublishes in `--apply` mode.
+
+Staging apply on 2026-05-11:
+- Hid 21 unsupported OTT commercial terms from customer-facing exposure.
+- Deactivated 21 unsupported OTT products/variants, including the API-only gift-card brands that Jaco said are not supported for merchant checkout.
+- Unpublished 2 unsupported OTT governance mappings.
+- Kept/published the spreadsheet-authorised voucher rows `OTT-68`, `OTT-69`, and `OTT-20`.
+
+Production remains gated. Run the dry-run report against Production only after André explicitly approves a production rollout plan; do not apply production changes from this Staging helper.
+
 ## OTT Production Catalog Readiness - 2026-05-07
 Read-only staging and production audits confirmed that OTT commercial terms exist but no OTT `products`, `product_variants`, or OTT governance mappings are currently imported in staging or production. Use `scripts/audit-ott-production-catalog.js` before any rollout to verify the current state without writing to the database.
 

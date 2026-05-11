@@ -5,8 +5,7 @@ const db = require('../../models');
 const ledgerService = require('../ledgerService');
 const { OttClient, redact } = require('./ottClient');
 const { getPayoutFeePolicy } = require('./ottCommercialTermsService');
-
-const APPROVED_CASH_PAYOUT_PROVIDER_CODES = new Set(['4', '10', '67', '112']);
+const { isApprovedCashPayoutProvider } = require('./ottAuthorizedProviderPolicy');
 
 function roundMoney(value) {
   return Number(Number(value || 0).toFixed(2));
@@ -27,7 +26,7 @@ function requireEnabled() {
 
 function requireApprovedCashPayoutProvider(providerCode) {
   const normalized = String(providerCode || '').trim();
-  if (!APPROVED_CASH_PAYOUT_PROVIDER_CODES.has(normalized)) {
+  if (!isApprovedCashPayoutProvider({ providerCode: normalized })) {
     const err = new Error('This cash provider is not available for MyMoolah yet');
     err.statusCode = 400;
     err.code = 'OTT_PAYOUT_PROVIDER_NOT_APPROVED';

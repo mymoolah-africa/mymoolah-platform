@@ -8,10 +8,10 @@ const { requireKYCVerification } = require('../middleware/kycMiddleware');
 const { idempotencyMiddleware } = require('../middleware/idempotency');
 const ottPayoutService = require('../services/ott/ottPayoutService');
 const { OttClient, buildRequestHash, getConfig } = require('../services/ott/ottClient');
+const { isApprovedCashPayoutProvider } = require('../services/ott/ottAuthorizedProviderPolicy');
 const db = require('../models');
 
 const router = express.Router();
-const APPROVED_CASH_PAYOUT_PROVIDER_CODES = new Set(['4', '10', '67', '112']);
 const ottPayoutLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 10,
@@ -174,7 +174,10 @@ function ottProviderCodeOf(provider = {}) {
 
 function filterApprovedCashProviders(data) {
   if (Array.isArray(data)) {
-    return data.filter((provider) => APPROVED_CASH_PAYOUT_PROVIDER_CODES.has(ottProviderCodeOf(provider)));
+    return data.filter((provider) => isApprovedCashPayoutProvider({
+      providerCode: ottProviderCodeOf(provider),
+      providerName: provider.providerName || provider.ProviderName || provider.name || provider.description,
+    }));
   }
   if (!data || typeof data !== 'object') return data;
 

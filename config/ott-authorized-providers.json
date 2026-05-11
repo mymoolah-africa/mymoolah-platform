@@ -1,0 +1,69 @@
+{
+  "version": "2026-05-11-jaco-email-baseline",
+  "description": "OTT authorised provider baseline from Jaco Snyders email thread. Replace or supplement with the official workbook when available.",
+  "providers": [
+    {
+      "code": "67",
+      "name": "ABSA CashSend",
+      "providerType": "payout",
+      "serviceFamily": "cash_send",
+      "customerFacing": true,
+      "environments": ["production", "staging", "uat"],
+      "source": "jaco_email_absa_correction"
+    },
+    {
+      "code": "4",
+      "name": "Nedbank Cardless Withdrawal",
+      "providerType": "payout",
+      "serviceFamily": "cash_send",
+      "customerFacing": true,
+      "environments": ["production", "staging", "uat"],
+      "source": "jaco_email_spreadsheet_reference"
+    },
+    {
+      "code": "112",
+      "name": "ABSA CashSend",
+      "providerType": "payout",
+      "serviceFamily": "cash_send",
+      "customerFacing": true,
+      "environments": ["staging", "uat"],
+      "source": "legacy_test_api_compatibility"
+    },
+    {
+      "code": "10",
+      "name": "Nedbank Cardless Withdrawal",
+      "providerType": "payout",
+      "serviceFamily": "cash_send",
+      "customerFacing": true,
+      "environments": ["staging", "uat"],
+      "source": "legacy_test_api_compatibility"
+    },
+    {
+      "code": "20",
+      "name": "Shoprite Vouchers",
+      "providerType": "voucher",
+      "serviceFamily": "voucher",
+      "customerFacing": true,
+      "environments": ["production", "staging", "uat"],
+      "source": "jaco_email_spreadsheet_reference"
+    },
+    {
+      "code": "68",
+      "name": "RTC EFT",
+      "providerType": "payout",
+      "serviceFamily": "eft",
+      "customerFacing": false,
+      "environments": ["production", "staging", "uat"],
+      "source": "jaco_email_code_mismatch_reference"
+    },
+    {
+      "code": "127",
+      "name": "PayShap Account",
+      "providerType": "payout",
+      "serviceFamily": "payshap",
+      "customerFacing": false,
+      "environments": ["production", "staging", "uat"],
+      "source": "jaco_email_banking_provider"
+    }
+  ]
+}

@@ -4,6 +4,12 @@ const { Op } = require('sequelize');
 const db = require('../../models');
 const { OttClient } = require('./ottClient');
 const { commissionPolicyFromTerm } = require('./ottCommercialTermsService');
+const {
+  findAuthorizedProvider,
+  isApprovedCatalogProvider: isCatalogProviderAuthorised,
+  isApprovedCashPayoutProvider,
+  isCustomerFacingAuthorizedProvider,
+} = require('./ottAuthorizedProviderPolicy');
 const { recogniseVoucherBrand } = require('../voucherCatalogBrandService');
 
 const KNOWN_PROVIDER_CLASSIFICATION = {
@@ -29,8 +35,6 @@ const KNOWN_PROVIDER_CLASSIFICATION = {
 };
 
 const HELD_PROVIDER_CODES = new Set(['141', '146']);
-const APPROVED_PAYOUT_PROVIDER_CODES = new Set(['4', '10', '67', '112']);
-const APPROVED_CATALOG_PROVIDER_CODES = new Set(['68', '69', '156', '157']);
 const DEFAULT_OTT_VAS_COMMISSION_TERMS = Object.freeze({
   commercialType: 'commission',
   grossCommissionPct: 1.00,
@@ -82,25 +86,35 @@ function classifyProvider(provider = {}) {
     return KNOWN_PROVIDER_CLASSIFICATION[code];
   }
 
+  const authorised = findAuthorizedProvider({ providerCode: code, providerName });
+  if (authorised) {
+    return {
+      providerType: authorised.providerType,
+      serviceFamily: authorised.serviceFamily,
+      customerFacing: Boolean(authorised.customerFacing),
+      authorisedSource: authorised.source,
+    };
+  }
+
   const recognisedVoucher = recogniseVoucherBrand(providerName);
   if (recognisedVoucher.recognition === 'mapped' && recognisedVoucher.isGiftCard) {
-    return { providerType: 'gift_card', serviceFamily: 'voucher', customerFacing: true };
+    return { providerType: 'gift_card', serviceFamily: 'voucher', customerFacing: false };
   }
   if (recognisedVoucher.recognition === 'mapped') {
-    return { providerType: 'voucher', serviceFamily: 'voucher', customerFacing: true };
+    return { providerType: 'voucher', serviceFamily: 'voucher', customerFacing: false };
   }
 
   const known = KNOWN_PROVIDER_CLASSIFICATION[code];
   if (known) return known;
 
   if (name.includes('electricity')) {
-    return { providerType: 'electricity', serviceFamily: 'electricity', customerFacing: true };
+    return { providerType: 'electricity', serviceFamily: 'electricity', customerFacing: false };
   }
   if (name.includes('gift') || name.includes('voucher') || name.includes('takealot') || name.includes('nandos') || name.includes('dis-chem')) {
-    return { providerType: 'voucher', serviceFamily: 'voucher', customerFacing: true };
+    return { providerType: 'voucher', serviceFamily: 'voucher', customerFacing: false };
   }
   if (name.includes('cash') || name.includes('payshap') || name.includes('instant money')) {
-    return { providerType: 'payout', serviceFamily: 'cash_send', customerFacing: true };
+    return { providerType: 'payout', serviceFamily: 'cash_send', customerFacing: false };
   }
   return { providerType: 'unknown', serviceFamily: 'unknown', customerFacing: false };
 }
@@ -114,10 +128,8 @@ function hasConfiguredPayoutEconomics(term) {
 
 function isApprovedCatalogProvider({ providerCode, providerName, providerType } = {}) {
   if (!['voucher', 'gift_card'].includes(providerType)) return false;
-  if (APPROVED_CATALOG_PROVIDER_CODES.has(String(providerCode))) return true;
   if (HELD_PROVIDER_CODES.has(String(providerCode))) return false;
-  const recognisedVoucher = recogniseVoucherBrand(providerName);
-  return recognisedVoucher.recognition === 'mapped';
+  return isCatalogProviderAuthorised({ providerCode, providerName, providerType });
 }
 
 function hasConfiguredCatalogEconomics(policy) {
@@ -188,7 +200,7 @@ async function upsertProviderMetadata({ provider, limits = [], transaction } = {
 
   if (existing) {
     const hasPayoutEconomics = hasConfiguredPayoutEconomics(existing);
-    const isApprovedPayout = APPROVED_PAYOUT_PROVIDER_CODES.has(providerCode);
+    const isApprovedPayout = isApprovedCashPayoutProvider({ providerCode, providerName });
     const shouldReclassify = existing.providerType === 'unknown' || (existing.isMock && !classification.isMock);
     const providerType = shouldReclassify ? classification.providerType : existing.providerType;
     const serviceFamily = shouldReclassify || existing.serviceFamily === 'unknown'
@@ -258,6 +270,11 @@ async function upsertProviderMetadata({ provider, limits = [], transaction } = {
       lastProviderSyncAt: new Date().toISOString(),
       activeProvider: provider,
       limits: limit.raw,
+      authorizedProvider: isCustomerFacingAuthorizedProvider({
+        providerCode,
+        providerName,
+        providerType: classification.providerType,
+      }),
       economicTermsMissing: !catalogPatch.isCustomerFacing,
       ...(catalogPatch.metadata || {}),
     },

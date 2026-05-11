@@ -10,16 +10,27 @@
 
 require('dotenv').config();
 
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
 const { getStagingClient, closeAll } = require('./db-connection-helper');
 const { recogniseVoucherBrand } = require('../services/voucherCatalogBrandService');
+const { isApprovedCatalogProvider } = require('../services/ott/ottAuthorizedProviderPolicy');
 
-const APPROVED_SUPPLIER_PRODUCT_IDS = Object.freeze(['OTT-68', 'OTT-69', 'OTT-156', 'OTT-157']);
-const APPROVED_RETAIL_CATALOG_KEYS = new Set(['pick-n-pay', 'shoprite-checkers']);
+const DEFAULT_WORKBOOK_PATH = path.join(os.homedir(), 'Downloads', 'Payout Provider List.xlsx');
 
 function parseArgs(argv) {
   const flags = new Set(argv);
   if (!flags.has('--staging')) {
     throw new Error('Use --staging to confirm this helper targets staging only.');
+  }
+  const workbookIndex = argv.indexOf('--workbook');
+  const workbookPath = workbookIndex >= 0 ? argv[workbookIndex + 1] : DEFAULT_WORKBOOK_PATH;
+  if (workbookIndex >= 0 && !workbookPath) {
+    throw new Error('--workbook requires a file path.');
+  }
+  if (workbookPath && fs.existsSync(workbookPath)) {
+    process.env.OTT_AUTHORIZED_PROVIDERS_WORKBOOK = workbookPath;
   }
   return {
     apply: flags.has('--apply'),
@@ -41,12 +52,17 @@ function canonicalFields(rawName) {
 
 function isApprovedOttCatalogCandidate(row) {
   const supplierProductId = row.product_supplier_id || row.variant_supplier_id;
-  if (APPROVED_SUPPLIER_PRODUCT_IDS.includes(supplierProductId)) return true;
+  const providerCode = String(supplierProductId || '').replace(/^OTT-/i, '');
 
   const rawName = row.product_name || row.provider || supplierProductId;
   const recognised = recogniseVoucherBrand(rawName);
-  return recognised.recognition === 'mapped' &&
-    (recognised.isGiftCard || APPROVED_RETAIL_CATALOG_KEYS.has(recognised.catalogKey));
+  if (recognised.recognition !== 'mapped') return false;
+  return isApprovedCatalogProvider({
+    providerCode,
+    providerName: rawName,
+    providerType: recognised.isGiftCard ? 'gift_card' : 'voucher',
+    environment: 'staging',
+  });
 }
 
 async function loadCandidates(client) {

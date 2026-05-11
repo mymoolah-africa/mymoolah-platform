@@ -167,6 +167,37 @@ Customer-facing placement decision:
 - Standard Bank Instant Money, OTT PayShap, and OTT airtime are not wired to
   frontend surfaces in this phase.
 
+### 2.7 Authorised provider synchronization update - 2026-05-11
+
+Jaco Snyders' active-provider spreadsheet/email thread is now treated as the
+customer-facing source of truth for OTT catalogue exposure. The implementation
+keeps the existing OTT API discovery and product import pipeline, but adds a
+central authorisation policy so API-only rows are not automatically exposed.
+
+New artefacts:
+
+- `config/ott-authorized-providers.json` - checked-in email baseline, including
+  the ABSA CashSend `67` correction.
+- `services/ott/ottAuthorizedProviderPolicy.js` - central helper used by
+  provider sync, payout provider filtering, payout quote/submit approval, and
+  Staging governance publication.
+- `scripts/sync-ott-authorized-products.js` - Staging-only dry-run/apply
+  reconciliation against workbook, OTT API, `supplier_commercial_terms`,
+  imported products/variants, and governance mappings.
+
+Staging apply completed on 2026-05-11:
+
+1. Parsed `~/Downloads/Payout Provider List.xlsx` and overlaid ABSA `67`.
+2. Called OTT read-only provider discovery: 16 providers and 1 limits row.
+3. Hid 21 unsupported OTT commercial terms from customer-facing exposure.
+4. Deactivated 21 unsupported OTT products/variants and unpublished 2 mappings.
+5. Approved/published Staging governance mappings for `OTT-68`, `OTT-69`, and
+   `OTT-20`.
+
+No production writes, wallet debits, payout submissions, voucher purchases,
+migrations, or Cloud Run deployments were performed. Production rollout requires
+an explicit dry-run review and André approval.
+
 ### 2.3 MMTP references
 
 - `docs/CHART_OF_ACCOUNTS.md`
