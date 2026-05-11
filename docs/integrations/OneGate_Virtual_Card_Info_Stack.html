@@ -1,0 +1,1411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MyMoolah x OneGate Virtual Card Information Stack</title>
+  <meta name="description" content="Partner-facing information stack for the proposed MyMoolah x OneGate wallet-linked virtual card programme.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    @page {
+      size: A4 landscape;
+      margin: 12mm 12mm 12mm 12mm;
+    }
+
+    :root {
+      --green: #86BE41;
+      --green-dark: #1f5c35;
+      --blue: #2D8CCA;
+      --ink: #17212b;
+      --muted: #5f6d7a;
+      --line: #d9e4ea;
+      --soft-green: #f1f8ea;
+      --soft-blue: #eef7fc;
+      --soft-amber: #fff7e8;
+      --surface: #ffffff;
+      --page: #f7faf8;
+      --danger: #b94a48;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background: var(--page);
+      color: var(--ink);
+      font-family: "Source Sans 3", sans-serif;
+      font-size: 15px;
+      line-height: 1.45;
+    }
+
+    .page {
+      max-width: 1060px;
+      margin: 0 auto;
+      padding: 34px 28px 44px;
+    }
+
+    .document {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      box-shadow: 0 22px 70px rgba(23, 33, 43, 0.10);
+      overflow: hidden;
+    }
+
+    .hero {
+      background:
+        radial-gradient(circle at top left, rgba(134, 190, 65, 0.26), transparent 30%),
+        radial-gradient(circle at 80% 20%, rgba(45, 140, 202, 0.24), transparent 34%),
+        linear-gradient(135deg, #f8fff2 0%, #f7fbff 50%, #ffffff 100%);
+      border-bottom: 1px solid var(--line);
+      padding: 34px 38px 30px;
+      position: relative;
+    }
+
+    .brand-rail {
+      align-items: center;
+      display: flex;
+      gap: 18px;
+      justify-content: space-between;
+      margin-bottom: 26px;
+    }
+
+    .brand-card {
+      align-items: center;
+      background: rgba(255, 255, 255, 0.82);
+      border: 1px solid rgba(217, 228, 234, 0.88);
+      border-radius: 20px;
+      box-shadow: 0 12px 34px rgba(23, 33, 43, 0.08);
+      display: flex;
+      min-height: 94px;
+      padding: 16px 22px;
+    }
+
+    .brand-card.mymoolah {
+      flex: 1 1 360px;
+      justify-content: center;
+    }
+
+    .brand-card.onegate {
+      background: linear-gradient(135deg, #101010, #050505);
+      border-color: rgba(255, 255, 255, 0.18);
+      flex: 1 1 360px;
+      gap: 15px;
+      justify-content: center;
+    }
+
+    .brand-card img {
+      display: block;
+      max-height: 62px;
+      max-width: 100%;
+      object-fit: contain;
+    }
+
+    .brand-card.mymoolah img {
+      width: min(100%, 285px);
+    }
+
+    .onegate-mark {
+      background: #000000;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 16px;
+      flex: 0 0 74px;
+      height: 74px;
+      overflow: hidden;
+      position: relative;
+      width: 74px;
+    }
+
+    .onegate-mark img {
+      height: 58px;
+      left: 8px;
+      max-height: none;
+      max-width: none;
+      object-fit: contain;
+      object-position: left center;
+      position: absolute;
+      top: 8px;
+      width: 226px;
+    }
+
+    .onegate-copy {
+      color: #ffffff;
+      line-height: 1;
+    }
+
+    .onegate-name {
+      background: linear-gradient(90deg, #ff9f45, #ff3c78, #d91cff);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      display: block;
+      font-family: Montserrat, sans-serif;
+      font-size: 31px;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+    }
+
+    .onegate-tagline {
+      color: rgba(255, 255, 255, 0.72);
+      display: block;
+      font-family: Montserrat, sans-serif;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      margin-top: 7px;
+      text-transform: uppercase;
+    }
+
+    .brand-link {
+      align-items: center;
+      color: var(--muted);
+      display: flex;
+      flex: 0 0 auto;
+      font-family: Montserrat, sans-serif;
+      font-size: 11px;
+      font-weight: 800;
+      gap: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .brand-link::before,
+    .brand-link::after {
+      background: linear-gradient(90deg, var(--green), var(--blue));
+      border-radius: 999px;
+      content: "";
+      display: block;
+      height: 2px;
+      width: 30px;
+    }
+
+    .kicker {
+      align-items: center;
+      color: var(--green-dark);
+      display: flex;
+      flex-wrap: wrap;
+      font-family: Montserrat, sans-serif;
+      font-size: 11px;
+      font-weight: 800;
+      gap: 8px;
+      letter-spacing: 0.12em;
+      margin-bottom: 14px;
+      text-transform: uppercase;
+    }
+
+    .kicker span {
+      background: rgba(134, 190, 65, 0.16);
+      border: 1px solid rgba(134, 190, 65, 0.34);
+      border-radius: 999px;
+      padding: 6px 10px;
+    }
+
+    h1 {
+      color: var(--ink);
+      font-family: Montserrat, sans-serif;
+      font-size: clamp(34px, 4vw, 52px);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1.02;
+      max-width: 880px;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1.45;
+      margin-top: 16px;
+      max-width: 840px;
+    }
+
+    .meta-grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(4, 1fr);
+      margin-top: 26px;
+    }
+
+    .meta-card {
+      background: rgba(255, 255, 255, 0.74);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 13px 14px;
+    }
+
+    .meta-label {
+      color: var(--muted);
+      font-family: Montserrat, sans-serif;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.09em;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+    }
+
+    .meta-value {
+      color: var(--ink);
+      font-weight: 700;
+    }
+
+    main {
+      padding: 28px 38px 36px;
+    }
+
+    section {
+      margin-top: 26px;
+      page-break-inside: avoid;
+    }
+
+    section:first-child {
+      margin-top: 0;
+    }
+
+    .section-heading {
+      align-items: flex-start;
+      display: flex;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .section-num {
+      align-items: center;
+      background: var(--green);
+      border-radius: 12px;
+      color: #ffffff;
+      display: inline-flex;
+      flex: 0 0 34px;
+      font-family: Montserrat, sans-serif;
+      font-size: 14px;
+      font-weight: 800;
+      height: 34px;
+      justify-content: center;
+      margin-top: 2px;
+      width: 34px;
+    }
+
+    h2 {
+      color: var(--ink);
+      font-family: Montserrat, sans-serif;
+      font-size: 23px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+    }
+
+    .section-note {
+      color: var(--muted);
+      font-size: 14px;
+      margin-top: 3px;
+    }
+
+    p {
+      margin: 8px 0;
+    }
+
+    .two-col {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: 1.12fr 0.88fr;
+    }
+
+    .card {
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 18px;
+    }
+
+    .card.soft-green {
+      background: var(--soft-green);
+      border-color: rgba(134, 190, 65, 0.42);
+    }
+
+    .card.soft-blue {
+      background: var(--soft-blue);
+      border-color: rgba(45, 140, 202, 0.30);
+    }
+
+    .card.soft-amber {
+      background: var(--soft-amber);
+      border-color: rgba(214, 134, 20, 0.28);
+    }
+
+    .card-title {
+      color: var(--green-dark);
+      font-family: Montserrat, sans-serif;
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .pill {
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 700;
+      padding: 6px 10px;
+    }
+
+    .stat-strip {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(3, 1fr);
+      margin-top: 14px;
+    }
+
+    .stat {
+      background: linear-gradient(180deg, #ffffff, #f8fbfd);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px;
+    }
+
+    .stat strong {
+      color: var(--green-dark);
+      display: block;
+      font-family: Montserrat, sans-serif;
+      font-size: 24px;
+      line-height: 1;
+      margin-bottom: 5px;
+    }
+
+    .stat span {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .roles-grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(4, 1fr);
+      margin-top: 10px;
+    }
+
+    .role {
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      min-height: 132px;
+      padding: 14px;
+    }
+
+    .role b {
+      color: var(--green-dark);
+      display: block;
+      font-family: Montserrat, sans-serif;
+      font-size: 14px;
+      margin-bottom: 6px;
+    }
+
+    .role p {
+      color: var(--muted);
+      font-size: 13px;
+      margin: 0;
+    }
+
+    .flow-panel {
+      background:
+        linear-gradient(90deg, rgba(134, 190, 65, 0.11), rgba(45, 140, 202, 0.10)),
+        #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      overflow: hidden;
+      page-break-inside: avoid;
+    }
+
+    .flow-header {
+      align-items: center;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      padding: 16px 18px;
+    }
+
+    .flow-header strong {
+      color: var(--ink);
+      font-family: Montserrat, sans-serif;
+      font-size: 16px;
+      font-weight: 800;
+    }
+
+    .flow-legend {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .flow-lanes {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(6, 1fr);
+      padding: 18px;
+    }
+
+    .flow-node {
+      background: #ffffff;
+      border: 1px solid rgba(31, 92, 53, 0.18);
+      border-radius: 16px;
+      min-height: 126px;
+      padding: 13px;
+      position: relative;
+    }
+
+    .flow-node:not(:last-child)::after {
+      color: var(--blue);
+      content: ">";
+      font-family: Montserrat, sans-serif;
+      font-size: 24px;
+      font-weight: 800;
+      position: absolute;
+      right: -13px;
+      top: 46px;
+      z-index: 2;
+    }
+
+    .node-type {
+      color: var(--blue);
+      font-family: Montserrat, sans-serif;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+    }
+
+    .node-title {
+      color: var(--ink);
+      font-family: Montserrat, sans-serif;
+      font-size: 14px;
+      font-weight: 800;
+      line-height: 1.18;
+      margin-bottom: 7px;
+    }
+
+    .node-copy {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.32;
+    }
+
+    .flow-foot {
+      background: rgba(255, 255, 255, 0.68);
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      display: grid;
+      font-size: 13px;
+      gap: 10px;
+      grid-template-columns: 1fr 1fr;
+      padding: 14px 18px;
+    }
+
+    .steps {
+      counter-reset: step;
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(2, 1fr);
+      margin-top: 12px;
+    }
+
+    .step {
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      counter-increment: step;
+      display: grid;
+      gap: 10px;
+      grid-template-columns: 34px 1fr;
+      padding: 13px;
+    }
+
+    .step::before {
+      align-items: center;
+      background: var(--green);
+      border-radius: 10px;
+      color: #ffffff;
+      content: counter(step);
+      display: flex;
+      font-family: Montserrat, sans-serif;
+      font-size: 14px;
+      font-weight: 800;
+      height: 34px;
+      justify-content: center;
+      width: 34px;
+    }
+
+    .step b {
+      display: block;
+      font-family: Montserrat, sans-serif;
+      font-size: 14px;
+      margin-bottom: 3px;
+    }
+
+    .step span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .control-grid {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(3, 1fr);
+      margin-top: 12px;
+    }
+
+    .control {
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      padding: 13px;
+    }
+
+    .control b {
+      color: var(--green-dark);
+      display: block;
+      font-family: Montserrat, sans-serif;
+      font-size: 13px;
+      margin-bottom: 5px;
+    }
+
+    .control span {
+      color: var(--muted);
+      display: block;
+      font-size: 12.5px;
+    }
+
+    .scope-grid {
+      display: grid;
+      gap: 14px;
+      grid-template-columns: 1fr 1fr;
+      margin-top: 12px;
+    }
+
+    .scope-card {
+      border-radius: 18px;
+      padding: 16px;
+    }
+
+    .scope-card.in {
+      background: var(--soft-green);
+      border: 1px solid rgba(134, 190, 65, 0.45);
+    }
+
+    .scope-card.out {
+      background: #fff2f2;
+      border: 1px solid rgba(185, 74, 72, 0.22);
+    }
+
+    .scope-card h3 {
+      font-family: Montserrat, sans-serif;
+      font-size: 15px;
+      margin-bottom: 8px;
+    }
+
+    .scope-card.in h3 {
+      color: var(--green-dark);
+    }
+
+    .scope-card.out h3 {
+      color: var(--danger);
+    }
+
+    ul {
+      margin-left: 19px;
+    }
+
+    li {
+      margin: 4px 0;
+    }
+
+    .policy-strip {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(4, 1fr);
+      margin-top: 12px;
+    }
+
+    .policy {
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px;
+    }
+
+    .policy b {
+      color: var(--green-dark);
+      display: block;
+      font-family: Montserrat, sans-serif;
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+
+    .policy span {
+      color: var(--muted);
+      display: block;
+      font-size: 12px;
+      line-height: 1.34;
+    }
+
+    .footer-note {
+      background: #f8fbfd;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 12.5px;
+      padding: 18px 38px;
+    }
+
+    .disclaimer {
+      background: #ffffff;
+      border: 1px dashed rgba(45, 140, 202, 0.50);
+      border-radius: 16px;
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 14px;
+      padding: 13px 15px;
+    }
+
+    .print-button {
+      background: var(--green-dark);
+      border: 0;
+      border-radius: 999px;
+      color: #ffffff;
+      cursor: pointer;
+      font-family: Montserrat, sans-serif;
+      font-size: 12px;
+      font-weight: 800;
+      padding: 10px 15px;
+      position: fixed;
+      right: 22px;
+      top: 22px;
+      z-index: 10;
+    }
+
+    @media (max-width: 920px) {
+      .brand-rail {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .brand-link {
+        justify-content: center;
+      }
+
+      .meta-grid,
+      .roles-grid,
+      .policy-strip {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .flow-lanes {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      .flow-node:nth-child(3)::after {
+        display: none;
+      }
+
+      .two-col,
+      .scope-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .page {
+        padding: 16px;
+      }
+
+      .hero,
+      main,
+      .footer-note {
+        padding-left: 20px;
+        padding-right: 20px;
+      }
+
+      .brand-card {
+        min-height: 72px;
+      }
+
+      .onegate-name {
+        font-size: 26px;
+      }
+
+      .meta-grid,
+      .roles-grid,
+      .flow-lanes,
+      .steps,
+      .control-grid,
+      .policy-strip {
+        grid-template-columns: 1fr;
+      }
+
+      .flow-node::after {
+        display: none;
+      }
+
+      .flow-foot {
+        grid-template-columns: 1fr;
+      }
+
+      .print-button {
+        display: none;
+      }
+    }
+
+    @media print {
+      * {
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+      }
+
+      body {
+        background: #ffffff;
+        color: #000000;
+        font-size: 9.6pt;
+        line-height: 1.38;
+      }
+
+      .page {
+        max-width: none;
+        padding: 0;
+      }
+
+      .document {
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+      }
+
+      .hero {
+        padding: 0 0 8mm;
+        page-break-after: avoid;
+      }
+
+      .brand-rail {
+        align-items: center !important;
+        display: grid !important;
+        flex-direction: row !important;
+        gap: 7mm !important;
+        grid-template-columns: 1fr auto 1fr;
+        margin-bottom: 7mm;
+        page-break-inside: avoid;
+      }
+
+      .brand-card {
+        border-radius: 12px;
+        min-height: 28mm;
+        padding: 5mm 7mm;
+        box-shadow: none;
+      }
+
+      .brand-card.mymoolah,
+      .brand-card.onegate {
+        flex: none;
+      }
+
+      .brand-card.mymoolah img {
+        width: 66mm;
+      }
+
+      .brand-card.onegate {
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+      }
+
+      .hero,
+      .card,
+      .card.soft-green,
+      .card.soft-blue,
+      .card.soft-amber,
+      .flow-panel,
+      .flow-foot,
+      .scope-card.in,
+      .scope-card.out,
+      .policy,
+      .control,
+      .role,
+      .step,
+      .stat,
+      .meta-card,
+      .disclaimer,
+      .footer-note,
+      .kicker span,
+      .pill,
+      .section-num,
+      .step::before {
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+      }
+
+      .onegate-mark {
+        border-radius: 10px;
+        flex-basis: 20mm;
+        height: 20mm;
+        width: 20mm;
+      }
+
+      .onegate-mark img {
+        height: 16mm;
+        left: 2mm;
+        top: 2mm;
+        width: 64mm;
+      }
+
+      .onegate-name {
+        font-size: 22pt;
+      }
+
+      .onegate-tagline {
+        font-size: 7pt;
+        letter-spacing: 0.14em;
+        margin-top: 2mm;
+      }
+
+      .brand-link {
+        font-size: 7pt;
+        gap: 2mm;
+        justify-content: center;
+        letter-spacing: 0.14em;
+        white-space: nowrap;
+      }
+
+      .brand-link::before,
+      .brand-link::after {
+        height: 0.4mm;
+        width: 10mm;
+      }
+
+      main {
+        padding: 0;
+      }
+
+      section {
+        margin-top: 6mm;
+      }
+
+      h1 {
+        font-size: 30pt;
+        max-width: 245mm;
+      }
+
+      h2 {
+        font-size: 14pt;
+      }
+
+      .subtitle {
+        font-size: 11pt;
+        line-height: 1.38;
+        margin-top: 4mm;
+        max-width: 235mm;
+      }
+
+      .kicker {
+        gap: 2mm;
+        margin-bottom: 4mm;
+      }
+
+      .kicker span {
+        font-size: 7pt;
+        padding: 1.2mm 2.4mm;
+      }
+
+      .meta-grid {
+        gap: 3mm;
+        grid-template-columns: repeat(4, 1fr) !important;
+        margin-top: 5mm;
+      }
+
+      .meta-card {
+        border-radius: 8px;
+        padding: 2.5mm 3mm;
+      }
+
+      .meta-label {
+        font-size: 6.5pt;
+      }
+
+      .meta-value {
+        font-size: 8.5pt;
+      }
+
+      .two-col,
+      .scope-grid,
+      .flow-foot {
+        grid-template-columns: 1fr 1fr !important;
+      }
+
+      .roles-grid,
+      .policy-strip {
+        grid-template-columns: repeat(4, 1fr) !important;
+      }
+
+      .control-grid {
+        grid-template-columns: repeat(3, 1fr) !important;
+      }
+
+      .steps {
+        grid-template-columns: repeat(3, 1fr) !important;
+      }
+
+      .flow-lanes {
+        grid-template-columns: repeat(6, 1fr) !important;
+      }
+
+      .flow-node {
+        min-height: 30mm;
+        padding: 3mm;
+      }
+
+      .flow-node:nth-child(3)::after,
+      .flow-node::after {
+        display: block;
+        font-size: 14pt;
+        right: -3mm;
+        top: 13mm;
+      }
+
+      .node-type {
+        font-size: 6pt;
+      }
+
+      .node-title {
+        font-size: 8.2pt;
+      }
+
+      .node-copy {
+        font-size: 7.2pt;
+      }
+
+      .card,
+      .role,
+      .stat,
+      .control,
+      .policy,
+      .step,
+      .scope-card {
+        border-radius: 9px;
+        padding: 3.5mm;
+      }
+
+      .print-button {
+        display: none;
+      }
+
+      .card,
+      .flow-panel,
+      .scope-card,
+      .control,
+      .policy,
+      .role,
+      .step,
+      .stat,
+      .meta-card {
+        break-inside: avoid;
+        box-shadow: none;
+      }
+
+      .footer-note {
+        border-top: 1px solid #cccccc;
+        padding: 8mm 0 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <button class="print-button" onclick="window.print()">Print / Save PDF</button>
+  <div class="page">
+    <article class="document">
+      <header class="hero">
+        <div class="brand-rail" aria-label="Partner logos">
+          <div class="brand-card mymoolah">
+            <img src="../../mymoolah-wallet-frontend/assets/logo.svg" alt="MyMoolah logo">
+          </div>
+          <div class="brand-link">Partner Integration</div>
+          <div class="brand-card onegate">
+            <div class="onegate-mark" aria-hidden="true">
+              <img src="assets/onegate-beyond-payments-logo.png" alt="">
+            </div>
+            <div class="onegate-copy">
+              <span class="onegate-name">OneGate</span>
+              <span class="onegate-tagline">Beyond Payments</span>
+            </div>
+          </div>
+        </div>
+        <div class="kicker">
+          <span>Partner Information Stack</span>
+          <span>South Africa Phase One</span>
+          <span>POS Spend Only</span>
+        </div>
+        <h1>MyMoolah x OneGate Virtual Card Enablement</h1>
+        <p class="subtitle">
+          A concise partner overview for linking OneGate-issued pre-funded virtual Mastercard debit cards to MMwallet balances,
+          enabling NFC point-of-sale merchant spend while excluding cash withdrawal functionality.
+        </p>
+        <div class="meta-grid" aria-label="Document metadata">
+          <div class="meta-card">
+            <div class="meta-label">Prepared For</div>
+            <div class="meta-value">OneGate</div>
+          </div>
+          <div class="meta-card">
+            <div class="meta-label">Prepared By</div>
+            <div class="meta-value">MyMoolah Treasury Platform</div>
+          </div>
+          <div class="meta-card">
+            <div class="meta-label">Document Type</div>
+            <div class="meta-value">Information Stack</div>
+          </div>
+          <div class="meta-card">
+            <div class="meta-label">Date</div>
+            <div class="meta-value">11 May 2026</div>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <section aria-labelledby="overview-title">
+          <div class="section-heading">
+            <span class="section-num">1</span>
+            <div>
+              <h2 id="overview-title">Executive Overview</h2>
+              <p class="section-note">The commercial opportunity is wallet utility at mainstream card-enabled merchants, without adding cash withdrawal.</p>
+            </div>
+          </div>
+          <div class="two-col">
+            <div class="card soft-green">
+              <div class="card-title">Platform Positioning</div>
+              <p>
+                MyMoolah is a South African banking-grade Treasury Platform and PASA TPPP-certified fintech platform,
+                with Standard Bank of South Africa as its sponsor bank. The platform provides digital wallet, payment,
+                disbursement, value-added services, KYC, ledger, reconciliation, and compliance capabilities.
+              </p>
+              <p>
+                The platform is built around the MMwallet, a secure stored-value wallet used by verified customers to receive,
+                hold, and spend funds through permitted wallet use cases.
+              </p>
+              <div class="pill-row">
+                <span class="pill">PASA TPPP-certified</span>
+                <span class="pill">Standard Bank sponsor bank</span>
+                <span class="pill">KYC/CDD controls</span>
+                <span class="pill">Double-entry ledger</span>
+              </div>
+            </div>
+            <div class="card soft-blue">
+              <div class="card-title">Proposed OneGate Scope</div>
+              <p>
+                OneGate issues a pre-funded virtual Mastercard debit card linked to an eligible MMwallet. Once linked,
+                the card can be tokenised into an NFC wallet such as Apple Pay, Google Pay, or Garmin Pay.
+              </p>
+              <p>
+                The wallet holder can then use available MMwallet balance for card-present merchant point-of-sale
+                transactions in South Africa.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section aria-labelledby="product-title">
+          <div class="section-heading">
+            <span class="section-num">2</span>
+            <div>
+              <h2 id="product-title">Product Snapshot</h2>
+              <p class="section-note">The card is the payment instrument; MyMoolah remains the wallet and control system of record.</p>
+            </div>
+          </div>
+          <div class="roles-grid">
+            <div class="role">
+              <b>Employer / Company</b>
+              <p>Funds payroll, wage, incentive, benefit, or customer disbursement use cases into the MyMoolah ecosystem.</p>
+            </div>
+            <div class="role">
+              <b>MyMoolah</b>
+              <p>Credits verified wallets, controls wallet balances, applies risk rules, posts ledger entries, and reconciles movement.</p>
+            </div>
+            <div class="role">
+              <b>OneGate</b>
+              <p>Provides the virtual card programme capability and supports card-network authorisation and settlement flows.</p>
+            </div>
+            <div class="role">
+              <b>Merchant</b>
+              <p>Receives approved card-present POS payment through the Mastercard-enabled acceptance ecosystem.</p>
+            </div>
+          </div>
+          <div class="stat-strip">
+            <div class="stat">
+              <strong>POS</strong>
+              <span>Card-present merchant spend in South Africa.</span>
+            </div>
+            <div class="stat">
+              <strong>NFC</strong>
+              <span>Tokenised wallet use through supported device wallets.</span>
+            </div>
+            <div class="stat">
+              <strong>No Cash</strong>
+              <span>No ATM, cash-back, or cash withdrawal functionality.</span>
+            </div>
+          </div>
+        </section>
+
+        <section aria-labelledby="flow-title">
+          <div class="section-heading">
+            <span class="section-num">3</span>
+            <div>
+              <h2 id="flow-title">Flow Of Money</h2>
+              <p class="section-note">The flow separates customer wallet value, partner pre-funding, real-time authorisation, and scheme settlement.</p>
+            </div>
+          </div>
+          <div class="flow-panel" role="img" aria-label="Funds and message flow from employer to wallet holder to OneGate to merchant">
+            <div class="flow-header">
+              <strong>Illustrative Partner Flow</strong>
+              <span class="flow-legend">Funds, authorisation messages, and settlement evidence</span>
+            </div>
+            <div class="flow-lanes">
+              <div class="flow-node">
+                <div class="node-type">Source Funds</div>
+                <div class="node-title">Employer or Disbursement Client</div>
+                <p class="node-copy">Funds payroll, wages, incentives, benefits, or client disbursement obligations.</p>
+              </div>
+              <div class="flow-node">
+                <div class="node-type">Wallet Credit</div>
+                <div class="node-title">MyMoolah Treasury Platform</div>
+                <p class="node-copy">Credits verified MMwallets and records the accounting movement.</p>
+              </div>
+              <div class="flow-node">
+                <div class="node-type">User Value</div>
+                <div class="node-title">MMwallet Holder</div>
+                <p class="node-copy">Holds available wallet balance, subject to KYC, limits, fraud, and monitoring controls.</p>
+              </div>
+              <div class="flow-node">
+                <div class="node-type">Card Token</div>
+                <div class="node-title">NFC Device Wallet</div>
+                <p class="node-copy">Presents the OneGate-issued virtual card at a Mastercard-enabled POS device.</p>
+              </div>
+              <div class="flow-node">
+                <div class="node-type">Authorisation</div>
+                <div class="node-title">OneGate + MyMoolah APIs</div>
+                <p class="node-copy">MyMoolah approves only if funds and controls pass; otherwise the transaction is declined.</p>
+              </div>
+              <div class="flow-node">
+                <div class="node-type">Settlement</div>
+                <div class="node-title">Merchant / Acquirer</div>
+                <p class="node-copy">OneGate and card-network settlement processes complete merchant-side payment.</p>
+              </div>
+            </div>
+            <div class="flow-foot">
+              <div><strong>Wallet side:</strong> MyMoolah debits the customer MMwallet and posts balanced ledger entries on approved spend.</div>
+              <div><strong>Programme side:</strong> MyMoolah maintains a prefunded OneGate float to support card programme settlement obligations.</div>
+            </div>
+          </div>
+
+          <div class="steps">
+            <div class="step">
+              <div>
+                <b>Funds enter MyMoolah</b>
+                <span>A company, employer, or disbursement partner funds users through MyMoolah.</span>
+              </div>
+            </div>
+            <div class="step">
+              <div>
+                <b>Wallet is credited</b>
+                <span>The verified wallet holder receives available MMwallet balance.</span>
+              </div>
+            </div>
+            <div class="step">
+              <div>
+                <b>OneGate float is maintained</b>
+                <span>MyMoolah prefunds the OneGate programme float for settlement support.</span>
+              </div>
+            </div>
+            <div class="step">
+              <div>
+                <b>Virtual card is linked</b>
+                <span>The OneGate-issued card is bound to the MMwallet and tokenised for NFC use.</span>
+              </div>
+            </div>
+            <div class="step">
+              <div>
+                <b>Tap triggers authorisation</b>
+                <span>OneGate routes the card request to MyMoolah for real-time funds and control checks.</span>
+              </div>
+            </div>
+            <div class="step">
+              <div>
+                <b>Approved spend debits wallet</b>
+                <span>The MMwallet is debited and settlement proceeds through OneGate and the card ecosystem.</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section aria-labelledby="controls-title">
+          <div class="section-heading">
+            <span class="section-num">4</span>
+            <div>
+              <h2 id="controls-title">Audit And Settlement Controls</h2>
+              <p class="section-note">The programme should be implemented as an auditable wallet-to-card spend rail, not as a cash access rail.</p>
+            </div>
+          </div>
+          <div class="control-grid">
+            <div class="control">
+              <b>No Negative Wallets</b>
+              <span>Authorisation is approved only where sufficient wallet value is available.</span>
+            </div>
+            <div class="control">
+              <b>Double-Entry Ledger</b>
+              <span>Every posted financial event must balance debits and credits to the cent.</span>
+            </div>
+            <div class="control">
+              <b>Idempotent References</b>
+              <span>Duplicate authorisation, advice, or reversal messages must not create duplicate wallet debits.</span>
+            </div>
+            <div class="control">
+              <b>Partner Float</b>
+              <span>OneGate prefunding is tracked as a partner-float position and reconciled to settlement evidence.</span>
+            </div>
+            <div class="control">
+              <b>Reversal Handling</b>
+              <span>Declines, reversals, expiries, chargebacks, and adjustments require auditable correction paths.</span>
+            </div>
+            <div class="control">
+              <b>Monitoring Evidence</b>
+              <span>Authorisation, wallet debit, settlement, and reconciliation events remain traceable.</span>
+            </div>
+          </div>
+        </section>
+
+        <section aria-labelledby="regulatory-title">
+          <div class="section-heading">
+            <span class="section-num">5</span>
+            <div>
+              <h2 id="regulatory-title">Regulatory And Risk Posture</h2>
+              <p class="section-note">Short-form control summary for partner evaluation. Full policy packs remain internal unless separately approved.</p>
+            </div>
+          </div>
+          <div class="policy-strip">
+            <div class="policy">
+              <b>KYC / CDD</b>
+              <span>Tiered customer due diligence, risk-based onboarding, ongoing monitoring, and enhanced review where required.</span>
+            </div>
+            <div class="policy">
+              <b>AML / CFT</b>
+              <span>Risk-based AML/CFT controls, transaction monitoring, escalation, and regulatory reporting paths where applicable.</span>
+            </div>
+            <div class="policy">
+              <b>Sanctions</b>
+              <span>Screening and escalation controls for sanctions, PEP, blocked-jurisdiction, and high-risk indicators.</span>
+            </div>
+            <div class="policy">
+              <b>Fraud</b>
+              <span>Authentication, device/session controls, velocity checks, safe user messaging, and incident response practices.</span>
+            </div>
+            <div class="policy">
+              <b>POPIA</b>
+              <span>Personal information is processed under POPIA-aligned privacy, sharing, and operator-governance controls.</span>
+            </div>
+            <div class="policy">
+              <b>Information Security</b>
+              <span>Strong transport security, access control, audit logging, least privilege, and redacted operational logs.</span>
+            </div>
+            <div class="policy">
+              <b>ABC</b>
+              <span>Zero tolerance for bribery, corruption, and facilitation payments, with third-party contractual controls.</span>
+            </div>
+            <div class="policy">
+              <b>Third-Party Risk</b>
+              <span>Partner due diligence, service-level expectations, breach notification, audit rights, and ongoing governance.</span>
+            </div>
+          </div>
+        </section>
+
+        <section aria-labelledby="scope-title">
+          <div class="section-heading">
+            <span class="section-num">6</span>
+            <div>
+              <h2 id="scope-title">Phase-One Boundaries</h2>
+              <p class="section-note">These boundaries keep the first release commercially useful while remaining regulatory-safe.</p>
+            </div>
+          </div>
+          <div class="scope-grid">
+            <div class="scope-card in">
+              <h3>In Scope</h3>
+              <ul>
+                <li>South African wallet holders.</li>
+                <li>South African card-present merchant POS spend.</li>
+                <li>OneGate-issued pre-funded virtual Mastercard debit cards.</li>
+                <li>NFC tokenisation where supported by device wallet providers.</li>
+                <li>Real-time MyMoolah authorisation against available MMwallet balance.</li>
+                <li>Partner-float and settlement reconciliation.</li>
+              </ul>
+            </div>
+            <div class="scope-card out">
+              <h3>Out Of Scope</h3>
+              <ul>
+                <li>ATM cash withdrawal.</li>
+                <li>Retail cash-back at till.</li>
+                <li>Cash-out or cash-equivalent withdrawal mechanisms.</li>
+                <li>Cross-border card use in phase one.</li>
+                <li>Unapproved gambling, quasi-cash, or high-risk expansion.</li>
+                <li>Any use case not separately approved by commercial, legal, compliance, and technical teams.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="disclaimer">
+            This document is intended for partner evaluation and solution alignment. Final implementation remains subject to
+            commercial agreement, legal review, scheme requirements, sponsor-bank requirements, integration design, and mutually
+            agreed operational procedures.
+          </div>
+        </section>
+
+        <section aria-labelledby="outcome-title">
+          <div class="section-heading">
+            <span class="section-num">7</span>
+            <div>
+              <h2 id="outcome-title">Partnership Outcome</h2>
+              <p class="section-note">The integration extends wallet utility without changing the cash-withdrawal boundary.</p>
+            </div>
+          </div>
+          <div class="card soft-green">
+            <p>
+              For OneGate, the integration creates a scalable wallet-linked card programme with a defined funding source,
+              clear settlement support, and a controlled South African phase-one scope.
+            </p>
+            <p>
+              For MyMoolah, it extends the MMwallet from in-app payments and disbursement use cases into everyday NFC
+              merchant payments, while keeping wallet balance, ledger integrity, audit evidence, and regulatory controls
+              inside the MyMoolah Treasury Platform.
+            </p>
+            <p>
+              Commercial terms, including transaction revenue share, are to be agreed separately with OneGate.
+            </p>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer-note">
+        Confidential partner discussion draft. No production credentials, customer PII, account numbers, or unsupported
+        commercial forecasts are included. Use of OneGate, Mastercard, Standard Bank, Apple Pay, Google Pay, or Garmin Pay
+        names in this document is descriptive and subject to the relevant contractual, brand, scheme, and partner approvals.
+      </footer>
+    </article>
+  </div>
+</body>
+</html>

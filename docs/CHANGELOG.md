@@ -1,5 +1,21 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-05-11 - OneGate virtual card information stack
+
+### Summary
+Created a polished partner-facing information stack for OneGate covering the proposed wallet-linked pre-funded virtual Mastercard debit card and NFC POS spend use case.
+
+### Changes
+- Added `docs/integrations/OneGate_Virtual_Card_Info_Stack.html` as a print-friendly A4 landscape HTML document for PDF export.
+- Included MyMoolah platform positioning, PASA TPPP certification with Standard Bank of South Africa as sponsor bank, OneGate virtual card scope, flow of funds, audit controls, regulatory posture, and phase-one boundaries.
+- Added co-branded MyMoolah / OneGate header styling, flow-of-money visuals, in-scope/out-of-scope cards, and print colour preservation for Chrome PDF export.
+- Kept the document commercially neutral: no volumes, rates, or revenue-share assumptions are included.
+
+### Validation
+- HTML parser validation passed after creation and follow-up print/layout refinements.
+- Cursor lints on the new HTML file reported no errors during document creation.
+- No runtime code, database schema, migrations, production data, secrets, ledger postings, or deployments changed.
+
 ## 2026-05-11 - Production voucher governance enforcement
 
 ### Summary
