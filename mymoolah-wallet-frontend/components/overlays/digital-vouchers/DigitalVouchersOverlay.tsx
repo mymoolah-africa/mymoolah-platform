@@ -28,6 +28,15 @@ export interface Voucher {
   isGiftCard?: boolean;
   available: boolean;
   denominations: number[];
+  denominationOptions?: DenominationOption[];
+}
+
+export interface DenominationOption {
+  amount: number;
+  purchaseProductId?: number;
+  productId?: number;
+  variantId?: number;
+  supplierProductId?: string;
 }
 
 interface VoucherCatalogItem {
@@ -48,6 +57,7 @@ interface VoucherCatalogItem {
   isGiftCard?: unknown;
   available?: unknown;
   denominations?: unknown;
+  denominationOptions?: unknown;
 }
 
 type VoucherOverlayMode = 'retail' | 'gift-cards';
@@ -135,7 +145,22 @@ export function DigitalVouchersOverlay({ mode = 'retail' }: DigitalVouchersOverl
         commission: typeof v.commission === 'number' ? v.commission : undefined,
         isGiftCard: v.isGiftCard === true,
         available: v.available !== false,
-        denominations: Array.isArray(v.denominations) ? v.denominations : []
+        denominations: Array.isArray(v.denominations) ? v.denominations : [],
+        denominationOptions: Array.isArray(v.denominationOptions)
+          ? v.denominationOptions
+            .map((option: any): DenominationOption | null => {
+              const amount = Number(option?.amount);
+              if (!Number.isFinite(amount) || amount <= 0) return null;
+              return {
+                amount,
+                purchaseProductId: typeof option.purchaseProductId === 'number' ? option.purchaseProductId : typeof option.productId === 'number' ? option.productId : undefined,
+                productId: typeof option.productId === 'number' ? option.productId : undefined,
+                variantId: typeof option.variantId === 'number' ? option.variantId : undefined,
+                supplierProductId: typeof option.supplierProductId === 'string' ? option.supplierProductId : undefined
+              };
+            })
+            .filter((option): option is DenominationOption => option !== null)
+          : []
       }));
       const visible = isGiftCardsMode ? loaded.filter(isGiftCardVoucher) : loaded.filter(isRetailVoucher);
       setVouchers(visible);

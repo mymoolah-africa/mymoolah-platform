@@ -1,5 +1,29 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-05-11 - Production voucher governance enforcement
+
+### Summary
+Made Product Catalog Governance the Production wallet voucher source of truth and approved André's selected voucher additions without removing the existing working retail voucher catalog.
+
+### Changes
+- Added explicit voucher recognition for `OTT Voucher`, `NetFlorist`, `EasyBet`, `GBets`, and `Gold Rush`.
+- Updated the wallet voucher catalog response to include denomination-specific purchase identities so fixed multi-denomination cards such as NetFlorist can submit the correct `productId` and `variantId` for each selected amount.
+- Added `scripts/approve-production-voucher-governance.js`, a dry-run-first Production approval helper that uses `scripts/db-connection-helper.js`, writes approval audit events, preserves the current live retail voucher cards, and keeps fallback/unknown rows blocked.
+- Production apply approved/published 93 voucher governance rows, including the selected additions: `OTT Variable Voucher` only, four NetFlorist fixed SKUs, EasyBet, GBets, and Gold Rush.
+- Updated Production `OTT Variable Voucher` from minimum `1000` cents to `500` cents so the single visible OTT card supports André's approved R5-R5,000 range.
+- Updated `scripts/deploy-backend.sh` so Production deploys set `PRODUCT_CATALOG_GOVERNANCE_ENABLED=true`; Staging remains default-off unless explicitly overridden.
+
+### Validation
+- `node --check scripts/approve-production-voucher-governance.js services/voucherCatalogBrandService.js routes/overlayServices.js` passed.
+- `bash -n scripts/deploy-backend.sh` passed.
+- `npx jest tests/voucherCatalogBrandService.test.js tests/productCatalogGovernanceService.test.js --runInBand --forceExit` passed 50/50.
+- `npm run build` in `mymoolah-wallet-frontend` passed.
+- Cursor lints on touched files reported no linter errors.
+- Production dry-run showed 29 retail voucher cards preserved, 93 approval rows, and 10 fallback rows still blocked; Production apply completed the same set.
+- Cloud Run verification confirmed Production backend revision `mymoolah-backend-production-00212-ltt` serves 100% traffic with `PRODUCT_CATALOG_GOVERNANCE_ENABLED=true`.
+- Production wallet revision `mymoolah-wallet-production-00052-6l5` serves 100% traffic.
+- Backend `/health` returned OK and `https://wallet.mymoolah.africa` returned HTTP 200.
+
 ## 2026-05-11 - OTT Production authorised catalog rollout
 
 ### Summary

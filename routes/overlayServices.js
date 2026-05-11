@@ -3709,6 +3709,7 @@ router.get('/vouchers/catalog', auth, async (req, res) => {
       let hasVariable = false;
       let variableVariant = null;
       const allDenoms = [];
+      const denominationOptionByAmount = new Map();
 
       for (const v of winnerVariants) {
         const minAmt = v.minAmount ? parseFloat(v.minAmount) : 0;
@@ -3725,10 +3726,30 @@ router.get('/vouchers/catalog', auth, async (req, res) => {
           if (Array.isArray(v.denominations) && v.denominations.length > 0) {
             v.denominations.forEach(d => {
               const n = typeof d === 'number' ? d : parseFloat(d);
-              if (!isNaN(n)) allDenoms.push(n);
+              if (!isNaN(n)) {
+                allDenoms.push(n);
+                if (!denominationOptionByAmount.has(n)) {
+                  denominationOptionByAmount.set(n, {
+                    amount: n,
+                    productId: v.product?.id,
+                    purchaseProductId: v.product?.id,
+                    variantId: v.id,
+                    supplierProductId: v.supplierProductId
+                  });
+                }
+              }
             });
           } else if (minAmt > 0) {
             allDenoms.push(minAmt);
+            if (!denominationOptionByAmount.has(minAmt)) {
+              denominationOptionByAmount.set(minAmt, {
+                amount: minAmt,
+                productId: v.product?.id,
+                purchaseProductId: v.product?.id,
+                variantId: v.id,
+                supplierProductId: v.supplierProductId
+              });
+            }
           }
         }
       }
@@ -3736,7 +3757,9 @@ router.get('/vouchers/catalog', auth, async (req, res) => {
       const bestVariant = bestVariantId
         ? winnerVariants.find((v) => Number(v.id) === Number(bestVariantId))
         : null;
-      const representative = bestVariant || variableVariant || winnerVariants[0];
+      const representative = hasVariable
+        ? (variableVariant || bestVariant || winnerVariants[0])
+        : (bestVariant || winnerVariants[0]);
       const uniqueDenoms = Array.from(new Set(allDenoms)).sort((a, b) => a - b);
       const minAmt = variableVariant
         ? parseFloat(variableVariant.minAmount) || 0
@@ -3764,6 +3787,9 @@ router.get('/vouchers/catalog', auth, async (req, res) => {
         maxAmount: maxAmt,
         isVariable: hasVariable,
         denominations: hasVariable ? [] : uniqueDenoms,
+        denominationOptions: hasVariable
+          ? []
+          : uniqueDenoms.map((amount) => denominationOptionByAmount.get(amount)).filter(Boolean),
         recognition: group.recognition,
         available: true
       });

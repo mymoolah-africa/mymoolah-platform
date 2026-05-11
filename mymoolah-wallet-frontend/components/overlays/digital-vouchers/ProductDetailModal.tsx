@@ -75,6 +75,14 @@ interface Voucher {
   description: string;
   available: boolean;
   denominations: number[];
+  denominationOptions?: DenominationOption[];
+}
+
+interface DenominationOption {
+  amount: number;
+  purchaseProductId?: number;
+  productId?: number;
+  variantId?: number;
 }
 
 interface ProductDetailModalProps {
@@ -147,12 +155,15 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
     setPurchaseError('');
 
     try {
-      const productIdForPurchase = voucher.purchaseProductId || voucher.productId;
+      const selectedOption = voucher.denominationOptions?.find(
+        (option) => Number(option.amount) === Number(selectedDenomination)
+      );
+      const productIdForPurchase = selectedOption?.purchaseProductId || selectedOption?.productId || voucher.purchaseProductId || voucher.productId;
       if (!productIdForPurchase) throw new Error('Product ID is required for purchase');
 
       const purchaseData = {
         productId: Number(productIdForPurchase),
-        variantId: voucher.variantId ? Number(voucher.variantId) : undefined,
+        variantId: selectedOption?.variantId ? Number(selectedOption.variantId) : voucher.variantId ? Number(voucher.variantId) : undefined,
         denomination: selectedDenomination!,
         idempotencyKey: typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
           ? crypto.randomUUID()

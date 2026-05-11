@@ -15,7 +15,7 @@ const VOUCHER_BRAND_TABLE = [
   { match: /spotify/i, brand: 'Spotify', catalogKey: 'spotify', icon: '🎵', category: 'entertainment', desc: 'Spotify music voucher' },
   { match: /apple\s*music/i, brand: 'Apple Music', catalogKey: 'apple-music', icon: '🎵', category: 'entertainment', desc: 'Apple Music retail voucher' },
   { match: /itunes/i, brand: 'iTunes', catalogKey: 'itunes', icon: '🍎', category: 'entertainment', desc: 'iTunes / Apple retail voucher' },
-  { match: /^ott\s+voucher\b|\bott\s+voucher\b/i, brand: 'OTT Voucher', catalogKey: 'ott-voucher', icon: '🎬', category: 'entertainment', desc: 'OTT streaming voucher' },
+  { match: /^ott\s+(?:voucher\b|variable\s+voucher\b|r\s*\d+\b)|\bott\s+voucher\b/i, brand: 'OTT Voucher', catalogKey: 'ott-voucher', icon: '🎬', category: 'entertainment', desc: 'OTT voucher' },
   { match: /talk\s*360/i, brand: 'Talk360', catalogKey: 'talk360', icon: '📞', category: 'entertainment', desc: 'Talk360 international calling credit' },
 
   { match: /free\s*fire|diamond/i, brand: 'Free Fire', catalogKey: 'free-fire', icon: '💎', category: 'gaming', desc: 'Free Fire Diamonds — in-game currency' },
@@ -35,6 +35,9 @@ const VOUCHER_BRAND_TABLE = [
   { match: /betway/i, brand: 'Betway', catalogKey: 'betway', icon: '🎯', category: 'betting', desc: 'Betway betting voucher' },
   { match: /supabets/i, brand: 'Supabets', catalogKey: 'supabets', icon: '🎲', category: 'betting', desc: 'Supabets betting voucher' },
   { match: /yesplay/i, brand: 'YesPlay', catalogKey: 'yesplay', icon: '🎲', category: 'betting', desc: 'YesPlay betting voucher' },
+  { match: /easybet/i, brand: 'EasyBet', catalogKey: 'easybet', icon: '🎲', category: 'betting', desc: 'EasyBet betting voucher' },
+  { match: /\bgbets?\b/i, brand: 'GBets', catalogKey: 'gbets', icon: '🎲', category: 'betting', desc: 'GBets betting voucher' },
+  { match: /gold\s*rush|goldrush/i, brand: 'Gold Rush', catalogKey: 'gold-rush', icon: '🎲', category: 'betting', desc: 'Gold Rush betting voucher' },
   { match: /lottostar/i, brand: 'LottoStar', catalogKey: 'lottostar', icon: '🎲', category: 'betting', desc: 'LottoStar betting voucher' },
   { match: /lottoland/i, brand: 'Lottoland', catalogKey: 'lottoland', icon: '🎲', category: 'betting', desc: 'Lottoland betting voucher' },
   { match: /flybet/i, brand: 'Flybet', catalogKey: 'flybet', icon: '🎲', category: 'betting', desc: 'Flybet betting voucher' },
@@ -61,6 +64,7 @@ const VOUCHER_BRAND_TABLE = [
 
   { match: /amazon/i, brand: 'Amazon', catalogKey: 'amazon', icon: '🛍️', category: 'shopping', desc: 'Amazon retail voucher' },
   { match: /takealot/i, brand: 'Takealot', catalogKey: 'takealot', icon: '🛍️', category: 'shopping', desc: 'Takealot retail voucher' },
+  { match: /net\s*florist|netflorist/i, brand: 'NetFlorist', catalogKey: 'netflorist', icon: '🛍️', category: 'shopping', desc: 'NetFlorist voucher' },
   { match: /dis[\s-]?chem/i, brand: 'Dis-Chem', catalogKey: 'dis-chem', icon: '💊', category: 'shopping', desc: 'Dis-Chem gift card', isGiftCard: true },
   { match: /boxer/i, brand: 'Boxer', catalogKey: 'boxer', icon: '🛒', category: 'shopping', desc: 'Boxer gift card', isGiftCard: true },
   { match: /ackermans/i, brand: 'Ackermans', catalogKey: 'ackermans', icon: '👕', category: 'shopping', desc: 'Ackermans gift card', isGiftCard: true },

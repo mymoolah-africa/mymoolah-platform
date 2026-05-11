@@ -28,9 +28,28 @@ Publish status is separate:
 - Every transition writes an audit event with actor, prior state, target state, reason, and metadata.
 
 ## Wallet Enforcement
-`PRODUCT_CATALOG_GOVERNANCE_ENABLED=false` is the rollout default. With the flag off, the wallet keeps using the existing curated retail voucher allowlist.
+`PRODUCT_CATALOG_GOVERNANCE_ENABLED=false` was the rollout default while mappings were being backfilled. Production now runs with `PRODUCT_CATALOG_GOVERNANCE_ENABLED=true` for wallet retail vouchers.
 
 When enabled, `/api/v1/overlay/vouchers/catalog` filters voucher cards against approved and published governance mappings. Pending, rejected, suspended, retired, and unmapped supplier SKUs are excluded from wallet responses.
+
+## Production Voucher Enforcement - 2026-05-11
+André approved moving Production retail vouchers to governance enforcement while preserving the currently working wallet catalog and adding selected blocked brands.
+
+Production apply used `scripts/approve-production-voucher-governance.js --production --confirm-production --apply` after dry-run review. The script:
+- Uses `scripts/db-connection-helper.js`.
+- Preserves the retail voucher cards already live in the wallet.
+- Publishes the real purchase SKUs behind those cards so grouped fixed denominations submit the correct product/variant.
+- Keeps fallback/unknown rows blocked.
+- Writes `product_catalog_audit_events` for approvals.
+
+Selected additions approved/published:
+- `OTT Voucher`: MobileMart `OTT Variable Voucher` only, supplier SKU `5BOioLwx80GvyiwTch2U`, range R5-R5,000.
+- `NetFlorist`: MobileMart fixed SKUs R100, R250, R500, and R1,000.
+- `EasyBet`: Flash SKU `1967`, range R10-R4,000.
+- `GBets`: Flash SKU `1970`, range R10-R4,000.
+- `Gold Rush`: Flash SKU `1969`, range R10-R4,000.
+
+Rows intentionally still blocked pending separate review include `Wallet Code`, generic Flash `Gift Card` rows, `EasyLoad Voucher`, and `World Bucks`.
 
 ## OTT Authorised Product Sync - 2026-05-11
 Staging now uses Jaco Snyders' active-provider spreadsheet/email list as the customer-facing OTT source of truth. The synchronisation tooling is:
@@ -42,7 +61,7 @@ node scripts/stage-ott-catalog-governance.js --staging
 node scripts/stage-ott-catalog-governance.js --staging --apply
 ```
 
-`scripts/sync-ott-authorized-products.js` is dry-run by default and Staging-only. It parses `~/Downloads/Payout Provider List.xlsx` when present, overlays the ABSA CashSend `67` correction from Jaco's email, compares against OTT API discovery plus Staging DB state, and only performs non-destructive hides/unpublishes in `--apply` mode.
+`scripts/sync-ott-authorized-products.js` is dry-run by default and requires an explicit environment flag. Production use requires `--production --confirm-production`. It parses `~/Downloads/Payout Provider List.xlsx` when present, overlays the ABSA CashSend `67` correction from Jaco's email, compares against OTT API discovery plus DB state, and only performs non-destructive hides/unpublishes in `--apply` mode.
 
 Staging apply on 2026-05-11:
 - Hid 21 unsupported OTT commercial terms from customer-facing exposure.
@@ -50,7 +69,7 @@ Staging apply on 2026-05-11:
 - Unpublished 2 unsupported OTT governance mappings.
 - Kept/published the spreadsheet-authorised voucher rows `OTT-68`, `OTT-69`, and `OTT-20`.
 
-Production remains gated. Run the dry-run report against Production only after André explicitly approves a production rollout plan; do not apply production changes from this Staging helper.
+Production use remains approval-gated. Run the dry-run report first and apply only after André explicitly approves the production rollout scope.
 
 ## OTT Production Catalog Readiness - 2026-05-07
 Read-only staging and production audits confirmed that OTT commercial terms exist but no OTT `products`, `product_variants`, or OTT governance mappings are currently imported in staging or production. Use `scripts/audit-ott-production-catalog.js` before any rollout to verify the current state without writing to the database.
