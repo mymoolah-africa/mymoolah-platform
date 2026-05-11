@@ -21,6 +21,7 @@ Implemented the OTT Product Synchronization Plan using Jaco Snyders' spreadsheet
 - [x] Applied Staging-only non-destructive hide/unpublish/deactivate changes.
 - [x] Published authorised Staging OTT governance mappings for `OTT-68`, `OTT-69`, and `OTT-20`.
 - [x] Updated tests and documentation.
+- [x] Committed, pushed, deployed Staging backend, and ran read-only Staging verification.
 
 ---
 
@@ -43,7 +44,7 @@ Implemented the OTT Product Synchronization Plan using Jaco Snyders' spreadsheet
 - `scripts/stage-ott-catalog-governance.js` - Uses central policy and workbook-aware allowlist publication.
 - `tests/ott-provider-catalog-service.test.js` - Updated coverage for policy and API-only gift-card hiding.
 - `tests/ott-routes.test.js` - Updated route helper coverage for authorised cash providers.
-- `docs/CHANGELOG.md`, `docs/PRODUCT_CATALOG_GOVERNANCE.md`, `docs/integrations/OTT_MOBILE_INTEGRATION_FRAMEWORK.md`, `docs/AGENT_HANDOVER.md` - Documented the change and production gate.
+- `docs/CHANGELOG.md`, `docs/PRODUCT_CATALOG_GOVERNANCE.md`, `docs/integrations/OTT_MOBILE_INTEGRATION_FRAMEWORK.md`, `docs/AGENT_HANDOVER.md` - Documented the change, Staging deployment, and production gate.
 
 ---
 
@@ -75,11 +76,14 @@ Commands/results:
 - `node scripts/stage-ott-catalog-governance.js --staging --apply` - published/kept mappings for `OTT-68`, `OTT-69`, and `OTT-20`.
 - `npx jest tests/ott-provider-catalog-service.test.js tests/ott-payout-service.test.js tests/ott-routes.test.js tests/voucherCatalogBrandService.test.js tests/productCatalogGovernanceService.test.js --runInBand --forceExit` - passed 67/67 with the pre-existing Jest config warning.
 - `node scripts/audit-ott-production-catalog.js --staging` - completed after Staging apply.
+- `./scripts/deploy-backend.sh --staging 20260511_ott_authorized_sync` - deployed Staging backend; final serving revision `mymoolah-backend-staging-00548-hxv`.
+- Post-deploy `node scripts/sync-ott-authorized-products.js --staging` - completed after stale local proxies were restarted; workbook parsed, 16 OTT API providers read, 1 limits row read.
+- Post-deploy `node scripts/audit-ott-production-catalog.js --staging` - completed; governance summary shows 3 approved/published OTT voucher mappings and 2 approved/unpublished held mappings.
 
 ---
 
 ## Next Steps
-- [ ] Review Staging wallet catalog after deploy/restart to confirm unsupported gift cards are no longer shown and authorised vouchers remain available.
+- [ ] Review Staging wallet catalog visually to confirm unsupported gift cards are no longer shown and authorised vouchers remain available.
 - [ ] Run a production dry-run report only when André approves production planning.
 - [ ] Do not run production apply, production catalog import, wallet-debit payout, or voucher purchase tests without explicit approval.
 
@@ -87,7 +91,7 @@ Commands/results:
 
 ## Important Context for Next Agent
 - The plan file was not edited.
-- The Staging DB was changed; Production was not.
+- The Staging DB and Staging backend deployment were changed; Production was not.
 - `scripts/sync-ott-authorized-products.js` is Staging-only by design and dry-run by default.
 - Runtime Cloud Run services do not need the workbook unless an operator deliberately passes `OTT_AUTHORIZED_PROVIDERS_WORKBOOK` or `--workbook` during sync tooling.
 - No migrations were added.

@@ -10,13 +10,14 @@ Aligned Staging OTT catalogue exposure to Jaco Snyders' active-provider spreadsh
 - Wired the central policy into OTT provider sync, payout provider filtering, payout quote/submit approval, and the Staging catalog governance helper.
 - Added `scripts/sync-ott-authorized-products.js`, a Staging-only dry-run/apply tool that parses `Payout Provider List.xlsx`, compares spreadsheet/email/API/DB/governance state, and applies non-destructive hide/unpublish updates.
 - Staging apply hid 21 unsupported OTT terms, deactivated 21 unsupported OTT products/variants, unpublished 2 unsupported mappings, and published authorised mappings for `OTT-68`, `OTT-69`, and `OTT-20`.
+- Deployed the backend to Staging with image tag `20260511_ott_authorized_sync`; final serving revision is `mymoolah-backend-staging-00548-hxv`.
 
 ### Validation
 - `node --check` passed for all touched OTT services/routes/scripts.
 - `npx jest tests/ott-provider-catalog-service.test.js tests/ott-payout-service.test.js tests/ott-routes.test.js tests/voucherCatalogBrandService.test.js tests/productCatalogGovernanceService.test.js --runInBand --forceExit` passed 67/67.
 - `node scripts/sync-ott-authorized-products.js --staging` parsed the workbook, called OTT read-only discovery, and produced the reconciliation report.
 - `node scripts/audit-ott-production-catalog.js --staging` completed after the Staging apply.
-- No production writes, wallet debits, payout submissions, voucher purchases, migrations, or Cloud Run deployments were performed.
+- No production writes, wallet debits, payout submissions, voucher purchases, migrations, or wallet frontend deployments were performed.
 
 ## 2026-05-10 - Referral SMS secret binding fix
 
