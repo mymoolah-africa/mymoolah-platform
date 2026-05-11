@@ -13,6 +13,7 @@ Made Product Catalog Governance the Production wallet voucher source of truth an
 - Updated Production `OTT Variable Voucher` from minimum `1000` cents to `500` cents so the single visible OTT card supports André's approved R5-R5,000 range.
 - Updated `scripts/deploy-backend.sh` so Production deploys set `PRODUCT_CATALOG_GOVERNANCE_ENABLED=true`; Staging remains default-off unless explicitly overridden.
 - Hotfixed the governance catalog icon merge so slug-style `icon_key` values such as `amazon` and `gold-rush` are not rendered as oversized card icons; cards now fall back to the recognizer visual icon/logo behavior.
+- Updated the retail voucher purchase modal so variable voucher amounts validate immediately against the visible product range; out-of-range OTT values such as R2 or R6,000 now show inline errors and keep the purchase button disabled.
 
 ### Validation
 - `node --check scripts/approve-production-voucher-governance.js services/voucherCatalogBrandService.js routes/overlayServices.js` passed.
@@ -25,6 +26,7 @@ Made Product Catalog Governance the Production wallet voucher source of truth an
 - Follow-up visual hotfix deployed Production backend revision `mymoolah-backend-production-00215-j69`.
 - Production wallet revision `mymoolah-wallet-production-00052-6l5` serves 100% traffic.
 - Backend `/health` returned OK and `https://wallet.mymoolah.africa` returned HTTP 200.
+- Follow-up amount-validation fix passed wallet `npm run build`, focused Jest 10/10, and Cursor lints on `ProductDetailModal.tsx`.
 
 ## 2026-05-11 - OTT Production authorised catalog rollout
 

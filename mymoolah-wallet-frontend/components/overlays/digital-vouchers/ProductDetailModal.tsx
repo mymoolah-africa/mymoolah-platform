@@ -117,32 +117,49 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
     }
   }, [isOpen, voucher]);
 
-  const handleAmountChange = (value: string) => {
-    setAmountInput(value);
-    if (errors.amount) setErrors(prev => ({ ...prev, amount: undefined }));
-    const cleaned = value.replace(/[^\d.,]/g, '').replace(',', '.');
-    const numeric = parseFloat(cleaned);
-    if (!cleaned || Number.isNaN(numeric)) {
-      setSelectedDenomination(null);
-      return;
-    }
-    setSelectedDenomination(Math.round(numeric * 100));
-  };
-
   const formatCurrency = (amount: number): string =>
     new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR' }).format(amount / 100);
 
+  const validateVariableAmountInput = (value: string): { amountCents: number | null; error?: string } => {
+    const trimmed = value.trim();
+    if (!trimmed) return { amountCents: null };
+
+    const unsupportedCharacters = trimmed.replace(/[0-9Rr\s.,]/g, '');
+    const cleaned = trimmed.replace(/[Rr\s]/g, '').replace(',', '.');
+    if (unsupportedCharacters || !/^\d*(\.\d{0,2})?$/.test(cleaned) || !/\d/.test(cleaned)) {
+      return { amountCents: null, error: 'Enter a valid amount' };
+    }
+
+    const numeric = Number(cleaned);
+    if (!Number.isFinite(numeric) || numeric <= 0) {
+      return { amountCents: null, error: 'Amount must be more than R0,00' };
+    }
+
+    const amountCents = Math.round(numeric * 100);
+    if (voucher.minAmount && amountCents < voucher.minAmount) {
+      return { amountCents: null, error: `Minimum amount is ${formatCurrency(voucher.minAmount)}` };
+    }
+    if (voucher.maxAmount && amountCents > voucher.maxAmount) {
+      return { amountCents: null, error: `Maximum amount is ${formatCurrency(voucher.maxAmount)}` };
+    }
+
+    return { amountCents };
+  };
+
+  const handleAmountChange = (value: string) => {
+    setAmountInput(value);
+    const validation = validateVariableAmountInput(value);
+    setSelectedDenomination(validation.amountCents);
+    setErrors(prev => ({ ...prev, amount: validation.error }));
+  };
+
   const validateForm = (): boolean => {
     const newErrors: { amount?: string } = {};
-    if (!selectedDenomination) {
-      newErrors.amount = 'Please select or enter an amount';
+    if (isFixedDenominations) {
+      if (!selectedDenomination) newErrors.amount = 'Please select or enter an amount';
     } else {
-      if (voucher.minAmount && selectedDenomination < voucher.minAmount) {
-        newErrors.amount = `Minimum amount is ${formatCurrency(voucher.minAmount)}`;
-      }
-      if (voucher.maxAmount && selectedDenomination > voucher.maxAmount) {
-        newErrors.amount = `Maximum amount is ${formatCurrency(voucher.maxAmount)}`;
-      }
+      const validation = validateVariableAmountInput(amountInput);
+      if (!validation.amountCents) newErrors.amount = validation.error || 'Please select or enter an amount';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -208,6 +225,8 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
 
   const isFixedDenominations = !voucher.isVariable && Array.isArray(voucher.denominations) && voucher.denominations.length > 0;
   const brandLogo = getBrandLogo(voucher.brand, voucher.name);
+  const isPurchaseAmountValid = Boolean(selectedDenomination) && !errors.amount;
+  const amountErrorId = `voucher-amount-error-${voucher.id}`;
 
   const getStepContent = () => {
     switch (currentStep) {
@@ -288,13 +307,21 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
                     }
                     value={amountInput}
                     onChange={(e) => handleAmountChange(e.target.value)}
+                    aria-invalid={Boolean(errors.amount)}
+                    aria-describedby={errors.amount ? amountErrorId : undefined}
                     style={{
                       fontFamily: 'Montserrat, sans-serif', fontSize: '14px', borderRadius: '12px',
                       minHeight: '48px', borderColor: errors.amount ? '#ef4444' : '#d1d5db'
                     }}
                   />
                   {errors.amount && (
-                    <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#ef4444' }}>{errors.amount}</p>
+                    <p
+                      id={amountErrorId}
+                      role="alert"
+                      style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#ef4444' }}
+                    >
+                      {errors.amount}
+                    </p>
                   )}
                 </div>
               )}
@@ -304,10 +331,10 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
 
             <Button
               onClick={handlePurchase}
-              disabled={!selectedDenomination || isProcessing}
+              disabled={!isPurchaseAmountValid || isProcessing}
               style={{
                 fontFamily: 'Montserrat, sans-serif', fontSize: '16px', fontWeight: '600', borderRadius: '12px',
-                minHeight: '52px', backgroundColor: selectedDenomination ? '#86BE41' : '#9ca3af', width: '100%'
+                minHeight: '52px', backgroundColor: isPurchaseAmountValid ? '#86BE41' : '#9ca3af', width: '100%'
               }}
             >
               {isProcessing ? 'Processing...' : `Purchase ${selectedDenomination ? formatCurrency(selectedDenomination) : 'Voucher'}`}

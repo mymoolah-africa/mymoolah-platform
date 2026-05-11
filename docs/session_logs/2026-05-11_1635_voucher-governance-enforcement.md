@@ -19,6 +19,7 @@ Fixed the Production wallet voucher catalog split-brain where the wallet was sti
 - [x] Added and ran `scripts/approve-production-voucher-governance.js` with dry-run first, then Production apply.
 - [x] Enabled Production governance enforcement through the durable backend deploy script and deployed backend/wallet.
 - [x] Hotfixed the Production voucher card icon regression caused by governance `icon_key` slugs being rendered as display icons.
+- [x] Fixed variable voucher amount UX so out-of-range values show inline errors and keep the purchase button disabled.
 
 ---
 
@@ -42,6 +43,7 @@ Fixed the Production wallet voucher catalog split-brain where the wallet was sti
 - `docs/CHANGELOG.md` - Documented the Production voucher governance enforcement.
 - `docs/AGENT_HANDOVER.md` - Updated current status and deployment revisions.
 - `docs/PRODUCT_CATALOG_GOVERNANCE.md` - Documented Production enforcement and approved voucher set.
+- `mymoolah-wallet-frontend/components/overlays/digital-vouchers/ProductDetailModal.tsx` - Added immediate min/max validation for variable voucher amount entry.
 
 ---
 
@@ -50,6 +52,7 @@ Fixed the Production wallet voucher catalog split-brain where the wallet was sti
 - Production governance mappings were approved/published for 93 retail voucher rows, preserving 29 current retail cards and adding the selected blocked brands.
 - OTT Variable was updated from min `1000` cents to `500` cents, keeping max `500000` cents.
 - Production backend now runs with `PRODUCT_CATALOG_GOVERNANCE_ENABLED=true`.
+- Variable voucher entry now blocks invalid values before submit; examples such as R2 and R6,000 show range-specific inline feedback instead of a green purchase button.
 
 ---
 
@@ -66,7 +69,9 @@ Fixed the Production wallet voucher catalog split-brain where the wallet was sti
 - [x] `bash -n scripts/deploy-backend.sh`
 - [x] `npx jest tests/voucherCatalogBrandService.test.js tests/productCatalogGovernanceService.test.js --runInBand --forceExit` passed 50/50.
 - [x] `npm run build` in `mymoolah-wallet-frontend` passed.
+- [x] Follow-up wallet UI validation build passed after `ProductDetailModal.tsx` change.
 - [x] Cursor lints on touched files reported no errors.
+- [x] Follow-up focused Jest `tests/ott-product-purchase-service.test.js tests/productCatalogGovernanceService.test.js --runInBand --forceExit` passed 10/10.
 - [x] Production dry-run and apply completed with the same 93 approval rows.
 - [x] Cloud Run verification confirmed backend revision `mymoolah-backend-production-00212-ltt` with `PRODUCT_CATALOG_GOVERNANCE_ENABLED=true`.
 - [x] Cloud Run verification confirmed wallet revision `mymoolah-wallet-production-00052-6l5`.
@@ -77,6 +82,7 @@ Fixed the Production wallet voucher catalog split-brain where the wallet was sti
 
 ## Next Steps
 - [ ] André to visually confirm `wallet.mymoolah.africa/vouchers-overlay` shows OTT Voucher, NetFlorist, EasyBet, GBets, and Gold Rush.
+- [ ] André to visually confirm the OTT Voucher modal disables purchase and shows inline range errors for amounts outside R5-R5,000.
 - [ ] Do not run live voucher purchases unless André explicitly approves a controlled purchase test.
 - [ ] Review remaining blocked rows separately: Wallet Code, generic Gift Card rows, EasyLoad, and World Bucks.
 
