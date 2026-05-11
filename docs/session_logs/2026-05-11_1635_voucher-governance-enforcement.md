@@ -77,6 +77,7 @@ Fixed the Production wallet voucher catalog split-brain where the wallet was sti
 - [x] Cloud Run verification confirmed wallet revision `mymoolah-wallet-production-00052-6l5`.
 - [x] Backend `/health` returned OK and wallet returned HTTP 200.
 - [x] Follow-up backend hotfix deployed revision `mymoolah-backend-production-00215-j69`; `/health` returned OK.
+- [x] Follow-up wallet amount-validation fix deployed revision `mymoolah-wallet-production-00053-jbc`; `https://wallet.mymoolah.africa` returned HTTP 200.
 
 ---
 
@@ -91,6 +92,7 @@ Fixed the Production wallet voucher catalog split-brain where the wallet was sti
 ## Important Context for Next Agent
 - Production voucher governance enforcement is now live; do not disable `PRODUCT_CATALOG_GOVERNANCE_ENABLED` without André approval.
 - Production backend revision `mymoolah-backend-production-00215-j69` includes the icon regression hotfix.
+- Production wallet revision `mymoolah-wallet-production-00053-jbc` includes the variable voucher amount validation fix.
 - `scripts/approve-production-voucher-governance.js` is dry-run by default and requires `--production --confirm-production`; use `--apply` only after dry-run review.
 - The helper intentionally preserves the current retail voucher catalog and keeps fallback recognizer rows blocked.
 - NetFlorist has four fixed SKUs, not a variable R100-R1,000 SKU in Production.

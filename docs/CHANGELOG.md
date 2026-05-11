@@ -27,6 +27,7 @@ Made Product Catalog Governance the Production wallet voucher source of truth an
 - Production wallet revision `mymoolah-wallet-production-00052-6l5` serves 100% traffic.
 - Backend `/health` returned OK and `https://wallet.mymoolah.africa` returned HTTP 200.
 - Follow-up amount-validation fix passed wallet `npm run build`, focused Jest 10/10, and Cursor lints on `ProductDetailModal.tsx`.
+- Follow-up amount-validation wallet deploy completed on Production revision `mymoolah-wallet-production-00053-jbc`; `https://wallet.mymoolah.africa` returned HTTP 200.
 
 ## 2026-05-11 - OTT Production authorised catalog rollout
 
