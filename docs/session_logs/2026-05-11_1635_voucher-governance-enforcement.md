@@ -18,6 +18,7 @@ Fixed the Production wallet voucher catalog split-brain where the wallet was sti
 - [x] Added denomination-specific purchase identities so fixed grouped cards submit the correct product/variant for each selected amount.
 - [x] Added and ran `scripts/approve-production-voucher-governance.js` with dry-run first, then Production apply.
 - [x] Enabled Production governance enforcement through the durable backend deploy script and deployed backend/wallet.
+- [x] Hotfixed the Production voucher card icon regression caused by governance `icon_key` slugs being rendered as display icons.
 
 ---
 
@@ -56,6 +57,7 @@ Fixed the Production wallet voucher catalog split-brain where the wallet was sti
 - **Stale Production DB proxy**: Local Production reads returned `ECONNRESET`; refreshed the local Cloud SQL proxy on port `6545` and continued.
 - **Deploy script config drift risk**: `scripts/deploy-backend.sh` did not include `PRODUCT_CATALOG_GOVERNANCE_ENABLED`, which would have wiped the flag on future deploys. Fixed before backend deployment.
 - **Fixed denomination purchase risk**: Grouped fixed cards could show multiple amounts while sending the representative variant for every purchase. Added `denominationOptions` to keep each amount tied to the correct SKU.
+- **Governance icon regression**: Approved mappings stored slug-style `icon_key` values such as `amazon`, `easybet`, and `gold-rush`. The governance merge returned those as `icon`, so the card rendered large text where a compact logo/emoji belonged. The backend now ignores slug-style icon keys for display and falls back to the recognizer icon/logo behavior.
 
 ---
 
@@ -69,6 +71,7 @@ Fixed the Production wallet voucher catalog split-brain where the wallet was sti
 - [x] Cloud Run verification confirmed backend revision `mymoolah-backend-production-00212-ltt` with `PRODUCT_CATALOG_GOVERNANCE_ENABLED=true`.
 - [x] Cloud Run verification confirmed wallet revision `mymoolah-wallet-production-00052-6l5`.
 - [x] Backend `/health` returned OK and wallet returned HTTP 200.
+- [x] Follow-up backend hotfix deployed revision `mymoolah-backend-production-00215-j69`; `/health` returned OK.
 
 ---
 
@@ -81,6 +84,7 @@ Fixed the Production wallet voucher catalog split-brain where the wallet was sti
 
 ## Important Context for Next Agent
 - Production voucher governance enforcement is now live; do not disable `PRODUCT_CATALOG_GOVERNANCE_ENABLED` without André approval.
+- Production backend revision `mymoolah-backend-production-00215-j69` includes the icon regression hotfix.
 - `scripts/approve-production-voucher-governance.js` is dry-run by default and requires `--production --confirm-production`; use `--apply` only after dry-run review.
 - The helper intentionally preserves the current retail voucher catalog and keeps fallback recognizer rows blocked.
 - NetFlorist has four fixed SKUs, not a variable R100-R1,000 SKU in Production.

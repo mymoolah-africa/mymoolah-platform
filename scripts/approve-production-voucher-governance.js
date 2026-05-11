@@ -50,7 +50,7 @@ function canonicalFields(rawName) {
     canonicalBrand: recognised.brand,
     category: recognised.category || 'shopping',
     description: recognised.desc || `${recognised.brand} retail voucher`,
-    iconKey: recognised.catalogKey || buildCatalogKey(recognised.brand),
+    iconKey: null,
     catalogKey: recognised.catalogKey || buildCatalogKey(recognised.brand),
     recognition: recognised.recognition,
     isGiftCard: Boolean(recognised.isGiftCard),

@@ -3564,6 +3564,16 @@ const {
   recogniseVoucherBrand,
 } = require('../services/voucherCatalogBrandService');
 
+function resolveVoucherDisplayIcon(mappingIconKey, fallbackIcon) {
+  const iconKey = String(mappingIconKey || '').trim();
+  if (!iconKey) return fallbackIcon;
+  // Governance icon_key currently stores stable catalog keys (for example,
+  // "amazon" or "gold-rush"). Those are not renderable icons; keep using the
+  // recognizer icon unless a future mapping stores an actual visual glyph/path.
+  if (/^[a-z0-9-]+$/.test(iconKey)) return fallbackIcon;
+  return iconKey;
+}
+
 /**
  * @route   GET /api/v1/overlay/vouchers/catalog
  * @desc    Get voucher catalog — grouped by brand, deduped (highest commission), sorted A-Z
@@ -3829,7 +3839,7 @@ router.get('/vouchers/catalog', auth, async (req, res) => {
             category: mapping.category || voucher.category,
             description: mapping.description || voucher.description,
             isGiftCard: voucher.isGiftCard,
-            icon: mapping.iconKey || voucher.icon,
+            icon: resolveVoucherDisplayIcon(mapping.iconKey, voucher.icon),
             logoKey: mapping.logoKey || voucher.logoKey,
             riskTier: mapping.riskTier,
             governanceMappingId: mapping.id,
