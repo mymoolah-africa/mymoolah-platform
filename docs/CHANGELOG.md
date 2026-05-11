@@ -19,7 +19,9 @@ Applied the approved non-destructive OTT authorised-provider policy to Productio
 - `npm run build` in `mymoolah-wallet-frontend` passed.
 - Cursor lints on touched files reported no linter errors.
 - Read-only Production audit confirmed one approved/published OTT voucher governance mapping and OTT float `1200-10-08` at R877.10.
-- Production backend and wallet deploy revision details: pending deploy step.
+- Deployed Production backend with image tag `20260511_ott_prod_rollout`; final serving revision `mymoolah-backend-production-00209-jcj`.
+- Deployed Production wallet with image tag `20260511_ott_prod_rollout`; serving revision `mymoolah-wallet-production-00051-9x4`.
+- Post-deploy read-only checks passed after restarting the stale local Production Cloud SQL proxy: backend `/health` returned OK, wallet returned HTTP 200, `sync-ott-authorized-products.js --production --confirm-production` completed, and `audit-ott-production-catalog.js --production` confirmed the Production catalog state.
 
 ## 2026-05-11 - OTT authorised product synchronization
 

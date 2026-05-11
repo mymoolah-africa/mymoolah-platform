@@ -20,6 +20,8 @@ Continued the approved OTT Production rollout from the plan without editing the 
 - [x] Stopped after the first Production dry-run surfaced policy risks, then fixed the policy and reran dry-runs.
 - [x] Applied non-destructive Production sync/governance after final dry-runs matched the safety intent.
 - [x] Ran focused backend tests, wallet build, syntax checks, and lints.
+- [x] Committed/pushed the rollout code, then deployed Production backend and wallet.
+- [x] Ran post-deploy read-only Production verification.
 
 ---
 
@@ -75,15 +77,21 @@ Commands/results:
 - `npx jest tests/ott-provider-catalog-service.test.js tests/ott-payout-service.test.js tests/ott-routes.test.js tests/voucherCatalogBrandService.test.js tests/productCatalogGovernanceService.test.js --runInBand --forceExit` - passed 67/67 with the pre-existing Jest config warning.
 - `npm run build` in `mymoolah-wallet-frontend` - passed with the existing large chunk warning.
 - Cursor lints on touched files - no linter errors.
+- `./scripts/deploy-backend.sh --production 20260511_ott_prod_rollout` - deployed backend image; final serving revision `mymoolah-backend-production-00209-jcj`.
+- `./scripts/deploy-wallet.sh --production 20260511_ott_prod_rollout` - deployed wallet image; serving revision `mymoolah-wallet-production-00051-9x4`.
+- `curl https://api-mm.mymoolah.africa/health` - returned `status: OK`.
+- `curl -I https://wallet.mymoolah.africa` - returned HTTP 200.
+- Post-deploy read-only `sync-ott-authorized-products.js --production --confirm-production` and `audit-ott-production-catalog.js --production` completed after restarting the stale local Production Cloud SQL proxy.
 
 ---
 
 ## Next Steps
-- [ ] Commit and push the rollout changes.
-- [ ] Deploy Production backend with `./scripts/deploy-backend.sh --production`.
-- [ ] Deploy Production wallet with `./scripts/deploy-wallet.sh --production`.
-- [ ] Run post-deploy read-only Production verification only.
-- [ ] Update this session log and handover with exact Production backend/wallet revisions after deployment.
+- [x] Commit and push the rollout changes.
+- [x] Deploy Production backend with `./scripts/deploy-backend.sh --production`.
+- [x] Deploy Production wallet with `./scripts/deploy-wallet.sh --production`.
+- [x] Run post-deploy read-only Production verification only.
+- [x] Update this session log and handover with exact Production backend/wallet revisions after deployment.
+- [ ] André to visually confirm Production wallet `Buy` section behavior.
 
 ---
 
@@ -97,8 +105,7 @@ Commands/results:
 ---
 
 ## Questions/Unresolved Items
-- Production backend and wallet deploy revisions are pending until deployment completes.
-- Post-deploy read-only endpoint verification still needs to be run after deployment.
+- No unresolved rollout blockers from this session.
 
 ---
 
