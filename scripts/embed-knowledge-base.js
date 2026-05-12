@@ -39,10 +39,40 @@ if (!['uat', 'staging', 'production'].includes(envArg)) {
   process.exit(1);
 }
 
+async function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isTransientDbError(err) {
+  const code = err && err.code;
+  const msg = (err && err.message) || '';
+  return (
+    code === 'ECONNRESET' ||
+    code === 'ECONNREFUSED' ||
+    code === 'ETIMEDOUT' ||
+    msg.includes('Connection terminated unexpectedly')
+  );
+}
+
+async function withDbRetries(label, fn, { attempts = 5, baseMs = 1000 } = {}) {
+  let lastErr;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      if (!isTransientDbError(err) || i === attempts - 1) throw err;
+      const wait = baseMs * Math.pow(2, i);
+      console.warn(`⚠️  ${label}: ${err.message} — retry ${i + 1}/${attempts - 1} in ${wait}ms`);
+      await sleep(wait);
+    }
+  }
+  throw lastErr;
+}
+
 // ─── Get DB client ────────────────────────────────────────────────────────────
 
-async function getClient(env) {
-  console.log(`🔌 Connecting to ${env.toUpperCase()} database via db-connection-helper...`);
+async function acquireClient(env) {
   switch (env) {
     case 'staging':    return getStagingClient();
     case 'production': return getProductionClient();
@@ -76,9 +106,9 @@ async function main() {
   if (dryRun) console.log('🔍 DRY RUN — no writes will be made\n');
 
   // Do not hold a DB session open across OpenAI calls; idle connections are dropped by Cloud SQL / proxy.
-  let entries;
-  {
-    const client = await getClient(envArg);
+  const entries = await withDbRetries('Load active KB rows', async () => {
+    console.log(`🔌 Connecting to ${envArg.toUpperCase()} database via db-connection-helper...`);
+    const client = await acquireClient(envArg);
     try {
       const { rows } = await client.query(
         `SELECT id, "faqId", question, answer, "questionEnglish", language, category
@@ -86,11 +116,11 @@ async function main() {
          WHERE "isActive" = true
          ORDER BY id`
       );
-      entries = rows;
+      return rows;
     } finally {
       client.release();
     }
-  }
+  });
 
   console.log(`📊 ${entries.length} active entries to process\n`);
 
@@ -119,18 +149,21 @@ async function main() {
   }
 
   if (!dryRun && embedded.length > 0) {
-    const writeClient = await getClient(envArg);
-    try {
-      for (const { entry, embedding } of embedded) {
-        await writeClient.query(
-          `UPDATE ai_knowledge_base SET embedding = $1, "updatedAt" = NOW() WHERE id = $2`,
-          [JSON.stringify(embedding), entry.id]
-        );
-        console.log(`  ✅ ${entry.id} ${entry.faqId || '-'} ${entry.category}`);
+    await withDbRetries('Flush embeddings to database', async () => {
+      console.log(`🔌 Writing embeddings to ${envArg.toUpperCase()} database...`);
+      const writeClient = await acquireClient(envArg);
+      try {
+        for (const { entry, embedding } of embedded) {
+          await writeClient.query(
+            `UPDATE ai_knowledge_base SET embedding = $1, "updatedAt" = NOW() WHERE id = $2`,
+            [JSON.stringify(embedding), entry.id]
+          );
+          console.log(`  ✅ ${entry.id} ${entry.faqId || '-'} ${entry.category}`);
+        }
+      } finally {
+        writeClient.release();
       }
-    } finally {
-      writeClient.release();
-    }
+    });
   } else if (dryRun) {
     for (const { entry } of embedded) {
       console.log(`  [DRY] ${entry.id} ${entry.faqId || '-'} ${entry.category}`);

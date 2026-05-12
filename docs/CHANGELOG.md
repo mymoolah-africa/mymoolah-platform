@@ -13,6 +13,9 @@
 ### Summary
 `scripts/embed-knowledge-base.js` held one pooled client while alternating OpenAI `embedText` calls and `UPDATE` rows. The session was idle on the DB during each embedding request, which often led to `Connection terminated unexpectedly` on Staging/Production. The script now loads active rows and releases the client, computes all embeddings, then opens a new client for the flush of `UPDATE`s.
 
+### Follow-up
+Staging later hit a transient `read ECONNRESET` during the initial active-row load. Added bounded retry handling for transient database connection failures (`ECONNRESET`, `ECONNREFUSED`, `ETIMEDOUT`, and unexpected connection termination) around the read and write DB phases, while still using `scripts/db-connection-helper.js` for all connections.
+
 ### Validation
 - `node --check scripts/embed-knowledge-base.js` passed.
 
