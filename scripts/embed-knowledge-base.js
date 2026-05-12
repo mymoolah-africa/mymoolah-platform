@@ -75,54 +75,69 @@ async function main() {
   console.log(`🌍 Environment: ${envArg.toUpperCase()}`);
   if (dryRun) console.log('🔍 DRY RUN — no writes will be made\n');
 
-  const client = await getClient(envArg);
+  // Do not hold a DB session open across OpenAI calls; idle connections are dropped by Cloud SQL / proxy.
+  let entries;
+  {
+    const client = await getClient(envArg);
+    try {
+      const { rows } = await client.query(
+        `SELECT id, "faqId", question, answer, "questionEnglish", language, category
+         FROM ai_knowledge_base
+         WHERE "isActive" = true
+         ORDER BY id`
+      );
+      entries = rows;
+    } finally {
+      client.release();
+    }
+  }
 
-  try {
-    // Fetch all active KB entries
-    const { rows: entries } = await client.query(
-      `SELECT id, "faqId", question, answer, "questionEnglish", language, category
-       FROM ai_knowledge_base
-       WHERE "isActive" = true
-       ORDER BY id`
-    );
+  console.log(`📊 ${entries.length} active entries to process\n`);
 
-    console.log(`📊 ${entries.length} active entries to process\n`);
+  let succeeded = 0;
+  let failed = 0;
+  const embedded = [];
 
-    let succeeded = 0;
-    let failed = 0;
+  for (let i = 0; i < entries.length; i += BATCH_SIZE) {
+    const batch = entries.slice(i, i + BATCH_SIZE);
 
-    for (let i = 0; i < entries.length; i += BATCH_SIZE) {
-      const batch = entries.slice(i, i + BATCH_SIZE);
+    for (const entry of batch) {
+      const textToEmbed =
+        (entry.questionEnglish || entry.question) +
+        '\n' +
+        (entry.answer || '').slice(0, 500);
 
-      for (const entry of batch) {
-        const textToEmbed =
-          (entry.questionEnglish || entry.question) +
-          '\n' +
-          (entry.answer || '').slice(0, 500);
-
-        try {
-          const embedding = await embedText(openai, textToEmbed);
-
-          if (!dryRun) {
-            await client.query(
-              `UPDATE ai_knowledge_base SET embedding = $1, "updatedAt" = NOW() WHERE id = $2`,
-              [JSON.stringify(embedding), entry.id]
-            );
-          }
-
-          console.log(`  ${dryRun ? '[DRY]' : '✅'} ${entry.id} ${entry.faqId || '-'} ${entry.category}`);
-          succeeded++;
-        } catch (err) {
-          console.error(`  ❌ ${entry.id} (${entry.faqId || '-'}): ${err.message}`);
-          failed++;
-        }
+      try {
+        const embedding = await embedText(openai, textToEmbed);
+        embedded.push({ entry, embedding });
+        succeeded++;
+      } catch (err) {
+        console.error(`  ❌ ${entry.id} (${entry.faqId || '-'}): ${err.message}`);
+        failed++;
       }
     }
-
-    console.log(`\n✅ Done — ${succeeded} embedded${dryRun ? ' (dry run)' : ''}, ${failed} failed`);
-  } finally {
-    client.release();
   }
+
+  if (!dryRun && embedded.length > 0) {
+    const writeClient = await getClient(envArg);
+    try {
+      for (const { entry, embedding } of embedded) {
+        await writeClient.query(
+          `UPDATE ai_knowledge_base SET embedding = $1, "updatedAt" = NOW() WHERE id = $2`,
+          [JSON.stringify(embedding), entry.id]
+        );
+        console.log(`  ✅ ${entry.id} ${entry.faqId || '-'} ${entry.category}`);
+      }
+    } finally {
+      writeClient.release();
+    }
+  } else if (dryRun) {
+    for (const { entry } of embedded) {
+      console.log(`  [DRY] ${entry.id} ${entry.faqId || '-'} ${entry.category}`);
+    }
+  }
+
+  console.log(`\n✅ Done — ${succeeded} embedded${dryRun ? ' (dry run)' : ''}, ${failed} failed`);
 
   process.exit(0);
 }

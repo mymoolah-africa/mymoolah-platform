@@ -8,6 +8,14 @@
 ### Validation
 - `node --check scripts/generate-knowledge-base.js` passed.
 
+## 2026-05-13 - KB embed script: no idle DB during OpenAI
+
+### Summary
+`scripts/embed-knowledge-base.js` held one pooled client while alternating OpenAI `embedText` calls and `UPDATE` rows. The session was idle on the DB during each embedding request, which often led to `Connection terminated unexpectedly` on Staging/Production. The script now loads active rows and releases the client, computes all embeddings, then opens a new client for the flush of `UPDATE`s.
+
+### Validation
+- `node --check scripts/embed-knowledge-base.js` passed.
+
 ## 2026-05-13 - Support KB: EasyPay V5 cash-in only
 
 ### Summary
