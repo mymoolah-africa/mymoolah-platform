@@ -24,6 +24,8 @@ Do not start substantive work before the rules confirmation is done.
 
 ## End Of Completed Work
 
+- If code, docs, features, suppliers, user flows, fees, support wording, or changelog entries changed, sweep `docs/FAQ_MASTER.md` and update the support KB source before commit/push.
+- Run `npm run check:kb:fresh` before commit/push; if `docs/FAQ_MASTER.md` changed, also plan the required `generate:kb:update` and `embed:kb` target-environment runs.
 - Create a session log from `docs/session_logs/TEMPLATE.md`.
 - Update `docs/AGENT_HANDOVER.md` and relevant docs.
 - Validate changed files with targeted tests/lints where practical.

@@ -22,6 +22,7 @@
 |------|----------|
 | Read rules + handover before work | Start without rules confirmation |
 | Sweep `scripts/` before creating | Create scripts without checking |
+| Keep `docs/FAQ_MASTER.md` current with shipped/support-facing changes before commit/push | Commit/push with stale AI support KB source |
 | Use `scripts/db-connection-helper.js` for ALL DB queries | Write custom DB connection logic (Sequelize, raw pg, etc.) |
 | Use `docs/DATABASE_CONNECTION_GUIDE.md` for DB work | Skip reading the DB guide |
 | Test in Codespaces | Test on local |
@@ -134,6 +135,7 @@ Migrations: ALWAYS use `./scripts/run-migrations-master.sh [uat|staging]` — ne
 - **Docs**: Update `docs/` after changes; read `DATABASE_CONNECTION_GUIDE.md` before DB work
 - **Scripts**: Sweep `scripts/` before creating (200+ exist)
 - **Performance**: DB aggregation (not JS sums); API <200ms, DB <50ms
+- **Support KB**: Before every commit/push to `main`, run `npm run check:kb:fresh`; update `docs/FAQ_MASTER.md` for support-facing changes and run the approved `generate:kb:update` / `embed:kb` flow for the target environment.
 
 ---
 
@@ -174,6 +176,7 @@ Migrations: ALWAYS use `./scripts/run-migrations-master.sh [uat|staging]` — ne
 - Personal responses NEVER cached (POPIA compliance)
 - Self-learning: unknown questions auto-saved to KB as `isActive=false` for admin review
 - Embed KB: `npm run embed:kb` (run after adding new KB entries)
+- Freshness guard: `npm run check:kb:fresh` must pass before commit/push; Cursor also runs this guard before `git commit` / `git push` shell commands.
 - **Withdrawals / eeziCash wording:** KB and FAQ must follow `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md` and `docs/FAQ_MASTER.md` §9 — eeziCash = **wallet cash withdrawal** (TPPP), not VAS retail-voucher resale.
 
 ---

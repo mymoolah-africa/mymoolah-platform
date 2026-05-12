@@ -50,8 +50,15 @@
     "generate:kb:force": "node scripts/generate-knowledge-base.js --force",
     "generate:kb:staging": "node scripts/generate-knowledge-base.js --env=staging",
     "generate:kb:production": "node scripts/generate-knowledge-base.js --env=production",
+    "generate:kb:update": "node scripts/generate-knowledge-base.js --update-existing",
+    "generate:kb:update:staging": "node scripts/generate-knowledge-base.js --env=staging --update-existing",
+    "generate:kb:update:production": "node scripts/generate-knowledge-base.js --env=production --update-existing",
+    "generate:kb:faq:update": "node scripts/generate-knowledge-base.js --faq-only --update-existing",
+    "generate:kb:faq:update:staging": "node scripts/generate-knowledge-base.js --env=staging --faq-only --update-existing",
+    "generate:kb:faq:update:production": "node scripts/generate-knowledge-base.js --env=production --faq-only --update-existing",
     "activate:kb": "node scripts/activate-generated-kb.js",
     "activate:kb:count": "node scripts/activate-generated-kb.js --count",
+    "check:kb:fresh": "node scripts/check-support-kb-freshness.js --plain",
     "start:cs-ip": "node scripts/start-cs-ip.js"
   },
   "dependencies": {

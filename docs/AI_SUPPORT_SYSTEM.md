@@ -1,7 +1,7 @@
 # MyMoolah AI Support System
 
-**Last Updated**: 2026-04-16  
-**Version**: 3.1.0 - Withdrawal KB alignment (eeziCash / TPPP)  
+**Last Updated**: 2026-05-12  
+**Version**: 3.2.0 - Support KB freshness guard + May 2026 catalog/referral updates  
 **Status**: ✅ **LIVE** — Clean ~250-line RAG service replaces legacy 4,000+ line pattern-matching stack
 
 ## 🚀 Overview
@@ -12,6 +12,15 @@ The MyMoolah AI Support System uses **LangChain RAG** (Retrieval-Augmented Gener
 - Canonical customer wording: **`docs/FAQ_MASTER.md`** §9 (eeziCash vs EasyPay vs eeziPay / eeziPower).
 - Compliance hub for agents and seed scripts: **`docs/WITHDRAWALS_COMPLIANCE_AND_KB.md`** (AML, monitoring, security logging, suggested KB categories).
 - **eeziCash** must be described in KB entries as **wallet cash withdrawal** (TPPP / sponsor-bank context); **not** “VAS voucher resale.” After adding or editing `ai_knowledge_base` rows for withdrawals, run **`npm run embed:kb`** (Codespaces, UAT proxy) so RAG embeddings match the new text.
+
+### **2026-05-12 — Support KB freshness guard**
+- `docs/FAQ_MASTER.md` was updated for recent support-facing changes: Gift Cards vs Buy Retail Vouchers, voucher amount validation, Production voucher governance examples, OTT cash-withdrawal availability rules, and referral SMS failure guidance.
+- `npm run check:kb:fresh` verifies that `docs/FAQ_MASTER.md` is not older than the newest `docs/CHANGELOG.md` entry.
+- `.cursor/hooks.json` runs the same guard before `git commit` and `git push` shell commands so agents are blocked from committing/pushing stale support KB source.
+- After approved FAQ changes, regenerate/update and embed the target environment KB with the existing scripts: `npm run generate:kb:update`, `npm run embed:kb`, and the staging/production variants when approved.
+- 2026-05-12 approved refresh completed: UAT `268` active embedded entries, Staging `253` active embedded entries, and Production `253` active embedded entries.
+- 2026-05-12 OTT-Mobile withdrawal network update completed: UAT `329` active embedded entries, Staging `293` active embedded entries, and Production `293` active embedded entries. The support KB now documents Nedbank and ABSA cash-withdrawal collection networks.
+- 2026-05-12 follow-up added PEP and Ackermans to the Nedbank voucher network and clarified that outlet staff should be asked for the partner process (`Nedbank cash-withdrawal voucher` or `ABSA CashSend`), not a MyMoolah withdrawal. Use `generate:kb:faq:update*` for focused FAQ-only refreshes that should not create extra GPT gap-fill rows.
 
 ### **2026-03-14 — LangChain RAG Rebuild**
 - Replaced `bankingGradeSupportService.js` (2,276 lines) + `aiSupportService.js` (2,100 lines) with `ragService.js` (~250 lines)

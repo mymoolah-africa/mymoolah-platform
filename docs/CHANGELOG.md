@@ -1,5 +1,48 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-05-12 - OTT-Mobile withdrawal network KB update
+
+### Summary
+Updated the AI support knowledgebase with the approved OTT-Mobile cash-withdrawal networks for Nedbank and ABSA across UAT, Staging, and Production.
+
+### Changes
+- Updated `docs/FAQ_MASTER.md` §9 with customer-facing OTT-Mobile withdrawal guidance.
+- Added Nedbank cash-withdrawal network locations: Nedbank ATM, Checkers, Checkers Hyper, Shoprite, Usave, House & Home, OK Foods, OK Furniture, Pick n Pay, Boxer, OTT outlets, Kazang outlets, and Flash shops.
+- Added ABSA CashSend collection locations: ABSA ATM, Pick n Pay, and Boxer.
+- Added how-to guidance for using an OTT-Mobile cash-withdrawal voucher/CashSend, including fee review, wallet debit first, OTP/security steps, safe PIN handling, and support escalation details.
+- Replaced the older support wording that described Nedbank as not customer-facing.
+- Follow-up added PEP and Ackermans to the Nedbank cash-withdrawal voucher network.
+- Clarified merchant-facing instructions: customers must present the credential as a Nedbank cash-withdrawal voucher or ABSA CashSend / ABSA cash-withdrawal voucher; merchants may not know MyMoolah and customers should not ask for a "MyMoolah withdrawal" at the outlet.
+- Added `--faq-only` support to `scripts/generate-knowledge-base.js` plus `generate:kb:faq:update*` npm scripts for focused FAQ refreshes without GPT gap-fill duplicate row creation.
+
+### Validation
+- UAT: `npm run generate:kb:update` processed 207 entries, inserted 61, updated 146; `npm run activate:kb && npm run embed:kb` embedded 329 active entries with 0 failures.
+- Staging: after restarting stale Cloud SQL proxies, `npm run generate:kb:update:staging` processed 207 entries, inserted 40, updated 167; `npm run embed:kb:staging` embedded 293 active entries with 0 failures.
+- Production: `npm run generate:kb:update:production` processed 207 entries, inserted 40, updated 167; `npm run embed:kb:production` embedded 293 active entries with 0 failures.
+- Final read-only DB verification: UAT 329 active / 329 active embedded / 0 inactive; Staging 293 active / 293 active embedded / 11 inactive; Production 293 active / 293 active embedded / 2 inactive.
+- Follow-up FAQ-only refresh for PEP/Ackermans and merchant-facing wording: UAT `generate:kb:faq:update` updated 127 and inserted 0, then embedded 329 active entries with 0 failures; Staging `generate:kb:faq:update:staging` updated 127 and inserted 0, then embedded 293 active entries with 0 failures; Production `generate:kb:faq:update:production` updated 127 and inserted 0, then embedded 293 active entries with 0 failures.
+- Final wording verification found active Nedbank and ABSA merchant-facing rows in all three DBs.
+
+## 2026-05-12 - AI support knowledgebase refresh and freshness guard
+
+### Summary
+Updated the AI support knowledgebase source from its 20 April 2026 baseline and added a local guard so future commit/push workflows cannot proceed with a stale support FAQ source.
+
+### Changes
+- Updated `docs/FAQ_MASTER.md` for support-facing changes since the last FAQ refresh: Gift Cards vs Buy Retail Vouchers, automatic hiding of Gift Cards when no approved catalog rows exist, voucher amount validation, current retail voucher examples, OTT cash-withdrawal availability rules, and referral SMS troubleshooting.
+- Added `scripts/check-support-kb-freshness.js`, a read-only guard that compares the newest `docs/CHANGELOG.md` date with the `_Last updated:` date in `docs/FAQ_MASTER.md`.
+- Added `npm run check:kb:fresh` and `.cursor/hooks.json` so Cursor blocks `git commit` / `git push` shell commands when the support FAQ is older than the changelog.
+- Added `--update-existing` support to `scripts/generate-knowledge-base.js` plus `generate:kb:update` npm scripts so existing KB answers are refreshed instead of only inserting brand-new questions.
+- Updated Cursor rules and AI support docs to make support KB freshness part of the commit/push workflow.
+
+### Validation
+- `npm run check:kb:fresh` must pass before commit/push.
+- `node --check scripts/generate-knowledge-base.js scripts/check-support-kb-freshness.js` passed.
+- `npm run generate:kb:update` completed for UAT: 204 processed, 195 inserted pending, 9 updated; then `npm run activate:kb && npm run embed:kb` activated and embedded UAT successfully.
+- `npm run generate:kb:update:staging` completed: 204 processed, 78 inserted, 126 updated; `npm run embed:kb:staging` embedded 253 active entries with 0 failures.
+- `npm run generate:kb:update:production` completed: 204 processed, 79 inserted, 125 updated; `npm run embed:kb:production` embedded 253 active entries with 0 failures.
+- Final read-only DB verification: UAT 268 active / 268 active embedded / 0 inactive; Staging 253 active / 253 active embedded / 11 inactive; Production 253 active / 253 active embedded / 2 inactive.
+
 ## 2026-05-11 - OneGate virtual card information stack
 
 ### Summary

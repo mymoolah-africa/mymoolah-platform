@@ -1,6 +1,6 @@
 # MyMoolah Treasury Platform – Comprehensive FAQ Library
 
-_Last updated: 20 April 2026_
+_Last updated: 12 May 2026_
 
 This FAQ is the single source of truth for customer support, covering all live and developed features of the MyMoolah digital wallet. Sections are ordered by the most common customer enquiries. Update this document and regenerate the knowledge base whenever a new feature goes live.
 
@@ -9,7 +9,7 @@ This FAQ is the single source of truth for customer support, covering all live a
 ## 1. Platform Overview
 
 **Q: What is MyMoolah?**
-A: MyMoolah is a South African digital wallet and treasury platform. It lets you store money, send and receive instant payments, buy airtime, data, electricity and other services, issue and redeem vouchers, withdraw cash at retail partners, and earn referral commissions — all from your mobile phone or browser.
+A: MyMoolah is a South African digital wallet and treasury platform. It lets you store money, send and receive instant payments, buy airtime, data, electricity and other services, buy retail vouchers and gift cards where available, withdraw cash at approved partners, and earn referral commissions — all from your mobile phone or browser.
 
 **Q: Is MyMoolah a bank?**
 A: No. MyMoolah is a registered payment platform, not a bank. Your wallet balance is held in safeguarded, segregated accounts at licensed South African financial institutions. MyMoolah handles the technology, compliance, and user experience — it does not take deposits or offer credit.
@@ -196,7 +196,7 @@ A: Verify the following: (1) The PIN is entered exactly as shown — no spaces o
 ## 8. Vouchers
 
 **Q: What types of vouchers does MyMoolah support?**
-A: MyMoolah supports two main types: MMVouchers (16-digit MyMoolah digital vouchers) and EasyPay vouchers (redeemable via the EasyPay retail network at stores like Pick n Pay, Shoprite, Checkers, and others).
+A: MyMoolah supports several voucher-style products depending on what is active for your wallet programme: MMVouchers, EasyPay vouchers, retail vouchers, and gift cards. Retail vouchers and gift cards are shown from the approved live catalog in the app, so the exact brands and amounts may change.
 
 **Q: How do I get a voucher?**
 A: Vouchers are issued to you by an employer, programme operator, or via the app if your programme supports it. You will receive them via SMS, email, or in-app notification.
@@ -215,6 +215,18 @@ A: EasyPay vouchers show as "pending" until the retail payment is confirmed. MMV
 
 **Q: Can a voucher be converted to wallet balance?**
 A: Some voucher types allow in-wallet redemption which credits your balance. Check the voucher terms — not all vouchers support this.
+
+**Q: What is the difference between Buy Retail Vouchers and Gift Cards?**
+A: Buy Retail Vouchers shows approved retail, grocery, betting, entertainment, and shopping voucher products. Gift Cards is a separate page for gift-card style brands such as food, coffee, entertainment, and shopping cards where those products are approved and active. The two pages use the same secure purchase flow, but the catalog is filtered so gift cards do not appear in both places.
+
+**Q: Why can I not see the Gift Cards option?**
+A: The Gift Cards option only appears when there is at least one approved, published gift-card product available in the live catalog. If no gift-card products are active, the app hides the tile automatically. You can still use other available wallet services such as airtime, data, electricity, bill payments, and retail vouchers.
+
+**Q: Which retail voucher brands are available?**
+A: Availability depends on the approved catalog at the time you use the app. Current supported examples may include approved OTT voucher products, NetFlorist, EasyBet, GBets, Gold Rush, and other retail voucher brands where they are active. Always use the brand and amount shown in the app, because the app is the source of truth for live availability.
+
+**Q: Why did the app reject my voucher amount?**
+A: Some vouchers have a fixed amount and others allow a variable amount within a minimum and maximum range. The app validates the amount before you can continue. If the amount is too low, too high, or not available for that product, choose one of the visible supported amounts or enter a value within the displayed range.
 
 ---
 
@@ -240,6 +252,21 @@ A: EasyPay cash withdrawal lets you collect cash at participating retail stores.
 
 **Q: Which stores can I withdraw cash at?**
 A: Any store that accepts EasyPay — including Shoprite, Checkers, Pick n Pay, Boxer, and thousands of other outlets across South Africa. Look for the EasyPay logo.
+
+**Q: Can I withdraw cash using OTT cash-withdrawal partners?**
+A: Yes. MyMoolah supports OTT-Mobile cash withdrawals through two approved options: **Nedbank cash withdrawal** and **ABSA CashSend**. In the app, go to Withdraw Cash, choose the available provider, enter the cash amount, review the fee and total wallet debit, and confirm. Your wallet is debited first. You then receive the partner withdrawal reference, voucher, PIN or SMS instructions needed to collect cash at the supported network.
+
+**Q: Where can I withdraw a Nedbank cash-withdrawal voucher?**
+A: A Nedbank cash-withdrawal voucher can be used at Nedbank ATMs and at participating retail or agent networks: Checkers, Checkers Hyper, Shoprite, Usave, House & Home, OK Foods, OK Furniture, Pick n Pay, Boxer, PEP, Ackermans, OTT outlets, Kazang outlets, and Flash shops. At the outlet, present it as a **Nedbank cash-withdrawal voucher**. The cashier or merchant may not know MyMoolah, so do not ask them for a "MyMoolah withdrawal"; use the Nedbank voucher wording and follow the SMS or in-app instructions.
+
+**Q: Where can I withdraw an ABSA CashSend from MyMoolah?**
+A: An ABSA CashSend withdrawal from MyMoolah can be collected at any ABSA ATM, any Pick n Pay store, or any Boxer store that supports ABSA CashSend cash collection. At the outlet, present it as an **ABSA CashSend** or **ABSA cash-withdrawal voucher**. The cashier or merchant may not know MyMoolah, so do not ask them for a "MyMoolah withdrawal"; use the ABSA wording and follow the ABSA SMS or in-app instructions exactly.
+
+**Q: How do I use an OTT-Mobile cash-withdrawal voucher or CashSend?**
+A: Start in the MyMoolah app under Withdraw Cash. Choose Nedbank or ABSA if available, enter the amount, confirm the fee and total debit, and complete any required OTP or security step. After successful confirmation, use the received voucher/reference/PIN at the supported ATM, store, or outlet. When speaking to the cashier, ask for the partner process: **Nedbank cash-withdrawal voucher** for Nedbank, or **ABSA CashSend / ABSA cash-withdrawal voucher** for ABSA. The merchant does not need to know MyMoolah to process the partner voucher. If collection fails, do not retry repeatedly. Note the provider, outlet, date, time, amount, and visible error, then contact MyMoolah support from your registered number so the team can trace the wallet debit and partner status.
+
+**Q: Why is a bank cash-withdrawal option missing from the app?**
+A: Cash-withdrawal options are shown only when the partner, provider, and MyMoolah approval status are all active. If an option is missing, it usually means that provider is temporarily unavailable for your wallet, your KYC/limits do not allow the transaction, or the partner network is not available at that moment. Do not use screenshots, old catalog names, or third-party provider lists as proof that an option is live; the app catalog is the source of truth.
 
 **Q: Is there a fee for withdrawing cash?**
 A: Yes. A cash-withdrawal fee is charged per transaction. The fee is shown before you confirm.
@@ -323,6 +350,9 @@ A: Go to the "Referral" section in the app → Dashboard. You can see your refer
 
 **Q: Can I invite friends by SMS directly from the app?**
 A: Yes. In the Referral section, enter a South African mobile number and tap "Send Invite." An SMS with your referral code is sent automatically.
+
+**Q: Why does my referral invite say SMS is temporarily unavailable?**
+A: This means the SMS provider could not send the invite at that moment. First check that the mobile number is a valid South African number and try again later. If it continues, contact support so the team can check the SMS provider configuration and delivery status. Your referral code can still be copied and shared manually while SMS delivery is being investigated.
 
 ---
 
@@ -438,4 +468,4 @@ A: Log a complaint via in-app chat, email, or phone. MyMoolah investigates per i
 
 ---
 
-_This FAQ is updated as new features go live. Regenerate the knowledge base after every update using `npm run generate:kb` followed by `npm run embed:kb`._
+_This FAQ is updated as new features go live. Regenerate the knowledge base after every update using `npm run generate:kb:update` followed by `npm run embed:kb` for UAT review, then run the staging/production update and embed scripts only when the update is approved for those environments._

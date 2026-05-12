@@ -8,6 +8,7 @@ alwaysApply: true
 ## Safety
 
 - Always run `git status --short --branch` before pull, commit, or push.
+- Before every commit or push to `main`, confirm the support KB source is current: run `npm run check:kb:fresh`, update `docs/FAQ_MASTER.md` when needed, and run `generate:kb:update` / `embed:kb` for the approved target environment.
 - Do not run destructive git commands (`reset --hard`, force push, checkout over files) unless André explicitly approves.
 - Do not commit secrets, `.env` files, credentials, private keys, or production data exports.
 - Commit only when the user explicitly asks or when project/session rules require it and no higher-priority instruction forbids it.

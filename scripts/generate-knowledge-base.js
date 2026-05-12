@@ -16,6 +16,8 @@
  *   node scripts/generate-knowledge-base.js --dry-run            # Preview only
  *   node scripts/generate-knowledge-base.js --clear              # Clear GEN- entries first
  *   node scripts/generate-knowledge-base.js --force              # Skip duplicate check
+ *   node scripts/generate-knowledge-base.js --update-existing    # Refresh answers for matching questions
+ *   node scripts/generate-knowledge-base.js --faq-only           # Use FAQ_MASTER.md only, no GPT gap fill
  *
  * Pre-requisites:
  *   - OPENAI_API_KEY set in .env
@@ -35,6 +37,8 @@ const FAQ_MASTER_PATH = path.join(__dirname, '../docs/FAQ_MASTER.md');
 const dryRun = process.argv.includes('--dry-run');
 const clearExisting = process.argv.includes('--clear');
 const forceReinsert = process.argv.includes('--force'); // Skip duplicate check, re-insert all
+const updateExisting = process.argv.includes('--update-existing');
+const faqOnly = process.argv.includes('--faq-only');
 const envArg = (process.argv.find(a => a.startsWith('--env=')) || '--env=uat').replace('--env=', '').toLowerCase();
 const validEnvs = ['uat', 'staging', 'production'];
 if (!validEnvs.includes(envArg)) { console.error(`❌ Invalid --env value: "${envArg}". Use: uat, staging, production`); process.exit(1); }
@@ -284,6 +288,7 @@ async function saveToDb(client, entries) {
   const activeLabel = isActiveOnInsert ? 'isActive=true (pre-approved)' : 'isActive=false (pending review)';
   console.log(`\n💾 Saving ${entries.length} entries to ${envLabel} database (${activeLabel})...`);
   let inserted = 0;
+  let updated = 0;
   let skipped = 0;
 
   for (const entry of entries) {
@@ -296,6 +301,26 @@ async function saveToDb(client, entries) {
           [question]
         );
         if (exists.rows.length > 0) {
+          if (updateExisting) {
+            await client.query(
+              `UPDATE ai_knowledge_base
+               SET answer = $1,
+                   category = $2,
+                   audience = $3,
+                   embedding = $4,
+                   "updatedAt" = NOW()
+               WHERE id = $5`,
+              [
+                answer,
+                category,
+                audience || 'end-user',
+                embedding ? JSON.stringify(embedding) : null,
+                exists.rows[0].id,
+              ]
+            );
+            updated++;
+            continue;
+          }
           skipped++;
           continue;
         }
@@ -323,7 +348,7 @@ async function saveToDb(client, entries) {
     }
   }
 
-  return { inserted, skipped };
+  return { inserted, updated, skipped };
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
@@ -346,6 +371,8 @@ async function main() {
   console.log(`📋 Mode: ${dryRun ? 'DRY RUN (no writes)' : `LIVE — will write to ${envLabel} DB`}`);
   if (isActiveOnInsert) console.log('✅ Entries will be activated immediately (pre-approved from UAT)');
   if (clearExisting) console.log('🗑️  --clear flag: will delete existing GEN- entries first');
+  if (updateExisting) console.log('♻️  --update-existing flag: matching questions will have answers/category/audience/embedding refreshed');
+  if (faqOnly) console.log('📖 --faq-only flag: GPT gap-fill generation is skipped');
 
   const openai = new OpenAI({ apiKey });
   const client = dryRun ? null : await getClient();
@@ -360,8 +387,8 @@ async function main() {
     // 1. Parse FAQ_MASTER.md
     const faqEntries = await parseFaqMaster();
 
-    // 2. Generate GPT-4o entries for gaps
-    const gptEntries = await generateGptEntries(openai);
+    // 2. Generate GPT-4o entries for gaps unless this is a focused FAQ refresh.
+    const gptEntries = faqOnly ? [] : await generateGptEntries(openai);
 
     // 3. Combine and enrich with category/audience
     const allEntries = [
@@ -395,7 +422,7 @@ async function main() {
     }
 
     // 5. Save to DB
-    const { inserted, skipped } = await saveToDb(client, allEntries);
+    const { inserted, updated, skipped } = await saveToDb(client, allEntries);
 
     // 6. Summary
     const estimatedCost = (
@@ -408,6 +435,7 @@ async function main() {
     console.log('✅ Knowledge Base Generation Complete');
     console.log('─'.repeat(60));
     console.log(`📊 Entries inserted:  ${inserted}`);
+    console.log(`♻️  Entries updated:   ${updated}`);
     console.log(`⏭️  Entries skipped:   ${skipped} (already exist)`);
     console.log(`💰 Estimated cost:    ~$${estimatedCost}`);
     console.log('');
