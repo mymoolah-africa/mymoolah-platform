@@ -1,5 +1,24 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-05-13 - Support KB: EasyPay V5 cash-in only
+
+### Summary
+Removed customer-facing support guidance that described EasyPay as a wallet cash-out or retail cash-withdrawal path. EasyPay V5 in MyMoolah is **cash-in only** (add money); wallet cash withdrawals use **Withdraw Cash** partners (for example eeziCash / Flash, OTT-Mobile Nedbank / ABSA) as shown in the app.
+
+### Changes
+- Updated `docs/FAQ_MASTER.md` §9b with explicit PEP / retail-store and “where can I get cash” answers that do not conflate EasyPay with withdrawals.
+- Replaced the GPT gap-fill topic in `scripts/generate-knowledge-base.js` that previously generated EasyPay cash-out Q&A; adjusted tier fee and platform overview contexts accordingly.
+- Updated `services/ragService.js` strict scope line to refer to EasyPay V5 cash-in and approved Withdraw Cash partners instead of “EasyPay cash-out.”
+- Updated `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md` KB intent note (`easypay-cashin` vs deprecated customer copy under `easypay-cashwithdrawal`).
+- `docs/CURSOR_2.0_RULES_FINAL.md` — clarified EasyPay V5 must not be described as a MyMoolah cash-out in customer KB.
+
+### Validation
+- `npm run check:kb:fresh` passed after updating FAQ and changelog dates.
+- `node --check scripts/generate-knowledge-base.js services/ragService.js` passed.
+
+### Deploy / KB pipeline
+- After pull, run approved `generate:kb:update*` / `embed:kb*` for each target environment so `ai_knowledge_base` embeddings reflect the corrected EasyPay wording.
+
 ## 2026-05-12 - Staging OTT live cashout provider fee terms
 
 ### Summary

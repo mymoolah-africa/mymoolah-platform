@@ -1,6 +1,6 @@
 # Withdrawals — Compliance, Security, and Knowledge Base (MMTP)
 
-**Last updated:** 2026-04-20  
+**Last updated:** 2026-05-13  
 **Classification:** Internal — regulatory, security, and support alignment  
 **Related artefact:** `docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html` (print-to-PDF flow diagrams, ledger excerpts, role matrices)  
 **Session context:** `docs/session_logs/2026-04-14_2200_tppp-withdrawal-flow-diagrams-legal.md`; `docs/session_logs/2026-04-20_*-own-funds-ringfence.md`
@@ -23,7 +23,7 @@
 - Banks Act 94 of 1990 (sponsor bank context, s1 + s11 read with applicable Exemption Notices)  
 - PASA TPPP framework (where applicable)
 
-**Own-Funds ring-fence (20 April 2026).** Cash withdrawals through **any Cash-Withdrawal Partner** — current (eeziCash via Flash Group, EasyPay retail cash-withdrawal, Cliquefin / OTT cash-withdrawal references, USSD cash-withdrawal) and any future partner — are **fundable only from Third-Party Funds** credited to the wallet. Own Funds (self-EFT, self-PayShap, NFC self-load, and voucher cash-in) are ring-fenced by policy and by system enforcement. See [`policies/20-Cash-Withdrawal-Policy.md`](policies/20-Cash-Withdrawal-Policy.md) and the Standard Bank letter [`policies/2026-04-20_StandardBank_CashWithdrawal_Policy_Letter.html`](policies/2026-04-20_StandardBank_CashWithdrawal_Policy_Letter.html).
+**Own-Funds ring-fence (20 April 2026).** Cash withdrawals through **any Cash-Withdrawal Partner** — current (eeziCash via Flash Group, Cliquefin / OTT cash-withdrawal references, USSD cash-withdrawal) and any future partner — are **fundable only from Third-Party Funds** credited to the wallet. Own Funds (self-EFT, self-PayShap, NFC self-load, and voucher cash-in) are ring-fenced by policy and by system enforcement. **EasyPay V5 is currently an add-money cash-in rail only.** See [`policies/20-Cash-Withdrawal-Policy.md`](policies/20-Cash-Withdrawal-Policy.md) and the Standard Bank letter [`policies/2026-04-20_StandardBank_CashWithdrawal_Policy_Letter.html`](policies/2026-04-20_StandardBank_CashWithdrawal_Policy_Letter.html).
 
 ---
 
@@ -34,14 +34,14 @@ MyMoolah supports multiple **outbound** paths from the consumer wallet (each wit
 | Channel | Nature | Compliance / security notes |
 |---------|--------|------------------------------|
 | **eeziCash (Flash Group)** | Partner-facilitated **cash** collection after wallet debit | Treat as **cash-withdrawal** typology in monitoring; PII redaction in logs per POPIA; double-entry audit trail; **fundable only from Third-Party Funds** under POL-020 |
-| **EasyPay retail cash-withdrawal** | Retail token / reference for cash | Existing EasyPay float (ledger account `1200-10-03` — historical name retained) and fee postings; CTR / structuring rules per FICA where cash thresholds apply; **fundable only from Third-Party Funds** under POL-020 |
 | **USSD cash-withdrawal** | Cash withdrawal initiated from the USSD menu, redeemed through any Cash-Withdrawal Partner | Same POL-020 ring-fence applies |
 | **Cliquefin / OTT cash-withdrawal credential** | Partner-facilitated cash collection via OTT vouchers at retail brands and Flash-enabled traders | Treat as cash-withdrawal typology in monitoring; same POL-020 ring-fence; same CTR / structuring rules under FICA |
+| **EasyPay V5 cash-in** | Retail cash deposit / add-money reference | **Cash-in only** for adding money into a wallet where available. |
 | **EFT / PayShap outbound** | Electronic transfer to bank / RTP | APP fraud typologies, velocity, PayShap-specific monitoring; usable from both Own Funds and Third-Party Funds |
 | **MobileMart VAS** | Airtime, data, electricity, bill pay | **Purchase** typology — not a substitute for eeziCash legal characterisation; usable from both Own Funds and Third-Party Funds |
 
 Canonical sponsor brief (high level): `docs/STANDARD_BANK_TPPP_BRIEF.md`.  
-Float references: `docs/SETTLEMENTS.md` (e.g. EasyPay cash-withdrawal float, Flash float, Cliquefin / OTT cash-withdrawal float when onboarded).
+Float references: `docs/SETTLEMENTS.md` (e.g. Flash float and Cliquefin / OTT cash-withdrawal float when onboarded). Historical EasyPay ledger labels may remain in older code or accounting records, but current EasyPay V5 support wording is cash-in only.
 
 ---
 
@@ -83,7 +83,7 @@ Withdrawal flows must not leak MSISDNs, ID numbers, or full PINs in application 
 2. Never describe eeziCash as “buying a VAS voucher to resell.”  
 3. Link internal agents to `MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html` for flow and ledger wording.  
 
-**Suggested KB categories / intents:** `withdrawal`, `cash-withdrawal`, `eezicash`, `easypay-cashwithdrawal`, `ott-cashwithdrawal`, `cash-withdrawal-limits`, `tppp`, `cash-withdrawal-partners`.
+**Suggested KB categories / intents:** `withdrawal`, `cash-withdrawal`, `eezicash`, `easypay-cashin`, `ott-cashwithdrawal`, `cash-withdrawal-limits`, `tppp`, `cash-withdrawal-partners`. (Do not use `easypay-cashwithdrawal` for customer-facing KB: EasyPay V5 is cash-in only in MyMoolah.)
 
 ---
 
@@ -96,7 +96,7 @@ Withdrawal flows must not leak MSISDNs, ID numbers, or full PINs in application 
 
 ## 7. Change control
 
-Any change to Flash / EasyPay / EFT / PayShap withdrawal behaviour, limits, or ledger accounts must update:
+Any change to Flash / OTT / USSD / EFT / PayShap withdrawal behaviour, limits, or ledger accounts must update:
 
 1. `docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html` (if flows change)  
 2. Relevant policies in `docs/policies/`  

@@ -177,7 +177,7 @@ Migrations: ALWAYS use `./scripts/run-migrations-master.sh [uat|staging]` — ne
 - Self-learning: unknown questions auto-saved to KB as `isActive=false` for admin review
 - Embed KB: `npm run embed:kb` (run after adding new KB entries)
 - Freshness guard: `npm run check:kb:fresh` must pass before commit/push; Cursor also runs this guard before `git commit` / `git push` shell commands.
-- **Withdrawals / eeziCash wording:** KB and FAQ must follow `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md` and `docs/FAQ_MASTER.md` §9 — eeziCash = **wallet cash withdrawal** (TPPP), not VAS retail-voucher resale.
+- **Withdrawals / eeziCash wording:** KB and FAQ must follow `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md` and `docs/FAQ_MASTER.md` §9 — eeziCash = **wallet cash withdrawal** (TPPP), not VAS retail-voucher resale. **EasyPay V5** in customer-facing KB = **cash-in (add money) only**; do not describe EasyPay as a MyMoolah wallet cash-out or retail withdrawal path.
 
 ---
 

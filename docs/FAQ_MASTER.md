@@ -1,6 +1,6 @@
 # MyMoolah Treasury Platform – Comprehensive FAQ Library
 
-_Last updated: 12 May 2026_
+_Last updated: 13 May 2026_
 
 This FAQ is the single source of truth for customer support, covering all live and developed features of the MyMoolah digital wallet. Sections are ordered by the most common customer enquiries. Update this document and regenerate the knowledge base whenever a new feature goes live.
 
@@ -84,7 +84,7 @@ A: Your wallet ID starts with "WAL-" and is shown on your dashboard. It is also 
 A: Your current balance is displayed on the dashboard whenever you log in. Tap "Refresh" if you need the latest figure after a recent transaction.
 
 **Q: How do I load money into my wallet?**
-A: You can load funds via EFT (bank transfer) to your linked account, or by receiving an EasyPay voucher payment, or from another wallet user sending you money. The available load methods and instructions are shown in the "Transact" or "Top Up" section of the app.
+A: You can load funds via EFT (bank transfer) to your linked account, an EasyPay V5 cash-in reference where available, or another wallet user sending you money. The available load methods and instructions are shown in the "Transact" or "Top Up" section of the app.
 
 **Q: Why is my balance not updating?**
 A: Balance updates happen when the dashboard loads. If a transaction is still pending, the balance reflects once the payment is confirmed. Pull down to refresh. If money was paid but still not showing after 15 minutes, contact support with your transaction reference.
@@ -196,22 +196,22 @@ A: Verify the following: (1) The PIN is entered exactly as shown — no spaces o
 ## 8. Vouchers
 
 **Q: What types of vouchers does MyMoolah support?**
-A: MyMoolah supports several voucher-style products depending on what is active for your wallet programme: MMVouchers, EasyPay vouchers, retail vouchers, and gift cards. Retail vouchers and gift cards are shown from the approved live catalog in the app, so the exact brands and amounts may change.
+A: MyMoolah supports several voucher-style products depending on what is active for your wallet programme: MMVouchers, retail vouchers, and gift cards. Retail vouchers and gift cards are shown from the approved live catalog in the app, so the exact brands and amounts may change. EasyPay V5 is currently used only for adding cash into a wallet.
 
 **Q: How do I get a voucher?**
 A: Vouchers are issued to you by an employer, programme operator, or via the app if your programme supports it. You will receive them via SMS, email, or in-app notification.
 
 **Q: Where can I use my voucher?**
-A: MMVouchers can be redeemed within the wallet. EasyPay vouchers can be redeemed at any EasyPay-enabled store (Shoprite, Checkers, Pick n Pay, Boxer, and thousands of other outlets nationwide).
+A: MMVouchers can be redeemed within the wallet. Retail vouchers and gift cards can be used only with the brand or retailer shown in the app and on the voucher instructions. EasyPay V5 references are for adding cash into your MyMoolah wallet where available.
 
 **Q: Do vouchers expire?**
-A: Yes. MMVouchers expire after 12 months. EasyPay vouchers have their own expiry. The expiry date is shown on the voucher. Expired vouchers cannot be refunded.
+A: Yes. MMVouchers expire after 12 months. Retail vouchers and gift cards have their own expiry rules. The expiry date is shown on the voucher or in the app. Expired vouchers cannot be refunded.
 
 **Q: I lost my voucher — can I get it back?**
 A: If unused, support may be able to resend it. If it has already been redeemed, it cannot be re-issued. Contact support with your registered phone number and the approximate issue date.
 
 **Q: Why does my voucher say "pending"?**
-A: EasyPay vouchers show as "pending" until the retail payment is confirmed. MMVouchers activate immediately on issue.
+A: Some voucher or cash-in transactions show as "pending" while the supplier or retail payment confirmation is still being processed. MMVouchers activate immediately on issue.
 
 **Q: Can a voucher be converted to wallet balance?**
 A: Some voucher types allow in-wallet redemption which credits your balance. Check the voucher terms — not all vouchers support this.
@@ -232,7 +232,7 @@ A: Some vouchers have a fixed amount and others allow a variable amount within a
 
 ## 9. Wallet cash withdrawals
 
-MyMoolah cash withdrawals are delivered through **Cash-Withdrawal Partners** — third-party networks that accept a PIN, reference or voucher credential at their retailer, merchant or trader point and dispense the corresponding cash. Current and contemplated partners include **eeziCash (Flash Group)**, **EasyPay retail cash-withdrawal**, and **Cliquefin / OTT cash-withdrawal references**, plus any future equivalent partner. The partner network varies by subsection below; the wallet-side rules (ring-fence, limits, FICA controls) are identical across every partner.
+MyMoolah cash withdrawals are delivered through **Cash-Withdrawal Partners** — third-party networks that accept a PIN, reference or voucher credential at their retailer, merchant or trader point and dispense the corresponding cash. Current and contemplated partners include **eeziCash (Flash Group)** and **Cliquefin / OTT cash-withdrawal references**, plus any future equivalent partner. **EasyPay V5 is currently an add-money cash-in rail only.** The partner network varies by subsection below; the wallet-side rules (ring-fence, limits, FICA controls) are identical across every active cash-withdrawal partner.
 
 ### 9a. eeziCash (Flash) — wallet cash withdrawal (not the same as eeziPay airtime)
 
@@ -245,13 +245,19 @@ A: **No.** For regulatory and support purposes, eeziCash is treated as a **walle
 **Q: How do I get help if eeziCash fails?**
 A: Note the date, time, amount, and any error message in the app. Do not share your full PIN in public channels. Contact support from your registered number so agents can trace the **wallet debit** and partner status.
 
-### 9b. EasyPay retail cash withdrawal
+### 9b. EasyPay V5 is add-money cash-in only
 
-**Q: How do I withdraw cash via EasyPay?**
-A: EasyPay cash withdrawal lets you collect cash at participating retail stores. In the app, go to "Cash Withdrawal" or "EasyPay," enter the amount, and receive a unique reference code. Take this code to a participating store (Shoprite, Checkers, Pick n Pay, Boxer, etc.) and ask the cashier to process an EasyPay payment.
+**Q: Can I get cash from an EasyPay store?**
+A: No. **MyMoolah does not offer EasyPay for wallet cash withdrawals.** EasyPay V5 in MyMoolah is **cash-in only** — it adds money into your wallet where that service is available. To get physical cash out of your wallet, use **Withdraw Cash** in the app and only the active partner shown there (for example approved OTT-Mobile Nedbank or ABSA options where available).
 
-**Q: Which stores can I withdraw cash at?**
-A: Any store that accepts EasyPay — including Shoprite, Checkers, Pick n Pay, Boxer, and thousands of other outlets across South Africa. Look for the EasyPay logo.
+**Q: Can I get cash at PEP?**
+A: Not via EasyPay for MyMoolah. **EasyPay V5 is only for adding money (cash-in).** If you need **wallet cash**, start **Withdraw Cash** in the app and follow the **Nedbank** or **ABSA** instructions and collection network shown there. At the outlet, use the partner wording (Nedbank cash-withdrawal voucher or ABSA CashSend), not “EasyPay cash-out.”
+
+**Q: Where can I get cash from my MyMoolah wallet?**
+A: Open **Withdraw Cash**, pick an available partner (such as Nedbank or ABSA where offered), confirm the fee and total debit, then use the partner voucher, PIN, or SMS instructions only at locations that partner lists for that product. **Do not use EasyPay expecting a MyMoolah cash withdrawal.**
+
+**Q: Can I collect cash at PEP, Shoprite, Checkers, Pick n Pay, Boxer, or another retail store?**
+A: Only if that **specific outlet and brand** are on the network for **your active withdrawal partner** in the app after you start **Withdraw Cash** (for example the Nedbank voucher network or the ABSA CashSend network). The same retail group may host many unrelated services; **EasyPay V5 cash-in at a store does not mean that store can pay out your MyMoolah wallet withdrawal.** Follow only the partner name and instructions shown in the app.
 
 **Q: Can I withdraw cash using OTT cash-withdrawal partners?**
 A: Yes. MyMoolah supports OTT-Mobile cash withdrawals through two approved options: **Nedbank cash withdrawal** and **ABSA CashSend**. In the app, go to Withdraw Cash, choose the available provider, enter the cash amount, review the fee and total wallet debit, and confirm. Your wallet is debited first. You then receive the partner withdrawal reference, voucher, PIN or SMS instructions needed to collect cash at the supported network.
@@ -272,10 +278,10 @@ A: Cash-withdrawal options are shown only when the partner, provider, and MyMool
 A: Yes. A cash-withdrawal fee is charged per transaction. The fee is shown before you confirm.
 
 **Q: My EasyPay token failed at the store — what do I do?**
-A: First check that the token has not expired or already been used. Confirm the store accepts EasyPay. If it still fails, note the token number, store name, date and time, and the error message shown by the cashier, and contact support.
+A: EasyPay V5 tokens or references are for cash-ins only. If an EasyPay cash-in fails at the store, first check that the reference has not expired or already been used and that you are following the cash-in instructions. If it still fails, note the reference number, store name, date and time, and the error message shown by the cashier, then contact support.
 
 **Q: Is there a limit on how much I can withdraw as cash?**
-A: Yes. Per-transaction, daily, and monthly limits apply. These are shown in the app and depend on your KYC level. The limits apply across **all Cash-Withdrawal Partners combined** — eeziCash, EasyPay, and Cliquefin / OTT vouchers — not per partner.
+A: Yes. Per-transaction, daily, and monthly limits apply. These are shown in the app and depend on your KYC level. The limits apply across **all active Cash-Withdrawal Partners combined** — such as eeziCash and Cliquefin / OTT vouchers where available — not per partner.
 
 ### 9c. Cash Withdrawals & Ring-Fencing of Own Funds
 
@@ -283,7 +289,7 @@ A: Yes. Per-transaction, daily, and monthly limits apply. These are shown in the
 A: South African banking law (the Banks Act 94 of 1990) reserves cash deposit-and-withdraw services for registered banks. MyMoolah is a licensed payment platform and not a bank. To stay compliant, we **ring-fence** any money you deposit from your own bank account (or self-load via NFC, 1Voucher or Flash Pay) so it can't be paid back out as physical cash. You can still use those funds freely for transfers, PayShap, bill payments, airtime, data, electricity, and merchant payments.
 
 **Q: Which deposits can I withdraw as cash?**
-A: Only **third-party credits** — money sent to you by someone else. Typical examples are salary from your employer, a wages or stokvel payment from a corporate disbursement, a loan disbursement, or a peer-to-peer transfer from another MyMoolah user. Those funds are eligible for cash withdrawal through any MyMoolah Cash-Withdrawal Partner — eeziCash (Flash), EasyPay retail cash-withdrawal, Cliquefin / OTT cash-withdrawal references, and any future equivalent partner — subject to your KYC limits and the usual fees.
+A: Only **third-party credits** — money sent to you by someone else. Typical examples are salary from your employer, a wages or stokvel payment from a corporate disbursement, a loan disbursement, or a peer-to-peer transfer from another MyMoolah user. Those funds are eligible for cash withdrawal through active MyMoolah Cash-Withdrawal Partners — such as eeziCash (Flash), Cliquefin / OTT cash-withdrawal references, and any future equivalent partner — subject to your KYC limits and the usual fees.
 
 **Q: What is a ring-fenced balance?**
 A: It's the portion of your wallet balance that came from your **own money** (deposits from your own bank account, self-loaded NFC, or Flash/1Voucher top-ups). Your total wallet balance is displayed, but this ring-fenced portion cannot be used for a cash withdrawal. There is no separate "cash-available" figure shown in the app — if you try a cash withdrawal that exceeds what is available from third-party credits, you'll see an explanation screen.
@@ -295,7 +301,7 @@ A: Salary paid into your wallet through the MyMoolah disbursement rail is classi
 A: When a deposit arrives, the system compares the sending account-holder's name (as supplied by the bank or payment rail) with your FICA-verified name on file. If the names match, it's treated as your own money and ring-fenced. If the names don't match, it's treated as a third-party credit and is available for cash withdrawal. When a remitter name is missing or unclear, we take the safer path and treat the deposit as your own money.
 
 **Q: Is my money safe if I can't withdraw it as cash?**
-A: Yes. The ring-fence only prevents **cash withdrawal**. Your money is still held in segregated sponsor-bank accounts, fully available for every other use — transfers, PayShap, bill payments, airtime, data, electricity, QR merchant payments, and so on. The restriction only affects cash withdrawals through Cash-Withdrawal Partners (eeziCash, EasyPay, Cliquefin / OTT, USSD cash-withdrawal, and any future equivalent partner).
+A: Yes. The ring-fence only prevents **cash withdrawal**. Your money is still held in segregated sponsor-bank accounts, fully available for every other use — transfers, PayShap, bill payments, airtime, data, electricity, QR merchant payments, and so on. The restriction only affects cash withdrawals through active Cash-Withdrawal Partners (eeziCash, Cliquefin / OTT, USSD cash-withdrawal, and any future equivalent partner).
 
 **Q: Where is the legal basis for this?**
 A: It flows from the Banks Act 94 of 1990 (sections 1 and 11), the SARB Position Paper on Electronic Money (NPS 01/2020), the National Payment System Act 78 of 1998, and FICA 38 of 2001. Internally this is documented as the **MyMoolah Cash Withdrawal & Ring-Fencing of Own Funds Policy (POL-020)** and is operationalised by MyMoolah's Compliance function under sponsor-bank oversight.
@@ -321,7 +327,7 @@ A: When you get close to your daily cash-withdrawal count cap (at around 80%), t
 A: If you reach your daily cash-withdrawal count cap, or if our monitoring system sees an unusual pattern (for example, using several different cash-withdrawal partners in a short window, or a large cumulative cash amount in 24 hours), the attempt is placed in a short pending-review state while MyMoolah Compliance checks the activity. The review normally completes within two hours. You don't need to do anything — if the review clears the transaction, it will continue; if it doesn't clear, you'll receive a notification explaining the decision.
 
 **Q: Can I move between different retail partners to get more cash out in one day?**
-A: No. The daily cap (3 cash withdrawals at Tier 1, or 5 at Tier 2) counts across **all** Cash-Withdrawal Partners combined — eeziCash, EasyPay, Cliquefin / OTT, USSD cash-withdrawal, and any future partner. Rotating between partners to exceed the cap will trigger additional fraud and anti-money-laundering checks.
+A: No. The daily cap (3 cash withdrawals at Tier 1, or 5 at Tier 2) counts across **all** active Cash-Withdrawal Partners combined — eeziCash, Cliquefin / OTT, USSD cash-withdrawal, and any future partner. Rotating between partners to exceed the cap will trigger additional fraud and anti-money-laundering checks.
 
 **Q: What happens if my total cash withdrawals hit the FICA reporting threshold?**
 A: South African law (the Financial Intelligence Centre Act 38 of 2001) requires every financial services institution to report to the Financial Intelligence Centre when cash activity by a single person reaches R24,999.99 (for enhanced review) or R49,999.99 (for a statutory Cash Threshold Report) in any rolling 24-hour period. MyMoolah files these reports automatically on your behalf. At the R49,999.99 level, further cash withdrawals are paused for the remainder of that day while the report is processed. This is a statutory obligation that applies to every South African bank and licensed financial services provider equally.

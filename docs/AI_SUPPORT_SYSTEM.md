@@ -1,12 +1,17 @@
 # MyMoolah AI Support System
 
-**Last Updated**: 2026-05-12  
-**Version**: 3.2.0 - Support KB freshness guard + May 2026 catalog/referral updates  
+**Last Updated**: 2026-05-13  
+**Version**: 3.2.1 - EasyPay V5 cash-in-only KB alignment  
 **Status**: ✅ **LIVE** — Clean ~250-line RAG service replaces legacy 4,000+ line pattern-matching stack
 
 ## 🚀 Overview
 
 The MyMoolah AI Support System uses **LangChain RAG** (Retrieval-Augmented Generation) for semantic search over the knowledge base, powered by GPT-4o. Multi-language (11 SA languages), conversational memory, and no pattern matching — answers come from your knowledge base via semantic similarity.
+
+### **2026-05-13 — EasyPay V5 cash-in only (support KB)**
+- FAQ §9b and GPT gap-fill seeds no longer describe EasyPay as a MyMoolah **wallet cash-out**.
+- **`services/ragService.js`** scope text updated so the assistant does not treat “EasyPay cash-out” as in-scope product wording.
+- Regenerate/embed the KB per environment after FAQ changes (`generate:kb:update*` / `embed:kb*`) so legacy rows are refreshed.
 
 ### **2026-04-16 — Withdrawals knowledge alignment**
 - Canonical customer wording: **`docs/FAQ_MASTER.md`** §9 (eeziCash vs EasyPay vs eeziPay / eeziPower).

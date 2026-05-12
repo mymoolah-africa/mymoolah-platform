@@ -54,7 +54,7 @@ const CATEGORY_MAP = {
   'wallet': ['wallet', 'balance', 'account', 'limit', 'hold', 'funds'],
   'payments': ['payment', 'transfer', 'send money', 'instant', 'eft', 'payshap', 'request money'],
   'vouchers': ['voucher', 'token', 'redeem', 'expiry', 'issue'],
-  'cash_out': ['cash-out', 'cash out', 'withdraw', 'retail', 'easypay', 'token at store'],
+  'cash_out': ['cash-out', 'cash out', 'withdraw', 'retail', 'eezicash', 'ott', 'token at store'],
   'vas': ['airtime', 'data', 'electricity', 'bill payment', 'vas', 'gaming', 'prepaid'],
   'eezipay': ['eezipay', 'eeziairtime', 'eezidata', 'ussd', '*130*'],
   'bulk_payouts': ['salary', 'payroll', 'bulk', 'employer', 'wages', 'payout'],
@@ -158,7 +158,7 @@ const GAP_TOPICS = [
   {
     category: 'fees',
     topic: 'Wallet tiers and fee structure (Bronze, Silver, Gold)',
-    context: `MyMoolah uses a 3-tier fee system. Bronze (default): Zapper payment fee 1.265% VAT-inclusive. Silver (10+ transactions, R5,000+ volume): 1.15%. Gold (25+ transactions, R15,000+ volume): 0.92%. All fees are VAT-inclusive and shown on every confirmation screen before payment. No monthly account fee for personal wallets. Cash-out fees apply per EasyPay transaction. Fees vary by channel and transaction type.`,
+    context: `MyMoolah uses a 3-tier fee system. Bronze (default): Zapper payment fee 1.265% VAT-inclusive. Silver (10+ transactions, R5,000+ volume): 1.15%. Gold (25+ transactions, R15,000+ volume): 0.92%. All fees are VAT-inclusive and shown on every confirmation screen before payment. No monthly account fee for personal wallets. Cash-withdrawal fees apply per approved Withdraw Cash partner transaction when shown in the app. EasyPay V5 cash-in has its own fee rules where offered. Fees vary by channel and transaction type.`,
   },
   {
     category: 'payments',
@@ -177,8 +177,8 @@ const GAP_TOPICS = [
   },
   {
     category: 'cash_out',
-    topic: 'EasyPay cash-out at retail stores',
-    context: `EasyPay cash-out lets users withdraw cash at participating retail stores: Shoprite, Checkers, Pick n Pay, Boxer, and thousands of other EasyPay-enabled outlets. In-app flow: select Cash Out, enter amount, receive a unique reference code. Present the code to the cashier. Fee is shown before confirmation. Limits apply per transaction, day, and month based on KYC level. If token fails at store: check it hasn't expired or been used, verify store accepts EasyPay, note store name/time/error and contact support.`,
+    topic: 'Withdrawing cash from your wallet (active partners only)',
+    context: `Wallet cash withdrawals use the partners shown under Withdraw Cash in the MyMoolah app — for example eeziCash (Flash) where available, and OTT-Mobile cash collection via Nedbank cash-withdrawal voucher or ABSA CashSend where available. The app debits the wallet first, then gives a partner PIN, voucher, or SMS instructions; collection is only at outlets that partner supports for that product. EasyPay V5 is not used for wallet cash withdrawals in MyMoolah: it is cash-in only (add money) where the app offers it. If collection fails, note partner, store, time, and error and contact support from the registered number. Do not tell customers to use "EasyPay cash-out" for MyMoolah wallet withdrawals.`,
   },
   {
     category: 'vas',
@@ -193,7 +193,7 @@ const GAP_TOPICS = [
   {
     category: 'platform_overview',
     topic: 'What MyMoolah is and how it works',
-    context: `MyMoolah is a South African digital wallet and treasury platform. Not a bank — funds held in segregated accounts at licensed institutions. Services: e-wallet storage, instant P2P payments, PayShap, Zapper QR payments, VAS (airtime/data/electricity/bills), EasyPay cash-out, voucher issuance and redemption, bulk employer payouts, referral program (5%/3%/2% 3-level commissions), cross-border transfers via Moolah Move (contact support to activate). Headquartered in Pretoria, South Africa. T-PPP registered. FICA/AML, POPIA, SARB/PASA compliant.`,
+    context: `MyMoolah is a South African digital wallet and treasury platform. Not a bank — funds held in segregated accounts at licensed institutions. Services: e-wallet storage, instant P2P payments, PayShap, Zapper QR payments, VAS (airtime/data/electricity/bills), EasyPay V5 cash-in where available (add money), approved Withdraw Cash partners (e.g. eeziCash / Flash, OTT-Mobile Nedbank or ABSA where offered), voucher issuance and redemption, bulk employer payouts, referral program (5%/3%/2% 3-level commissions), cross-border transfers via Moolah Move (contact support to activate). Headquartered in Pretoria, South Africa. T-PPP registered. FICA/AML, POPIA, SARB/PASA compliant.`,
   },
 ];
 
