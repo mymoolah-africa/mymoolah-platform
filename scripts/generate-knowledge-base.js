@@ -375,87 +375,96 @@ async function main() {
   if (faqOnly) console.log('📖 --faq-only flag: GPT gap-fill generation is skipped');
 
   const openai = new OpenAI({ apiKey });
-  const client = dryRun ? null : await getClient();
 
-  try {
-    if (clearExisting && !dryRun) {
+  // Never hold a pooled DB connection during embedBatch(): OpenAI work can take minutes
+  // and Cloud SQL / proxy will terminate an idle session before saveToDb runs.
+  if (clearExisting && !dryRun) {
+    const clearClient = await getClient();
+    try {
       console.log('\n🗑️  Clearing existing auto-generated entries (faqId LIKE GEN-%)...');
-      const result = await client.query(`DELETE FROM ai_knowledge_base WHERE "faqId" LIKE 'GEN-%'`);
+      const result = await clearClient.query(`DELETE FROM ai_knowledge_base WHERE "faqId" LIKE 'GEN-%'`);
       console.log(`  ✅ Deleted ${result.rowCount} entries`);
+    } finally {
+      clearClient.release();
     }
-
-    // 1. Parse FAQ_MASTER.md
-    const faqEntries = await parseFaqMaster();
-
-    // 2. Generate GPT-4o entries for gaps unless this is a focused FAQ refresh.
-    const gptEntries = faqOnly ? [] : await generateGptEntries(openai);
-
-    // 3. Combine and enrich with category/audience
-    const allEntries = [
-      ...faqEntries.map(e => ({
-        ...e,
-        category: detectCategory(e.question, e.answer),
-        audience: detectAudience(e.question, e.answer),
-      })),
-      ...gptEntries.map(e => ({
-        ...e,
-        audience: detectAudience(e.question, e.answer),
-      })),
-    ];
-
-    console.log(`\n📊 Total entries to process: ${allEntries.length}`);
-    console.log(`   - From FAQ_MASTER.md: ${faqEntries.length}`);
-    console.log(`   - From GPT-4o generation: ${gptEntries.length}`);
-
-    // 4. Embed all entries
-    await embedBatch(openai, allEntries);
-
-    if (dryRun) {
-      console.log('\n🔍 DRY RUN — sample of what would be inserted:');
-      allEntries.slice(0, 5).forEach((e, i) => {
-        console.log(`\n  [${i + 1}] Category: ${e.category} | Audience: ${e.audience}`);
-        console.log(`       Q: ${e.question.slice(0, 80)}`);
-        console.log(`       A: ${e.answer.slice(0, 100)}...`);
-      });
-      console.log(`\n✅ Dry run complete. ${allEntries.length} entries would be inserted.`);
-      return;
-    }
-
-    // 5. Save to DB
-    const { inserted, updated, skipped } = await saveToDb(client, allEntries);
-
-    // 6. Summary
-    const estimatedCost = (
-      (faqEntries.length * 0.00002) + // embeddings
-      (gptEntries.length * 0.00002) +  // embeddings
-      (GAP_TOPICS.length * 0.01)       // GPT-4o calls
-    ).toFixed(2);
-
-    console.log('\n' + '─'.repeat(60));
-    console.log('✅ Knowledge Base Generation Complete');
-    console.log('─'.repeat(60));
-    console.log(`📊 Entries inserted:  ${inserted}`);
-    console.log(`♻️  Entries updated:   ${updated}`);
-    console.log(`⏭️  Entries skipped:   ${skipped} (already exist)`);
-    console.log(`💰 Estimated cost:    ~$${estimatedCost}`);
-    console.log('');
-    console.log('📋 Next steps:');
-    if (envArg === 'uat') {
-      console.log('   1. Review entries in UAT database (isActive=false)');
-      console.log('   2. Run: npm run activate:kb to activate all GEN- entries');
-      console.log('   3. Run: npm run embed:kb (to re-embed active entries)');
-      console.log('   4. Test support bot in UAT');
-      console.log('   5. Run: npm run generate:kb:staging && npm run generate:kb:production');
-    } else {
-      console.log(`   1. Run: npm run embed:kb:${envArg} (entries already active)`);
-      console.log('   2. Deploy code: ./scripts/deploy-backend.sh --' + envArg);
-      console.log('   3. Test the deployed support bot');
-    }
-    console.log('─'.repeat(60));
-
-  } finally {
-    if (client) client.release();
   }
+
+  // 1. Parse FAQ_MASTER.md
+  const faqEntries = await parseFaqMaster();
+
+  // 2. Generate GPT-4o entries for gaps unless this is a focused FAQ refresh.
+  const gptEntries = faqOnly ? [] : await generateGptEntries(openai);
+
+  // 3. Combine and enrich with category/audience
+  const allEntries = [
+    ...faqEntries.map(e => ({
+      ...e,
+      category: detectCategory(e.question, e.answer),
+      audience: detectAudience(e.question, e.answer),
+    })),
+    ...gptEntries.map(e => ({
+      ...e,
+      audience: detectAudience(e.question, e.answer),
+    })),
+  ];
+
+  console.log(`\n📊 Total entries to process: ${allEntries.length}`);
+  console.log(`   - From FAQ_MASTER.md: ${faqEntries.length}`);
+  console.log(`   - From GPT-4o generation: ${gptEntries.length}`);
+
+  // 4. Embed all entries
+  await embedBatch(openai, allEntries);
+
+  if (dryRun) {
+    console.log('\n🔍 DRY RUN — sample of what would be inserted:');
+    allEntries.slice(0, 5).forEach((e, i) => {
+      console.log(`\n  [${i + 1}] Category: ${e.category} | Audience: ${e.audience}`);
+      console.log(`       Q: ${e.question.slice(0, 80)}`);
+      console.log(`       A: ${e.answer.slice(0, 100)}...`);
+    });
+    console.log(`\n✅ Dry run complete. ${allEntries.length} entries would be inserted.`);
+    return;
+  }
+
+  // 5. Save to DB (connect after embeddings so the session is not idle for minutes)
+  const dbClient = await getClient();
+  let inserted;
+  let updated;
+  let skipped;
+  try {
+    ({ inserted, updated, skipped } = await saveToDb(dbClient, allEntries));
+  } finally {
+    dbClient.release();
+  }
+
+  // 6. Summary
+  const estimatedCost = (
+    (faqEntries.length * 0.00002) + // embeddings
+    (gptEntries.length * 0.00002) +  // embeddings
+    (GAP_TOPICS.length * 0.01)       // GPT-4o calls
+  ).toFixed(2);
+
+  console.log('\n' + '─'.repeat(60));
+  console.log('✅ Knowledge Base Generation Complete');
+  console.log('─'.repeat(60));
+  console.log(`📊 Entries inserted:  ${inserted}`);
+  console.log(`♻️  Entries updated:   ${updated}`);
+  console.log(`⏭️  Entries skipped:   ${skipped} (already exist)`);
+  console.log(`💰 Estimated cost:    ~$${estimatedCost}`);
+  console.log('');
+  console.log('📋 Next steps:');
+  if (envArg === 'uat') {
+    console.log('   1. Review entries in UAT database (isActive=false)');
+    console.log('   2. Run: npm run activate:kb to activate all GEN- entries');
+    console.log('   3. Run: npm run embed:kb (to re-embed active entries)');
+    console.log('   4. Test support bot in UAT');
+    console.log('   5. Run: npm run generate:kb:staging && npm run generate:kb:production');
+  } else {
+    console.log(`   1. Run: npm run embed:kb:${envArg} (entries already active)`);
+    console.log('   2. Deploy code: ./scripts/deploy-backend.sh --' + envArg);
+    console.log('   3. Test the deployed support bot');
+  }
+  console.log('─'.repeat(60));
 
   process.exit(0);
 }

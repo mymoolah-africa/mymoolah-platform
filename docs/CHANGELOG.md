@@ -1,5 +1,13 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-05-13 - KB generator: DB connect after embeddings (Cloud SQL idle drop)
+
+### Summary
+`scripts/generate-knowledge-base.js` previously acquired a pooled PostgreSQL client before calling OpenAI for embeddings, then reused it for `saveToDb`. Long embedding runs left the DB session idle; Cloud SQL / Auth Proxy often closed it, producing `Connection terminated unexpectedly` on write. The script now connects only for `--clear` deletes and immediately before `saveToDb`, after embeddings finish.
+
+### Validation
+- `node --check scripts/generate-knowledge-base.js` passed.
+
 ## 2026-05-13 - Support KB: EasyPay V5 cash-in only
 
 ### Summary
