@@ -1,5 +1,22 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-05-12 - Staging OTT live cashout provider fee terms
+
+### Summary
+Prepared a Staging-only migration path to fix `/api/v1/ott/payouts/quote` 500s caused by incomplete OTT commercial fee rows for live provider codes `4` and `67`.
+
+### Changes
+- Added `migrations/20260512_01_seed_ott_live_absa_nedbank_payout_terms.js` to update active OTT `cash_send` fixed-fee terms for Nedbank Cardless Withdrawal provider `4` and ABSA CashSend provider `67`.
+- The migration applies the approved fixed customer cashout fee structure: `fixed_fee_ex_vat=9.96`, `mmtp_fee_ex_vat=1.34`, `reversal_fee_ex_vat=9.96`, `fixed_fee_vat_rate=0.15`, and `customerFeeInclVat=13.00`.
+- Existing active rows are updated in place so later Staging rows with null economics no longer win the fee-policy lookup; missing rows are inserted only when no active row exists.
+- Production was not touched; André will run the migration against Staging only before retesting.
+
+### Validation
+- Cloud Run logs identified the root cause as `OTT_FEE_POLICY_INCOMPLETE` for provider `67` and provider `4`.
+- Read-only DB comparison confirmed Staging rows for `4` and `67` had null fee fields while the fixed fee policy is already approved.
+- `node --check migrations/20260512_01_seed_ott_live_absa_nedbank_payout_terms.js` passed.
+- Cursor lints on the migration reported no errors.
+
 ## 2026-05-12 - OTT-Mobile withdrawal network KB update
 
 ### Summary
