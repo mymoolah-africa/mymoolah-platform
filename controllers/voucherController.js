@@ -2292,11 +2292,31 @@ exports.getVoucherBalanceSummary = async (req, res) => {
       where: {
         userId: userId,
         status: {
-          [require('sequelize').Op.notIn]: ['cancelled', 'expired']
+          [Op.notIn]: ['cancelled', 'expired']
         }
       },
-      attributes: ['id', 'status', 'balance', 'originalAmount', 'voucherType']
+      attributes: ['id', 'status', 'balance', 'originalAmount', 'voucherType', 'easyPayCode']
     });
+
+    const easyPayTopUpCodes = allVouchers
+      .filter(voucher =>
+        voucher.status === 'pending_payment' &&
+        (voucher.voucherType === 'easypay_topup' || voucher.voucherType === 'easypay_topup_active') &&
+        voucher.easyPayCode
+      )
+      .map(voucher => voucher.easyPayCode);
+
+    const paidTopUpBills = easyPayTopUpCodes.length > 0
+      ? await Bill.findAll({
+          where: {
+            userId,
+            easyPayNumber: { [Op.in]: easyPayTopUpCodes },
+            status: 'paid'
+          },
+          attributes: ['easyPayNumber']
+        })
+      : [];
+    const paidTopUpCodes = new Set(paidTopUpBills.map(bill => bill.easyPayNumber));
     
     let activeValue = 0;
     let pendingValue = 0;
@@ -2307,17 +2327,21 @@ exports.getVoucherBalanceSummary = async (req, res) => {
     allVouchers.forEach(voucher => {
       const amount = parseFloat(voucher.originalAmount || 0);
       const balance = parseFloat(voucher.balance || 0);
+      const isEasyPayTopUp = voucher.voucherType === 'easypay_topup' || voucher.voucherType === 'easypay_topup_active';
+      const effectiveStatus = isEasyPayTopUp && paidTopUpCodes.has(voucher.easyPayCode)
+        ? 'redeemed'
+        : voucher.status;
       
-      if (voucher.status === 'active') {
+      if (effectiveStatus === 'active') {
         // Active MMVouchers: use balance (remaining value)
         activeValue += balance;
-      } else if (voucher.status === 'pending_payment' && voucher.voucherType === 'easypay_pending') {
+      } else if (effectiveStatus === 'pending_payment' && voucher.voucherType === 'easypay_pending') {
         // Traditional EPVouchers: use originalAmount (user already paid)
         activeValue += amount;
-      } else if (voucher.status === 'pending_payment' && voucher.voucherType === 'easypay_topup') {
+      } else if (effectiveStatus === 'pending_payment' && isEasyPayTopUp) {
         // Top-up @ EasyPay: use 0 (user hasn't paid yet)
         // Don't add to activeValue - not an asset yet
-      } else if (voucher.status === 'redeemed') {
+      } else if (effectiveStatus === 'redeemed') {
         // Redeemed vouchers: use originalAmount
         redeemedValue += amount;
       }
@@ -2326,10 +2350,22 @@ exports.getVoucherBalanceSummary = async (req, res) => {
       totalValue += amount;
     });
     
-    // Count vouchers by status
-    const activeCount = allVouchers.filter(v => v.status === 'active').length;
-    const pendingCount = allVouchers.filter(v => v.status === 'pending_payment').length;
-    const redeemedCount = allVouchers.filter(v => v.status === 'redeemed').length;
+    // Count only spendable/open vouchers for the dashboard; EasyPay top-up
+    // instructions are not MyMoolah voucher value and paid top-ups are history.
+    const activeCount = allVouchers.filter(v =>
+      v.status === 'active' &&
+      v.voucherType !== 'easypay_topup' &&
+      v.voucherType !== 'easypay_topup_active'
+    ).length;
+    const pendingCount = allVouchers.filter(v =>
+      v.status === 'pending_payment' &&
+      v.voucherType !== 'easypay_topup' &&
+      v.voucherType !== 'easypay_topup_active'
+    ).length;
+    const redeemedCount = allVouchers.filter(v => {
+      const isEasyPayTopUp = v.voucherType === 'easypay_topup' || v.voucherType === 'easypay_topup_active';
+      return v.status === 'redeemed' || (isEasyPayTopUp && paidTopUpCodes.has(v.easyPayCode));
+    }).length;
     
     res.json({
       success: true,

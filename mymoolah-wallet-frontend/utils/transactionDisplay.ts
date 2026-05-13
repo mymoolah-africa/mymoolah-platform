@@ -9,12 +9,25 @@ export function cleanTransactionDescription(transaction: TransactionDisplayInput
   if (!description) return 'Transaction';
 
   const metadata = transaction.metadata || {};
+  const lowerDescription = description.toLowerCase();
+  const isFeeTransaction =
+    transaction.type === 'fee' ||
+    metadata.isTopUpFee === true ||
+    metadata.isFlashCashoutFee === true ||
+    metadata.isCashoutFee === true ||
+    metadata.isEasyPayVoucherFee === true ||
+    String(metadata.operationType || '').toLowerCase().includes('fee') ||
+    String(metadata.settlementType || '').toLowerCase().includes('fee') ||
+    /\bfee\b/i.test(description);
+
+  if (isFeeTransaction) return 'Transaction fee';
+
   const providerCode = String(metadata.providerCode || '');
   const providerLabel =
     providerCode === '112' ? 'ABSA CashSend' :
     providerCode === '10' ? 'Nedbank Cardless Withdrawal' :
-    description.toLowerCase().includes('absa') ? 'ABSA CashSend' :
-    description.toLowerCase().includes('nedbank') ? 'Nedbank Cardless Withdrawal' :
+    lowerDescription.includes('absa') ? 'ABSA CashSend' :
+    lowerDescription.includes('nedbank') ? 'Nedbank Cardless Withdrawal' :
     'Cash payout';
 
   if (metadata.combinedOttPayoutRefund || /^ott payout reversal:/i.test(description)) {
@@ -22,7 +35,6 @@ export function cleanTransactionDescription(transaction: TransactionDisplayInput
   }
 
   if (metadata.combinedOttPayout || metadata.ottPayoutId) {
-    if (description.toLowerCase() === 'transaction fee') return 'Transaction fee';
     return `Withdraw Cash - ${providerLabel}`;
   }
 

@@ -253,7 +253,7 @@ export function DashboardPage() {
           const voucherData = await voucherResponse.json();
           if (voucherData.success && voucherData.data) {
             const summary = voucherData.data;
-            // Dashboard counter should use active.count which already includes both active AND pending vouchers
+            // Dashboard count comes from backend spendable/open voucher rules.
             const dashboardVoucherCount = summary.active.count || 0;
             
                   // Voucher count calculation for dashboard display

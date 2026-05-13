@@ -415,7 +415,7 @@ class EasyPayController {
           type: 'fee',
           amount: -totalFee,
           fee: totalFee,
-          description: `EasyPay Fee (R${feeExclVat.toFixed(2)} + R${vat.toFixed(2)} VAT)`,
+          description: 'Transaction fee',
           status: 'completed',
           reference: `${transactionRef}-FEE`,
           metadata: {

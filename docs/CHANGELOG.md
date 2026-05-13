@@ -10,7 +10,9 @@ Aligned EasyPay V5 cash top-up PINs with wallet UX and banking controls: creatin
 - The voucher completion metadata now records callback receipt, paid timestamp, gross amount, fee, net amount, payment reference, transaction reference, merchant, terminal, and echo data for history/audit display.
 - `mymoolah-wallet-frontend/pages/VouchersPage.tsx` now labels pending top-up PINs as `Pending Cash Top-up`, keeps them visible as payment instructions while unpaid, excludes their pending amount from total spendable voucher value, and shows completed top-ups as paid history rows.
 - Follow-up: `controllers/voucherController.js` now reconciles legacy pending EasyPay top-up vouchers against paid `bills` when listing vouchers, so already-paid top-ups move out of `Mine` and into history without a production row mutation or migration.
+- Follow-up: the voucher balance summary now applies the same EasyPay top-up rule to the Home dashboard count, so paid or unpaid top-up instructions do not appear as open MyMoolah voucher count.
 - Follow-up: `mymoolah-wallet-frontend/pages/VouchersPage.tsx` now renders pending EasyPay top-ups as a clearer payment-instruction card with the amount separated from the badges and explanatory copy.
+- Follow-up: EasyPay fee transaction rows and defensive frontend transaction formatting now show customer-facing fee rows only as `Transaction fee`, without exposing fee/VAT breakdown text in cards or history.
 - The wallet `Vouchers > Create` page now shows only `MyMoolah Voucher`; EasyPay top-up remains under `Add Money > EasyPay Top-up`, and future cash-out belongs under `Withdraw Cash`.
 - `mymoolah-wallet-frontend/components/overlays/digital-vouchers/brandLogos.ts` now centralises real-logo matching for voucher overlay cards and the purchase modal, using the expanded `*_logo` asset inventory for betting, retail, food, health, and service brands.
 - `tests/easypay-v5-controller.test.js` now verifies that `paymentNotification` redeems the matching EasyPay top-up voucher without changing duplicate-callback credit behaviour.
@@ -19,6 +21,7 @@ Aligned EasyPay V5 cash top-up PINs with wallet UX and banking controls: creatin
 - `node --check controllers/easyPayController.js tests/easypay-v5-controller.test.js` passed.
 - `npx jest tests/easypay-v5-controller.test.js tests/easypay-auth.test.js --runInBand` passed 10/10.
 - `node --check controllers/voucherController.js` passed.
+- `node --check controllers/easyPayController.js` passed after fee-label cleanup.
 - `npx tsc --noEmit` in `mymoolah-wallet-frontend` passed.
 - Cursor lints on touched files reported no errors.
 - Follow-up logo import fix updated wallet references from `*-logo.png` to `*_logo.png`; full `npm run build` in `mymoolah-wallet-frontend` passed.

@@ -20,7 +20,9 @@ Implemented the approved EasyPay Cash Top-up Voucher Lifecycle Plan without edit
 - [x] Updated wallet logo imports from `*-logo.png` to André's renamed `*_logo.png` assets.
 - [x] Added a shared voucher overlay real-logo resolver so cards and purchase modals use the expanded `*_logo` brand assets instead of fallback icons where possible.
 - [x] Added voucher-list response reconciliation so legacy pending EasyPay top-ups with paid Bills are returned as redeemed/history rows without a migration.
+- [x] Added voucher balance summary reconciliation so Home dashboard voucher count excludes EasyPay top-up instructions and paid legacy top-ups.
 - [x] Restyled pending EasyPay top-up cards in `Mine` to read as payment instructions instead of cramped voucher-value cards.
+- [x] Standardized fee row display so EasyPay/VAT breakdown wording is shown only as `Transaction fee` in customer-facing transaction cards/history.
 - [x] Ran targeted backend/frontend validation and captured known unrelated blockers.
 - [x] Updated changelog, handover, and this session log.
 
@@ -38,6 +40,9 @@ Implemented the approved EasyPay Cash Top-up Voucher Lifecycle Plan without edit
 ## Files Modified
 - `controllers/easyPayController.js` - Finds the matching `easypay_topup` voucher by user and EasyPay number during successful callback and marks it `redeemed` inside the existing DB transaction.
 - `controllers/voucherController.js` - Reconciles pending EasyPay top-up voucher response status against paid `Bill` records so legacy paid top-ups leave `Mine` without mutating production rows.
+- `controllers/easyPayController.js` - Persists the EasyPay V5 fee row using customer-facing `Transaction fee` wording.
+- `mymoolah-wallet-frontend/components/DashboardPage.tsx` - Clarifies that the Home dashboard count is supplied by backend spendable/open voucher rules.
+- `mymoolah-wallet-frontend/utils/transactionDisplay.ts` - Defensively normalizes fee transaction descriptions to `Transaction fee`.
 - `tests/easypay-v5-controller.test.js` - Adds coverage that payment notification redeems the matching EasyPay top-up voucher and preserves metadata.
 - `mymoolah-wallet-frontend/pages/VouchersPage.tsx` - Adds EasyPay top-up-specific labels, display amounts, spendable-value summary rules, and history presentation.
 - `mymoolah-wallet-frontend/pages/VouchersPage.tsx` - Removes the visible `EasyPay Cash-out Voucher` option from the Create tab.
@@ -56,7 +61,9 @@ Implemented the approved EasyPay Cash Top-up Voucher Lifecycle Plan without edit
 - Voucher metadata now records callback receipt, paid timestamp, gross amount, fee, net amount, payment reference, transaction reference, merchant ID, terminal ID, and `EchoData`.
 - The wallet page now excludes pending EasyPay top-up amounts from `Total Value`, while still showing the amount due on the pending instruction card.
 - Redeemed EasyPay top-ups are naturally excluded from the dashboard/Mine filter and shown in the existing history list.
+- The Home dashboard voucher count now uses the same rule and does not count EasyPay top-up instructions as open MyMoolah vouchers.
 - Pending EasyPay top-up cards now separate the amount, status badges, PIN, expiry notice, and action buttons to avoid the cramped/overlapping layout seen after deployment.
+- Customer-facing transaction cards/history must not expose supplier fee or VAT breakdowns; all fee rows display as `Transaction fee`.
 - Retail voucher cards and detail modals now resolve real logos from the expanded asset set for brands such as betting providers, OTT, Shoprite/Checkers, Pick n Pay, Boxer, Discovery, Kena Health, Ticketpro, Flash, and other available `*_logo` assets.
 
 ---
