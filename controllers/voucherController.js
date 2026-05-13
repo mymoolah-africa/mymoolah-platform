@@ -1,4 +1,4 @@
-const { Voucher, VoucherType, User, sequelize } = require('../models');
+const { Voucher, VoucherType, User, Bill, sequelize } = require('../models');
 const { Op } = require('sequelize');
 const { sendErrorResponse, ERROR_CODES, requestIdMiddleware } = require('../utils/errorHandler');
 const { validateEasyPayNumber } = require('../utils/easyPayUtils');
@@ -2376,16 +2376,54 @@ exports.listAllVouchersForMe = async (req, res) => {
       },
       order: [['createdAt', 'DESC']]
     });
+
+    const easyPayTopUpCodes = vouchers
+      .filter(voucher =>
+        voucher.status === 'pending_payment' &&
+        (voucher.voucherType === 'easypay_topup' || voucher.voucherType === 'easypay_topup_active') &&
+        voucher.easyPayCode
+      )
+      .map(voucher => voucher.easyPayCode);
+
+    const paidTopUpBills = easyPayTopUpCodes.length > 0
+      ? await Bill.findAll({
+          where: {
+            userId,
+            easyPayNumber: { [Op.in]: easyPayTopUpCodes },
+            status: 'paid'
+          },
+          attributes: ['easyPayNumber', 'paidAt', 'paidAmount', 'transactionId', 'metadata']
+        })
+      : [];
+
+    const paidBillByEasyPayNumber = new Map(
+      paidTopUpBills.map(bill => [bill.easyPayNumber, bill])
+    );
     
     const vouchersData = vouchers.map(voucher => {
+      const paidTopUpBill = paidBillByEasyPayNumber.get(voucher.easyPayCode);
+      const isSettledTopUp = Boolean(paidTopUpBill);
+      const effectiveStatus = isSettledTopUp ? 'redeemed' : voucher.status;
+      const effectiveBalance = isSettledTopUp ? 0 : voucher.balance;
+      const effectiveMetadata = isSettledTopUp
+        ? {
+            ...(voucher.metadata || {}),
+            callbackReceived: true,
+            paidAt: paidTopUpBill.paidAt || voucher.updatedAt,
+            paidAmount: paidTopUpBill.paidAmount,
+            billTransactionId: paidTopUpBill.transactionId,
+            reconciledFromBill: true
+          }
+        : voucher.metadata;
+
       // Backfill expiry if missing to ensure consistent UI
       let effectiveExpiresAt = voucher.expiresAt;
       if (!effectiveExpiresAt) {
         const createdTs = new Date(voucher.createdAt).getTime();
-        if (voucher.status === 'pending_payment' && voucher.easyPayCode) {
+        if (effectiveStatus === 'pending_payment' && voucher.easyPayCode) {
           const epExpiryDays = parseInt(process.env.EASYPAY_PIN_EXPIRY_DAYS || '30', 10);
           effectiveExpiresAt = new Date(createdTs + epExpiryDays * 24 * 60 * 60 * 1000);
-        } else if (voucher.status === 'active') {
+        } else if (effectiveStatus === 'active') {
           // Active MMVoucher: 12 months from creation
           effectiveExpiresAt = new Date(createdTs + 365 * 24 * 60 * 60 * 1000);
         }
@@ -2398,15 +2436,17 @@ exports.listAllVouchersForMe = async (req, res) => {
         userId: voucher.userId,
         voucherType: voucher.voucherType,
         originalAmount: voucher.originalAmount,
-        balance: voucher.balance,
-        status: voucher.status,
+        balance: effectiveBalance,
+        status: effectiveStatus,
         // Provide both expiresAt and expiryDate for frontend compatibility
         expiresAt: effectiveExpiresAt,
         expiryDate: effectiveExpiresAt,
         createdAt: voucher.createdAt,
         updatedAt: voucher.updatedAt,
-        metadata: voucher.metadata,
-        redeemedAt: voucher.metadata && voucher.metadata.redeemedAt ? voucher.metadata.redeemedAt : null
+        metadata: effectiveMetadata,
+        redeemedAt: effectiveMetadata && (effectiveMetadata.redeemedAt || effectiveMetadata.paidAt)
+          ? (effectiveMetadata.redeemedAt || effectiveMetadata.paidAt)
+          : null
       };
     });
     

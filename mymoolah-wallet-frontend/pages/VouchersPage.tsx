@@ -1515,6 +1515,7 @@ export function VouchersPage() {
                   const typeBadge = getVoucherTypeBadge(voucher.type, voucher);
                   const statusBadge = getVoucherStatusBadge(voucher.status, voucher);
                   const displayAmount = getVoucherDisplayAmount(voucher);
+                  const isPendingTopUpCard = isPendingEasyPayTopUpVoucher(voucher);
                   
                   return (
                     <div
@@ -1526,12 +1527,12 @@ export function VouchersPage() {
                         margin: '0',
                         padding: '0',
                         boxSizing: 'border-box',
-                        border: '1px solid #e2e8f0',
+                        border: isPendingTopUpCard ? '1px solid #bfdbfe' : '1px solid #e2e8f0',
                         borderRadius: '16px',
                         cursor: 'pointer',
                         transition: 'all 0.2s ease',
                         backgroundColor: '#ffffff',
-                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
+                        boxShadow: isPendingTopUpCard ? '0 8px 20px rgba(45, 140, 202, 0.08)' : '0 1px 3px rgba(0, 0, 0, 0.05)'
                       }}
                       onMouseOver={(e) => {
                         e.currentTarget.style.borderColor = '#86BE41';
@@ -1547,7 +1548,14 @@ export function VouchersPage() {
                     >
                       <div style={{ padding: '20px', width: '100%', boxSizing: 'border-box' }}>
                         {/* Header with Logo and Badges */}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: isPendingTopUpCard ? 'flex-start' : 'center',
+                          justifyContent: 'space-between',
+                          flexWrap: isPendingTopUpCard ? 'wrap' : 'nowrap',
+                          gap: isPendingTopUpCard ? '12px' : '8px',
+                          marginBottom: '16px'
+                        }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             {/* Logo */}
                             <div 
@@ -1632,11 +1640,32 @@ export function VouchersPage() {
                           </div>
                           
                           {/* Amount */}
-                          <div style={{ textAlign: 'right' }}>
+                          <div style={{
+                            textAlign: isPendingTopUpCard ? 'left' : 'right',
+                            width: isPendingTopUpCard ? '100%' : undefined,
+                            padding: isPendingTopUpCard ? '10px 12px' : 0,
+                            borderRadius: isPendingTopUpCard ? '12px' : undefined,
+                            backgroundColor: isPendingTopUpCard ? '#f0f9ff' : undefined,
+                            border: isPendingTopUpCard ? '1px solid #bfdbfe' : undefined
+                          }}>
+                            {isPendingTopUpCard && (
+                              <p
+                                style={{
+                                  fontFamily: 'Montserrat, sans-serif',
+                                  fontSize: '11px',
+                                  color: '#2D8CCA',
+                                  fontWeight: '700',
+                                  margin: '0 0 4px 0',
+                                  lineHeight: 1
+                                }}
+                              >
+                                Amount to pay at EasyPay
+                              </p>
+                            )}
                             <p 
                               style={{
                                 fontFamily: 'Montserrat, sans-serif',
-                                fontSize: '18px',
+                                fontSize: isPendingTopUpCard ? '22px' : '18px',
                                 fontWeight: '700',
                                 color: getVoucherDisplayAmountColor(voucher),
                                 margin: 0,
@@ -1655,7 +1684,7 @@ export function VouchersPage() {
                                   lineHeight: 1
                                 }}
                               >
-                                pay at till
+                                Wallet credits after payment confirmation
                               </p>
                             )}
                             {voucher.isPartialRedemption && (
@@ -1725,7 +1754,9 @@ export function VouchersPage() {
                             lineHeight: 1.3
                           }}
                         >
-                          
+                          {isPendingTopUpCard
+                            ? 'Use this EasyPay number at a participating EasyPay retailer. This is not spendable wallet value yet.'
+                            : voucher.description}
                         </p>
 
                         {/* Bottom Info */}
@@ -1777,9 +1808,10 @@ export function VouchersPage() {
                          !isVoucherExpired(voucher) && (
                           <div style={{ 
                             marginTop: '8px',
-                            display: 'flex',
+                            display: 'grid',
+                            gridTemplateColumns: isPendingTopUpCard ? '1fr' : '1fr auto',
                             gap: '8px',
-                            alignItems: 'flex-start'
+                            alignItems: 'stretch'
                           }}>
                             {/* Expiry Notice - Narrower */}
                             <div style={{ 
@@ -1820,7 +1852,7 @@ export function VouchersPage() {
                             </div>
                             
                             {/* Action Buttons */}
-                            <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+                            <div style={{ display: 'flex', gap: '8px', flexShrink: 0, justifyContent: isPendingTopUpCard ? 'flex-end' : 'flex-start' }}>
                               {/* Simulate Button (UAT only) - Show for pending_payment (top-up/cash-out) or active (standalone) */}
                               {isUATEnvironment() && (
                                 (voucher.status === 'pending_payment') || 
