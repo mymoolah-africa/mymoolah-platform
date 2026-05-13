@@ -8,60 +8,11 @@ import { Card, CardContent } from '../../ui/card';
 import { Separator } from '../../ui/separator';
 import { apiService } from '../../../services/apiService';
 import { BrandSpinner } from '../../common/LoadingSpinner';
-
-import oneVoucherLogo from '../../../assets/1voucher-logo.png';
-import betwayLogo from '../../../assets/betway-logo.png';
-import bluLogo from '../../../assets/blu_logo.png';
-import fnbLogo from '../../../assets/fnb_logo.png';
-import hollywoodLogo from '../../../assets/hollywood-logo.png';
-import ottLogo from '../../../assets/ott-logo.png';
-import pnpLogo from '../../../assets/pnp_logo.png';
-import shopriteLogo from '../../../assets/shoprite_logo.png';
-import supabetsLogo from '../../../assets/supabets_logo.png';
-import yesplayLogo from '../../../assets/yesplay_logo.png';
-
-const BRAND_LOGO_MAP: Record<string, string> = {
-  '1voucher': oneVoucherLogo,
-  'betway': betwayLogo,
-  'blu': bluLogo,
-  'blue': bluLogo,
-  'blu voucher': bluLogo,
-  'blue voucher': bluLogo,
-  'fnb': fnbLogo,
-  'first national bank': fnbLogo,
-  'fnb voucher': fnbLogo,
-  'hollywood bets': hollywoodLogo,
-  'ott voucher': ottLogo,
-  'pick n pay': pnpLogo,
-  'pick n pay voucher': pnpLogo,
-  'pick and pay': pnpLogo,
-  'picknpay': pnpLogo,
-  'pnp': pnpLogo,
-  'shoprite': shopriteLogo,
-  'shoprite voucher': shopriteLogo,
-  'checkers': shopriteLogo,
-  'checkers voucher': shopriteLogo,
-  'supabets': supabetsLogo,
-  'supa bets': supabetsLogo,
-  'supabets voucher': supabetsLogo,
-  'yesplay': yesplayLogo,
-  'yes play': yesplayLogo,
-  'yesplay voucher': yesplayLogo,
-};
-
-function getBrandLogo(...brandNames: Array<string | undefined | null>): string | null {
-  for (const brandName of brandNames) {
-    const key = String(brandName || '').toLowerCase().trim();
-    if (!key) continue;
-    if (BRAND_LOGO_MAP[key]) return BRAND_LOGO_MAP[key];
-    const matchedKey = Object.keys(BRAND_LOGO_MAP).find(candidate => key.includes(candidate));
-    if (matchedKey) return BRAND_LOGO_MAP[matchedKey];
-  }
-  return null;
-}
+import { getBrandLogo } from './brandLogos';
 
 interface Voucher {
   id: string;
+  catalogKey?: string;
   purchaseProductId?: number;
   productId?: number;
   variantId?: number;
@@ -224,7 +175,7 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
   };
 
   const isFixedDenominations = !voucher.isVariable && Array.isArray(voucher.denominations) && voucher.denominations.length > 0;
-  const brandLogo = getBrandLogo(voucher.brand, voucher.name);
+  const brandLogo = getBrandLogo(voucher.catalogKey, voucher.brand, voucher.name);
   const isPurchaseAmountValid = Boolean(selectedDenomination) && !errors.amount;
   const amountErrorId = `voucher-amount-error-${voucher.id}`;
 

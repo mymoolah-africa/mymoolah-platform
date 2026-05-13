@@ -1,4 +1,4 @@
-const { Bill, Payment, sequelize } = require('../models');
+const { Bill, Payment, Voucher, sequelize } = require('../models');
 const { validateEasyPayNumber, extractReceiverId } = require('../utils/easyPayUtils');
 
 function buildEasyPayPaymentReference(easyPayNumber, reference) {
@@ -447,6 +447,38 @@ class EasyPayController {
               walletId: wallet.walletId
             }, { transaction: t });
           }
+        }
+
+        const topUpVoucher = await Voucher.findOne({
+          where: {
+            userId: bill.userId,
+            easyPayCode: EasyPayNumber,
+            voucherType: 'easypay_topup'
+          },
+          transaction: t,
+          lock: t.LOCK.UPDATE
+        });
+
+        if (topUpVoucher) {
+          await topUpVoucher.update({
+            status: 'redeemed',
+            balance: 0,
+            metadata: {
+              ...(topUpVoucher.metadata || {}),
+              callbackReceived: true,
+              paidAt: new Date().toISOString(),
+              grossAmount: grossAmountRand,
+              fee: totalFee,
+              netAmount,
+              paymentReference: Reference || null,
+              transactionReference: transactionRef,
+              merchantId: MerchantId || null,
+              terminalId: TerminalId || null,
+              echoData: EchoData
+            }
+          }, { transaction: t });
+        } else {
+          console.warn(`[EasyPay] paymentNotification: no top-up voucher found for ${EasyPayNumber}`);
         }
 
         await bill.update({

@@ -1,5 +1,5 @@
 import React from 'react';
-import vodacomLogo from '../../assets/vodacom-logo.png';
+import vodacomLogo from '../../assets/vodacom_logo.png';
 
 interface IconProps {
   size?: number;

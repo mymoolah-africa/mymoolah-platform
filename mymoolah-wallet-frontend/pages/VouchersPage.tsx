@@ -225,6 +225,10 @@ export function VouchersPage() {
   };
   const isEasyPayTopUpVoucher = (voucher: MMVoucher): boolean =>
     voucher.voucherType === 'easypay_topup' || voucher.voucherType === 'easypay_topup_active';
+  const isCompletedEasyPayTopUpVoucher = (voucher: MMVoucher): boolean =>
+    isEasyPayTopUpVoucher(voucher) && voucher.status === 'redeemed';
+  const isPendingEasyPayTopUpVoucher = (voucher: MMVoucher): boolean =>
+    isEasyPayTopUpVoucher(voucher) && voucher.status === 'pending_payment';
 
   // Format voucher code for display based on type
   const formatVoucherCodeForDisplay = (voucher: MMVoucher): { mainCode: string; subCode?: string } => {
@@ -525,6 +529,22 @@ export function VouchersPage() {
     .filter(voucher => voucher.status === 'active' || voucher.status === 'pending_payment')
     .sort((a, b) => new Date(b.createdDate).getTime() - new Date(a.createdDate).getTime())
     .slice(0, 10);
+  const getVoucherSpendableValue = (voucher: MMVoucher): number => {
+    if (voucher.status === 'active') return voucher.remainingValue;
+    if (voucher.status === 'pending_payment' && !isEasyPayTopUpVoucher(voucher)) return voucher.amount;
+    return 0;
+  };
+  const getVoucherDisplayAmount = (voucher: MMVoucher): number => {
+    if (isPendingEasyPayTopUpVoucher(voucher) || isCompletedEasyPayTopUpVoucher(voucher)) {
+      return voucher.amount;
+    }
+    return voucher.remainingValue;
+  };
+  const getVoucherDisplayAmountColor = (voucher: MMVoucher): string => {
+    if (isPendingEasyPayTopUpVoucher(voucher)) return '#16a34a';
+    if (isCompletedEasyPayTopUpVoucher(voucher)) return '#6b7280';
+    return voucher.remainingValue > 0 ? '#16a34a' : '#9ca3af';
+  };
 
   // Generate new voucher
   const handleGenerateVoucher = async () => {
@@ -832,7 +852,11 @@ export function VouchersPage() {
   };
 
   // Get voucher type badge
-  const getVoucherTypeBadge = (type: MMVoucher['type']) => {
+  const getVoucherTypeBadge = (type: MMVoucher['type'], voucher?: MMVoucher) => {
+    if (voucher && isEasyPayTopUpVoucher(voucher)) {
+      return { text: 'Cash Top-up', color: 'bg-[#2D8CCA] text-white' };
+    }
+
     switch (type) {
       case 'mm_voucher':
         return { text: 'MMVoucher', color: 'bg-[#86BE41] text-white' };
@@ -846,7 +870,14 @@ export function VouchersPage() {
   };
 
   // Get voucher status badge
-  const getVoucherStatusBadge = (status: MMVoucher['status']) => {
+  const getVoucherStatusBadge = (status: MMVoucher['status'], voucher?: MMVoucher) => {
+    if (voucher && isPendingEasyPayTopUpVoucher(voucher)) {
+      return { text: 'Pending Cash Top-up', color: 'bg-orange-100 text-orange-700' };
+    }
+    if (voucher && isCompletedEasyPayTopUpVoucher(voucher)) {
+      return { text: 'Paid', color: 'bg-blue-100 text-blue-700' };
+    }
+
     switch (status) {
       case 'active':
         return { text: 'Active', color: 'bg-green-100 text-green-700' };
@@ -1428,8 +1459,7 @@ export function VouchersPage() {
                 </p>
                 <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '16px', fontWeight: '700', color: '#1f2937', margin: 0 }}>
                   {formatCurrencyCompact(
-                    mmVouchers.filter(v => v.status === 'active').reduce((sum, v) => sum + v.remainingValue, 0) +
-                    mmVouchers.filter(v => v.status === 'pending_payment').reduce((sum, v) => sum + v.amount, 0)
+                    mmVouchers.reduce((sum, v) => sum + getVoucherSpendableValue(v), 0)
                   )}
                 </p>
               </Card>
@@ -1482,8 +1512,9 @@ export function VouchersPage() {
                 </Card>
               ) : (
                 (activeTab === 'vouchers' ? dashboardVouchers : filteredVouchers).map((voucher) => {
-                  const typeBadge = getVoucherTypeBadge(voucher.type);
-                  const statusBadge = getVoucherStatusBadge(voucher.status);
+                  const typeBadge = getVoucherTypeBadge(voucher.type, voucher);
+                  const statusBadge = getVoucherStatusBadge(voucher.status, voucher);
+                  const displayAmount = getVoucherDisplayAmount(voucher);
                   
                   return (
                     <div
@@ -1607,13 +1638,26 @@ export function VouchersPage() {
                                 fontFamily: 'Montserrat, sans-serif',
                                 fontSize: '18px',
                                 fontWeight: '700',
-                                color: voucher.remainingValue > 0 ? '#16a34a' : '#9ca3af',
+                                color: getVoucherDisplayAmountColor(voucher),
                                 margin: 0,
                                 lineHeight: 1
                               }}
                             >
-                              {formatCurrency(voucher.remainingValue)}
+                              {formatCurrency(displayAmount)}
                             </p>
+                            {isPendingEasyPayTopUpVoucher(voucher) && (
+                              <p
+                                style={{
+                                  fontFamily: 'Montserrat, sans-serif',
+                                  fontSize: '10px',
+                                  color: '#9ca3af',
+                                  margin: '2px 0 0 0',
+                                  lineHeight: 1
+                                }}
+                              >
+                                pay at till
+                              </p>
+                            )}
                             {voucher.isPartialRedemption && (
                               <p 
                                 style={{
@@ -1767,7 +1811,9 @@ export function VouchersPage() {
                                   fontWeight: '500'
                                 }}
                               >
-                                {voucher.status === 'pending_payment' 
+                                {isPendingEasyPayTopUpVoucher(voucher)
+                                  ? 'Pay at any EasyPay terminal. Wallet credits after payment confirmation.'
+                                  : voucher.status === 'pending_payment'
                                   ? 'Make payment at any EasyPay terminal'
                                   : 'Redeemable at any EasyPay merchant'}
                               </span>
@@ -1889,70 +1935,6 @@ export function VouchersPage() {
               </CardHeader>
               <CardContent style={{ padding: '24px' }}>
                 <div style={{ display: 'grid', gap: '16px' }}>
-                  {/* Voucher Type Selection */}
-                  <div>
-                    <Label 
-                      style={{
-                        fontFamily: 'Montserrat, sans-serif',
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        color: '#374151',
-                        marginBottom: '8px',
-                        display: 'block'
-                      }}
-                    >
-                      Voucher Type
-                    </Label>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px' }}>
-                      {[
-                        { id: 'mm_voucher', name: 'MyMoolah Voucher', desc: 'Wallet-value voucher for MyMoolah redemption and future retail cash-out', icon: <Wallet style={{ width: '20px', height: '20px' }} /> },
-                        { id: 'easypay_voucher', name: 'EasyPay Cash-out Voucher', desc: 'Future EasyPay cash-out flow. Use only when this service is enabled for testing.', icon: <Ticket style={{ width: '20px', height: '20px' }} /> }
-                      ].map((type) => (
-                        <button
-                          key={type.id}
-                          onClick={() => setSellVoucherType(type.id as typeof sellVoucherType)}
-                          style={{
-                            padding: '16px',
-                            borderRadius: '12px',
-                            border: `2px solid ${sellVoucherType === type.id ? '#86BE41' : '#e2e8f0'}`,
-                            backgroundColor: sellVoucherType === type.id ? '#86BE41' : '#ffffff',
-                            color: sellVoucherType === type.id ? '#ffffff' : '#1f2937',
-                            textAlign: 'left',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease',
-                            width: '100%',
-                            fontFamily: 'Montserrat, sans-serif'
-                          }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                            <div style={{ color: sellVoucherType === type.id ? '#ffffff' : '#6b7280' }}>
-                              {type.icon}
-                            </div>
-                            <span 
-                              style={{
-                                fontFamily: 'Montserrat, sans-serif',
-                                fontSize: '16px',
-                                fontWeight: '600'
-                              }}
-                            >
-                              {type.name}
-                            </span>
-                          </div>
-                          <p 
-                            style={{
-                              fontFamily: 'Montserrat, sans-serif',
-                              fontSize: '12px',
-                              margin: 0,
-                              opacity: 0.9
-                            }}
-                          >
-                            {type.desc}
-                          </p>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
                   {/* Amount Input */}
                   <div>
                     <Label 
@@ -2080,9 +2062,7 @@ export function VouchersPage() {
                           margin: 0
                         }}
                       >
-                        {sellVoucherType === 'mm_voucher' && 'MyMoolah vouchers use 16 digits in format: XXXX XXXX XXXX XXXX'}
-                        {sellVoucherType === 'easypay_voucher' && 'EasyPay cash-withdrawal references are not retail vouchers. They are reserved for the EasyPay cash-out journey.'}
-                        {sellVoucherType === 'third_party_voucher' && 'Supplier retail vouchers are bought under Buy Retail Vouchers, not created here.'}
+                        MyMoolah vouchers use 16 digits in format: XXXX XXXX XXXX XXXX
                       </p>
                     </AlertDescription>
                   </Alert>
@@ -2110,7 +2090,7 @@ export function VouchersPage() {
                         Generating...
                       </div>
                     ) : (
-                      `Generate ${sellVoucherType === 'mm_voucher' ? 'MyMoolah' : sellVoucherType === 'easypay_voucher' ? 'EasyPay' : '3rd Party'} Voucher`
+                      'Generate MyMoolah Voucher'
                     )}
                   </Button>
                 </div>
@@ -2658,9 +2638,9 @@ export function VouchersPage() {
                 </Card>
               ) : (
                 filteredVouchers.map((voucher) => {
-                  const typeBadge = getVoucherTypeBadge(voucher.type);
-                  const statusBadge = getVoucherStatusBadge(voucher.status);
-                  const formattedCode = formatVoucherCodeForDisplay(voucher);
+                  const typeBadge = getVoucherTypeBadge(voucher.type, voucher);
+                  const statusBadge = getVoucherStatusBadge(voucher.status, voucher);
+                  const displayAmount = getVoucherDisplayAmount(voucher);
                   
                   return (
                     <div key={voucher.id} style={{ 
@@ -2784,13 +2764,26 @@ export function VouchersPage() {
                                 fontFamily: 'Montserrat, sans-serif',
                                 fontSize: '18px',
                                 fontWeight: '700',
-                                color: voucher.remainingValue > 0 ? '#16a34a' : '#9ca3af',
+                                color: getVoucherDisplayAmountColor(voucher),
                                 margin: 0,
                                 lineHeight: 1
                               }}
                             >
-                              {formatCurrency(voucher.remainingValue)}
+                              {formatCurrency(displayAmount)}
                             </p>
+                            {isCompletedEasyPayTopUpVoucher(voucher) && (
+                              <p
+                                style={{
+                                  fontFamily: 'Montserrat, sans-serif',
+                                  fontSize: '10px',
+                                  color: '#9ca3af',
+                                  margin: '2px 0 0 0',
+                                  lineHeight: 1
+                                }}
+                              >
+                                paid top-up
+                              </p>
+                            )}
                             {voucher.isPartialRedemption && (
                               <p 
                                 style={{
@@ -2944,7 +2937,9 @@ export function VouchersPage() {
                                   fontWeight: '500'
                                 }}
                               >
-                                {voucher.status === 'pending_payment' 
+                                {isPendingEasyPayTopUpVoucher(voucher)
+                                  ? 'Pay at any EasyPay terminal. Wallet credits after payment confirmation.'
+                                  : voucher.status === 'pending_payment'
                                   ? 'Make payment at any EasyPay terminal'
                                   : 'Redeemable at any EasyPay merchant'}
                               </span>
@@ -3070,7 +3065,7 @@ export function VouchersPage() {
                 {/* Voucher Type and Status */}
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
                   <Badge 
-                    className={getVoucherTypeBadge(selectedVoucher.type).color}
+                    className={getVoucherTypeBadge(selectedVoucher.type, selectedVoucher).color}
                     style={{
                       fontSize: '12px',
                       fontWeight: '600',
@@ -3078,10 +3073,10 @@ export function VouchersPage() {
                       borderRadius: '6px'
                     }}
                   >
-                    {getVoucherTypeBadge(selectedVoucher.type).text}
+                    {getVoucherTypeBadge(selectedVoucher.type, selectedVoucher).text}
                   </Badge>
                   <Badge 
-                    className={getVoucherStatusBadge(selectedVoucher.status).color}
+                    className={getVoucherStatusBadge(selectedVoucher.status, selectedVoucher).color}
                     style={{
                       fontSize: '12px',
                       fontWeight: '600',
@@ -3089,7 +3084,7 @@ export function VouchersPage() {
                       borderRadius: '6px'
                     }}
                   >
-                    {getVoucherStatusBadge(selectedVoucher.status).text}
+                    {getVoucherStatusBadge(selectedVoucher.status, selectedVoucher).text}
                   </Badge>
                 </div>
 
@@ -3257,18 +3252,18 @@ export function VouchersPage() {
                         display: 'block'
                       }}
                     >
-                      Remaining Value
+                      {isEasyPayTopUpVoucher(selectedVoucher) ? 'Top-up Amount' : 'Remaining Value'}
                     </Label>
                     <p 
                       style={{
                         fontFamily: 'Montserrat, sans-serif',
                         fontSize: '16px',
                         fontWeight: '700',
-                        color: selectedVoucher.remainingValue > 0 ? '#16a34a' : '#6b7280',
+                        color: getVoucherDisplayAmountColor(selectedVoucher),
                         margin: 0
                       }}
                     >
-                      {formatCurrency(selectedVoucher.remainingValue)}
+                      {formatCurrency(getVoucherDisplayAmount(selectedVoucher))}
                     </p>
                   </div>
                 </div>

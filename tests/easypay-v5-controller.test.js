@@ -28,12 +28,21 @@ const mockPayment = {
   update: jest.fn(),
 };
 
+const mockVoucher = {
+  metadata: {
+    issuedTo: 'self',
+    callbackReceived: false,
+  },
+  update: jest.fn(),
+};
+
 const mockModels = {
   Bill: { findOne: jest.fn() },
   Payment: {
     findOne: jest.fn(),
     create: jest.fn(),
   },
+  Voucher: { findOne: jest.fn() },
   Wallet: { findOne: jest.fn() },
   Transaction: { create: jest.fn() },
   User: {},
@@ -90,6 +99,8 @@ describe('EasyPay V5 controller', () => {
     mockModels.Wallet.findOne.mockResolvedValue(mockWallet);
     mockModels.Payment.findOne.mockResolvedValue(null);
     mockModels.Payment.create.mockResolvedValue({});
+    mockModels.Voucher.findOne.mockResolvedValue(null);
+    mockVoucher.update.mockResolvedValue(mockVoucher);
     mockModels.Transaction.create
       .mockResolvedValueOnce({ id: 1001 })
       .mockResolvedValueOnce({ id: 1002 });
@@ -207,6 +218,54 @@ describe('EasyPay V5 controller', () => {
         status: 'completed',
         userId: 7,
         walletId: 'WAL-TEST-0007',
+      }),
+      { transaction: mockTransaction }
+    );
+  });
+
+  it('marks the matching EasyPay top-up voucher redeemed after payment notification', async () => {
+    mockModels.Payment.findOne.mockResolvedValue(mockPayment);
+    mockModels.Voucher.findOne.mockResolvedValue(mockVoucher);
+    const res = createResponse();
+
+    await easyPayController.paymentNotification({
+      body: {
+        MerchantId: '000000000000002',
+        TerminalId: '00000001',
+        PaymentDate: '2026-04-29 12:58:36',
+        Reference: '1',
+        EasyPayNumber: '95063163563805',
+        AccountNumber: '16356380',
+        Amount: 5000,
+        EchoData: 'payment-echo',
+      },
+    }, res);
+
+    expect(res.statusCode).toBe(200);
+    expect(mockModels.Voucher.findOne).toHaveBeenCalledWith({
+      where: {
+        userId: 7,
+        easyPayCode: '95063163563805',
+        voucherType: 'easypay_topup',
+      },
+      transaction: mockTransaction,
+      lock: mockTransaction.LOCK.UPDATE,
+    });
+    expect(mockVoucher.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'redeemed',
+        balance: 0,
+        metadata: expect.objectContaining({
+          issuedTo: 'self',
+          callbackReceived: true,
+          grossAmount: 50,
+          fee: 6.33,
+          netAmount: 43.67,
+          paymentReference: '1',
+          merchantId: '000000000000002',
+          terminalId: '00000001',
+          echoData: 'payment-echo',
+        }),
       }),
       { transaction: mockTransaction }
     );

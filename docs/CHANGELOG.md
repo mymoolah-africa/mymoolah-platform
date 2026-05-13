@@ -1,5 +1,26 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-05-13 - EasyPay cash top-up voucher lifecycle
+
+### Summary
+Aligned EasyPay V5 cash top-up PINs with wallet UX and banking controls: creating a PIN remains a pending payment instruction, wallet credit still only happens after a successful `paymentNotification`, and completed top-ups no longer remain in the active `Mine` voucher cards.
+
+### Changes
+- `controllers/easyPayController.js` now marks the matching `easypay_topup` voucher as `redeemed` inside the same DB transaction that credits the wallet, posts fee/deposit transactions, updates the `Payment`, and marks the `Bill` paid.
+- The voucher completion metadata now records callback receipt, paid timestamp, gross amount, fee, net amount, payment reference, transaction reference, merchant, terminal, and echo data for history/audit display.
+- `mymoolah-wallet-frontend/pages/VouchersPage.tsx` now labels pending top-up PINs as `Pending Cash Top-up`, keeps them visible as payment instructions while unpaid, excludes their pending amount from total spendable voucher value, and shows completed top-ups as paid history rows.
+- The wallet `Vouchers > Create` page now shows only `MyMoolah Voucher`; EasyPay top-up remains under `Add Money > EasyPay Top-up`, and future cash-out belongs under `Withdraw Cash`.
+- `mymoolah-wallet-frontend/components/overlays/digital-vouchers/brandLogos.ts` now centralises real-logo matching for voucher overlay cards and the purchase modal, using the expanded `*_logo` asset inventory for betting, retail, food, health, and service brands.
+- `tests/easypay-v5-controller.test.js` now verifies that `paymentNotification` redeems the matching EasyPay top-up voucher without changing duplicate-callback credit behaviour.
+
+### Validation
+- `node --check controllers/easyPayController.js tests/easypay-v5-controller.test.js` passed.
+- `npx jest tests/easypay-v5-controller.test.js tests/easypay-auth.test.js --runInBand` passed 10/10.
+- `npx tsc --noEmit` in `mymoolah-wallet-frontend` passed.
+- Cursor lints on touched files reported no errors.
+- Follow-up logo import fix updated wallet references from `*-logo.png` to `*_logo.png`; full `npm run build` in `mymoolah-wallet-frontend` passed.
+- Targeted ESLint on `pages/VouchersPage.tsx` still reports pre-existing legacy lint debt.
+
 ## 2026-05-13 - EasyPay top-up PIN spacing
 
 ### Summary
