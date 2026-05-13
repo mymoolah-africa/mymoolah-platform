@@ -1,5 +1,21 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-05-14 - Notification drawer freshness and EasyPay notification fix
+
+### Summary
+Fixed the wallet notification experience so recent notifications are shown in the bell drawer and EasyPay deposit notifications are not dropped by strict notification enum validation.
+
+### Changes
+- `services/notificationService.js` now normalizes unsupported notification `type`, `severity`, `category`, and `source` values before inserting rows, preventing best-effort notifications from failing when callers pass provider-specific source labels such as `easypay`.
+- `mymoolah-wallet-frontend/contexts/MoolahContext.tsx` now fetches recent notifications with `status=all` for the drawer, while still calculating the red indicator and blocking prompts from unread notifications only.
+
+### Validation
+- `node --check services/notificationService.js controllers/easyPayController.js` passed.
+- `npx tsc --noEmit` in `mymoolah-wallet-frontend` passed.
+- `npm run build` in `mymoolah-wallet-frontend` passed.
+- `npx jest tests/easypay-v5-controller.test.js tests/easypay-auth.test.js --runInBand` passed 10/10.
+- Cursor lints on touched files reported no errors.
+
 ## 2026-05-14 - Launch add-money card readiness
 
 ### Summary

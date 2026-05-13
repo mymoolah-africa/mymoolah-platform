@@ -295,7 +295,7 @@ export function MoolahProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const res = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/notifications?status=unread&limit=50`, {
+      const res = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/notifications?status=all&limit=50`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -307,8 +307,9 @@ export function MoolahProvider({ children }: { children: ReactNode }) {
       const json = await res.json();
       const list: NotificationItem[] = json?.data || [];
       setNotifications(list);
-      setUnreadCount(list.length);
-      const blocker = list.find(n => n.freezeUntilViewed);
+      const unreadList = list.filter(n => !n.readAt);
+      setUnreadCount(unreadList.length);
+      const blocker = unreadList.find(n => n.freezeUntilViewed);
       setBlockingNotification(blocker || null);
 
       // Event-driven balance refresh: update balance when money arrives (RTP paid, wallet transfer, etc.)

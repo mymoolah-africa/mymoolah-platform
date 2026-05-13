@@ -1,5 +1,10 @@
 const { Notification, UserNotificationSettings, sequelize } = require('../models');
 
+const ALLOWED_TYPES = new Set(['txn_wallet_credit', 'txn_bank_credit', 'maintenance', 'promo']);
+const ALLOWED_SEVERITIES = new Set(['info', 'warning', 'critical']);
+const ALLOWED_CATEGORIES = new Set(['transaction', 'maintenance', 'marketing']);
+const ALLOWED_SOURCES = new Set(['system', 'admin', 'job']);
+
 async function getOrCreateSettings(userId) {
   let row = await UserNotificationSettings.findByPk(userId);
   if (!row) {
@@ -12,13 +17,14 @@ module.exports = {
   async createNotification(userId, type, title, message, options = {}) {
     const payload = options.payload || null;
     const freezeUntilViewed = Boolean(options.freezeUntilViewed);
-    const severity = options.severity || 'info';
-    const category = options.category || 'transaction';
-    const source = options.source || 'system';
+    const severity = ALLOWED_SEVERITIES.has(options.severity) ? options.severity : 'info';
+    const category = ALLOWED_CATEGORIES.has(options.category) ? options.category : 'transaction';
+    const source = ALLOWED_SOURCES.has(options.source) ? options.source : 'system';
+    const notificationType = ALLOWED_TYPES.has(type) ? type : 'maintenance';
 
     const notification = await Notification.create({
       userId,
-      type,
+      type: notificationType,
       title,
       message: message || null,
       payload,
