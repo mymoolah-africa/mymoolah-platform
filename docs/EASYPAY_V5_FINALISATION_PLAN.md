@@ -150,6 +150,16 @@ At `paymentNotification` time: only the R6.33 user fee is charged.
 
 ---
 
+### Task 2b (roadmap, partner-dependent): Payer pays fee at POS — wallet credits full face value
+
+**Status:** Not implemented. Production behaviour today remains **net wallet credit** after the flat R6.33 sweep on `paymentNotification`.
+
+**Intent:** EasyPay collects the agreed **flat channel fee from the payer at the till**; **V5 `Amount` (cents)** remains the **PIN/bill face value** (what MMTP credits to the wallet). MMTP then **stops** debiting that fee from the wallet and **realigns** `postEasyPayDeposit` / float journals with EasyPay settlement once **written** partner confirmation covers POS pricing, customer receipt, and SFTP columns.
+
+**Draft partner comms summary:** `docs/session_logs/2026-05-14_1000_easypay-partner-comms-docs-sync.md`. Full email text: Cursor session transcript for 2026-05-14 partner-comms work.
+
+---
+
 ## Task 3: Remove legacy settlement routes
 
 ### Files to change

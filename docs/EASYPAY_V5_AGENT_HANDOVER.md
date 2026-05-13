@@ -35,7 +35,7 @@
    - `POST /billpayment/v1/infoRequest` — lookup bill by PIN
    - `POST /billpayment/v1/authorisationRequest` — validate amount, authorise payment
    - `POST /billpayment/v1/paymentNotification` — payment taken, MMTP credits wallet
-5. User wallet is credited **immediately** on `paymentNotification` (gross amount minus flat R6.33 fee)
+5. User wallet is credited **immediately** on `paymentNotification`. **Today:** gross face value is credited then the flat **R6.33** channel fee (R5.50 excl. VAT + VAT) is debited on the wallet — **net = face value − R6.33**. **Roadmap (partner-dependent):** payer pays that fee at the **POS**; wallet receives **full face value** with no fee sweep — see `docs/integrations/EasyPay_API_Integration_Guide.md` §12.2 and `docs/EASYPAY_V5_FINALISATION_PLAN.md` Task 2b.
 6. EasyPay settles to MMTP's Standard Bank account **T+2 business days** (single daily batch)
 
 **Contract**: "Lesaka ADP | MyMoolah : Supplier Bill Payment Service Agreement" — signed and completed via Adobe Sign on **8 April 2026** by Werner van Reenen (EasyPay) and Andre Botes (MMTP).

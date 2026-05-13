@@ -1,5 +1,23 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-05-14 - EasyPay V5: partner comms drafts and documentation sync
+
+### Summary
+Documented **in-chat draft emails** to EasyPay for (1) **canonical Bill Payment Receiver V5 callback URLs** (production `https://api-mm.mymoolah.africa`, staging `https://staging.mymoolah.africa`) and operational alignment on timeouts; (2) a **commercial ask** to move the **flat channel fee** to **payer-paid at POS** so the **wallet receives the full PIN face value** instead of a post-notification fee debit — preferred technical approach: **keep V5 `Amount` as integer cents equal to face value**; EasyPay collects fee in the retail/POS stack.
+
+### Documentation
+- `docs/integrations/EasyPay_API_Integration_Guide.md` → v1.2.0; new §12.1 (URLs) and §12.2 (fee model today vs roadmap).
+- `docs/API_DOCUMENTATION.md` — V5 host bases, current fee behaviour, roadmap pointer.
+- `docs/EASYPAY_V5_AGENT_HANDOVER.md` — product flow note + payer-pays-fee roadmap.
+- `docs/EASYPAY_V5_FINALISATION_PLAN.md` — Task 2b (partner-dependent).
+- `docs/AGENT_HANDOVER.md`, `docs/PROJECT_STATUS.md`, `docs/README.md`, `docs/CURSOR_2.0_RULES_FINAL.md` (tech debt row).
+- `docs/FAQ_MASTER.md` — §9b EasyPay V5 cash-in fee Q&A; date bump for KB freshness guard.
+- `docs/session_logs/2026-05-14_1000_easypay-partner-comms-docs-sync.md`.
+
+### Runtime / KB
+- **Support FAQ:** Added §9b **Q: Is there a fee when I add money with EasyPay V5?** describing current net credit after **R6.33** and that collection may move to the till after partner agreement. Updated `_Last updated` in `docs/FAQ_MASTER.md`. Run approved **`generate:kb:faq:update*` / `embed:kb*`** per environment when André wants embeddings refreshed.
+- **No** application code or database changes in this entry.
+
 ## 2026-05-13 - EasyPay cash-in-only KB embedded in all environments
 
 ### Summary

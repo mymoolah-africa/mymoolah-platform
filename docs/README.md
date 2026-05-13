@@ -1,10 +1,20 @@
 # MyMoolah Treasury Platform
 
-**Last Updated**: May 13, 2026
-**Version**: 3.2.2 - EasyPay V5 cash-in-only KB embedded
+**Last Updated**: May 14, 2026
+**Version**: 3.2.3 - EasyPay V5 partner comms + doc sync
 **Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **EASYPAY V5 CASH-IN ONLY KB EMBEDDED** ✅ **WITHDRAW CASH PARTNER KB** ✅ **VAT PASS-THROUGH POLICY FORMALISED** ✅ **PRODUCTION DB MIGRATED** ✅ **SBSA H2H EFT UAT ACTIVATION** ✅ **PAYSHAP RPP INSTANT PAYMENT** ✅ **CHART OF ACCOUNTS** ✅ **ELECTRICITY SUPPLIER COMPARISON** ✅ **LEDGER AUDIT** ✅ **CLOUD SCHEDULER** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **POPIA ID ENCRYPTION** ✅ **LANGCHAIN RAG AI** ✅ **PASA T-PPP BADGE**
 
-**Recent work**: **May 13, 2026** — Completed the EasyPay V5 cash-in-only support KB correction across UAT, Staging, and Production. `docs/FAQ_MASTER.md`, generator seed context, and RAG scope wording now distinguish EasyPay V5 as add-money / cash-in only and route wallet cash withdrawals to approved Withdraw Cash partners. Environment KB refresh results: UAT `333` active embedded entries, Staging `297`, and Production `297`, all with 0 embedding failures. Staging/Production required restarting stale Cloud SQL Auth Proxy processes before embedding because old fixed-token proxy sessions can remain listening while returning `read ECONNRESET`. **Apr 26** — Formalised MMTP VAT accounting strategy: VAT control records are only for MMTP-owned revenue/markup/commission, not supplier/bank/client/merchant pass-through fees. Aligned PayShap RTP, Zapper QR, historical EasyPay/Flash cash-out fee posting, and future V5 cash-in support with the policy in `docs/VAT_ACCOUNTING_STRATEGY.md`. See `docs/CHANGELOG.md`.
+**Recent work**: **May 14, 2026** — Synced **EasyPay Bill Payment V5** documentation: canonical **callback URLs** for production (`api-mm`) and staging, notes on timeout alignment, and a **roadmap** to **payer-paid POS fee** with **full face-value wallet credit** (partner confirmation required before code/FAQ changes). See `docs/CHANGELOG.md` and `docs/session_logs/2026-05-14_1000_easypay-partner-comms-docs-sync.md`. **May 13, 2026** — Completed the EasyPay V5 cash-in-only support KB correction across UAT, Staging, and Production. `docs/FAQ_MASTER.md`, generator seed context, and RAG scope wording now distinguish EasyPay V5 as add-money / cash-in only and route wallet cash withdrawals to approved Withdraw Cash partners. Environment KB refresh results: UAT `333` active embedded entries, Staging `297`, and Production `297`, all with 0 embedding failures. Staging/Production required restarting stale Cloud SQL Auth Proxy processes before embedding because old fixed-token proxy sessions can remain listening while returning `read ECONNRESET`. **Apr 26** — Formalised MMTP VAT accounting strategy: VAT control records are only for MMTP-owned revenue/markup/commission, not supplier/bank/client/merchant pass-through fees. Aligned PayShap RTP, Zapper QR, historical EasyPay/Flash cash-out fee posting, and future V5 cash-in support with the policy in `docs/VAT_ACCOUNTING_STRATEGY.md`. See `docs/CHANGELOG.md`.
+
+---
+
+## 🚀 **LATEST UPDATE: EasyPay V5 partner documentation (May 14, 2026)**
+
+### **Callback URLs and fee roadmap (documentation only)**
+
+- **Canonical V5 paths:** `docs/integrations/EasyPay_API_Integration_Guide.md` §12.1 — production `https://api-mm.mymoolah.africa/billpayment/v1/...`, staging `https://staging.mymoolah.africa/billpayment/v1/...`, alias `/api/v1/easypay/...`.
+- **Fees:** Receiver still applies **net wallet credit** after **R6.33** until code changes; **payer-paid POS fee** + full face credit is **roadmap** — §12.2 and `docs/EASYPAY_V5_FINALISATION_PLAN.md` Task 2b.
+- **Session log:** `docs/session_logs/2026-05-14_1000_easypay-partner-comms-docs-sync.md`
 
 ---
 

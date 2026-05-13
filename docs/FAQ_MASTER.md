@@ -1,6 +1,6 @@
 # MyMoolah Treasury Platform – Comprehensive FAQ Library
 
-_Last updated: 13 May 2026_
+_Last updated: 14 May 2026_
 
 This FAQ is the single source of truth for customer support, covering all live and developed features of the MyMoolah digital wallet. Sections are ordered by the most common customer enquiries. Update this document and regenerate the knowledge base whenever a new feature goes live.
 
@@ -279,6 +279,9 @@ A: Yes. A cash-withdrawal fee is charged per transaction. The fee is shown befor
 
 **Q: My EasyPay token failed at the store — what do I do?**
 A: EasyPay V5 tokens or references are for cash-ins only. If an EasyPay cash-in fails at the store, first check that the reference has not expired or already been used and that you are following the cash-in instructions. If it still fails, note the reference number, store name, date and time, and the error message shown by the cashier, then contact support.
+
+**Q: Is there a fee when I add money with EasyPay V5?**
+A: Yes. Today the wallet is credited the amount you pay at the till **minus** a flat EasyPay cash-in fee (**R5.50** excluding VAT plus **15% VAT** = **R6.33** total per load), unless the app shows a different approved fee. MyMoolah may agree with EasyPay to change how that fee is collected (for example recovering it in what you pay at the till) in future; any change will be reflected in the app and support information.
 
 **Q: Is there a limit on how much I can withdraw as cash?**
 A: Yes. Per-transaction, daily, and monthly limits apply. These are shown in the app and depend on your KYC level. The limits apply across **all active Cash-Withdrawal Partners combined** — such as eeziCash and Cliquefin / OTT vouchers where available — not per partner.

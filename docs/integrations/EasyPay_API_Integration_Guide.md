@@ -1,7 +1,7 @@
 # EasyPay API Integration Guide
 
-**Version**: 1.1.0  
-**Last Updated**: April 10, 2026  
+**Version**: 1.2.0  
+**Last Updated**: May 14, 2026  
 **API Provider**: MyMoolah Treasury Platform  
 **Integration Partner**: EasyPay South Africa (Lesaka)  
 **Status**: Phase 1 **Top-up @ EasyPay** live on **Bill Payment Receiver V5** — partner Q&A for fee precision, settlement reference format, and recon file: see **[EasyPay_V5_PARTNER_QA_CHECKLIST.md](./EasyPay_V5_PARTNER_QA_CHECKLIST.md)**.
@@ -21,7 +21,7 @@
 9. [Production Deployment](#production-deployment)
 10. [Reconciliation](#reconciliation)
 11. [Support & SLAs](#support--slas)
-12. [Partner Q&A & V5 finalisation](#12-partner-qa--v5-finalisation)
+12. [Partner Q&A & V5 finalisation](#12-partner-qa--v5-finalisation) — includes §12.1 canonical URLs and §12.2 fee roadmap
 13. [Appendices](#13-appendices)
 
 ---
@@ -1358,6 +1358,33 @@ All numbered questions for EasyPay (protocol, fees, settlement, credentials, leg
 
 Use that file in partner meetings and tick off **§ F** after written answers are received.
 
+### 12.1 Canonical Bill Payment Receiver V5 URLs (internal / partner alignment)
+
+Use these **full URLs** in switch configuration and runbooks so operations and engineering stay aligned.
+
+**Production** — host **`https://api-mm.mymoolah.africa`** (MMTP production API is `api-mm`, not `api`):
+
+- `GET https://api-mm.mymoolah.africa/billpayment/v1/ping`
+- `POST https://api-mm.mymoolah.africa/billpayment/v1/infoRequest`
+- `POST https://api-mm.mymoolah.africa/billpayment/v1/authorisationRequest`
+- `POST https://api-mm.mymoolah.africa/billpayment/v1/paymentNotification`
+
+**Equivalent alias paths** (same implementation): replace `/billpayment/v1/` with `/api/v1/easypay/` on the same host.
+
+**Staging / partner-test host** — `https://staging.mymoolah.africa` with the same `/billpayment/v1/...` paths (or `/api/v1/easypay/...` alias).
+
+**Auth** (except `ping`): `Authorization: SessionToken {token}` per environment.
+
+If EasyPay logs **`TIME_OUT`** or I/O errors on `authorisationRequest`, validate **read/connect timeouts** on the EasyPay HTTP client, **infrastructure backend timeouts** (e.g. load balancer to Cloud Run), **cold start** latency on first request, and that **all three** POST URLs use the same host + path pattern (no mixed `api` vs `api-mm`).
+
+### 12.2 Fee collection — implemented behaviour vs payer-pays-fee roadmap
+
+**Implemented today (MMTP receiver):** The customer pays the **face value** of the PIN at retail. On `paymentNotification`, **`Amount`** is **gross in integer cents** for that face value. MMTP credits the wallet then applies the agreed **flat user fee** (R5.50 excl. VAT + 15% VAT = **R6.33** unless env commercial terms change), so the **net wallet increase is face value minus R6.33**. Ledger: `services/easyPayDepositService.js` (`calculateEasyPayFee`, `postEasyPayDeposit`).
+
+**Roadmap (partner-dependent, not yet in production code):** MMTP intends to move to **payer pays the channel fee at the till** so the **wallet is credited the full face value** with **no post-hoc wallet fee debit** for that flat fee. **Preferred contract:** EasyPay’s POS collects **face value + fee** while V5 requests still send **`Amount` = face value only** (wallet credit amount in cents). That avoids ambiguous “total tender” in `Amount` and keeps `infoRequest` / `authorisationRequest` min/max aligned with the bill.
+
+**Action:** Written confirmation from EasyPay on POS pricing, customer receipt, settlement/SFTP columns, and retry semantics; then MMTP implements controller/service/ledger changes and updates customer FAQ/KB.
+
 ---
 
 ## 13. Appendices
@@ -1467,6 +1494,7 @@ sequenceDiagram
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.2.0 | 2026-05-14 | §12.1 canonical production/staging V5 URLs + timeout alignment notes; §12.2 fee collection **today** (net wallet after R6.33) vs **payer-pays-fee roadmap** (full face credit; `Amount` stays face value); session log cross-reference |
 | 1.1.0 | 2026-04-10 | **V5 as Phase 1 cash-in**: Updated §1.2 architecture (mermaid), added §4.0 V5 endpoint table, §2.2 checklist, §10 V5 recon pointer, new §12 Partner Q&A link to `EasyPay_V5_PARTNER_QA_CHECKLIST.md`; §4.1 top-up settlement documented then **removed** 2026-04-10 (E1 V5-only; see §4.0); header status + Lesaka |
 | 1.0.4 | 2026-03-24 | TPPP / NPS positioning (§1.4), prerequisites |
 | 1.0.2 | 2026-01-16 | Added comprehensive environment endpoints (QA/Test, Staging, Production), API key management section, IP whitelisting instructions, and test data scenarios |

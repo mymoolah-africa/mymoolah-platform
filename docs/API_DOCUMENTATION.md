@@ -813,6 +813,8 @@ POST /api/v1/overlay/electricity/purchase
 
 The **EasyPay switch** calls MMTP on **`/billpayment/v1/*`** (canonical) or **`/api/v1/easypay/*`** (alias). **Wallet credit** occurs on **`POST .../paymentNotification`** after successful POS payment.
 
+**Production base URL:** `https://api-mm.mymoolah.africa` (use **`api-mm`**, not `api`). Example: `https://api-mm.mymoolah.africa/billpayment/v1/ping`. **Staging:** `https://staging.mymoolah.africa/billpayment/v1/...` for partner tests.
+
 | Method | Path | Notes |
 |--------|------|--------|
 | GET | `/billpayment/v1/ping` | Health |
@@ -822,7 +824,9 @@ The **EasyPay switch** calls MMTP on **`/billpayment/v1/*`** (canonical) or **`/
 
 **Auth**: `Authorization: SessionToken {token}` (token = `EASYPAY_API_KEY`), or `X-API-Key`; UAT may allow Bearer for simulation — see `middleware/easypayAuth.js`.
 
-**Spec**: `integrations/easypay/EasypayReceiverV5.yaml`. **Partner questions / recon**: `docs/integrations/EasyPay_V5_PARTNER_QA_CHECKLIST.md`. **Guide**: `docs/integrations/EasyPay_API_Integration_Guide.md` v1.1.0.
+**Fee (current implementation):** On `paymentNotification`, MMTP credits the face value then applies the flat channel fee (R5.50 excl. VAT + 15% VAT = **R6.33** by default), so the wallet nets **face value minus R6.33**. **Roadmap:** Payer pays fee at POS; wallet credits full face value — pending EasyPay alignment; see integration guide **§12.2**.
+
+**Spec**: `integrations/easypay/EasypayReceiverV5.yaml`. **Partner questions / recon**: `docs/integrations/EasyPay_V5_PARTNER_QA_CHECKLIST.md`. **Guide**: `docs/integrations/EasyPay_API_Integration_Guide.md` v1.2.0.
 
 ---
 
