@@ -217,6 +217,15 @@ export function VouchersPage() {
     }
   };
 
+  const normalizeEasyPayNumber = (value: string): string => value.replace(/\D/g, '');
+  const formatEasyPayNumberWithSpaces = (value: string): string => {
+    const epNumber = normalizeEasyPayNumber(value);
+    if (epNumber.length !== 14) return value;
+    return `${epNumber.substring(0, 1)} ${epNumber.substring(1, 5)} ${epNumber.substring(5, 9)} ${epNumber.substring(9, 13)} ${epNumber.substring(13, 14)}`;
+  };
+  const isEasyPayTopUpVoucher = (voucher: MMVoucher): boolean =>
+    voucher.voucherType === 'easypay_topup' || voucher.voucherType === 'easypay_topup_active';
+
   // Format voucher code for display based on type
   const formatVoucherCodeForDisplay = (voucher: MMVoucher): { mainCode: string; subCode?: string } => {
     if (voucher.type === 'mm_voucher') {
@@ -230,12 +239,11 @@ export function VouchersPage() {
       // For EasyPay vouchers, ALWAYS use the 14-digit EasyPay PIN (easyPayNumber)
       // EasyPay standalone vouchers CANNOT be redeemed in wallet - only at EasyPay merchants
       if (voucher.easyPayNumber) {
-        const epNumber = voucher.easyPayNumber.replace(/\D/g, ''); // Remove any non-digits
+        const epNumber = normalizeEasyPayNumber(voucher.easyPayNumber);
         // Ensure it's exactly 14 digits
         if (epNumber.length === 14) {
-          // Format as: x xxxx xxxx xxxx x (14 digits: 9 + 4-digit MM code + 8 digits + 1 check digit)
           return {
-            mainCode: `${epNumber.substring(0, 1)} ${epNumber.substring(1, 5)} ${epNumber.substring(5, 9)} ${epNumber.substring(9, 13)} ${epNumber.substring(13, 14)}`
+            mainCode: isEasyPayTopUpVoucher(voucher) ? epNumber : formatEasyPayNumberWithSpaces(epNumber)
           };
         }
       }
@@ -767,21 +775,19 @@ export function VouchersPage() {
   };
 
   // Handle copying EasyPay numbers specifically
-  const handleCopyEasyPayNumber = async (easyPayNumber: string) => {
+  const handleCopyEasyPayNumber = async (easyPayNumber: string, shouldRemoveSpaces = false) => {
     try {
-      const formattedNumber = easyPayNumber.slice(0, 1) + ' ' + 
-                             easyPayNumber.slice(1, 5) + ' ' + 
-                             easyPayNumber.slice(5, 9) + ' ' + 
-                             easyPayNumber.slice(9, 13) + ' ' + 
-                             easyPayNumber.slice(13);
+      const easyPayNumberToCopy = shouldRemoveSpaces
+        ? normalizeEasyPayNumber(easyPayNumber)
+        : formatEasyPayNumberWithSpaces(easyPayNumber);
       
       // Try modern clipboard API first
       if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(formattedNumber);
+        await navigator.clipboard.writeText(easyPayNumberToCopy);
       } else {
         // Fallback for older browsers or non-secure contexts
         const textArea = document.createElement('textarea');
-        textArea.value = formattedNumber;
+        textArea.value = easyPayNumberToCopy;
         textArea.style.position = 'fixed';
         textArea.style.left = '-999999px';
         textArea.style.top = '-999999px';
@@ -793,7 +799,7 @@ export function VouchersPage() {
       }
       
       // Set success state
-      setCopiedCode(formattedNumber);
+      setCopiedCode(easyPayNumberToCopy);
       setTimeout(() => setCopiedCode(''), 2000);
       
       // Show toast notification
@@ -3188,17 +3194,15 @@ export function VouchersPage() {
                         }}
                       >
                         {selectedVoucher.easyPayNumber && (
-                          selectedVoucher.easyPayNumber.slice(0, 1) + ' ' + 
-                          selectedVoucher.easyPayNumber.slice(1, 5) + ' ' + 
-                          selectedVoucher.easyPayNumber.slice(5, 9) + ' ' + 
-                          selectedVoucher.easyPayNumber.slice(9, 13) + ' ' + 
-                          selectedVoucher.easyPayNumber.slice(13)
+                          isEasyPayTopUpVoucher(selectedVoucher)
+                            ? normalizeEasyPayNumber(selectedVoucher.easyPayNumber)
+                            : formatEasyPayNumberWithSpaces(selectedVoucher.easyPayNumber)
                         )}
                       </span>
                                               <button
                           onClick={() => {
                             if (selectedVoucher.easyPayNumber) {
-                              handleCopyEasyPayNumber(selectedVoucher.easyPayNumber);
+                              handleCopyEasyPayNumber(selectedVoucher.easyPayNumber, isEasyPayTopUpVoucher(selectedVoucher));
                             }
                           }}
                           style={{

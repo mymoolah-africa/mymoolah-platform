@@ -1,5 +1,20 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-05-13 - EasyPay top-up PIN spacing
+
+### Summary
+Removed customer-facing spaces from EasyPay top-up PINs in the wallet frontend while preserving existing formatting for MMVouchers, non-top-up EasyPay vouchers, cash-out EasyPay screens, backend voucher data, and transaction-history descriptions.
+
+### Changes
+- `mymoolah-wallet-frontend/components/overlays/topup-easypay/TopupEasyPayOverlay.tsx` now displays and copies EasyPay top-up PINs as continuous digits.
+- `mymoolah-wallet-frontend/pages/VouchersPage.tsx` now shows and copies digit-only values only for backend `easypay_topup` / `easypay_topup_active` records.
+- Non-top-up EasyPay voucher display keeps the previous grouped format in the vouchers page.
+
+### Validation
+- `npm run build` in `mymoolah-wallet-frontend` passed.
+- Cursor lints on touched frontend files reported no errors.
+- Targeted ESLint on the two legacy touched files still reports pre-existing unrelated lint debt.
+
 ## 2026-05-13 - EasyPay V5: production retest hardening
 
 ### Summary

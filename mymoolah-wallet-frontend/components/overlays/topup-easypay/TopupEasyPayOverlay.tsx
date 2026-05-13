@@ -161,7 +161,7 @@ export function TopupEasyPayOverlay() {
   // Copy PIN to clipboard
   const handleCopyPIN = async () => {
     try {
-      await navigator.clipboard.writeText(easyPayPIN);
+      await navigator.clipboard.writeText(easyPayPIN.replace(/\D/g, ''));
       setCopiedPIN(true);
       setTimeout(() => setCopiedPIN(false), 2000);
     } catch (err) {
@@ -169,11 +169,10 @@ export function TopupEasyPayOverlay() {
     }
   };
 
-  // Format PIN for display: x xxxx xxxx xxxx x (14 digits on one line)
+  // Keep EasyPay top-up PINs ungrouped so the displayed value matches the copied value.
   const formatPIN = (pin: string): string => {
-    if (!pin || pin.length !== 14) return pin;
-    // Format as: x xxxx xxxx xxxx x
-    return `${pin[0]} ${pin.substring(1, 5)} ${pin.substring(5, 9)} ${pin.substring(9, 13)} ${pin[13]}`;
+    const numericPIN = pin.replace(/\D/g, '');
+    return numericPIN || pin;
   };
 
   // Reset form
