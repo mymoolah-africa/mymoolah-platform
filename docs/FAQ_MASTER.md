@@ -289,13 +289,13 @@ A: Yes. Per-transaction, daily, and monthly limits apply. These are shown in the
 ### 9c. Cash Withdrawals & Ring-Fencing of Own Funds
 
 **Q: Why can't I withdraw cash from my own deposit?**
-A: South African banking law (the Banks Act 94 of 1990) reserves cash deposit-and-withdraw services for registered banks. MyMoolah is a licensed payment platform and not a bank. To stay compliant, we **ring-fence** any money you deposit from your own bank account (or self-load via NFC, 1Voucher or Flash Pay) so it can't be paid back out as physical cash. You can still use those funds freely for transfers, PayShap, bill payments, airtime, data, electricity, and merchant payments.
+A: South African banking law (the Banks Act 94 of 1990) reserves cash deposit-and-withdraw services for registered banks. MyMoolah is a licensed payment platform and not a bank. To stay compliant, we **ring-fence** any money you deposit from your own bank account or other self-load channels when they are available, so it can't be paid back out as physical cash. You can still use those funds freely for transfers, PayShap, bill payments, airtime, data, electricity, and merchant payments.
 
 **Q: Which deposits can I withdraw as cash?**
 A: Only **third-party credits** — money sent to you by someone else. Typical examples are salary from your employer, a wages or stokvel payment from a corporate disbursement, a loan disbursement, or a peer-to-peer transfer from another MyMoolah user. Those funds are eligible for cash withdrawal through active MyMoolah Cash-Withdrawal Partners — such as eeziCash (Flash), Cliquefin / OTT cash-withdrawal references, and any future equivalent partner — subject to your KYC limits and the usual fees.
 
 **Q: What is a ring-fenced balance?**
-A: It's the portion of your wallet balance that came from your **own money** (deposits from your own bank account, self-loaded NFC, or Flash/1Voucher top-ups). Your total wallet balance is displayed, but this ring-fenced portion cannot be used for a cash withdrawal. There is no separate "cash-available" figure shown in the app — if you try a cash withdrawal that exceeds what is available from third-party credits, you'll see an explanation screen.
+A: It's the portion of your wallet balance that came from your **own money** (for example, deposits from your own bank account or other self-load channels when available). Your total wallet balance is displayed, but this ring-fenced portion cannot be used for a cash withdrawal. There is no separate "cash-available" figure shown in the app — if you try a cash withdrawal that exceeds what is available from third-party credits, you'll see an explanation screen.
 
 **Q: What happens if my salary is paid into my wallet?**
 A: Salary paid into your wallet through the MyMoolah disbursement rail is classified as **third-party funds** and is fully eligible for cash withdrawal (subject to your KYC tier and the ordinary fees). The same applies to loan disbursements and other bulk-pay credits processed through the disbursement rail.

@@ -202,14 +202,25 @@ export function TransactPage() {
           badgeType: 'success'
         },
         {
+          id: 'topup-easypay',
+          title: 'EasyPay Top-up',
+          description: 'Create a top-up request and pay at EasyPay',
+          icon: <Wallet className="w-6 h-6" />,
+          route: '/topup-easypay',
+          available: true,
+          badge: 'New',
+          badgeType: 'success'
+        },
+        {
           id: 'topup-voucher',
           title: 'Voucher Top-up',
           description: 'Redeem a 1Voucher, Flash Pay, or FNB voucher into your wallet',
           icon: <Ticket className="w-6 h-6" />,
           route: '/topup-voucher',
-          available: true,
-          badge: 'New',
-          badgeType: 'success'
+          available: false,
+          badge: 'Coming Soon',
+          badgeType: 'info',
+          comingSoon: true
         },
         {
           id: 'tap-to-add-money',
@@ -219,16 +230,6 @@ export function TransactPage() {
           route: '/tap-to-add-money',
           available: false,
           hidden: true,
-        },
-        {
-          id: 'topup-easypay',
-          title: 'EasyPay Top-up',
-          description: 'Create a top-up request and pay at EasyPay',
-          icon: <Wallet className="w-6 h-6" />,
-          route: '/topup-easypay',
-          available: true,
-          badge: 'New',
-          badgeType: 'success'
         }
       ]
     },

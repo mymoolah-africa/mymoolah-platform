@@ -1,5 +1,20 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-05-14 - Launch add-money card readiness
+
+### Summary
+Prepared the wallet Add Money service list for app launch while Flash voucher top-up is on hold.
+
+### Changes
+- `mymoolah-wallet-frontend/pages/TransactPage.tsx` now shows `EasyPay Top-up` directly under `Bank Transfer`.
+- `Voucher Top-up` is moved below `EasyPay Top-up` and masked as `Coming Soon`, matching the disabled launch treatment used for unavailable cash-out services.
+- `docs/FAQ_MASTER.md` no longer describes Flash/1Voucher self-load channels as generally live in the ring-fenced balance support wording; it now refers to self-load channels only when available.
+
+### Validation
+- `npx tsc --noEmit` in `mymoolah-wallet-frontend` passed.
+- `npm run build` in `mymoolah-wallet-frontend` passed.
+- Cursor lints on `mymoolah-wallet-frontend/pages/TransactPage.tsx` reported no errors.
+
 ## 2026-05-13 - EasyPay cash top-up voucher lifecycle
 
 ### Summary
