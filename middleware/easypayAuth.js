@@ -16,6 +16,10 @@
 const { sendErrorResponse, ERROR_CODES } = require('../utils/errorHandler');
 const jwt = require('jsonwebtoken');
 
+function isStagingEnvironment() {
+  return String(process.env.STAGING || '').toLowerCase() === 'true';
+}
+
 /**
  * Extracts the SessionToken value from the Authorization header.
  * Accepts: "SessionToken abc123" (EasyPay V5 spec)
@@ -44,7 +48,7 @@ function extractSessionToken(authHeader) {
  */
 function easypayAuthMiddleware(req, res, next) {
   const configuredApiKey = process.env.EASYPAY_API_KEY;
-  const isProduction = process.env.NODE_ENV === 'production' && !process.env.STAGING;
+  const isProduction = process.env.NODE_ENV === 'production' && !isStagingEnvironment();
   const isUAT = !isProduction;
   const clientIp = req.ip || req.connection?.remoteAddress || 'unknown';
 
@@ -67,7 +71,7 @@ function easypayAuthMiddleware(req, res, next) {
       return next();
     }
     console.warn(`⚠️ Invalid EasyPay SessionToken from IP: ${clientIp}`);
-    return sendErrorResponse(res, ERROR_CODES.INVALID_API_KEY, 'Invalid SessionToken', req.requestId, 401);
+    return sendErrorResponse(res, ERROR_CODES.INVALID_API_KEY, 'Invalid SessionToken', req.requestId);
   }
 
   // ── 2. X-API-Key header (legacy / backward compat) ────────────────────────
@@ -89,7 +93,7 @@ function easypayAuthMiddleware(req, res, next) {
     }
     console.warn(`⚠️ Invalid EasyPay X-API-Key from IP: ${clientIp}`);
     if (isProduction) {
-      return sendErrorResponse(res, ERROR_CODES.INVALID_API_KEY, 'Invalid API key', req.requestId, 401);
+      return sendErrorResponse(res, ERROR_CODES.INVALID_API_KEY, 'Invalid API key', req.requestId);
     }
     // Fall through to JWT check in UAT
   }
@@ -106,7 +110,7 @@ function easypayAuthMiddleware(req, res, next) {
     } catch (error) {
       console.warn(`⚠️ Invalid JWT for EasyPay simulation: ${error.message}`);
       return sendErrorResponse(res, ERROR_CODES.INVALID_API_KEY,
-        'Invalid authentication token', req.requestId, 401);
+        'Invalid authentication token', req.requestId);
     }
   }
 
@@ -114,7 +118,7 @@ function easypayAuthMiddleware(req, res, next) {
   const msg = isProduction
     ? 'Authorization: SessionToken {token} header is required'
     : 'Authorization: SessionToken {token}, X-API-Key, or Bearer token is required';
-  return sendErrorResponse(res, ERROR_CODES.MISSING_API_KEY, msg, req.requestId, 401);
+  return sendErrorResponse(res, ERROR_CODES.MISSING_API_KEY, msg, req.requestId);
 }
 
 /**
@@ -138,5 +142,6 @@ function constantTimeCompare(a, b) {
 }
 
 module.exports = {
-  easypayAuthMiddleware
+  easypayAuthMiddleware,
+  isStagingEnvironment
 };

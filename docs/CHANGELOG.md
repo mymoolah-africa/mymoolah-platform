@@ -1,5 +1,22 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-05-13 - EasyPay V5: production retest hardening
+
+### Summary
+Hardened the EasyPay Bill Payment Receiver V5 code before the next production retest. The changes fix production/staging environment detection for EasyPay auth, align `authorisationRequest` with the V5 optional `Reference` field, and prevent wallet notification creation from delaying the `paymentNotification` HTTP acknowledgement.
+
+### Changes
+- `middleware/easypayAuth.js` now treats only `STAGING=true` as staging; production deployments with `STAGING=false` are handled as production and no longer expose UAT/Bearer fallback behavior.
+- Removed incorrect numeric metadata arguments passed to `sendErrorResponse` in the EasyPay auth middleware.
+- `controllers/easyPayController.js` no longer rejects `authorisationRequest` when EasyPay omits optional `Reference`; the existing `NOREF` internal fallback is used.
+- `paymentNotification` still completes wallet and ledger work before responding, but in-app notification creation is no longer awaited before returning `{ EchoData }`.
+- Added focused tests in `tests/easypay-auth.test.js` and `tests/easypay-v5-controller.test.js`.
+
+### Validation
+- `node --check middleware/easypayAuth.js controllers/easyPayController.js tests/easypay-v5-controller.test.js tests/easypay-auth.test.js` passed.
+- `npx jest tests/easypay-v5-controller.test.js tests/easypay-auth.test.js --runInBand` passed 9/9.
+- Cursor lints on touched code/test files reported no errors.
+
 ## 2026-05-14 - EasyPay V5: partner comms drafts and documentation sync
 
 ### Summary

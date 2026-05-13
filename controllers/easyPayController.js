@@ -159,7 +159,7 @@ class EasyPayController {
       } = req.body;
       
       // Validate required fields
-      if (!EasyPayNumber || !AccountNumber || Amount == null || !Reference || !EchoData) {
+      if (!EasyPayNumber || !AccountNumber || Amount == null || !EchoData) {
         return res.status(400).json({ error: 'Missing required fields' });
       }
 
@@ -475,31 +475,29 @@ class EasyPayController {
 
       console.log(`[EasyPay] paymentNotification: credited wallet ${wallet.id} with R${netAmount.toFixed(2)} net (gross R${grossAmountRand.toFixed(2)}, fee R${totalFee.toFixed(2)})`);
 
-      try {
-        const notificationService = require('../services/notificationService');
-        await notificationService.createNotification(
-          bill.userId,
-          'txn_wallet_credit',
-          'EasyPay Deposit Received',
-          `R${netAmount.toFixed(2)} deposited to your wallet (R${grossAmountRand.toFixed(2)} paid, R${totalFee.toFixed(2)} fee)`,
-          {
-            payload: {
-              subtype: 'easypay_deposit',
-              grossAmount: grossAmountRand,
-              netAmount,
-              fee: totalFee,
-              easyPayNumber: EasyPayNumber,
-              reference: transactionRef,
-              action: 'view_receipt'
-            },
-            severity: 'info',
-            category: 'transaction',
-            source: 'easypay'
-          }
-        );
-      } catch (notifErr) {
+      const notificationService = require('../services/notificationService');
+      notificationService.createNotification(
+        bill.userId,
+        'txn_wallet_credit',
+        'EasyPay Deposit Received',
+        `R${netAmount.toFixed(2)} deposited to your wallet (R${grossAmountRand.toFixed(2)} paid, R${totalFee.toFixed(2)} fee)`,
+        {
+          payload: {
+            subtype: 'easypay_deposit',
+            grossAmount: grossAmountRand,
+            netAmount,
+            fee: totalFee,
+            easyPayNumber: EasyPayNumber,
+            reference: transactionRef,
+            action: 'view_receipt'
+          },
+          severity: 'info',
+          category: 'transaction',
+          source: 'easypay'
+        }
+      ).catch((notifErr) => {
         console.error('[EasyPay] Notification error:', notifErr.message);
-      }
+      });
 
       res.status(200).json({ EchoData });
     } catch (error) {

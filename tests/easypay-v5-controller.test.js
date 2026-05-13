@@ -139,6 +139,30 @@ describe('EasyPay V5 controller', () => {
     expect(mockModels.Payment.create).not.toHaveBeenCalled();
   });
 
+  it('accepts authorisation without Reference per V5 optional POS reference', async () => {
+    const res = createResponse();
+
+    await easyPayController.authorisationRequest({
+      body: {
+        EasyPayNumber: '95063163563805',
+        AccountNumber: '16356380',
+        Amount: 5000,
+        EchoData: 'auth-echo-no-ref',
+      },
+    }, res);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.ResponseCode).toBe('0');
+    expect(mockModels.Payment.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reference: 'EPV5-95063163563805-NOREF',
+        transactionId: null,
+        easyPayNumber: '95063163563805',
+      }),
+      { transaction: mockTransaction }
+    );
+  });
+
   it('records payment notification transactions with the wallet string ID', async () => {
     mockModels.Payment.findOne.mockResolvedValue(mockPayment);
     const res = createResponse();
@@ -205,5 +229,29 @@ describe('EasyPay V5 controller', () => {
     expect(res.body).toEqual({ EchoData: 'duplicate-echo' });
     expect(mockWallet.credit).not.toHaveBeenCalled();
     expect(mockModels.Transaction.create).not.toHaveBeenCalled();
+  });
+
+  it('does not wait for wallet notification before acknowledging paymentNotification', async () => {
+    const notificationService = require('../services/notificationService');
+    notificationService.createNotification.mockImplementationOnce(() => new Promise(() => {}));
+    mockModels.Payment.findOne.mockResolvedValue(mockPayment);
+    const res = createResponse();
+
+    await easyPayController.paymentNotification({
+      body: {
+        MerchantId: '000000000000002',
+        TerminalId: '00000001',
+        PaymentDate: '2026-04-29 12:58:36',
+        Reference: '1',
+        EasyPayNumber: '95063163563805',
+        AccountNumber: '16356380',
+        Amount: 5000,
+        EchoData: 'payment-echo-no-wait',
+      },
+    }, res);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({ EchoData: 'payment-echo-no-wait' });
+    expect(notificationService.createNotification).toHaveBeenCalled();
   });
 });
