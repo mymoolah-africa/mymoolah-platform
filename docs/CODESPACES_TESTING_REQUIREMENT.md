@@ -1,8 +1,8 @@
 # Codespaces Testing Requirement - MyMoolah Platform
 
 **Status**: ✅ **MANDATORY** - All testing must be performed in Codespaces  
-**Last Updated**: April 26, 2026  
-**Version**: 1.3.0 - VAT pass-through regression testing
+**Last Updated**: May 13, 2026
+**Version**: 1.3.1 - KB refresh proxy health checks
 
 ---
 
@@ -16,6 +16,44 @@
 - ✅ **ALWAYS** use Codespaces as the primary testing environment
 
 **Reason**: Codespaces has the correct environment configuration, database connections, and credentials that match production-like conditions.
+
+---
+
+## 🧠 **SUPPORT KB REFRESH TESTING (MAY 2026)**
+
+When refreshing `ai_knowledge_base` in Codespaces, always pull latest code first and use the environment-specific generator / embed scripts. UAT may require activation of pending generated entries; Staging and Production insert/update as active.
+
+```bash
+git pull origin main
+./scripts/ensure-proxies-running.sh
+
+# UAT
+npm run generate:kb:faq:update && npm run activate:kb && npm run embed:kb
+
+# Staging
+npm run generate:kb:faq:update:staging && npm run embed:kb:staging
+
+# Production (only after explicit approval for Production DB writes)
+npm run generate:kb:faq:update:production && npm run embed:kb:production
+```
+
+If Staging or Production fails with `read ECONNRESET` even though the proxy is reported as running, restart only the affected proxy and probe the DB before retrying. This happens when an old Cloud SQL Auth Proxy process is still listening but its fixed access token is stale.
+
+```bash
+# Staging
+kill $(lsof -ti:6544) 2>/dev/null || true
+sleep 3
+./scripts/ensure-proxies-running.sh staging
+node -e "const { getStagingClient } = require('./scripts/db-connection-helper'); (async () => { const c = await getStagingClient(); const r = await c.query('SELECT NOW() AS now'); console.log('STAGING DB OK:', r.rows[0].now); c.release(); process.exit(0); })().catch(e => { console.error('STAGING DB FAIL:', e.message); process.exit(1); });"
+
+# Production
+kill $(lsof -ti:6545) 2>/dev/null || true
+sleep 3
+./scripts/ensure-proxies-running.sh production
+node -e "const { getProductionClient } = require('./scripts/db-connection-helper'); (async () => { const c = await getProductionClient(); const r = await c.query('SELECT NOW() AS now'); console.log('PRODUCTION DB OK:', r.rows[0].now); c.release(); process.exit(0); })().catch(e => { console.error('PRODUCTION DB FAIL:', e.message); process.exit(1); });"
+```
+
+May 13 EasyPay V5 cash-in-only KB refresh result: UAT embedded `333` active entries, Staging embedded `297` active entries, and Production embedded `297` active entries, all with `0` embedding failures.
 
 ---
 

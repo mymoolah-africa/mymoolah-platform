@@ -1,7 +1,7 @@
 # MyMoolah AI Support System
 
-**Last Updated**: 2026-05-13  
-**Version**: 3.2.1 - EasyPay V5 cash-in-only KB alignment  
+**Last Updated**: 2026-05-13
+**Version**: 3.2.2 - EasyPay V5 cash-in-only KB embedded in all environments
 **Status**: ✅ **LIVE** — Clean ~250-line RAG service replaces legacy 4,000+ line pattern-matching stack
 
 ## 🚀 Overview
@@ -11,7 +11,11 @@ The MyMoolah AI Support System uses **LangChain RAG** (Retrieval-Augmented Gener
 ### **2026-05-13 — EasyPay V5 cash-in only (support KB)**
 - FAQ §9b and GPT gap-fill seeds no longer describe EasyPay as a MyMoolah **wallet cash-out**.
 - **`services/ragService.js`** scope text updated so the assistant does not treat “EasyPay cash-out” as in-scope product wording.
-- Regenerate/embed the KB per environment after FAQ changes (`generate:kb:update*` / `embed:kb*`) so legacy rows are refreshed.
+- KB database refresh completed in all environments after the FAQ/source update:
+  - UAT: 129 FAQ rows updated, 20 pending GEN rows activated, 333 active entries embedded, 0 failures.
+  - Staging: 4 FAQ rows inserted, 125 updated, 297 active entries embedded, 0 failures.
+  - Production: 4 FAQ rows inserted, 125 updated, 297 active entries embedded, 0 failures.
+- Do not rerun `generate:kb:faq:update*` / `embed:kb*` unless FAQ/source wording changes again. If Staging or Production embedding fails with `read ECONNRESET`, kill and restart the specific Cloud SQL proxy port first (`6544` / `6545`) because old fixed-token proxy sessions can keep listening after the token expires.
 
 ### **2026-04-16 — Withdrawals knowledge alignment**
 - Canonical customer wording: **`docs/FAQ_MASTER.md`** §9 (eeziCash vs EasyPay vs eeziPay / eeziPower).
@@ -22,10 +26,11 @@ The MyMoolah AI Support System uses **LangChain RAG** (Retrieval-Augmented Gener
 - `docs/FAQ_MASTER.md` was updated for recent support-facing changes: Gift Cards vs Buy Retail Vouchers, voucher amount validation, Production voucher governance examples, OTT cash-withdrawal availability rules, and referral SMS failure guidance.
 - `npm run check:kb:fresh` verifies that `docs/FAQ_MASTER.md` is not older than the newest `docs/CHANGELOG.md` entry.
 - `.cursor/hooks.json` runs the same guard before `git commit` and `git push` shell commands so agents are blocked from committing/pushing stale support KB source.
-- After approved FAQ changes, regenerate/update and embed the target environment KB with the existing scripts: `npm run generate:kb:update`, `npm run embed:kb`, and the staging/production variants when approved.
+- After approved FAQ changes, regenerate/update and embed the target environment KB with the existing scripts: `npm run generate:kb:faq:update`, `npm run embed:kb`, and the staging/production variants when approved.
 - 2026-05-12 approved refresh completed: UAT `268` active embedded entries, Staging `253` active embedded entries, and Production `253` active embedded entries.
 - 2026-05-12 OTT-Mobile withdrawal network update completed: UAT `329` active embedded entries, Staging `293` active embedded entries, and Production `293` active embedded entries. The support KB now documents Nedbank and ABSA cash-withdrawal collection networks.
 - 2026-05-12 follow-up added PEP and Ackermans to the Nedbank voucher network and clarified that outlet staff should be asked for the partner process (`Nedbank cash-withdrawal voucher` or `ABSA CashSend`), not a MyMoolah withdrawal. Use `generate:kb:faq:update*` for focused FAQ-only refreshes that should not create extra GPT gap-fill rows.
+- 2026-05-13 EasyPay V5 cash-in-only refresh completed: UAT `333` active embedded entries, Staging `297` active embedded entries, and Production `297` active embedded entries.
 
 ### **2026-03-14 — LangChain RAG Rebuild**
 - Replaced `bankingGradeSupportService.js` (2,276 lines) + `aiSupportService.js` (2,100 lines) with `ragService.js` (~250 lines)

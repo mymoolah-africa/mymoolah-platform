@@ -1,12 +1,19 @@
 # 🏦 Banking-Grade Support System
 
-**Last Updated**: April 16, 2026  
-**Version**: 2.4.42 - Withdrawals / eeziCash TPPP KB alignment  
-**Status**: ✅ **SMS WORKING** ✅ **KB UPDATED** ✅ **OTP SUPPORT** ✅ **REFERRAL SUPPORT** ✅ **EEZIPAY HOW TO** ✅ **MOJALOOP COMPLIANT**
+**Last Updated**: May 13, 2026
+**Version**: 3.2.2 - EasyPay V5 cash-in-only KB embedded
+**Status**: ✅ **SMS WORKING** ✅ **EASYPAY V5 CASH-IN ONLY KB EMBEDDED** ✅ **WITHDRAW CASH PARTNER KB** ✅ **OTP SUPPORT** ✅ **REFERRAL SUPPORT** ✅ **EEZIPAY HOW TO** ✅ **MOJALOOP COMPLIANT**
 
 ## Overview
 
 The MyMoolah Banking-Grade Support System is a **production-ready, enterprise-level AI support platform** designed for **millions of users** with **Mojaloop & ISO20022 compliance**. This system replaces the previous demo implementation with a **banking-grade architecture** that meets global financial standards.
+
+### **May 13, 2026 - EasyPay V5 cash-in-only KB embedded**
+- **FAQ/source:** `docs/FAQ_MASTER.md` and KB generator seed context now describe EasyPay V5 as **cash-in only** (add money), not wallet cash-out.
+- **Withdraw Cash:** Support answers must direct wallet withdrawals to approved Withdraw Cash partners such as eeziCash / Flash and OTT-Mobile ABSA/Nedbank where available.
+- **RAG scope:** `services/ragService.js` strict scope wording was updated to prevent "EasyPay cash-out" being treated as an in-scope MyMoolah product.
+- **Environment refresh:** UAT embedded 333 active entries, Staging embedded 297, and Production embedded 297, all with 0 failures.
+- **Ops note:** For Staging/Production KB scripts in long Codespaces sessions, restart stale Cloud SQL proxy ports before embedding if `read ECONNRESET` appears.
 
 ### **April 16, 2026 - Withdrawals and eeziCash (TPPP) knowledge base alignment**
 - **FAQ:** `docs/FAQ_MASTER.md` §9 — distinguishes **eeziCash** (wallet **cash withdrawal** via Flash; wallet debited before cash collection) from **eeziPay / eeziAirtime / eeziPower** (VAS redemption products).

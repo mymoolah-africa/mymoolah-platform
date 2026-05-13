@@ -1,13 +1,13 @@
 # Database Connection Guide - UAT, Staging & Production
 
-**Last Updated**: April 26, 2026  
-**Latest Migration Note**: Wallet-bank EFT activation adds `20260425110000_create_wallet_bank_payments_and_fee_policies.js`; the migration has been hardened for partial reruns and confirmed successful in UAT + staging Codespaces runs. VAT pass-through correction scripts use `scripts/db-connection-helper.js` and must be dry-run before any production apply.
+**Last Updated**: May 13, 2026
+**Latest Operational Note**: For long-running Codespaces sessions, a Cloud SQL Auth Proxy process can remain listening while its fixed access token is stale. If Staging/Production scripts fail with `read ECONNRESET` even though `ensure-proxies-running.sh` says the proxy is running, kill the specific proxy port (`6544` Staging / `6545` Production), restart that environment with `./scripts/ensure-proxies-running.sh <env>`, then run a simple `SELECT NOW()` probe before retrying.
 
 ## 🎯 **CRITICAL: NEVER STRUGGLE WITH PASSWORDS AGAIN**
 
 This guide ensures **100% reliable** database connections for UAT, Staging, and Production. **ALWAYS** use the provided scripts and helpers - never write custom connection logic.
 
-**Codespaces quick start**: See [CODESPACES_DB_CONNECTION.md](./CODESPACES_DB_CONNECTION.md) for one-click restart and Cloud SQL proxy setup.
+**Codespaces quick start**: See [CODESPACES_TESTING_REQUIREMENT.md](./CODESPACES_TESTING_REQUIREMENT.md) for current Codespaces testing and Cloud SQL proxy notes. Historical proxy notes live in `docs/archive/codespaces/CODESPACES_DB_CONNECTION.md`.
 
 ---
 
@@ -99,6 +99,22 @@ Use this ownership repair for owner-only DDL failures. `GRANT ALL PRIVILEGES` is
 - `scripts/correct-production-rtp-pass-through-ledger.js`
 
 Both use `scripts/db-connection-helper.js`, require the production Cloud SQL proxy, and are idempotent. Always run `--dry-run` first; after Apr 26, 2026 the RTP dry-run should report 0 eligible corrections.
+
+**Cloud SQL proxy stale-token note (May 2026):** `ensure-proxies-running.sh` checks whether a process is listening on the target port; it does not verify that the proxy can still authenticate to Cloud SQL. If a script repeatedly fails with `read ECONNRESET` before or during the first query, restart the specific proxy and probe the DB before retrying:
+
+```bash
+# Staging
+kill $(lsof -ti:6544) 2>/dev/null || true
+sleep 3
+./scripts/ensure-proxies-running.sh staging
+node -e "const { getStagingClient } = require('./scripts/db-connection-helper'); (async () => { const c = await getStagingClient(); const r = await c.query('SELECT NOW() AS now'); console.log('STAGING DB OK:', r.rows[0].now); c.release(); process.exit(0); })().catch(e => { console.error('STAGING DB FAIL:', e.message); process.exit(1); });"
+
+# Production
+kill $(lsof -ti:6545) 2>/dev/null || true
+sleep 3
+./scripts/ensure-proxies-running.sh production
+node -e "const { getProductionClient } = require('./scripts/db-connection-helper'); (async () => { const c = await getProductionClient(); const r = await c.query('SELECT NOW() AS now'); console.log('PRODUCTION DB OK:', r.rows[0].now); c.release(); process.exit(0); })().catch(e => { console.error('PRODUCTION DB FAIL:', e.message); process.exit(1); });"
+```
 
 ---
 

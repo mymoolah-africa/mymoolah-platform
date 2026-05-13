@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Performance Documentation
 
-**Last Updated**: April 26, 2026
-**Version**: 3.0.1 - VAT pass-through performance notes
-**Status**: ✅ **VAT PASS-THROUGH WRITES SIMPLIFIED** ✅ **WALLET-BANK EFT INDEXED TRACKING** ✅ **USDC LIMIT CHECKS DB-AGGREGATION ONLY** ✅ **EASYPAY STANDALONE VOUCHER UI OPTIMIZED** ✅ **RECONCILIATION OPTIMIZED** ✅ **FLASH + MOBILEMART** ✅ **REFERRAL SYSTEM OPTIMIZED** ✅ **PEACH PAYMENTS COMPLETE** ✅ **ZAPPER REVIEWED** ✅ **PRODUCTION READY**
+**Last Updated**: May 13, 2026
+**Version**: 3.2.2 - KB embedding connection resilience
+**Status**: ✅ **KB EMBEDDING REFRESHED UAT/STAGING/PRODUCTION** ✅ **DB CONNECTION HELD ONLY DURING DB WORK** ✅ **VAT PASS-THROUGH WRITES SIMPLIFIED** ✅ **WALLET-BANK EFT INDEXED TRACKING** ✅ **USDC LIMIT CHECKS DB-AGGREGATION ONLY** ✅ **RECONCILIATION OPTIMIZED** ✅ **FLASH + MOBILEMART** ✅ **REFERRAL SYSTEM OPTIMIZED** ✅ **PRODUCTION READY**
 
 ---
 
@@ -11,6 +11,7 @@
 The MyMoolah Treasury Platform is optimized for **high-performance financial transactions** with **TLS 1.3** and **banking-grade security**. The platform is designed to handle **millions of transactions** with sub-second response times while maintaining enterprise-grade security and reliability.
 
 ### **🏆 Performance Achievements**
+- ✅ **Knowledge-base embedding resilience**: KB generator/embed scripts no longer hold Cloud SQL sessions idle during long OpenAI embedding phases; Staging and Production support KB refreshes completed with 297 active rows embedded each and 0 failures.
 - ✅ **VAT pass-through accounting simplification**: PayShap RTP and pass-through supplier fee flows no longer write artificial VAT-control/TaxTransaction rows for throughput-only fees.
 - ✅ **Wallet-bank EFT quote/submit path**: Fee lookup uses indexed effective-dated DB policy; EFT settlement estimate is local deterministic logic; submit reuses existing H2H and PayShap services.
 - ✅ **Sub-Second Response Times**: <200ms average API response times
@@ -32,6 +33,12 @@ The MyMoolah Treasury Platform is optimized for **high-performance financial tra
 - **Frontend UX**: Quote calls are debounced in `SendMoneyPage.tsx` to avoid excessive quote requests while the amount is being typed.
 - **Migration resilience**: The launch migration is hardened for partial reruns by checking existing tables/indexes before creation and using conflict-safe fee-policy seed logic.
 - **Website separation**: Public website SEO/content/FAQ/AI support should stay in the separate website project so MMTP performance work remains focused on APIs, MMAP integration, wallet services, and payment rails.
+
+## 🧠 **SUPPORT KB EMBEDDING PERFORMANCE NOTES**
+
+- **DB connection scope:** `scripts/generate-knowledge-base.js` and `scripts/embed-knowledge-base.js` should not hold PostgreSQL clients while waiting on OpenAI embedding calls. Fetch rows, release the client, compute embeddings, then reconnect for writes.
+- **Environment results (May 13):** UAT `333` active entries embedded, Staging `297`, and Production `297`, all with 0 failures after the EasyPay V5 cash-in-only correction.
+- **Proxy health:** A listening Cloud SQL proxy port is not sufficient evidence of DB health in long Codespaces sessions. Restart stale Staging/Production proxy ports and run a `SELECT NOW()` probe before retrying heavy KB operations.
 
 ## 🧾 **VAT PASS-THROUGH PERFORMANCE NOTES**
 

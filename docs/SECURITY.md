@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Security Documentation
 
-**Last Updated**: April 26, 2026
-**Version**: 3.0.1 - VAT pass-through accounting control notes
-**Status**: ✅ **VAT PASS-THROUGH POLICY FORMALISED** ✅ **WALLET-BANK EFT AUTH/KYC/RATE LIMITS** ✅ **USDC API VALIDATION AT BOUNDARY** ✅ **USDC IDEMPOTENCY & VALR GUARDS** ✅ **EASYPAY STANDALONE VOUCHER UI SECURE** ✅ **RECONCILIATION SECURITY IMPLEMENTED** ⚠️ **CRITICAL PII EXPOSURE IDENTIFIED** 🔴 **ENCRYPTION AT REST REQUIRED** ✅ **STAGING/PRODUCTION DATABASES SECURED** ✅ **REFERRAL SYSTEM FRAUD PREVENTION ACTIVE** ✅ **RULE 12A DOCUMENTED** ✅ **DB CONNECTION HELPER PATTERN ESTABLISHED** ✅ **LEDGER AUDIT LIVE** ✅ **RATE LIMITERS UNIFIED** ✅ **KYC RAW SQL**
+**Last Updated**: May 13, 2026
+**Version**: 3.2.2 - EasyPay V5 cash-in-only KB security alignment
+**Status**: ✅ **EASYPAY V5 CASH-IN ONLY KB EMBEDDED** ✅ **WITHDRAW CASH PARTNER WORDING ALIGNED** ✅ **VAT PASS-THROUGH POLICY FORMALISED** ✅ **WALLET-BANK EFT AUTH/KYC/RATE LIMITS** ✅ **USDC API VALIDATION AT BOUNDARY** ✅ **USDC IDEMPOTENCY & VALR GUARDS** ✅ **RECONCILIATION SECURITY IMPLEMENTED** ⚠️ **CRITICAL PII EXPOSURE IDENTIFIED** 🔴 **ENCRYPTION AT REST REQUIRED** ✅ **STAGING/PRODUCTION DATABASES SECURED** ✅ **REFERRAL SYSTEM FRAUD PREVENTION ACTIVE** ✅ **RULE 12A DOCUMENTED** ✅ **DB CONNECTION HELPER PATTERN ESTABLISHED** ✅ **LEDGER AUDIT LIVE** ✅ **RATE LIMITERS UNIFIED** ✅ **KYC RAW SQL**
 
 ---
 
@@ -12,7 +12,8 @@ The MyMoolah Treasury Platform implements **banking-grade security** with **TLS 
 
 Notes for Codespaces development:
 - TLS is disabled for the dev HTTP server; DB connections use runtime TLS overrides only for development convenience
-- Recommended for teams: Cloud SQL Auth Proxy for verified TLS. See `docs/CODESPACES_DB_CONNECTION.md`
+- Recommended for teams: Cloud SQL Auth Proxy for verified TLS. See `docs/DATABASE_CONNECTION_GUIDE.md` and `docs/CODESPACES_TESTING_REQUIREMENT.md`
+- For long Codespaces sessions, Staging/Production Cloud SQL Auth Proxy processes can remain listening after their fixed access token is stale. If DB scripts fail with `read ECONNRESET`, kill/restart the affected port and probe the DB before retrying.
 
 Notes for AI-assisted development:
 - **Workspace rules** (`.cursor/rules/*.mdc`) and **skills** (`.agents/skills/`) are documented in `docs/CURSOR_2.0_RULES_FINAL.md` and `docs/CURSOR_SKILLS.md`. They do not replace this security profile; agents must still follow parameterized queries, secrets handling, and POPIA logging rules defined here and in project rules.
@@ -78,6 +79,10 @@ See: `docs/session_logs/2025-12-02_1220_msisdn-phonenumber-audit.md` for full au
 - **Regulatory / product clarity:** **eeziCash** is documented across MMTP as a **wallet cash-withdrawal** service under the TPPP/sponsor-bank framework (wallet debited before withdrawal credential issuance; PIN is a **withdrawal credential**, not VAS retail product resale). This aligns external communications with AML, transaction monitoring, and fraud models.
 - **Artefacts:** `docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html` (flows, ledger excerpts, role matrices); hub `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md` (AML, monitoring, security logging, KB seeding guidance).
 - **Security impact:** Cash-withdrawal channels (all Cash-Withdrawal Partners — eeziCash via Flash, EasyPay, Cliquefin / OTT, and any future partner) remain subject to **PII redaction** in logs, **immutable audit trails** on financial tables, **velocity and step-up** controls at the API boundary, and **cross-channel** fraud correlation (wallet → cash withdrawal → RTP). See `docs/policies/13-Information-Security-Policy.md` §10.2 and `docs/policies/20-Cash-Withdrawal-Policy.md` (POL-020 ring-fence).
+
+### EasyPay V5 support wording correction (May 2026)
+- **Customer/RAG security wording:** EasyPay V5 must be described as cash-in only (add money). Wallet cash withdrawals must be described through approved Withdraw Cash partners only.
+- **KB status:** UAT, Staging, and Production `ai_knowledge_base` rows and embeddings were refreshed on May 13, 2026 with 0 embedding failures.
 
 ### **Wallet-to-bank EFT security notes (April 2026)**
 

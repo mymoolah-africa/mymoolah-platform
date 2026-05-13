@@ -1,14 +1,26 @@
 # MyMoolah Treasury Platform
 
-**Last Updated**: April 26, 2026  
-**Version**: 3.0.1 - VAT pass-through accounting strategy  
-**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **VAT PASS-THROUGH POLICY FORMALISED** ✅ **PRODUCTION DB MIGRATED** ✅ **SBSA H2H EFT UAT ACTIVATION** ✅ **PAYSHAP RPP INSTANT PAYMENT** ✅ **CHART OF ACCOUNTS** ✅ **ELECTRICITY SUPPLIER COMPARISON** ✅ **LEDGER AUDIT** ✅ **CLOUD SCHEDULER** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **POPIA ID ENCRYPTION** ✅ **LANGCHAIN RAG AI** ✅ **PASA T-PPP BADGE**
+**Last Updated**: May 13, 2026
+**Version**: 3.2.2 - EasyPay V5 cash-in-only KB embedded
+**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **EASYPAY V5 CASH-IN ONLY KB EMBEDDED** ✅ **WITHDRAW CASH PARTNER KB** ✅ **VAT PASS-THROUGH POLICY FORMALISED** ✅ **PRODUCTION DB MIGRATED** ✅ **SBSA H2H EFT UAT ACTIVATION** ✅ **PAYSHAP RPP INSTANT PAYMENT** ✅ **CHART OF ACCOUNTS** ✅ **ELECTRICITY SUPPLIER COMPARISON** ✅ **LEDGER AUDIT** ✅ **CLOUD SCHEDULER** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **POPIA ID ENCRYPTION** ✅ **LANGCHAIN RAG AI** ✅ **PASA T-PPP BADGE**
 
-**Recent work**: **Apr 26, 2026** — Formalised MMTP VAT accounting strategy: VAT control records are only for MMTP-owned revenue/markup/commission, not supplier/bank/client/merchant pass-through fees. Aligned PayShap RTP, Zapper QR, EasyPay cash-out, and Flash cash-out fee posting with the policy in `docs/VAT_ACCOUNTING_STRATEGY.md`. **Apr 25** — Wallet-to-bank payments activated for UAT: bank payments default to **SBSA H2H EFT**, with an **Instant Payment** toggle for PayShap RPP. Added DB-backed effective-dated transaction fee policies for future MMAP management, seeded UAT EFT fee `R2.00`, added quote/submit APIs, wallet-bank payment tracking, Pain.002 rejection reversal/refund handling, and EFT receiver timing estimates using `15:00 SAST` cutoff + Saturday intake + SA public holidays. The EFT migration was hardened after a partial-run index conflict; André confirmed UAT and staging migrations completed successfully in Codespaces. Website SEO/content/FAQ/AI support belongs in the separate website project/Claude Code; this repo owns MMTP APIs, MMAP integration, audit, auth, and wallet/backend services. Commit `f288790f`. **Apr 24** — SBSA H2H PROD Penny #2 ACK + INTAUD succeeded in 22 seconds; FINAUD expected 2026-04-29 due to Freedom Day roll. **Apr 20** — POL-020 Cash Withdrawal & Ring-Fencing of Own Funds policy and related compliance docs. See `docs/CHANGELOG.md`.
+**Recent work**: **May 13, 2026** — Completed the EasyPay V5 cash-in-only support KB correction across UAT, Staging, and Production. `docs/FAQ_MASTER.md`, generator seed context, and RAG scope wording now distinguish EasyPay V5 as add-money / cash-in only and route wallet cash withdrawals to approved Withdraw Cash partners. Environment KB refresh results: UAT `333` active embedded entries, Staging `297`, and Production `297`, all with 0 embedding failures. Staging/Production required restarting stale Cloud SQL Auth Proxy processes before embedding because old fixed-token proxy sessions can remain listening while returning `read ECONNRESET`. **Apr 26** — Formalised MMTP VAT accounting strategy: VAT control records are only for MMTP-owned revenue/markup/commission, not supplier/bank/client/merchant pass-through fees. Aligned PayShap RTP, Zapper QR, historical EasyPay/Flash cash-out fee posting, and future V5 cash-in support with the policy in `docs/VAT_ACCOUNTING_STRATEGY.md`. See `docs/CHANGELOG.md`.
 
 ---
 
-## 🚀 **LATEST UPDATE: Wallet-to-bank EFT H2H activation (April 25, 2026)**
+## 🚀 **LATEST UPDATE: EasyPay V5 cash-in-only support KB (May 13, 2026)**
+
+### **AI support / RAG knowledge base**
+
+- **Canonical source:** `docs/FAQ_MASTER.md` now treats EasyPay V5 as **cash-in only** (add money), not a wallet withdrawal path.
+- **Withdrawals wording:** Customers should be directed to the app's **Withdraw Cash** partners (for example eeziCash / Flash and OTT-Mobile ABSA/Nedbank where available), not "EasyPay cash-out."
+- **Code scope:** `services/ragService.js` strict scope text now matches the cash-in-only position.
+- **Environment refresh:** UAT, Staging, and Production `ai_knowledge_base` rows and embeddings have been refreshed. Do not rerun KB generation unless the FAQ/source wording changes again.
+- **Codespaces proxy note:** If Staging/Production KB embedding fails with `read ECONNRESET`, restart the relevant Cloud SQL proxy port first (`6544` / `6545`) and probe the DB before retrying.
+
+---
+
+## 🚀 **PREVIOUS UPDATE: Wallet-to-bank EFT H2H activation (April 25, 2026)**
 
 ### **Wallet-to-bank payments**
 
@@ -391,7 +403,7 @@ The platform now includes **enhanced QR code scanning** with:
 
 ### **🏢 MyMoolah Admin Portal (MMAP)**
 
-The platform includes the **MyMoolah Admin Portal (MMAP)** - a comprehensive administrative interface with **banking-grade architecture** and a code-first MyMoolah design system.
+The platform includes the **MyMoolah Admin Portal (MMAP)** - a comprehensive administrative interface with **banking-grade architecture** and **Figma design integration**.
 
 ### **🏆 MISSION ACCOMPLISHED - KEY ACHIEVEMENTS**
 
@@ -416,10 +428,10 @@ The platform includes the **MyMoolah Admin Portal (MMAP)** - a comprehensive adm
 #### **MMAP (MyMoolah Admin Portal) Foundation** ✅ **COMPLETED**
 - **Portal Architecture**: Complete portal directory structure with backend and frontend
 - **Backend Foundation**: Portal backend with models, controllers, routes, and middleware
-- **Frontend Foundation**: Portal frontend with React/TypeScript and code-first MyMoolah design-system implementation
+- **Frontend Foundation**: Portal frontend with React/TypeScript and Figma design integration
 - **Database Schema**: Complete portal database schema with migrations and seeds
 - **Authentication System**: Portal-specific authentication with JWT and localStorage
-- **Design System Integration**: Complete code-first design-system integration with wallet and portal patterns
+- **Figma Design Integration**: Complete Figma design system integration with wallet design system
 
 #### **Complete Flash Commercial Terms Implementation** ✅ **COMPLETED**
 - **All 167 Flash Commercial Products**: Successfully implemented with exact commission rates
@@ -524,12 +536,12 @@ Comprehensive UAT test suite executed with 92.3% success rate. All critical paym
 - **Portal Frontend**: Port 3003 (New MMAP)
 
 ### **MMAP Features**
-- **Professional Login**: Code-first login with MyMoolah branding
+- **Professional Login**: Figma-designed login with MyMoolah branding
 - **Admin Dashboard**: Comprehensive admin interface with system metrics
 - **Real-time Data**: Live data from PostgreSQL database (no hardcoded data)
 - **Banking-Grade Security**: JWT authentication, rate limiting, audit logging
 - **Responsive Design**: Mobile-first design with wallet design system
-- **Design System**: Complete MyMoolah design-system integration
+- **Figma Integration**: Complete Figma design system integration
 
 ### **Test Credentials**
 ```
@@ -799,7 +811,7 @@ npm run dev
 - **Testing Suite**: Create comprehensive Zapper testing framework
 
 ### **Phase 2.4.3 - Portal Development Continuation** 🔄 **PLANNED**
-- **Dashboard Refinements**: Complete dashboard formatting to match the coded MyMoolah design system
+- **Dashboard Refinements**: Complete dashboard formatting to match Figma design exactly
 - **Additional Portals**: Implement supplier, client, merchant, and reseller portals
 - **Advanced Features**: Add real-time notifications and advanced analytics
 - **Multi-tenant Architecture**: Implement multi-tenant portal architecture

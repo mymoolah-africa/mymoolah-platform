@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Development Guide
 
-**Last Updated**: April 26, 2026  
-**Version**: 3.0.1 - VAT pass-through accounting strategy  
-**Status**: ✅ **CLOUD BUILD DEPLOYS** ✅ **VAT PASS-THROUGH POLICY FORMALISED** ✅ **SBSA H2H EFT UAT ACTIVATION** ✅ **PAYSHAP RPP INSTANT PAYMENT** ✅ **EEZIAIRTIME REDEMPTION UI** ✅ **EEZIPAY KB** ✅ **INTERNATIONAL AIRTIME PINLESS (AWAITING FLASH)** ✅ **EASYPAY STANDALONE VOUCHER** ✅ **RECONCILIATION LIVE** ✅ **REFERRAL SYSTEM LIVE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY** ✅ **CHART OF ACCOUNTS** ✅ **LEDGER AUDIT** ✅ **ELECTRICITY SUPPLIER COMPARISON** ✅ **CLOUD SCHEDULER**
+**Last Updated**: May 13, 2026
+**Version**: 3.2.2 - EasyPay V5 cash-in-only KB embedded
+**Status**: ✅ **CLOUD BUILD DEPLOYS** ✅ **EASYPAY V5 CASH-IN ONLY KB EMBEDDED** ✅ **WITHDRAW CASH PARTNER KB** ✅ **VAT PASS-THROUGH POLICY FORMALISED** ✅ **SBSA H2H EFT UAT ACTIVATION** ✅ **PAYSHAP RPP INSTANT PAYMENT** ✅ **EEZIAIRTIME REDEMPTION UI** ✅ **EEZIPAY KB** ✅ **RECONCILIATION LIVE** ✅ **REFERRAL SYSTEM LIVE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY** ✅ **CHART OF ACCOUNTS** ✅ **LEDGER AUDIT** ✅ **ELECTRICITY SUPPLIER COMPARISON** ✅ **CLOUD SCHEDULER**
 
 ---
 
@@ -14,7 +14,7 @@ Welcome to the MyMoolah Treasury Platform development guide! This platform is bu
 - **Workspace rules**: `.cursor/rules/*.mdc` — always applied; non‑negotiables (workflow, git, DB helper, security).
 - **Skills**: `.agents/skills/**/SKILL.md` — read when the task matches (migrations, recon, Redis, UI patterns). See `docs/CURSOR_SKILLS.md`.
 - **Continuity**: `docs/CURSOR_2.0_RULES_FINAL.md`, `docs/AGENT_HANDOVER.md`, `docs/session_logs/`.
-- **Cash withdrawals / TPPP / Cash-Withdrawal Partners:** Engineering and support wording must match `docs/policies/20-Cash-Withdrawal-Policy.md` (POL-020) and `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md` (wallet cash withdrawal vs VAS; ring-fence of Own Funds). Partner-specific flows: eeziCash (Flash), EasyPay, Cliquefin / OTT, USSD. Flow diagrams: `docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html`. Backend identifiers (`canCashOut`, `purchaseCashOutPin`, `issueEasyPayCashout`, route paths containing `cashout`) retain their historical spelling.
+- **Cash withdrawals / TPPP / Cash-Withdrawal Partners:** Engineering and support wording must match `docs/policies/20-Cash-Withdrawal-Policy.md` (POL-020) and `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md` (wallet cash withdrawal vs VAS; ring-fence of Own Funds). Partner-specific withdrawal flows: eeziCash (Flash), Cliquefin / OTT, USSD, and future approved Withdraw Cash partners. **EasyPay V5 is cash-in only** for customer-facing support and RAG wording. Flow diagrams: `docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html`. Backend identifiers (`canCashOut`, `purchaseCashOutPin`, `issueEasyPayCashout`, route paths containing `cashout`) retain their historical spelling where legacy code has not been cleaned up.
 
 ### **Platform Architecture**
 - **Multi-Supplier Integration**: Unified product catalog across Flash, MobileMart, dtMercury, and Peach
@@ -32,6 +32,12 @@ Welcome to the MyMoolah Treasury Platform development guide! This platform is bu
 - **Migrations**: Run `run-migrations-master.sh` from **Codespaces** (Cloud SQL Auth Proxy running)
 - **Codespaces startup**: Main backend + proxy only → `./scripts/one-click-restart-and-start.sh`. **Admin Portal** (disbursement clients, etc.) → `./scripts/start-all-services.sh` (main 3001, portal BE 3002, portal FE 3003, wallet 3000); logs: `/tmp/mymoolah-logs/*.log`. Details: `docs/CODESPACES_TESTING_REQUIREMENT.md`.
 - **See:** `scripts/README_DEPLOYMENT.md` for "Where to Run What" and typical workflow; `DEVELOPMENT_DEPLOYMENT_WORKFLOW.md` for complete workflow
+
+### **Support KB refresh notes (v3.2.2)**
+- **Canonical source:** `docs/FAQ_MASTER.md`; support-facing changes must be followed by `npm run check:kb:fresh`.
+- **Focused refresh scripts:** Use `generate:kb:faq:update*` for FAQ-only updates, then the matching `embed:kb*` script for the target environment.
+- **May 13 status:** UAT embedded `333` active KB rows, Staging `297`, and Production `297`, all with 0 failures after the EasyPay V5 cash-in-only correction.
+- **Codespaces proxy warning:** If Staging/Production embedding fails with `read ECONNRESET`, restart the affected Cloud SQL proxy port and run a DB probe before retrying; see `docs/DATABASE_CONNECTION_GUIDE.md`.
 
 ### **Wallet-to-bank EFT development notes (v3.0.0)**
 - **Default rail**: Consumer bank payments default to SBSA H2H EFT.

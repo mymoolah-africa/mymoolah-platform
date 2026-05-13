@@ -76,6 +76,7 @@ Withdrawal flows must not leak MSISDNs, ID numbers, or full PINs in application 
 
 - `docs/AI_SUPPORT_SYSTEM.md` — LangChain RAG over `ai_knowledge_base`; run `npm run embed:kb` after seeding new entries  
 - `docs/BANKING_GRADE_SUPPORT_SYSTEM.md` — legacy banking-grade support narrative and KB history  
+- **2026-05-13 status:** EasyPay V5 cash-in-only FAQ/source wording has been regenerated and embedded in UAT (`333` active embedded rows), Staging (`297`), and Production (`297`), all with 0 embedding failures. Do not rerun the KB scripts unless `FAQ_MASTER.md` or KB seed wording changes again.
 
 **When adding KB rows** (scripts such as `scripts/seed-support-knowledge-base.js` or dedicated seed scripts):
 

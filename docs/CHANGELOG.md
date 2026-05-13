@@ -1,5 +1,19 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-05-13 - EasyPay cash-in-only KB embedded in all environments
+
+### Summary
+Completed the approved support-KB database refresh for the EasyPay V5 cash-in-only correction across UAT, Staging, and Production. The FAQ source now treats EasyPay V5 as **cash-in only** and wallet withdrawals as **Withdraw Cash** partner flows; database embeddings in all three environments now reflect that source.
+
+### Environment Results
+- UAT: `npm run generate:kb:faq:update` updated 129 FAQ rows, `npm run activate:kb` activated 20 pending GEN rows, and `npm run embed:kb` embedded 333 active rows with 0 failures.
+- Staging: `npm run generate:kb:faq:update:staging` inserted 4 rows and updated 125 rows; after restarting the stale Staging Cloud SQL proxy on port `6544`, `npm run embed:kb:staging` embedded 297 active rows with 0 failures.
+- Production: after restarting the stale Production Cloud SQL proxy on port `6545`, `npm run generate:kb:faq:update:production` inserted 4 rows and updated 125 rows, and `npm run embed:kb:production` embedded 297 active rows with 0 failures.
+
+### Operational Notes
+- Staging and Production initially failed with `read ECONNRESET` because old Cloud SQL Auth Proxy processes were still listening but using expired fixed access tokens. `ensure-proxies-running.sh` reports a listening port as healthy; for long Codespaces sessions, kill the specific proxy port first (`6544` for Staging, `6545` for Production), restart it with `./scripts/ensure-proxies-running.sh <env>`, and run a one-line `SELECT NOW()` DB probe before KB embedding.
+- The KB scripts should not be rerun unless `docs/FAQ_MASTER.md` or KB seed/source wording changes again. If `services/ragService.js` has not yet been deployed, deploy backend per environment so the strict-scope prompt matches the refreshed DB content.
+
 ## 2026-05-13 - KB generator: DB connect after embeddings (Cloud SQL idle drop)
 
 ### Summary

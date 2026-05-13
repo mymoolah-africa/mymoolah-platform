@@ -1,12 +1,18 @@
 # 🏦 Banking-Grade Architecture for MyMoolah
 
-**Last Updated**: April 26, 2026
-**Version**: 3.0.1 - VAT pass-through accounting architecture
-**Status**: ✅ **VAT PASS-THROUGH POLICY FORMALISED** ✅ **PRODUCTION DB MIGRATED** ✅ **WALLET-BANK EFT UAT ACTIVATION** ✅ **PAYSHAP RPP INSTANT PAYMENT** ✅ **USDC DB-AGGREGATION ONLY (NO JS SUM)** ✅ **FLOAT MONITORING LIVE** ✅ **LEDGER INTEGRATION COMPLETE** ✅ **RECONCILIATION LIVE** ✅ **FLASH + MOBILEMART** ✅ **PEACH PAYMENTS INTEGRATED** ✅ **ZAPPER REVIEWED** ✅ **PRODUCTION READY** ✅ **CHART OF ACCOUNTS (28 ACCOUNTS)** ✅ **AUTOMATED LEDGER AUDIT** ✅ **CLOUD SCHEDULER** ✅ **ELECTRICITY SUPPLIER COMPARISON**
+**Last Updated**: May 13, 2026
+**Version**: 3.2.2 - EasyPay V5 cash-in-only KB architecture alignment
+**Status**: ✅ **EASYPAY V5 CASH-IN ONLY KB EMBEDDED** ✅ **WITHDRAW CASH PARTNER KB** ✅ **VAT PASS-THROUGH POLICY FORMALISED** ✅ **PRODUCTION DB MIGRATED** ✅ **WALLET-BANK EFT UAT ACTIVATION** ✅ **PAYSHAP RPP INSTANT PAYMENT** ✅ **USDC DB-AGGREGATION ONLY (NO JS SUM)** ✅ **FLOAT MONITORING LIVE** ✅ **LEDGER INTEGRATION COMPLETE** ✅ **RECONCILIATION LIVE** ✅ **FLASH + MOBILEMART** ✅ **PRODUCTION READY** ✅ **CHART OF ACCOUNTS (28 ACCOUNTS)** ✅ **AUTOMATED LEDGER AUDIT** ✅ **CLOUD SCHEDULER** ✅ **ELECTRICITY SUPPLIER COMPARISON**
 
 ## Overview
 
-This document outlines the banking-grade architecture implemented for MyMoolah to handle **millions of customers and transactions** with enterprise-level performance, security, and scalability. The platform now includes **USDC Send with full API validation and DB-only aggregation for limits** (February 2026), **complete Peach Payments integration**, **comprehensive Zapper integration review**, and a **world-class automated reconciliation system** for multi-supplier transaction reconciliation (MobileMart + Flash configured, January 14, 2026).
+This document outlines the banking-grade architecture implemented for MyMoolah to handle **millions of customers and transactions** with enterprise-level performance, security, and scalability. The platform includes **LangChain RAG support over an embedded PostgreSQL knowledge base**, **USDC Send with full API validation and DB-only aggregation for limits** (February 2026), **comprehensive Zapper integration review**, and a **world-class automated reconciliation system** for multi-supplier transaction reconciliation (MobileMart + Flash configured, January 14, 2026).
+
+### AI support KB architecture alignment (May 2026)
+
+The support knowledge base source of truth is `docs/FAQ_MASTER.md`, generated into `ai_knowledge_base` and embedded with OpenAI `text-embedding-3-small`. The May 13 EasyPay V5 correction was embedded in all environments: UAT `333` active entries, Staging `297`, and Production `297`, all with 0 failures.
+
+Architectural rule: **EasyPay V5 is cash-in only** in customer-facing RAG/FAQ wording. Wallet withdrawals are handled through approved Withdraw Cash partners. KB generation and embedding scripts must use `scripts/db-connection-helper.js` and must not keep database clients open while waiting on OpenAI embedding calls.
 
 ### Wallet-to-bank EFT H2H activation (April 2026)
 
@@ -32,7 +38,7 @@ Aligned live paths include PayShap RPP/RTP, Zapper QR supplier fees, EasyPay cas
 
 ### TPPP wallet withdrawals (April 2026)
 
-Outbound wallet flows include **cash withdrawal** rails delivered through **Cash-Withdrawal Partners** (currently eeziCash via Flash Group, EasyPay retail cash-withdrawal, Cliquefin / OTT cash-withdrawal references, USSD cash-withdrawal, and any future partner), **electronic transfers** (EFT, PayShap), and **VAS** purchases. Architecture and compliance documentation characterise every such partner credential as a **wallet cash-withdrawal mechanism** under the TPPP/sponsor-bank framework (wallet debit precedes withdrawal credential; the PIN / reference / token is not VAS product resale). See `docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html`, `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md`, `docs/policies/20-Cash-Withdrawal-Policy.md`, and `docs/STANDARD_BANK_TPPP_BRIEF.md`.
+Outbound wallet flows include **cash withdrawal** rails delivered through approved **Cash-Withdrawal Partners** (currently eeziCash via Flash Group, Cliquefin / OTT cash-withdrawal references where available, USSD cash-withdrawal, and any future approved partner), **EasyPay V5 cash-in** as an add-money rail, **electronic transfers** (EFT, PayShap), and **VAS** purchases. Architecture and compliance documentation characterise cash-withdrawal partner credentials as **wallet cash-withdrawal mechanisms** under the TPPP/sponsor-bank framework (wallet debit precedes withdrawal credential; the PIN / reference / token is not VAS product resale). EasyPay V5 must not be represented as a wallet withdrawal path in current customer-facing KB. See `docs/integrations/MyMoolah_TPPP_Withdrawal_Flow_Diagrams.html`, `docs/WITHDRAWALS_COMPLIANCE_AND_KB.md`, `docs/policies/20-Cash-Withdrawal-Policy.md`, and `docs/STANDARD_BANK_TPPP_BRIEF.md`.
 
 ### Double-Entry Ledger & Chart of Accounts
 - **28 live ledger accounts** across 6 categories: Assets, Liabilities, Revenue, Expenses, Clearing/Suspense
