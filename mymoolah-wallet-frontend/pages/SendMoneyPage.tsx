@@ -40,7 +40,7 @@ import { Switch } from '../components/ui/switch';
 import { Textarea } from '../components/ui/textarea';
 import { ConfirmationModal } from '../components/overlays/shared/ConfirmationModal';
 import { ErrorModal } from '../components/ui/ErrorModal';
-import { AddAccountModal } from '../components/overlays/shared/AddAccountModal';
+import { AddAccountModal, CHANNELS_BY_COUNTRY, MOOLAHMOVE_COUNTRIES } from '../components/overlays/shared/AddAccountModal';
 
 // Beneficiary Types - Using centralized service types
 // Note: SendMoneyPage only handles PaymentBeneficiary types (mymoolah and bank)
@@ -252,6 +252,12 @@ export function SendMoneyPage() {
     bankName: '',
     accountNumber: ''
   });
+  const [newMoolahMoveCountry, setNewMoolahMoveCountry] = useState('');
+  const [newMoolahMoveChannelId, setNewMoolahMoveChannelId] = useState('');
+  const [newMoolahMoveAccountNumber, setNewMoolahMoveAccountNumber] = useState('');
+  const newMoolahMoveChannels = newMoolahMoveCountry ? (CHANNELS_BY_COUNTRY[newMoolahMoveCountry] || []) : [];
+  const newMoolahMoveChannel = newMoolahMoveChannels.find((channel) => channel.id === newMoolahMoveChannelId);
+  const newMoolahMoveSelectedCountry = MOOLAHMOVE_COUNTRIES.find((country) => country.code === newMoolahMoveCountry);
   
   // Payment Modal State
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -302,6 +308,11 @@ export function SendMoneyPage() {
     message: 'An error occurred',
     type: 'error'
   });
+
+  useEffect(() => {
+    setNewMoolahMoveChannelId('');
+    setNewMoolahMoveAccountNumber('');
+  }, [newMoolahMoveCountry]);
   
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentDescription, setPaymentDescription] = useState('');
@@ -794,6 +805,67 @@ export function SendMoneyPage() {
 
   // Handle Add Beneficiary
   const handleAddBeneficiary = async () => {
+    if (selectedAccountType === 'moolahmove') {
+      if (!MOOLAHMOVE_ENABLED) {
+        showError('MoolahMove', 'MoolahMove is not available in this environment yet.', 'warning');
+        return;
+      }
+      if (!newBeneficiary.name.trim()) {
+        showError('Validation Error', 'Please enter the beneficiary name.', 'warning');
+        return;
+      }
+      if (!newMoolahMoveCountry) {
+        showError('Validation Error', 'Please select the destination country.', 'warning');
+        return;
+      }
+      if (!newMoolahMoveChannelId || !newMoolahMoveChannel) {
+        showError('Validation Error', 'Please select the MoolahMove payment method.', 'warning');
+        return;
+      }
+      if (!newMoolahMoveAccountNumber.trim()) {
+        showError(
+          'Validation Error',
+          newMoolahMoveChannel.type === 'mobile_money' ? 'Please enter the recipient mobile money number.' : 'Please enter the recipient account number.',
+          'warning'
+        );
+        return;
+      }
+
+      try {
+        const serviceType = newMoolahMoveChannel.type === 'mobile_money' ? 'mobile_money' : 'international_bank';
+        await beneficiaryService.createOrUpdateBeneficiary({
+          name: newBeneficiary.name.trim(),
+          serviceType,
+          serviceData: {
+            channelId: newMoolahMoveChannelId,
+            country: newMoolahMoveCountry,
+            countryCode: newMoolahMoveCountry,
+            currency: newMoolahMoveSelectedCountry?.currency || '',
+            paymentRail: 'moolahmove',
+            paymentMethod: newMoolahMoveChannel.type,
+            provider: newMoolahMoveChannel.name,
+            accountNumber: newMoolahMoveChannel.type === 'mobile_money' ? undefined : newMoolahMoveAccountNumber.trim(),
+            mobileMoneyId: newMoolahMoveChannel.type === 'mobile_money' ? newMoolahMoveAccountNumber.trim() : undefined,
+            msisdn: newMoolahMoveChannel.type === 'mobile_money' ? newMoolahMoveAccountNumber.trim() : undefined,
+            accountName: newBeneficiary.name.trim(),
+            isDefault: true
+          }
+        });
+        await loadBeneficiaries();
+        setNewBeneficiary({ name: '', msisdn: '', identifier: '', bankName: '', accountNumber: '' });
+        setNewMoolahMoveCountry('');
+        setNewMoolahMoveChannelId('');
+        setNewMoolahMoveAccountNumber('');
+        setSelectedAccountType('mymoolah');
+        setShowAddBeneficiary(false);
+        showError('Success', `${newBeneficiary.name.trim()} added with a MoolahMove account.`, 'info');
+      } catch (error: any) {
+        logError('SendMoneyPage', 'Failed to add MoolahMove beneficiary', error as Error);
+        showError('Error', error?.message || 'Failed to add MoolahMove recipient. Please try again.', 'error');
+      }
+      return;
+    }
+
     const isBankBeneficiary = selectedAccountType === 'bank' || selectedAccountType === 'eft' || selectedAccountType === 'payshap';
     // Validate required fields including MSISDN
     if (!newBeneficiary.name || !newBeneficiary.msisdn) {
@@ -1605,15 +1677,18 @@ export function SendMoneyPage() {
                     </Button>
                     {/* 3. MoolahMove */}
                     <Button
-                      variant="outline"
+                      variant={selectedAccountType === 'moolahmove' ? 'default' : 'outline'}
                       disabled={!MOOLAHMOVE_ENABLED}
                       onClick={() => {
                         if (!MOOLAHMOVE_ENABLED) return;
-                        showError('MoolahMove', 'MoolahMove account setup is available for UAT testing from an existing beneficiary account.', 'info');
+                        setSelectedAccountType('moolahmove');
+                        setInstantPaymentEnabled(false);
                       }}
                       className={`h-16 flex-col gap-0.5 col-span-2 ${
                         !MOOLAHMOVE_ENABLED
                           ? 'border-gray-100 bg-gray-50 text-gray-400 opacity-70 cursor-not-allowed'
+                          : selectedAccountType === 'moolahmove'
+                          ? 'bg-[#65AEDD] text-white border-[#65AEDD]'
                           : 'border-[#65AEDD] text-[#2D8CCA] bg-white hover:bg-[#65AEDD]/10'
                       }`}
                     >
@@ -1644,7 +1719,85 @@ export function SendMoneyPage() {
                     />
                   </div>
 
+                  {selectedAccountType === 'moolahmove' && (
+                    <>
+                      <div style={{
+                        background: 'linear-gradient(135deg, #F59E0B15, #F59E0B08)',
+                        border: '1px solid #F59E0B40',
+                        borderRadius: '8px',
+                        padding: '8px 12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}>
+                        <Globe style={{ width: '14px', height: '14px', color: '#F59E0B', flexShrink: 0 }} />
+                        <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '11px', color: '#92400E', margin: 0 }}>
+                          Send money internationally via <strong>MoolahMove</strong>. Recipient receives local currency.
+                        </p>
+                      </div>
+
+                      <div>
+                        <Label style={{ fontFamily: 'Montserrat, sans-serif' }}>
+                          Country <span className="text-red-500">*</span>
+                        </Label>
+                        <Select value={newMoolahMoveCountry} onValueChange={setNewMoolahMoveCountry}>
+                          <SelectTrigger style={{ height: 'var(--mobile-touch-target)', marginTop: '6px' }}>
+                            <SelectValue placeholder="Select country" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {MOOLAHMOVE_COUNTRIES.map((country) => (
+                              <SelectItem key={country.code} value={country.code}>
+                                {country.flag} {country.name} ({country.currency})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {newMoolahMoveCountry && (
+                        <div>
+                          <Label style={{ fontFamily: 'Montserrat, sans-serif' }}>
+                            Payment Method <span className="text-red-500">*</span>
+                          </Label>
+                          <Select value={newMoolahMoveChannelId} onValueChange={setNewMoolahMoveChannelId}>
+                            <SelectTrigger style={{ height: 'var(--mobile-touch-target)', marginTop: '6px' }}>
+                              <SelectValue placeholder="Select payment method" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {newMoolahMoveChannels.map((channel) => (
+                                <SelectItem key={channel.id} value={channel.id}>
+                                  {channel.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+
+                      {newMoolahMoveChannelId && (
+                        <div>
+                          <Label style={{ fontFamily: 'Montserrat, sans-serif' }}>
+                            {newMoolahMoveChannel?.type === 'mobile_money' ? 'Mobile Money Number' : 'Account Number'} <span className="text-red-500">*</span>
+                          </Label>
+                          <Input
+                            placeholder={newMoolahMoveChannel?.type === 'mobile_money' ? 'e.g. +265 99 123 4567' : 'Bank account number'}
+                            value={newMoolahMoveAccountNumber}
+                            onChange={(e) => setNewMoolahMoveAccountNumber(e.target.value)}
+                            style={{
+                              fontFamily: 'Montserrat, sans-serif',
+                              fontSize: 'var(--mobile-font-base)',
+                              height: 'var(--mobile-touch-target)',
+                              marginTop: '6px'
+                            }}
+                            className="font-mono"
+                          />
+                        </div>
+                      )}
+                    </>
+                  )}
+
                   {/* Mobile Number Field - For MyMoolah: this IS their account number. For Bank: this is MSISDN for verification */}
+                  {selectedAccountType !== 'moolahmove' && (
                   <div>
                     <Label style={{ fontFamily: 'Montserrat, sans-serif' }}>
                       {selectedAccountType === 'mymoolah' 
@@ -1711,6 +1864,7 @@ export function SendMoneyPage() {
                       })()
                     )}
                   </div>
+                  )}
 
                   {selectedAccountType === 'payshap' && (
                     <>
@@ -1764,7 +1918,11 @@ export function SendMoneyPage() {
                   </Button>
                   <Button 
                     onClick={handleAddBeneficiary}
-                    disabled={!newBeneficiary.name || !newBeneficiary.msisdn}
+                    disabled={
+                      selectedAccountType === 'moolahmove'
+                        ? !newBeneficiary.name || !newMoolahMoveCountry || !newMoolahMoveChannelId || !newMoolahMoveAccountNumber
+                        : !newBeneficiary.name || !newBeneficiary.msisdn
+                    }
                     className="flex-1 bg-gradient-to-r from-[#86BE41] to-[#2D8CCA] text-white"
                   >
                     Add Beneficiary

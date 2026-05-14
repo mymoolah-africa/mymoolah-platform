@@ -10,6 +10,7 @@ Made the wallet remove the disabled/fogged treatment for ABSA, Nedbank, and Mool
 - `WithdrawCashOverlay.tsx` now allows ABSA and Nedbank cash-provider cards to appear available in UAT, including both historic test codes and live OTT provider codes.
 - `AddAccountModal.tsx` now enables the MoolahMove account tab and international account fields in UAT only; Staging/Production remain disabled with the Coming Soon badge.
 - `SendMoneyPage.tsx` removes the MoolahMove fog/Coming Soon pill in UAT only, but avoids routing testers into an unsupported legacy beneficiary form.
+- Follow-up fixed the Add Account modal to use rounded corners on all sides and wired the Add New Beneficiary MoolahMove tile to the real country/payment-method/account form.
 
 ### Validation
 - `npx tsc --noEmit` in `mymoolah-wallet-frontend` passed.

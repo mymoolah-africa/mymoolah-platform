@@ -17,6 +17,7 @@ Implemented André's follow-up request to remove the fog/Coming Soon treatment f
 - [x] Unfogged ABSA and Nedbank Withdraw Cash provider cards in UAT only.
 - [x] Enabled the MoolahMove Add Account tab and international account fields in UAT only.
 - [x] Removed the MoolahMove Coming Soon/fog treatment from Send Money tiles in UAT only without routing testers into unsupported legacy form submission.
+- [x] Follow-up: fixed Add Account modal top-corner styling and wired the Add New Beneficiary MoolahMove tile to the real MoolahMove fields.
 - [x] Updated changelog, agent handover, and this session log.
 
 ---
@@ -32,7 +33,7 @@ Implemented André's follow-up request to remove the fog/Coming Soon treatment f
 - `mymoolah-wallet-frontend/utils/environment.ts` - New UAT-only environment helper.
 - `mymoolah-wallet-frontend/components/overlays/withdraw-cash/WithdrawCashOverlay.tsx` - UAT-only ABSA/Nedbank availability override and live provider-code alias support.
 - `mymoolah-wallet-frontend/components/overlays/shared/AddAccountModal.tsx` - MoolahMove tab/form enabled in UAT only.
-- `mymoolah-wallet-frontend/pages/SendMoneyPage.tsx` - MoolahMove tiles unfogged in UAT only with safe informational click handling.
+- `mymoolah-wallet-frontend/pages/SendMoneyPage.tsx` - MoolahMove tiles unfogged in UAT only; Add New Beneficiary now opens real MoolahMove country/payment-method/account fields.
 - `docs/CHANGELOG.md` - Added the UAT-only wallet availability entry.
 - `docs/AGENT_HANDOVER.md` - Updated latest feature and session log pointer.
 - `docs/session_logs/2026-05-14_1525_uat-wallet-unfogging.md` - This session log.
@@ -43,6 +44,7 @@ Implemented André's follow-up request to remove the fog/Coming Soon treatment f
 - Added `isWalletUatEnvironment()` to centralize wallet UAT detection.
 - Kept Staging and Production unchanged by making MoolahMove disabled/Coming Soon outside UAT and preserving API-driven Withdraw Cash availability outside UAT.
 - In UAT, ABSA/Nedbank cash provider cards display as available even when UAT discovery marks them unavailable.
+- Follow-up changed Add Account modal radius from bottom-only to fully rounded and corrected MoolahMove beneficiary creation to use `mobile_money` / `international_bank` service types.
 
 ---
 
@@ -75,7 +77,7 @@ Implemented André's follow-up request to remove the fog/Coming Soon treatment f
 ---
 
 ## Questions/Unresolved Items
-- Full MoolahMove send/payment flow from `SendMoneyPage.tsx` remains future work; this session only addressed the requested UAT visual/entry-point treatment safely.
+- Full MoolahMove send/payment execution remains future work; this session wires the beneficiary/account capture path only.
 
 ---
 

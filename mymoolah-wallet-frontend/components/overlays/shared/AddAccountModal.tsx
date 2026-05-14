@@ -24,7 +24,7 @@ const SA_BANKS = [
 
 // Supported MoolahMove corridors — populated from Yellow Card /channels at runtime.
 // This static list is used as a fallback / for UI display before API call.
-const MOOLAHMOVE_COUNTRIES = [
+export const MOOLAHMOVE_COUNTRIES = [
   { code: 'MW', name: 'Malawi', currency: 'MWK', flag: '🇲🇼' },
   { code: 'KE', name: 'Kenya', currency: 'KES', flag: '🇰🇪' },
   { code: 'ZW', name: 'Zimbabwe', currency: 'ZWL', flag: '🇿🇼' },
@@ -38,7 +38,7 @@ const MOOLAHMOVE_COUNTRIES = [
 
 // Payment channels per country — will be fetched from Yellow Card API in Phase 2.
 // Static fallback for Phase 0/1.
-const CHANNELS_BY_COUNTRY: Record<string, Array<{ id: string; name: string; type: 'mobile_money' | 'bank_transfer' }>> = {
+export const CHANNELS_BY_COUNTRY: Record<string, Array<{ id: string; name: string; type: 'mobile_money' | 'bank_transfer' }>> = {
   MW: [
     { id: 'mw-airtel-mobile', name: 'Airtel Money', type: 'mobile_money' },
     { id: 'mw-tnm-mobile', name: 'TNM Mpamba', type: 'mobile_money' },
@@ -237,15 +237,20 @@ export function AddAccountModal({
       }
       setIsLoading(true);
       try {
+        const serviceType = selectedChannel?.type === 'mobile_money' ? 'mobile_money' : 'international_bank';
         await beneficiaryService.addServiceToBeneficiary(Number(beneficiaryId), {
-          serviceType: 'international',
+          serviceType,
           serviceData: {
             channelId: intlChannelId,
             country: intlCountry,
+            countryCode: intlCountry,
             currency: selectedCountry?.currency || '',
+            paymentRail: 'moolahmove',
             paymentMethod: selectedChannel?.type || 'mobile_money',
             provider: selectedChannel?.name || '',
-            accountNumber: intlAccountNumber.trim(),
+            accountNumber: selectedChannel?.type === 'mobile_money' ? undefined : intlAccountNumber.trim(),
+            mobileMoneyId: selectedChannel?.type === 'mobile_money' ? intlAccountNumber.trim() : undefined,
+            msisdn: selectedChannel?.type === 'mobile_money' ? intlAccountNumber.trim() : undefined,
             accountName: intlAccountName.trim(),
             isDefault: false,
           },
@@ -274,7 +279,7 @@ export function AddAccountModal({
           maxWidth: '375px',
           maxHeight: 'calc(100vh - 120px - 60px)',
           overflowY: 'auto',
-          borderRadius: '0 0 16px 16px',
+          borderRadius: '16px',
           boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
         }}
         aria-describedby="add-account-desc"
