@@ -6,6 +6,7 @@ import { Input } from '../../ui/input';
 import { Label } from '../../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
 import { beneficiaryService } from '../../../services/beneficiaryService';
+import { isWalletUatEnvironment } from '../../../utils/environment';
 
 const SA_BANKS = [
   { name: 'ABSA Bank', branchCode: '632005' },
@@ -93,7 +94,7 @@ export interface AddAccountModalProps {
 }
 
 type AccountTypeTab = 'mymoolah' | 'bank' | 'international';
-const MOOLAHMOVE_ENABLED = false;
+const MOOLAHMOVE_ENABLED = isWalletUatEnvironment();
 
 export function AddAccountModal({
   isOpen,
@@ -307,19 +308,27 @@ export function AddAccountModal({
               <span style={{ fontSize: '10px', fontFamily: 'Montserrat, sans-serif' }}>Bank</span>
             </Button>
             <Button
-              variant="outline"
+              variant={tab === 'international' ? 'default' : 'outline'}
               disabled={!MOOLAHMOVE_ENABLED}
               onClick={() => {
                 if (!MOOLAHMOVE_ENABLED) return;
                 setTab('international');
                 setError('');
               }}
-              className="h-14 flex-col gap-0.5 border-gray-100 bg-gray-50 text-gray-400 opacity-70 cursor-not-allowed"
-              aria-label="MoolahMove coming soon"
+              className={`h-14 flex-col gap-0.5 ${
+                !MOOLAHMOVE_ENABLED
+                  ? 'border-gray-100 bg-gray-50 text-gray-400 opacity-70 cursor-not-allowed'
+                  : tab === 'international'
+                  ? 'bg-[#65AEDD] text-white border-[#65AEDD]'
+                  : 'border-gray-200 text-gray-700'
+              }`}
+              aria-label={MOOLAHMOVE_ENABLED ? 'MoolahMove' : 'MoolahMove coming soon'}
             >
               <Globe className="w-4 h-4" />
               <span style={{ fontSize: '10px', fontFamily: 'Montserrat, sans-serif' }}>MoolahMove</span>
-              <span style={{ fontSize: '8px', fontFamily: 'Montserrat, sans-serif', background: '#65AEDD', color: '#ffffff', borderRadius: '999px', padding: '1px 6px', lineHeight: '1.4', fontWeight: 600 }}>Coming Soon</span>
+              {!MOOLAHMOVE_ENABLED && (
+                <span style={{ fontSize: '8px', fontFamily: 'Montserrat, sans-serif', background: '#65AEDD', color: '#ffffff', borderRadius: '999px', padding: '1px 6px', lineHeight: '1.4', fontWeight: 600 }}>Coming Soon</span>
+              )}
             </Button>
           </div>
 

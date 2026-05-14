@@ -7,6 +7,7 @@ import { getToken } from '../utils/authToken';
 import { APP_CONFIG } from '../config/app-config';
 import { validateMobileNumber } from '../services/overlayService';
 import { logError, logErrorWithContext } from '../services/loggingService';
+import { isWalletUatEnvironment } from '../utils/environment';
 
 // Import centralized transaction icon utility
 import { getTransactionIcon } from '../utils/transactionIcons.tsx';
@@ -77,6 +78,8 @@ const SA_BANKS = [
   { code: 'STANDARD', name: 'Standard Bank', branchCode: '051001' },
   { code: 'TYMEBANK', name: 'TymeBank', branchCode: '678910' }
 ];
+
+const MOOLAHMOVE_ENABLED = isWalletUatEnvironment();
 
 // No mock data; pull from backend
 
@@ -1600,15 +1603,25 @@ export function SendMoneyPage() {
                       <Building2 className="w-5 h-5" />
                       <span style={{ fontSize: '11px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}>Bank Transfer</span>
                     </Button>
-                    {/* 3. MoolahMove — coming soon */}
+                    {/* 3. MoolahMove */}
                     <Button
                       variant="outline"
-                      disabled
-                      className="h-16 flex-col gap-0.5 border-gray-100 bg-gray-50 text-gray-400 opacity-70 cursor-not-allowed col-span-2"
+                      disabled={!MOOLAHMOVE_ENABLED}
+                      onClick={() => {
+                        if (!MOOLAHMOVE_ENABLED) return;
+                        showError('MoolahMove', 'MoolahMove account setup is available for UAT testing from an existing beneficiary account.', 'info');
+                      }}
+                      className={`h-16 flex-col gap-0.5 col-span-2 ${
+                        !MOOLAHMOVE_ENABLED
+                          ? 'border-gray-100 bg-gray-50 text-gray-400 opacity-70 cursor-not-allowed'
+                          : 'border-[#65AEDD] text-[#2D8CCA] bg-white hover:bg-[#65AEDD]/10'
+                      }`}
                     >
                       <Globe className="w-5 h-5" />
                       <span style={{ fontSize: '11px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}>MoolahMove</span>
-                      <span style={{ fontSize: '8px', fontFamily: 'Montserrat, sans-serif', background: '#65AEDD', color: '#ffffff', borderRadius: '999px', padding: '1px 6px', lineHeight: '1.4', fontWeight: 600 }}>Coming Soon</span>
+                      {!MOOLAHMOVE_ENABLED && (
+                        <span style={{ fontSize: '8px', fontFamily: 'Montserrat, sans-serif', background: '#65AEDD', color: '#ffffff', borderRadius: '999px', padding: '1px 6px', lineHeight: '1.4', fontWeight: 600 }}>Coming Soon</span>
+                      )}
                     </Button>
                   </div>
                 </div>
@@ -2579,15 +2592,25 @@ export function SendMoneyPage() {
                   <Building2 className="w-5 h-5" />
                   <span style={{ fontSize: '11px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}>Bank Transfer</span>
                 </Button>
-                {/* 3. MoolahMove — coming soon */}
+                {/* 3. MoolahMove */}
                 <Button
                   variant="outline"
-                  disabled
-                  className="h-16 flex-col gap-0.5 border-gray-100 bg-gray-50 text-gray-400 opacity-70 cursor-not-allowed col-span-2"
+                  disabled={!MOOLAHMOVE_ENABLED}
+                  onClick={() => {
+                    if (!MOOLAHMOVE_ENABLED) return;
+                    showError('MoolahMove', 'MoolahMove account setup is available for UAT testing from an existing beneficiary account.', 'info');
+                  }}
+                  className={`h-16 flex-col gap-0.5 col-span-2 ${
+                    !MOOLAHMOVE_ENABLED
+                      ? 'border-gray-100 bg-gray-50 text-gray-400 opacity-70 cursor-not-allowed'
+                      : 'border-[#65AEDD] text-[#2D8CCA] bg-white hover:bg-[#65AEDD]/10'
+                  }`}
                 >
                   <Globe className="w-5 h-5" />
                   <span style={{ fontSize: '11px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}>MoolahMove</span>
-                  <span style={{ fontSize: '8px', fontFamily: 'Montserrat, sans-serif', background: '#65AEDD', color: '#ffffff', borderRadius: '999px', padding: '1px 6px', lineHeight: '1.4', fontWeight: 600 }}>Coming Soon</span>
+                  {!MOOLAHMOVE_ENABLED && (
+                    <span style={{ fontSize: '8px', fontFamily: 'Montserrat, sans-serif', background: '#65AEDD', color: '#ffffff', borderRadius: '999px', padding: '1px 6px', lineHeight: '1.4', fontWeight: 600 }}>Coming Soon</span>
+                  )}
                 </Button>
               </div>
             </div>

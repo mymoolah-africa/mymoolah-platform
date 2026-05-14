@@ -8,6 +8,7 @@ import { Label } from '../../ui/label';
 import { Alert, AlertDescription } from '../../ui/alert';
 import { apiService, ApiError, type OttPayoutProvider, type OttPayoutQuote, type OttPayoutResult } from '../../../services/apiService';
 import { BrandSpinner } from '../../common/LoadingSpinner';
+import { isWalletUatEnvironment } from '../../../utils/environment';
 
 type Step = 'details' | 'processing' | 'success' | 'error';
 
@@ -57,9 +58,20 @@ const FALLBACK_PROVIDERS: CashProvider[] = [
 ];
 
 const CASH_PROVIDER_ALIASES: Record<string, string[]> = {
-  '112': ['112', 'absa', 'cashsend'],
-  '10': ['10', 'nedbank', 'cardless', 'cardless withdrawal'],
+  '112': ['112', '67', 'absa', 'cashsend'],
+  '10': ['10', '4', 'nedbank', 'cardless', 'cardless withdrawal'],
 };
+
+const UAT_ENABLED_CASH_PROVIDER_CODES = new Set(['112', '67', '10', '4']);
+
+function isUatEnabledCashProvider(provider: Pick<CashProvider, 'providerCode' | 'providerName'>): boolean {
+  if (!isWalletUatEnvironment()) return false;
+  const providerCode = String(provider.providerCode || '').toLowerCase();
+  const providerName = String(provider.providerName || '').toLowerCase();
+  return UAT_ENABLED_CASH_PROVIDER_CODES.has(providerCode) ||
+    providerName.includes('absa') ||
+    providerName.includes('nedbank');
+}
 
 function formatRand(value: number): string {
   return `R${value.toLocaleString('en-ZA', { maximumFractionDigits: 0 })}`;
@@ -99,7 +111,8 @@ export function WithdrawCashOverlay() {
             if (fallback.providerCode.toLowerCase() === code) return true;
             return aliases.some((alias) => code === alias || name.includes(alias));
           });
-          return live ? { ...fallback, ...live, helper: fallback.helper, available: live.available } : fallback;
+          const provider = live ? { ...fallback, ...live, helper: fallback.helper, available: live.available } : fallback;
+          return isUatEnabledCashProvider(provider) ? { ...provider, available: true } : provider;
         });
 
         setProviders(cashProviders);

@@ -1,5 +1,21 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-05-14 - UAT-only wallet availability unfogging
+
+### Summary
+Made the wallet remove the disabled/fogged treatment for ABSA, Nedbank, and MoolahMove only when the wallet is running against UAT, while Staging and Production keep their existing availability/Coming Soon treatment.
+
+### Changes
+- Added a shared wallet environment helper that treats only an explicit `VITE_NODE_ENV=uat` / related UAT build env or a UAT API base URL as UAT.
+- `WithdrawCashOverlay.tsx` now allows ABSA and Nedbank cash-provider cards to appear available in UAT, including both historic test codes and live OTT provider codes.
+- `AddAccountModal.tsx` now enables the MoolahMove account tab and international account fields in UAT only; Staging/Production remain disabled with the Coming Soon badge.
+- `SendMoneyPage.tsx` removes the MoolahMove fog/Coming Soon pill in UAT only, but avoids routing testers into an unsupported legacy beneficiary form.
+
+### Validation
+- `npx tsc --noEmit` in `mymoolah-wallet-frontend` passed.
+- `npm run build` in `mymoolah-wallet-frontend` passed.
+- Cursor lints on touched frontend files reported no errors.
+
 ## 2026-05-14 - EasyPay channel correction embedded in all environments
 
 ### Summary
