@@ -1,5 +1,55 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-05-14 - EasyPay channel correction embedded in all environments
+
+### Summary
+Applied Razeen Abrahams' correction that MyMoolah's EasyPay Receiver ID is not activated on excluded eCommerce / non-in-person channels because of fraud risk.
+
+### Changes
+- `docs/FAQ_MASTER.md` now limits EasyPay cash-in guidance to in-person participating tills/kiosks plus the direct bank integrations Razeen named.
+- Removed or explicitly excluded Plusmore, Vodacom-related channels / wallets such as VodaPay, WalletDoc, Prepaid24, EFTCorp / Ukheshe, banking-app bill-payment routes such as Nedbank app flows, and Clicks website/app payments.
+- Kept direct bank integrations as Absa, Tyme Bank, Capitec, and Old Mutual Bank, subject to each bank's onboarding process and only when the option is available.
+
+### Environment Results
+- UAT: `npm run generate:kb:faq:update` updated 133 FAQ rows, `npm run activate:kb` found all generated rows already active, and `npm run embed:kb` embedded 337 active rows with 0 failures.
+- Staging: first update attempt hit stale proxy `read ECONNRESET`; after restarting port `6544`, `npm run generate:kb:faq:update:staging` inserted 4 rows and updated 129 rows, and `npm run embed:kb:staging` embedded 301 active rows with 0 failures.
+- Production: first update attempt hit stale proxy `read ECONNRESET`; after restarting port `6545`, `npm run generate:kb:faq:update:production` inserted 4 rows and updated 129 rows, and `npm run embed:kb:production` embedded 301 active rows with 0 failures.
+- Readback verification confirmed the corrected EasyPay question is active and embedded in UAT, Staging, and Production, includes the eCommerce exclusion wording, and names only the direct banks Razeen confirmed.
+
+## 2026-05-14 - EasyPay hosted SFTP automation
+
+### Summary
+Implemented a gated EasyPay-hosted SFTP pull bridge that downloads daily SOF files into the existing GCS-backed reconciliation rail instead of depending on WinSCP or a local Mac.
+
+### Changes
+- Added `services/reconciliation/EasyPaySftpPullService.js` to connect to EasyPay-hosted SFTP, match `easy%.%` files, validate SOF structure, skip files already present in GCS, and upload valid files to the `easypay/` inbound prefix.
+- Added Cloud Scheduler-compatible route `POST /api/v1/reconciliation/scheduled-easypay-sftp-pull`, guarded by `EASYPAY_SFTP_PULL_ENABLED=false` by default and optionally chaining into the existing SFTP sweep.
+- Added `ssh2-sftp-client` dependency for the hosted SFTP puller.
+- Updated `scripts/deploy-backend.sh`, `env.template`, and `scripts/setup-cloud-scheduler.sh` with gated env vars, Secret Manager bindings, and scheduler creation controls. No live scheduler is created unless `EASYPAY_SFTP_PULL_CREATE_SCHEDULER=true` is explicitly set.
+- Updated EasyPay and deployment docs to reflect the new pull model, secure Secret Manager handling, and Staging -> Production rollout gates.
+- Follow-up: scoped the scheduled EasyPay SFTP pull route to Staging/Production only. UAT/local does not need EasyPay-hosted SFTP and will skip even if the flag is accidentally set.
+
+### Validation
+- `node --check services/reconciliation/EasyPaySftpPullService.js routes/reconciliation.js` passed.
+- `bash -n scripts/deploy-backend.sh scripts/setup-cloud-scheduler.sh` passed.
+- `npx jest tests/reconciliation/EasyPaySftpPullService.test.js tests/reconciliation/EasyPayAdapter.test.js tests/reconciliation/SFTPWatcherService.test.js --runInBand` passed 15/15, with pre-existing Jest config warnings about `setupFilesAfterSetup`.
+
+## 2026-05-14 - EasyPay retailer network KB update in UAT
+
+### Summary
+Added EasyPay's integration-confirmation details to the support FAQ source and refreshed the UAT AI support KB only.
+
+### Changes
+- `docs/FAQ_MASTER.md` now includes the confirmed EasyPay add-money retailer/channel networks, including the note that PEP/Ackermans and Pick n Pay/Boxer are expected after final channel testing.
+- Added safe support escalation wording for EasyPay receiver queries via SalesSupport, without storing SFTP credentials or passwords in the KB.
+- Added a customer-safe WinSCP/SFTP clarification: customers do not need SFTP; MyMoolah operations can use secure macOS SFTP clients such as Cyberduck, FileZilla, Transmit, ForkLift, Mountain Duck, or Terminal `sftp`.
+
+### UAT KB Refresh
+- Initial `npm run generate:kb:faq:update` failed with `read ECONNRESET` after embeddings due to a stale UAT DB proxy.
+- Restarted the UAT proxy on port `6543`, verified `SELECT NOW()`, then reran the UAT-only pipeline.
+- UAT results: `generate:kb:faq:update` inserted 4 rows and updated 129 rows; `activate:kb` activated 4 pending generated rows; `embed:kb` embedded 337 active rows with 0 failures.
+- Staging and Production were intentionally not updated; André will test UAT first.
+
 ## 2026-05-14 - MoolahMove coming-soon treatment
 
 ### Summary

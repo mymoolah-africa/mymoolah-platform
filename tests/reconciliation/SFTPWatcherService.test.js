@@ -193,3 +193,33 @@ describe('SFTPWatcherService.processFile — orchestrator outcomes', () => {
     expect(file.move.mock.calls[0][0]).toBe('failed/mobilemart/recon_20260417.csv');
   });
 });
+
+describe('SFTPWatcherService EasyPay pattern support', () => {
+  it('matches EasyPay SOF filenames using the configured easy%.% pattern', () => {
+    const watcher = new SFTPWatcherService();
+
+    expect(watcher.matchesPattern('easypay/easy2138.148', 'easy%.%')).toBe(true);
+    expect(watcher.matchesPattern('easypay/easy5063.001', 'easy%.%')).toBe(true);
+    expect(watcher.matchesPattern('easypay/not-easypay.txt', 'easy%.%')).toBe(false);
+  });
+
+  it('lists the lower-case easypay GCS prefix for an EASYPAY supplier', async () => {
+    const supplier = fakeSupplier({
+      supplier_code: 'EASYPAY',
+      supplier_name: 'EasyPay',
+      file_name_pattern: 'easy%.%'
+    });
+    db.ReconSupplierConfig.findAll.mockResolvedValue([supplier]);
+    const file = fakeGcsFile('easypay/easy2138.148', 'hash-easypay');
+    mockGetFiles.mockResolvedValue([[file]]);
+    db.ReconRun.findOne.mockResolvedValue(null);
+
+    const watcher = new SFTPWatcherService();
+    jest.spyOn(watcher, 'processFile').mockResolvedValue(undefined);
+
+    await watcher.checkForNewFiles();
+
+    expect(mockGetFiles).toHaveBeenCalledWith({ prefix: 'easypay/' });
+    expect(watcher.processFile).toHaveBeenCalledWith(file, supplier);
+  });
+});

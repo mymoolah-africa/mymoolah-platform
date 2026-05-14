@@ -115,6 +115,7 @@ Tasks 1 + 3 in parallel → Task 2 → Task 4 → Task 5 → Task 6 (last)
 | EasyPay deposits are NOT ringfenced | Unlike Flash voucher deposits, EasyPay cash-in is unrestricted. No `restricted_balance` logic. | 2026-04-09 |
 | Wallet credited immediately on paymentNotification | Not on settlement. T+2 settlement is float management, not user-facing. | 2026-04-09 |
 | JE pattern: 2 at payment + 1 at recon + 1 at settlement | JE1 gross deposit, JE2 user fee, JE3 batch handling cost, JE4 T+2 bank credit. | 2026-04-10 |
+| EasyPay-hosted SFTP pull | EasyPay confirmed in May 2026 that MMTP should collect daily transaction files from EasyPay-hosted SFTP. MMTP pulls matching SOF files into `gs://mymoolah-sftp-inbound/easypay/`, then reuses `SFTPWatcherService` and `EasyPayAdapter`; credentials are Secret Manager only. | 2026-05-14 |
 
 ---
 

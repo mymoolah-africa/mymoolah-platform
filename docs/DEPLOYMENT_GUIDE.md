@@ -284,7 +284,7 @@ const { getUATDatabaseURL } = require('./scripts/db-connection-helper');
 #### **2. Install Dependencies**
 ```bash
 # Install reconciliation-specific packages
-npm install exceljs@^4.4.0 moment-timezone@^0.5.45 csv-parse@^5.5.3 @google-cloud/storage@^7.14.0
+npm install exceljs moment-timezone csv-parse @google-cloud/storage ssh2-sftp-client
 
 # Verify installation
 npm audit fix
@@ -298,6 +298,14 @@ npm audit fix
 RECON_SFTP_HOST=34.35.137.166
 RECON_SFTP_PORT=5022
 RECON_GCS_BUCKET=mymoolah-sftp-inbound
+
+# EasyPay-hosted SFTP pull (disabled until Staging validation; not used in UAT/local)
+EASYPAY_SFTP_PULL_ENABLED=false
+EASYPAY_SFTP_REMOTE_DIR=.
+EASYPAY_SFTP_GCS_PREFIX=easypay/
+EASYPAY_SFTP_FILE_PATTERN=easy%.%
+EASYPAY_SFTP_VALIDATE_SOF=true
+EASYPAY_SFTP_SWEEP_AFTER_PULL=true
 
 # Email Alerts (Optional)
 SMTP_HOST=smtp.gmail.com
@@ -323,13 +331,35 @@ gcloud compute firewall-rules create allow-mobilemart-sftp \
   --target-tags=sftp-1-deployment \
   --description="Allow SFTP access from MobileMart"
 
-# Configure firewall rule for EasyPay IP (confirmed by Razeen, April 2026)
+# Legacy push model only: configure firewall rule for EasyPay IP if EasyPay
+# pushes files to MyMoolah's SFTP gateway. Current May 2026 model is pull from
+# EasyPay-hosted SFTP into GCS via EasyPaySftpPullService.
 gcloud compute firewall-rules create allow-easypay-sftp \
   --allow=tcp:5022 \
   --source-ranges=20.164.206.68/32 \
   --target-tags=sftp-1-deployment \
   --description="Allow SFTP access from EasyPay"
 ```
+
+#### **4a. Configure EasyPay-Hosted SFTP Pull Secrets**
+
+Create the EasyPay SFTP secrets outside the repository and bind them through `scripts/deploy-backend.sh`. Use the environment suffixes already expected by the deploy script:
+
+```bash
+# Staging secret names
+easypay-sftp-host-staging
+easypay-sftp-port-staging
+easypay-sftp-username-staging
+easypay-sftp-password-staging
+
+# Production secret names
+easypay-sftp-host-production
+easypay-sftp-port-production
+easypay-sftp-username-production
+easypay-sftp-password-production
+```
+
+Do not commit the values. UAT/local uses Codespaces `.env` for development and does not need this hosted EasyPay SFTP integration. After Staging validation, enable the pull explicitly on the target Cloud Run service by setting `EASYPAY_SFTP_PULL_ENABLED=true`; scheduler creation is separately gated by `EASYPAY_SFTP_PULL_CREATE_SCHEDULER=true ./scripts/setup-cloud-scheduler.sh --staging` or `--production`.
 
 #### **5. Verify Deployment**
 ```bash

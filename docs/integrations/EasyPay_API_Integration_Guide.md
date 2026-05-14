@@ -1055,7 +1055,9 @@ To obtain production credentials, submit the following to `integrations@mymoolah
 
 ### 10.1 SFTP-Based Reconciliation (Primary Method)
 
-MyMoolah operates a **secure SFTP server** for automated daily reconciliation file exchange. This is the **recommended** reconciliation method for production environments.
+MyMoolah uses the shared reconciliation rail for automated daily file exchange. Earlier onboarding assumed EasyPay would upload SOF files to the MyMoolah SFTP gateway. As of the May 2026 EasyPay environment confirmation, EasyPay will instead upload daily transaction files to **EasyPay-hosted SFTP**. Staging and Production Cloud Run services pull those files into the existing GCS inbound prefix (`gs://mymoolah-sftp-inbound/easypay/`) and then reuse `SFTPWatcherService` + `EasyPayAdapter` for reconciliation. UAT/local does not need this hosted SFTP pull enabled.
+
+> **Credential rule**: EasyPay SFTP host, port, username, and password must be stored in Secret Manager / approved secure storage only. Do not place the password in docs, tickets, logs, shell history, or support KB content.
 
 #### 10.1.1 SFTP Connection Details
 
@@ -1067,6 +1069,17 @@ Username: easypay
 Authentication: SSH public key only (no password authentication)
 Home Directory: /home/easypay (mapped to gs://mymoolah-sftp-inbound/easypay/)
 ```
+
+**Current EasyPay-hosted pull model**:
+```
+EasyPay SFTP (partner-hosted)
+  -> services/reconciliation/EasyPaySftpPullService.js
+  -> gs://mymoolah-sftp-inbound/easypay/
+  -> services/reconciliation/SFTPWatcherService.js
+  -> services/reconciliation/adapters/EasyPayAdapter.js
+```
+
+The legacy MyMoolah-hosted SFTP gateway details above remain useful if EasyPay later changes to pushing files to MMTP. The active automation path is the pull model unless Operations explicitly changes it.
 
 **Security Requirements**:
 - SSH key-based authentication (RSA 4096-bit or ED25519 recommended)
@@ -1190,7 +1203,7 @@ T,    559.00,      1.12,Cash
 **EasyPay Network Details**:
 - **Public IP**: `20.164.206.68` (for SFTP source IP whitelisting)
 
-**Upload Command**:
+**Legacy upload command** (only if EasyPay changes to pushing files to the MyMoolah SFTP gateway):
 ```bash
 sftp -P 5022 easypay@34.35.137.166 << EOF
 cd /home/easypay
@@ -1205,25 +1218,27 @@ MyMoolah's **automated reconciliation service** monitors the SFTP server and pro
 
 ```mermaid
 flowchart TD
-    A[EasyPay uploads SOF] --> B[SFTP Server: easy2138.148]
-    B --> C{File detected<br/>within 5 minutes}
-    C -->|Yes| D[Download & Parse SOF]
-    C -->|No| E[Alert: File not received]
-    D --> F{CSV Valid?}
-    F -->|No| G[Alert: SOF validation failed]
-    F -->|Yes| H[Match against MyMoolah transactions]
-    H --> I{All transactions match?}
-    I -->|Yes| J[Reconciliation: SUCCESS]
-    I -->|No| K[Generate discrepancy report]
-    K --> L[Email finance team + EasyPay contact]
-    J --> M[Move file to /processed/]
-    G --> N[Move file to /error/]
-    E --> O[Email alert to EasyPay contact]
+    A[EasyPay publishes SOF] --> B[EasyPay-hosted SFTP]
+    B --> C[Scheduled MMTP pull]
+    C --> D[GCS inbound easypay/]
+    D --> E{File detected<br/>by recon sweep}
+    E -->|Yes| F[Download & Parse SOF]
+    E -->|No| G[Alert: File not received]
+    F --> H{SOF Valid?}
+    H -->|No| I[Alert: SOF validation failed]
+    H -->|Yes| J[Match against MyMoolah transactions]
+    J --> K{All transactions match?}
+    K -->|Yes| L[Reconciliation: SUCCESS]
+    K -->|No| M[Generate discrepancy report]
+    M --> N[Email finance team + EasyPay contact]
+    L --> O[Move file to /processed/]
+    I --> P[Move file to /error/]
+    G --> Q[Email alert to EasyPay contact]
 ```
 
 **Processing Timeline**:
-1. **File Upload**: 00:00 - 06:00 SAST
-2. **Auto-Detection**: Within 5 minutes of upload
+1. **EasyPay File Availability**: Daily, per EasyPay hosted-SFTP upload timing
+2. **Cloud Pull**: Scheduled MMTP job pulls matching `easy%.%` files into `easypay/`
 3. **Validation**: ~1 minute
 4. **Reconciliation**: ~5 minutes (for 10,000 transactions)
 5. **Notification**: Immediate (success or failure)

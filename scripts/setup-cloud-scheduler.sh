@@ -10,7 +10,8 @@ set -euo pipefail
 #   3. sbsa-statement-poll-{env}   — every 2 min (MT940/MT942 bank statements)
 #   4. sbsa-pain002-poll-{env}     — every 5 min (Pain.002 disbursement responses)
 #   5. sftp-recon-sweep-{env}      — every 2 min (supplier recon file sweep)
-#   6. agent-governance-optimizer-{env} — Sunday 03:30 SAST (draft-only skills/rules review)
+#   6. easypay-sftp-pull-{env}     — 06:15 SAST daily (pull EasyPay-hosted SOF into GCS)
+#   7. agent-governance-optimizer-{env} — Sunday 03:30 SAST (draft-only skills/rules review)
 #
 # Usage:
 #   ./scripts/setup-cloud-scheduler.sh --staging
@@ -126,7 +127,21 @@ create_all_jobs_for_env() {
     "Supplier recon file SFTP sweep for ${env} — feeds ReconciliationOrchestrator" \
     "600s"
 
-  # 6. Agent governance optimizer — weekly, draft-only, staging-first rollout.
+  # 6. EasyPay-hosted SFTP pull — disabled by default until EasyPay files are validated.
+  if [ "${EASYPAY_SFTP_PULL_CREATE_SCHEDULER:-false}" = "true" ]; then
+    create_http_job \
+      "easypay-sftp-pull-${env}" \
+      "${service_url}/api/v1/reconciliation/scheduled-easypay-sftp-pull" \
+      "15 6 * * *" \
+      "${sa}" \
+      "${service_url}" \
+      "EasyPay SOF SFTP pull for ${env} — downloads partner-hosted daily transaction files into GCS inbound/easypay" \
+      "900s"
+  else
+    log "Skipping easypay-sftp-pull-${env}; set EASYPAY_SFTP_PULL_CREATE_SCHEDULER=true after UAT/Staging validation"
+  fi
+
+  # 7. Agent governance optimizer — weekly, draft-only, staging-first rollout.
   # Production scheduler is intentionally gated until André approves staging output.
   if [ "${env}" = "staging" ] || [ "${AGENT_GOVERNANCE_CREATE_PRODUCTION_SCHEDULER:-false}" = "true" ]; then
     create_http_job \

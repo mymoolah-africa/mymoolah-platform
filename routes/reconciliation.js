@@ -470,4 +470,65 @@ router.post('/scheduled-sftp-sweep', verifyCloudSchedulerToken, async (req, res)
   }
 });
 
+/**
+ * @route   POST /api/v1/reconciliation/scheduled-easypay-sftp-pull
+ * @desc    Cloud Scheduler-triggered pull from EasyPay-hosted SFTP into the
+ *          existing GCS supplier reconciliation inbound prefix.
+ * @access  Cloud Scheduler only (OIDC token)
+ */
+router.post('/scheduled-easypay-sftp-pull', verifyCloudSchedulerToken, async (req, res) => {
+  const startTime = Date.now();
+  const triggeredBy = req.schedulerAuth?.email || 'unknown';
+  const deploymentEnv = String(process.env.MM_DEPLOYMENT_ENV || '').toLowerCase();
+  const isHostedEnvironment = deploymentEnv === 'staging' || deploymentEnv === 'production';
+  const enabled = String(process.env.EASYPAY_SFTP_PULL_ENABLED || 'false').toLowerCase() === 'true';
+
+  if (!isHostedEnvironment) {
+    return res.json({
+      success: true,
+      message: 'EasyPay SFTP pull skipped: only staging and production use hosted SFTP',
+      data: { triggeredBy, deploymentEnv: deploymentEnv || 'local' }
+    });
+  }
+
+  if (!enabled) {
+    return res.json({
+      success: true,
+      message: 'EasyPay SFTP pull skipped: disabled',
+      data: { triggeredBy, deploymentEnv }
+    });
+  }
+
+  try {
+    const EasyPaySftpPullService = require('../services/reconciliation/EasyPaySftpPullService');
+    const SFTPWatcherService = require('../services/reconciliation/SFTPWatcherService');
+    const puller = new EasyPaySftpPullService();
+    const pullSummary = await puller.pullNewFiles();
+
+    let sweepTriggered = false;
+    if (String(process.env.EASYPAY_SFTP_SWEEP_AFTER_PULL || 'true').toLowerCase() !== 'false') {
+      const watcher = new SFTPWatcherService();
+      await watcher.checkForNewFiles();
+      sweepTriggered = true;
+    }
+
+    const durationMs = Date.now() - startTime;
+    logger.info(`Scheduled EasyPay SFTP pull completed in ${durationMs}ms (triggered by ${triggeredBy})`);
+    res.json({
+      success: true,
+      message: 'EasyPay SFTP pull completed',
+      data: { durationMs, triggeredBy, deploymentEnv, pullSummary, sweepTriggered }
+    });
+  } catch (error) {
+    const durationMs = Date.now() - startTime;
+    logger.error(`Scheduled EasyPay SFTP pull failed after ${durationMs}ms:`, error.message);
+    res.status(500).json({
+      success: false,
+      error: 'EasyPay SFTP pull failed',
+      message: error.message,
+      data: { durationMs, triggeredBy, deploymentEnv }
+    });
+  }
+});
+
 module.exports = router;

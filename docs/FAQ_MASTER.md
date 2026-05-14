@@ -253,6 +253,9 @@ A: No. **MyMoolah does not offer EasyPay for wallet cash withdrawals.** EasyPay 
 **Q: Can I get cash at PEP?**
 A: Not via EasyPay for MyMoolah. **EasyPay V5 is only for adding money (cash-in).** If you need **wallet cash**, start **Withdraw Cash** in the app and follow the **Nedbank** or **ABSA** instructions and collection network shown there. At the outlet, use the partner wording (Nedbank cash-withdrawal voucher or ABSA CashSend), not “EasyPay cash-out.”
 
+**Q: Where can I add money to my MyMoolah wallet with EasyPay?**
+A: EasyPay V5 is for **add money / cash-in only**. Create the EasyPay reference in the MyMoolah app, then pay it **in person** at a participating EasyPay store till or kiosk that accepts the reference. EasyPay has confirmed support across in-person retail networks including Shoprite, Checkers, USave, Spar-family stores (SaveMor, Spar Express, SuperSpar, KwikSpar), Game, Makro, Builders Warehouse, Lewis, and Woolworths. Clicks is excluded for website/app payments; use only an in-store till if the store can process the EasyPay reference. Do **not** pay this MyMoolah reference through Plusmore, Vodacom-related channels or wallets such as VodaPay, WalletDoc, Prepaid24, EFTCorp / Ukheshe, or banking-app bill-payment routes such as Nedbank app flows. Direct bank integrations that EasyPay has not prevented for MyMoolah's Receiver ID are Absa, Tyme Bank, Capitec, and Old Mutual Bank, subject to each bank's onboarding process and only when the app or bank channel shows the option as available. PEP / Ackermans and Pick n Pay / Boxer are expected to follow after final channel testing. Retailer availability can change and not every branch participates, so if a store cannot process the reference, try another participating outlet or contact support with the reference, store name, date, time, and cashier error message.
+
 **Q: Where can I get cash from my MyMoolah wallet?**
 A: Open **Withdraw Cash**, pick an available partner (such as Nedbank or ABSA where offered), confirm the fee and total debit, then use the partner voucher, PIN, or SMS instructions only at locations that partner lists for that product. **Do not use EasyPay expecting a MyMoolah cash withdrawal.**
 
@@ -279,6 +282,12 @@ A: Yes. A cash-withdrawal fee is charged per transaction. The fee is shown befor
 
 **Q: My EasyPay token failed at the store — what do I do?**
 A: EasyPay V5 tokens or references are for cash-ins only. If an EasyPay cash-in fails at the store, first check that the reference has not expired or already been used and that you are following the cash-in instructions. If it still fails, note the reference number, store name, date and time, and the error message shown by the cashier, then contact support.
+
+**Q: Who handles EasyPay receiver queries?**
+A: Receiver queries such as client payments not reflecting, short settlement payments, and receiver tax invoices should be escalated to EasyPay SalesSupport at SalesSupport@easypay.co.za. Do not share customer PINs, full references, passwords, or other sensitive information in public channels.
+
+**Q: Do customers need WinSCP or SFTP for EasyPay?**
+A: No. Customers only use the EasyPay reference shown in the MyMoolah app and pay through a participating EasyPay channel. SFTP daily transaction files are an internal MyMoolah operations and reconciliation process. Operations can use a secure SFTP client on macOS, such as Cyberduck, FileZilla, Transmit, ForkLift, Mountain Duck, or the built-in Terminal `sftp` command, but credentials must be kept in approved secure storage and never added to support tickets, chats, logs, or the knowledge base.
 
 **Q: Is there a fee when I add money with EasyPay V5?**
 A: Yes. Today the wallet is credited the amount you pay at the till **minus** a flat EasyPay cash-in fee (**R5.50** excluding VAT plus **15% VAT** = **R6.33** total per load), unless the app shows a different approved fee. MyMoolah may agree with EasyPay to change how that fee is collected (for example recovering it in what you pay at the till) in future; any change will be reflected in the app and support information.
