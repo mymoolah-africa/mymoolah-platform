@@ -27,6 +27,16 @@ function formatOttPayoutError(error: ApiError): string {
   return error.message;
 }
 
+function isFailedPayoutStatus(status?: string): boolean {
+  return ['failed', 'cancelled', 'canceled', 'reversed', 'ledger_post_failed'].includes(String(status || '').toLowerCase());
+}
+
+function formatPayoutStatusError(payout: OttPayoutResult): string {
+  const status = String(payout.status || '').replace(/_/g, ' ');
+  if (payout.rejectionReason) return payout.rejectionReason;
+  return `The cash withdrawal ${status || 'could not be completed'}. Your wallet will show the reversal if funds were already reserved.`;
+}
+
 const FALLBACK_PROVIDERS: CashProvider[] = [
   {
     providerCode: '112',
@@ -180,7 +190,7 @@ export function WithdrawCashOverlay() {
   const pollIfNeeded = async (payout: OttPayoutResult): Promise<OttPayoutResult> => {
     if (!payout.requiresPolling && payout.status !== 'processing') return payout;
     try {
-      return await apiService.pollOttPayout(payout.payoutId);
+      return await apiService.pollOttPayout(payout.payoutId, payout);
     } catch {
       return payout;
     }
@@ -202,10 +212,13 @@ export function WithdrawCashOverlay() {
         reference: `Withdraw cash - ${selectedProvider.providerName}`,
       });
       const finalResult = await pollIfNeeded(submitted);
+      if (isFailedPayoutStatus(finalResult.status)) {
+        throw new Error(formatPayoutStatusError(finalResult));
+      }
       setResult(finalResult);
       setStep('success');
     } catch (err: any) {
-      setError(err instanceof ApiError ? formatOttPayoutError(err) : 'Could not create the cash PIN. Please try again.');
+      setError(err instanceof ApiError ? formatOttPayoutError(err) : (err instanceof Error ? err.message : 'Could not create the cash PIN. Please try again.'));
       setStep('error');
     } finally {
       setIsSubmitting(false);
@@ -236,7 +249,7 @@ export function WithdrawCashOverlay() {
   }
 
   if (step === 'success') {
-    const isCompleted = result?.status === 'completed';
+    const isCompleted = String(result?.status || '').toLowerCase() === 'completed';
     return (
       <div
         role="dialog"
@@ -267,7 +280,9 @@ export function WithdrawCashOverlay() {
             <Alert className="border-[#86BE41]/30 bg-[#86BE41]/5">
               <ShieldCheck className="h-4 w-4 text-[#86BE41]" />
               <AlertDescription className="text-sm text-gray-700">
-                Your cash PIN will be sent by SMS after the transaction is successful. Keep it private and follow the instructions in the provider SMS.
+                {isCompleted
+                  ? 'Your cash PIN request is successful. The provider SMS contains the collection PIN and instructions. Keep it private.'
+                  : 'Your cash PIN is still processing. The provider SMS will arrive once the transaction completes. Keep it private and follow the provider instructions.'}
               </AlertDescription>
             </Alert>
 

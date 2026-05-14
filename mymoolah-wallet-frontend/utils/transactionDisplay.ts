@@ -24,8 +24,8 @@ export function cleanTransactionDescription(transaction: TransactionDisplayInput
 
   const providerCode = String(metadata.providerCode || '');
   const providerLabel =
-    providerCode === '112' ? 'ABSA CashSend' :
-    providerCode === '10' ? 'Nedbank Cardless Withdrawal' :
+    ['112', '67'].includes(providerCode) ? 'ABSA CashSend' :
+    ['10', '4'].includes(providerCode) ? 'Nedbank Cardless Withdrawal' :
     lowerDescription.includes('absa') ? 'ABSA CashSend' :
     lowerDescription.includes('nedbank') ? 'Nedbank Cardless Withdrawal' :
     'Cash payout';

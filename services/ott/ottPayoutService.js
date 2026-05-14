@@ -6,6 +6,7 @@ const ledgerService = require('../ledgerService');
 const { OttClient, redact } = require('./ottClient');
 const { getPayoutFeePolicy } = require('./ottCommercialTermsService');
 const { isApprovedCashPayoutProvider } = require('./ottAuthorizedProviderPolicy');
+const { encrypt, decrypt, checkConfiguration } = require('../../utils/fieldEncryption');
 
 function roundMoney(value) {
   return Number(Number(value || 0).toFixed(2));
@@ -85,6 +86,102 @@ function extractProviderRefs(data = {}) {
     providerTransactionReference: data.providerTransactionReference || data.provider_reference || data.providerRef || null,
     status: normalizeProviderStatus(data.status || data.Status || data.transactionStatus || data.responseStatus),
   };
+}
+
+const CASHOUT_CREDENTIAL_FIELDS = new Map([
+  ['pin', 'PIN'],
+  ['pinnumber', 'PIN'],
+  ['voucherpin', 'PIN'],
+  ['voucher_pin', 'PIN'],
+  ['cashpin', 'Cash PIN'],
+  ['cash_pin', 'Cash PIN'],
+  ['code', 'Code'],
+  ['vouchercode', 'Voucher Code'],
+  ['voucher_code', 'Voucher Code'],
+  ['voucherid', 'Voucher Code'],
+  ['voucher_id', 'Voucher Code'],
+  ['token', 'Token'],
+  ['serialnumber', 'Serial Number'],
+  ['serial_number', 'Serial Number'],
+  ['withdrawalcode', 'Withdrawal Code'],
+  ['withdrawal_code', 'Withdrawal Code'],
+  ['cashsendcode', 'CashSend Code'],
+  ['cash_send_code', 'CashSend Code'],
+]);
+
+function normalizeCredentialKey(key) {
+  return String(key || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+}
+
+function maskCashoutCredential(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return null;
+  const visibleTail = raw.replace(/\s+/g, '').slice(-4);
+  return visibleTail ? `****${visibleTail}` : '****';
+}
+
+function extractCashoutCredential(data = {}) {
+  const stack = [data];
+  const visited = new Set();
+
+  while (stack.length > 0) {
+    const current = stack.pop();
+    if (!current || typeof current !== 'object' || visited.has(current)) continue;
+    visited.add(current);
+
+    if (Array.isArray(current)) {
+      current.forEach((item) => stack.push(item));
+      continue;
+    }
+
+    for (const [key, value] of Object.entries(current)) {
+      const normalizedKey = normalizeCredentialKey(key);
+      const label = CASHOUT_CREDENTIAL_FIELDS.get(normalizedKey);
+      if (label && typeof value === 'string' && value.trim()) {
+        const rawValue = value.trim();
+        const credential = {
+          label,
+          maskedCode: maskCashoutCredential(rawValue),
+          sourceField: key,
+        };
+        if (checkConfiguration().encryptionKey) {
+          credential.encryptedValue = encrypt(rawValue);
+        }
+        return credential;
+      }
+      if (value && typeof value === 'object') stack.push(value);
+    }
+  }
+
+  return null;
+}
+
+function toSafeCashoutCredential(credential = {}) {
+  if (!credential || typeof credential !== 'object') return null;
+  const maskedCode = credential.maskedCode || maskCashoutCredential(credential.value);
+  if (!maskedCode) return null;
+  const decryptedValue = credential.encryptedValue ? decrypt(credential.encryptedValue) : credential.value;
+  return {
+    label: credential.label || 'Cash PIN',
+    maskedCode,
+    value: decryptedValue && !String(decryptedValue).startsWith('enc:v1:') ? decryptedValue : undefined,
+  };
+}
+
+async function updatePayoutTransactionCredential(payment, credential) {
+  if (!credential) return;
+  await db.Transaction.update({
+    metadata: {
+      ottPayoutId: payment.payoutId,
+      providerCode: payment.providerCode,
+      cashoutCredential: credential,
+    },
+  }, {
+    where: {
+      reference: payment.uniqueReferenceId,
+      type: 'withdraw',
+    },
+  });
 }
 
 function isUnknownProviderOutcome(error = {}) {
@@ -255,6 +352,7 @@ async function recordSupplierFloatSyncWarning(payment, error, context) {
 function toSafePayout(payment) {
   if (!payment) return null;
   const plain = typeof payment.toJSON === 'function' ? payment.toJSON() : payment;
+  const cashoutCredential = toSafeCashoutCredential(plain.metadata?.cashoutCredential);
   return {
     payoutId: plain.payoutId,
     uniqueReferenceId: plain.uniqueReferenceId,
@@ -273,6 +371,7 @@ function toSafePayout(payment) {
     ottPaymentReference: plain.ottPaymentReference,
     providerTransactionReference: plain.providerTransactionReference,
     rejectionReason: plain.rejectionReason,
+    cashoutCredential,
     processedAt: plain.processedAt,
     reversedAt: plain.reversedAt,
     createdAt: plain.createdAt,
@@ -659,18 +758,25 @@ async function submitOttPayout({ userId, amount, providerCode, providerName, rec
   }
 
   const refs = extractProviderRefs(response.data);
+  const cashoutCredential = extractCashoutCredential(response.data);
+  const nextMetadata = {
+    ...(payment.metadata || {}),
+    request: response.request,
+    ...(cashoutCredential ? { cashoutCredential } : {}),
+  };
   await payment.update({
     status: refs.status,
     ottPaymentReference: refs.ottPaymentReference,
     providerTransactionReference: refs.providerTransactionReference,
     providerResponse: redact(response.data || {}),
     processedAt: refs.status === 'completed' ? new Date() : null,
-    metadata: {
-      ...(payment.metadata || {}),
-      request: response.request,
-    },
+    metadata: nextMetadata,
   });
   payment.status = refs.status;
+  payment.metadata = nextMetadata;
+  if (cashoutCredential) {
+    await updatePayoutTransactionCredential(payment, cashoutCredential);
+  }
 
   if (['failed', 'cancelled', 'reversed'].includes(refs.status)) {
     await reverseWalletDebit(payment, response.data?.message || `OTT payout ${refs.status}`);
@@ -702,6 +808,7 @@ async function submitOttPayout({ userId, amount, providerCode, providerName, rec
     mmtpFeeAmount: quote.mmtpFeeAmount,
     totalDebit: quote.totalDebit,
     currency: quote.currency,
+    cashoutCredential: toSafeCashoutCredential(cashoutCredential),
   };
 }
 
@@ -734,9 +841,11 @@ async function pollPayoutStatus({ userId, payoutId }) {
     ...(response.data || {}),
     yourUniqueReference: paymentRecord.uniqueReferenceId,
   });
+  const refreshedPayment = await db.OttPayout.findOne({ where: { payoutId, userId } });
+  const safePayout = toSafePayout(refreshedPayment || paymentRecord);
   return {
-    payoutId: paymentRecord.payoutId,
-    uniqueReferenceId: paymentRecord.uniqueReferenceId,
+    ...safePayout,
+    status: updateResult.status || safePayout.status,
     providerResponse: redact(response.data || {}),
     updateResult,
   };
@@ -762,6 +871,11 @@ async function updatePayoutFromWebhook(payload = {}) {
   }
 
   const refs = extractProviderRefs(payload);
+  const cashoutCredential = extractCashoutCredential(payload);
+  const nextMetadata = {
+    ...(payment.metadata || {}),
+    ...(cashoutCredential ? { cashoutCredential } : {}),
+  };
   const updates = {
     status: refs.status,
     webhookEventId: eventId,
@@ -769,6 +883,7 @@ async function updatePayoutFromWebhook(payload = {}) {
     providerTransactionReference: refs.providerTransactionReference || payment.providerTransactionReference,
     providerResponse: redact(payload),
     processedAt: refs.status === 'completed' ? new Date() : payment.processedAt,
+    metadata: nextMetadata,
   };
 
   if (['failed', 'cancelled', 'reversed'].includes(refs.status) && !payment.reversedAt) {
@@ -777,6 +892,10 @@ async function updatePayoutFromWebhook(payload = {}) {
   }
 
   await payment.update(updates);
+  payment.metadata = nextMetadata;
+  if (cashoutCredential) {
+    await updatePayoutTransactionCredential(payment, cashoutCredential);
+  }
   if (refs.status === 'completed') {
     if (!payment.metadata?.ledgerPostedAt) {
       payment.status = refs.status;

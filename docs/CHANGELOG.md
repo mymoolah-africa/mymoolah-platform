@@ -1,5 +1,26 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-05-14 - OTT cash withdrawal result and history fix
+
+### Summary
+Fixed OTT Withdraw Cash result handling so a successful poll response can show the wallet success state, and prepared Transaction History to display masked OTT cashout credentials only when the provider sends them to the API.
+
+### Changes
+- `services/ott/ottPayoutService.js` now returns a top-level safe payout shape from `pollPayoutStatus`, matching submit/get status responses and preserving `status`, amounts, references, and redacted poll diagnostics.
+- The OTT payout service now extracts allowlisted credential-like provider fields before redaction, stores encrypted credential values only when field encryption is configured, and stores masked credential metadata for transaction history.
+- `controllers/walletController.js` now sanitizes OTT credential metadata before returning transaction history rows and recognizes live OTT provider codes `4`/`67` alongside earlier test codes.
+- `mymoolah-wallet-frontend/services/apiService.ts` and `WithdrawCashOverlay.tsx` now normalize polled payout results, preserve submitted payout fields, and treat failed/cancelled/reversed statuses as errors instead of success.
+- `TransactionHistoryPage.tsx` and `TransactionDetailModal.tsx` now show a masked OTT credential on the card and a reveal/copy section in details only when the API has a credential.
+
+### Validation
+- Read-only Production diagnostic for the R50 Nedbank/OTT payout showed the payout and wallet transaction were completed, but the persisted provider response did not contain PIN/voucher/token/serial/code fields.
+- `node --check services/ott/ottPayoutService.js controllers/walletController.js` passed.
+- `npx jest tests/ott-payout-service.test.js --runInBand --forceExit` passed 17/17.
+- `npx jest tests/wallet-ott-display.test.js --runInBand --forceExit` passed 3/3.
+- `npx tsc --noEmit` in `mymoolah-wallet-frontend` passed.
+- `npm run build` in `mymoolah-wallet-frontend` passed.
+- Cursor lints on touched files reported no errors.
+
 ## 2026-05-14 - Notification drawer freshness and EasyPay notification fix
 
 ### Summary

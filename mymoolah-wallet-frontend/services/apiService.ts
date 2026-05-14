@@ -305,8 +305,18 @@ export interface OttPayoutResult {
   mmtpFeeAmount: number;
   totalDebit: number;
   currency: string;
+  cashoutCredential?: {
+    label?: string;
+    maskedCode?: string;
+    value?: string;
+  };
   outcomeUnknown?: boolean;
   requiresPolling?: boolean;
+  rejectionReason?: string;
+  updateResult?: {
+    status?: string;
+    [key: string]: unknown;
+  };
 }
 
 export interface OttPayoutRecipient {
@@ -740,6 +750,22 @@ class ApiService {
     return (response?.data?.data ?? response?.data ?? response) as OttPayoutQuote;
   }
 
+  private normalizeOttPayoutResult(payload: any, previous?: OttPayoutResult): OttPayoutResult {
+    const raw = (payload?.data?.data ?? payload?.data ?? payload) || {};
+    const updateResult = raw.updateResult || {};
+    return {
+      ...(previous || {}),
+      ...raw,
+      status: raw.status || updateResult.status || previous?.status || 'processing',
+      amount: Number(raw.amount ?? previous?.amount ?? 0),
+      providerFeeAmount: Number(raw.providerFeeAmount ?? previous?.providerFeeAmount ?? 0),
+      mmtpFeeAmount: Number(raw.mmtpFeeAmount ?? previous?.mmtpFeeAmount ?? 0),
+      totalDebit: Number(raw.totalDebit ?? previous?.totalDebit ?? 0),
+      currency: raw.currency || previous?.currency || 'ZAR',
+      updateResult,
+    } as OttPayoutResult;
+  }
+
   async submitOttPayout(args: {
     amount: number;
     providerCode: string;
@@ -752,14 +778,14 @@ class ApiService {
       headers: { 'X-Idempotency-Key': generateIdempotencyKey() },
       body: JSON.stringify(args),
     });
-    return (response?.data?.data ?? response?.data ?? response) as OttPayoutResult;
+    return this.normalizeOttPayoutResult(response);
   }
 
-  async pollOttPayout(payoutId: string): Promise<OttPayoutResult> {
+  async pollOttPayout(payoutId: string, previous?: OttPayoutResult): Promise<OttPayoutResult> {
     const response = await this.request<any>(`/api/v1/ott/payouts/${encodeURIComponent(payoutId)}/poll`, {
       method: 'POST',
     });
-    return (response?.data?.data ?? response?.data ?? response) as OttPayoutResult;
+    return this.normalizeOttPayoutResult(response, previous);
   }
 
   private normalizeOttProviders(payload: any, hasLimits = false): OttPayoutProvider[] {

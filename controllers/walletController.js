@@ -1,10 +1,13 @@
 const { Wallet, Transaction, User } = require('../models');
 const notificationService = require('../services/notificationService');
 const { getLimitsForTier } = require('../config/kycTierLimits');
+const { decrypt } = require('../utils/fieldEncryption');
 
 const OTT_PAYOUT_PROVIDER_LABELS = {
   '112': 'ABSA CashSend',
+  '67': 'ABSA CashSend',
   '10': 'Nedbank Cardless Withdrawal',
+  '4': 'Nedbank Cardless Withdrawal',
 };
 
 function asMoney(value) {
@@ -27,6 +30,29 @@ function getOttPayoutProviderLabelFromRow(row = {}) {
   return 'Cash payout';
 }
 
+function sanitizeOttCashoutCredential(credential = {}) {
+  if (!credential || typeof credential !== 'object') return null;
+  const value = credential.encryptedValue ? decrypt(credential.encryptedValue) : credential.value;
+  const safeCredential = {
+    label: credential.label || 'Cash PIN',
+    maskedCode: credential.maskedCode || null,
+  };
+  if (value && !String(value).startsWith('enc:v1:')) {
+    safeCredential.value = value;
+  }
+  return safeCredential.maskedCode ? safeCredential : null;
+}
+
+function sanitizeOttPayoutMetadata(metadata = {}) {
+  const cashoutCredential = sanitizeOttCashoutCredential(metadata.cashoutCredential);
+  const { cashoutCredential: _cashoutCredential, ...rest } = metadata;
+  if (!cashoutCredential) return rest;
+  return {
+    ...rest,
+    cashoutCredential,
+  };
+}
+
 function sanitizeOttPayoutDisplayRows(rows = []) {
   const providerLabelsByPayoutId = new Map();
   rows.forEach((tx) => {
@@ -41,6 +67,7 @@ function sanitizeOttPayoutDisplayRows(rows = []) {
   return rows.map((tx) => {
     const metadata = tx.metadata || {};
     if (!metadata.ottPayoutId) return tx;
+    const safeMetadata = sanitizeOttPayoutMetadata(metadata);
 
     const providerLabel = providerLabelsByPayoutId.get(String(metadata.ottPayoutId)) || getOttPayoutProviderLabelFromRow(tx);
     const transactionId = String(tx.transactionId || '');
@@ -50,7 +77,7 @@ function sanitizeOttPayoutDisplayRows(rows = []) {
         ...tx,
         description: `Withdraw Cash refund - ${providerLabel}`,
         metadata: {
-          ...metadata,
+          ...safeMetadata,
           safeOttPayoutDescription: true,
         },
       };
@@ -61,7 +88,7 @@ function sanitizeOttPayoutDisplayRows(rows = []) {
         ...tx,
         description: 'Transaction fee',
         metadata: {
-          ...metadata,
+          ...safeMetadata,
           safeOttPayoutDescription: true,
         },
       };
@@ -71,7 +98,7 @@ function sanitizeOttPayoutDisplayRows(rows = []) {
       ...tx,
       description: `Withdraw Cash - ${providerLabel}`,
       metadata: {
-        ...metadata,
+        ...safeMetadata,
         safeOttPayoutDescription: true,
       },
     };

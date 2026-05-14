@@ -23,6 +23,7 @@ const mockPayment = {
   mmtpFeeAmount: 1.15,
   totalDebit: 111.11,
   currency: 'ZAR',
+  providerCode: '112',
   status: 'processing',
   metadata: {},
   update: jest.fn(),
@@ -70,6 +71,7 @@ const mockModels = {
 };
 
 const mockPerformPayout = jest.fn();
+const mockGetPaymentStatus = jest.fn();
 
 jest.mock('../models', () => mockModels);
 jest.mock('../services/ledgerService', () => ({
@@ -79,6 +81,7 @@ jest.mock('../services/ledgerService', () => ({
 jest.mock('../services/ott/ottClient', () => ({
   OttClient: jest.fn().mockImplementation(() => ({
     performPayout: mockPerformPayout,
+    getPaymentStatus: mockGetPaymentStatus,
   })),
   redact: jest.fn((value) => value),
 }));
@@ -91,6 +94,8 @@ describe('OTT payout service', () => {
     jest.clearAllMocks();
     process.env.OTT_PAYOUT_ENABLED = 'true';
     process.env.VAT_RATE = '0.15';
+    process.env.FIELD_ENCRYPTION_KEY = 'a'.repeat(64);
+    process.env.FIELD_HMAC_KEY = 'b'.repeat(64);
     mockPayment.status = 'processing';
     mockPayment.metadata = {};
     mockPayment.webhookEventId = null;
@@ -127,6 +132,15 @@ describe('OTT payout service', () => {
       },
       request: { yourUniqueReference: 'MM-OTT-TEST' },
     });
+    mockGetPaymentStatus.mockResolvedValue({
+      status: 200,
+      data: {
+        status: '100',
+        message: 'Successful',
+        transactionId: '3460396',
+        pin: '123456',
+      },
+    });
     ledgerService.postJournalEntry.mockResolvedValue({});
     ledgerService.getAccountBalanceByCode.mockResolvedValue(890.04);
   });
@@ -134,6 +148,8 @@ describe('OTT payout service', () => {
   afterEach(() => {
     delete process.env.OTT_PAYOUT_ENABLED;
     delete process.env.VAT_RATE;
+    delete process.env.FIELD_ENCRYPTION_KEY;
+    delete process.env.FIELD_HMAC_KEY;
   });
 
   it('builds balanced ledger lines with provider fee as pass-through and VAT only on MMTP fee', () => {
@@ -503,6 +519,50 @@ describe('OTT payout service', () => {
         submitOutcomeUnknownReason: 'timeout of 15000ms exceeded',
       }),
     }));
+  });
+
+  it('returns top-level payout status and masked credential when polling completes', async () => {
+    const result = await service.pollPayoutStatus({
+      userId: 7,
+      payoutId: 'OTT-TEST',
+    });
+
+    expect(mockGetPaymentStatus).toHaveBeenCalledWith(expect.objectContaining({
+      yourUniqueReference: 'MM-OTT-TEST',
+    }));
+    expect(result).toEqual(expect.objectContaining({
+      payoutId: 'OTT-TEST',
+      uniqueReferenceId: 'MM-OTT-TEST',
+      status: 'completed',
+      amount: 100,
+      totalDebit: 113.00,
+      cashoutCredential: expect.objectContaining({
+        label: 'PIN',
+        maskedCode: '****3456',
+        value: '123456',
+      }),
+      updateResult: expect.objectContaining({
+        status: 'completed',
+      }),
+    }));
+    expect(mockModels.Transaction.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metadata: expect.objectContaining({
+          ottPayoutId: 'OTT-TEST',
+          providerCode: '112',
+          cashoutCredential: expect.objectContaining({
+            label: 'PIN',
+            maskedCode: '****3456',
+          }),
+        }),
+      }),
+      expect.objectContaining({
+        where: {
+          reference: 'MM-OTT-TEST',
+          type: 'withdraw',
+        },
+      })
+    );
   });
 
   it('surfaces ledger posting failures without crediting the wallet after OTT accepted the payout', async () => {

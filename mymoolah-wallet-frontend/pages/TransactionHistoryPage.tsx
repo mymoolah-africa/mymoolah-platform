@@ -248,6 +248,15 @@ export function TransactionHistoryPage() {
     return description;
   };
 
+  const getCashoutCredential = (t: Transaction) => {
+    const credential = t.metadata?.cashoutCredential;
+    if (!credential?.maskedCode) return null;
+    return {
+      label: credential.label || 'Cash PIN',
+      maskedCode: credential.maskedCode,
+    };
+  };
+
   // Load transactions function (kept for potential future use)
   const loadTransactions = async () => {
     try {
@@ -699,6 +708,7 @@ export function TransactionHistoryPage() {
             </Card>
           ) : (
             filteredTransactions.map((transaction) => {
+              const cashoutCredential = getCashoutCredential(transaction);
               return (
                 <Card 
                   key={transaction.id} 
@@ -775,6 +785,30 @@ export function TransactionHistoryPage() {
                                     }}
                                   >
                                     {transaction.metadata.voucher.maskedCode}
+                                  </span>
+                                </div>
+                              )}
+                              {cashoutCredential && (
+                                <div className="flex items-center gap-2">
+                                  <span
+                                    style={{
+                                      fontFamily: 'Montserrat, sans-serif',
+                                      fontSize: 'var(--mobile-font-small)',
+                                      color: '#6b7280'
+                                    }}
+                                  >
+                                    {cashoutCredential.label}:
+                                  </span>
+                                  <span
+                                    style={{
+                                      fontFamily: 'Montserrat, sans-serif',
+                                      fontSize: 'var(--mobile-font-small)',
+                                      fontWeight: 600,
+                                      color: '#1f2937',
+                                      wordBreak: 'break-word'
+                                    }}
+                                  >
+                                    {cashoutCredential.maskedCode}
                                   </span>
                                 </div>
                               )}

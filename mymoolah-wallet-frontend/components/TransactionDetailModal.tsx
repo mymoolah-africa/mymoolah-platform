@@ -31,8 +31,20 @@ interface TransactionDetailModalProps {
 }
 
 export function TransactionDetailModal({ isOpen, onClose, transaction }: TransactionDetailModalProps) {
+  const [showCashoutCredential, setShowCashoutCredential] = React.useState(false);
+  const [cashoutCopied, setCashoutCopied] = React.useState(false);
+
+  React.useEffect(() => {
+    setShowCashoutCredential(false);
+    setCashoutCopied(false);
+  }, [isOpen, transaction?.id]);
+
   if (!isOpen || !transaction) return null;
   const displayDescription = cleanTransactionDescription(transaction);
+  const cashoutCredential = transaction.metadata?.cashoutCredential;
+  const hasCashoutCredential = Boolean(cashoutCredential?.maskedCode);
+  const cashoutCredentialValue = typeof cashoutCredential?.value === 'string' ? cashoutCredential.value : '';
+  const cashoutCredentialLabel = cashoutCredential?.label || 'Cash PIN';
 
   const isElectricity = transaction.metadata?.vasType === 'electricity' || 
                         transaction.description?.toLowerCase().includes('electricity');
@@ -70,6 +82,13 @@ export function TransactionDetailModal({ isOpen, onClose, transaction }: Transac
         }, 2000);
       }
     }
+  };
+
+  const handleCopyCashoutCredential = async () => {
+    if (!cashoutCredentialValue) return;
+    await navigator.clipboard.writeText(cashoutCredentialValue);
+    setCashoutCopied(true);
+    setTimeout(() => setCashoutCopied(false), 2000);
   };
 
   const formatDate = (dateString: string) => {
@@ -437,6 +456,93 @@ export function TransactionDetailModal({ isOpen, onClose, transaction }: Transac
                     <Copy style={{ width: '16px', height: '16px', marginRight: '8px' }} />
                     Copy PIN
                   </Button>
+                </div>
+              </div>
+
+              <div style={{
+                borderBottom: '1px solid #e5e7eb',
+                marginBottom: '1rem',
+                marginTop: '1rem'
+              }} />
+            </>
+          )}
+
+          {/* OTT Withdraw Cash credential, shown only when the provider returned one */}
+          {hasCashoutCredential && (
+            <>
+              <div style={{
+                padding: '1rem',
+                backgroundColor: '#f8fafe',
+                borderRadius: '12px',
+                border: '2px dashed #2D8CCA'
+              }}>
+                <div style={{ textAlign: 'center' }}>
+                  <p style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '12px',
+                    color: '#6b7280',
+                    marginBottom: '8px'
+                  }}>
+                    Your Withdraw Cash {cashoutCredentialLabel}
+                  </p>
+                  <p style={{
+                    fontFamily: 'Monaco, Courier, monospace',
+                    fontSize: '22px',
+                    fontWeight: '700',
+                    color: '#1f2937',
+                    letterSpacing: '3px',
+                    wordBreak: 'break-all',
+                    marginBottom: '1rem'
+                  }}>
+                    {showCashoutCredential && cashoutCredentialValue
+                      ? formatToken(cashoutCredentialValue)
+                      : cashoutCredential.maskedCode}
+                  </p>
+                  <p style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '12px',
+                    color: '#4b5563',
+                    marginBottom: '1rem',
+                    lineHeight: 1.4
+                  }}>
+                    Keep this private. Use it only at the collection channel shown in the provider SMS.
+                  </p>
+                  <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                    {cashoutCredentialValue && (
+                      <Button
+                        onClick={() => setShowCashoutCredential((current) => !current)}
+                        variant="outline"
+                        style={{
+                          fontFamily: 'Montserrat, sans-serif',
+                          fontSize: '14px',
+                          fontWeight: '500',
+                          minHeight: '44px',
+                          borderRadius: '12px'
+                        }}
+                      >
+                        {showCashoutCredential ? 'Hide' : 'Reveal'}
+                      </Button>
+                    )}
+                    {cashoutCredentialValue && (
+                      <Button
+                        onClick={handleCopyCashoutCredential}
+                        variant="outline"
+                        style={{
+                          fontFamily: 'Montserrat, sans-serif',
+                          fontSize: '14px',
+                          fontWeight: '500',
+                          minHeight: '44px',
+                          borderRadius: '12px',
+                          backgroundColor: '#ffffff',
+                          border: '2px solid #2D8CCA',
+                          color: '#2D8CCA'
+                        }}
+                      >
+                        <Copy style={{ width: '16px', height: '16px', marginRight: '8px' }} />
+                        {cashoutCopied ? 'Copied!' : `Copy ${cashoutCredentialLabel}`}
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
 
