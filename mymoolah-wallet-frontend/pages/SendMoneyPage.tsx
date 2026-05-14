@@ -1604,11 +1604,11 @@ export function SendMoneyPage() {
                     <Button
                       variant="outline"
                       disabled
-                      className="h-16 flex-col gap-0.5 border-amber-200 text-amber-400 opacity-60 cursor-not-allowed col-span-2"
+                      className="h-16 flex-col gap-0.5 border-gray-100 bg-gray-50 text-gray-400 opacity-70 cursor-not-allowed col-span-2"
                     >
                       <Globe className="w-5 h-5" />
                       <span style={{ fontSize: '11px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}>MoolahMove</span>
-                      <span style={{ fontSize: '8px', fontFamily: 'Montserrat, sans-serif', background: '#fef3c7', color: '#92400e', borderRadius: '4px', padding: '1px 4px', lineHeight: '1.4' }}>Coming Soon</span>
+                      <span style={{ fontSize: '8px', fontFamily: 'Montserrat, sans-serif', background: '#65AEDD', color: '#ffffff', borderRadius: '999px', padding: '1px 6px', lineHeight: '1.4', fontWeight: 600 }}>Coming Soon</span>
                     </Button>
                   </div>
                 </div>
@@ -2583,11 +2583,11 @@ export function SendMoneyPage() {
                 <Button
                   variant="outline"
                   disabled
-                  className="h-16 flex-col gap-0.5 border-amber-200 text-amber-400 opacity-60 cursor-not-allowed col-span-2"
+                  className="h-16 flex-col gap-0.5 border-gray-100 bg-gray-50 text-gray-400 opacity-70 cursor-not-allowed col-span-2"
                 >
                   <Globe className="w-5 h-5" />
                   <span style={{ fontSize: '11px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}>MoolahMove</span>
-                  <span style={{ fontSize: '8px', fontFamily: 'Montserrat, sans-serif', background: '#fef3c7', color: '#92400e', borderRadius: '4px', padding: '1px 4px', lineHeight: '1.4' }}>Coming Soon</span>
+                  <span style={{ fontSize: '8px', fontFamily: 'Montserrat, sans-serif', background: '#65AEDD', color: '#ffffff', borderRadius: '999px', padding: '1px 6px', lineHeight: '1.4', fontWeight: 600 }}>Coming Soon</span>
                 </Button>
               </div>
             </div>

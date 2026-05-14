@@ -1,5 +1,19 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-05-14 - MoolahMove coming-soon treatment
+
+### Summary
+Fogged out MoolahMove entry points in the Send Money / Add Account wallet UI so the unavailable function presents as Coming Soon instead of looking selectable.
+
+### Changes
+- `mymoolah-wallet-frontend/components/overlays/shared/AddAccountModal.tsx` now disables the MoolahMove tab, shows a blue `Coming Soon` pill, and gates the international account form behind the existing availability flag.
+- `mymoolah-wallet-frontend/pages/SendMoneyPage.tsx` now aligns the existing disabled MoolahMove tiles to the same greyed blue-pill Coming Soon treatment.
+
+### Validation
+- `npx tsc --noEmit` in `mymoolah-wallet-frontend` passed.
+- `npm run build` in `mymoolah-wallet-frontend` passed.
+- Cursor lints on touched frontend files reported no errors.
+
 ## 2026-05-14 - OTT cash withdrawal result and history fix
 
 ### Summary

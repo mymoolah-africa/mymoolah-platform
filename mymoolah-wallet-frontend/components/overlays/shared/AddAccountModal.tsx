@@ -93,6 +93,7 @@ export interface AddAccountModalProps {
 }
 
 type AccountTypeTab = 'mymoolah' | 'bank' | 'international';
+const MOOLAHMOVE_ENABLED = false;
 
 export function AddAccountModal({
   isOpen,
@@ -210,6 +211,11 @@ export function AddAccountModal({
 
     } else {
       // International (MoolahMove)
+      if (!MOOLAHMOVE_ENABLED) {
+        setError('MoolahMove is coming soon.');
+        setTab('mymoolah');
+        return;
+      }
       if (!intlCountry) {
         setError('Please select a country');
         return;
@@ -301,12 +307,19 @@ export function AddAccountModal({
               <span style={{ fontSize: '10px', fontFamily: 'Montserrat, sans-serif' }}>Bank</span>
             </Button>
             <Button
-              variant={tab === 'international' ? 'default' : 'outline'}
-              onClick={() => { setTab('international'); setError(''); }}
-              className={`h-14 flex-col gap-1 ${tab === 'international' ? 'bg-[#F59E0B] text-white border-[#F59E0B]' : 'border-gray-200'}`}
+              variant="outline"
+              disabled={!MOOLAHMOVE_ENABLED}
+              onClick={() => {
+                if (!MOOLAHMOVE_ENABLED) return;
+                setTab('international');
+                setError('');
+              }}
+              className="h-14 flex-col gap-0.5 border-gray-100 bg-gray-50 text-gray-400 opacity-70 cursor-not-allowed"
+              aria-label="MoolahMove coming soon"
             >
               <Globe className="w-4 h-4" />
               <span style={{ fontSize: '10px', fontFamily: 'Montserrat, sans-serif' }}>MoolahMove</span>
+              <span style={{ fontSize: '8px', fontFamily: 'Montserrat, sans-serif', background: '#65AEDD', color: '#ffffff', borderRadius: '999px', padding: '1px 6px', lineHeight: '1.4', fontWeight: 600 }}>Coming Soon</span>
             </Button>
           </div>
 
@@ -366,7 +379,7 @@ export function AddAccountModal({
           )}
 
           {/* International (MoolahMove) fields */}
-          {tab === 'international' && (
+          {MOOLAHMOVE_ENABLED && tab === 'international' && (
             <div className="space-y-3">
               {/* MoolahMove badge */}
               <div style={{
