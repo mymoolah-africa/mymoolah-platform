@@ -12,5 +12,5 @@ export function isWalletUatEnvironment(): boolean {
   ).toLowerCase();
   const apiBaseUrl = String(APP_CONFIG.API.baseUrl || '').toLowerCase();
 
-  return deploymentEnv === 'uat' || apiBaseUrl.includes('uat');
+  return viteEnv.DEV === true || deploymentEnv === 'uat' || apiBaseUrl.includes('uat');
 }

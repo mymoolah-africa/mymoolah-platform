@@ -22,7 +22,7 @@ Implemented André's follow-up request to remove the fog/Coming Soon treatment f
 ---
 
 ## Key Decisions
-- **UAT-only detection**: Used explicit UAT build/env signals (`VITE_NODE_ENV=uat` or related UAT env names) or a UAT API base URL. Did not use `import.meta.env.MODE !== 'production'` because that would include local/dev builds and is not safe for Staging/Production separation.
+- **UAT-only detection**: Used Codespaces/local Vite dev, explicit UAT build/env signals (`VITE_NODE_ENV=uat` or related UAT env names), or a UAT API base URL. Did not use `import.meta.env.MODE !== 'production'` because that could include Staging-like production builds and is not safe for Staging/Production separation.
 - **Withdraw Cash scope**: Allowed both legacy/test and live OTT provider codes for ABSA/Nedbank (`112`/`67`, `10`/`4`) so UAT does not stay fogged when the API returns live codes.
 - **Send Money MoolahMove safety**: The visible Send Money tiles are unfogged in UAT, but tapping them shows an informational modal instead of selecting `moolahmove` in the old MyMoolah/bank beneficiary form, which would create the wrong beneficiary type.
 
@@ -69,8 +69,8 @@ Implemented André's follow-up request to remove the fog/Coming Soon treatment f
 
 ## Important Context for Next Agent
 - This change is frontend-only and does not alter OTT backend provider approval, payout submission, or MoolahMove backend rails.
-- If UAT still appears fogged, check the UAT wallet build has `VITE_NODE_ENV=uat` or that `VITE_API_BASE_URL` contains `uat`.
-- Do not widen the helper to `localhost`, `test`, or generic non-production mode unless André explicitly wants local/test builds to behave like UAT.
+- Codespaces UAT often runs the wallet with `npm run dev`; the helper intentionally treats Vite `DEV` as UAT for this local testing flow while Staging/Production production builds remain excluded.
+- If hosted UAT still appears fogged, check the UAT wallet build has `VITE_NODE_ENV=uat` or that `VITE_API_BASE_URL` contains `uat`.
 
 ---
 
