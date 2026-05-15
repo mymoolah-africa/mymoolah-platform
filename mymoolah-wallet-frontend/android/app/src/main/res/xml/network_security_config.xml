@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">api-mm.mymoolah.africa</domain>
+        <pin-set expiration="2026-08-15">
+            <pin digest="SHA-256">IzL9MsR58fBfsz5CiaCYtZnu8A2Yt2dwOTriaVruhog=</pin>
+        </pin-set>
+    </domain-config>
+
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">staging.mymoolah.africa</domain>
+        <pin-set expiration="2026-08-15">
+            <pin digest="SHA-256">8UqShWEIvVaQfU5fZG/KkUF4k92PkEq2+V8N3s4Afas=</pin>
+        </pin-set>
+    </domain-config>
+</network-security-config>

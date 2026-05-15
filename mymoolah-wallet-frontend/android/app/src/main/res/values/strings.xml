@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">MyMoolah</string>
+    <string name="title_activity_main">MyMoolah</string>
+    <string name="package_name">africa.mymoolah.wallet</string>
+    <string name="custom_url_scheme">africa.mymoolah.wallet</string>
+</resources>

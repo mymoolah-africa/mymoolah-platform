@@ -1,50 +1,108 @@
-// Token helpers to isolate auth tokens per browser tab
-// Uses sessionStorage primarily - tokens cleared when tab closes
-// Temporary localStorage fallback for transition (filters out demo tokens)
+import { Capacitor } from '@capacitor/core';
+import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
 
-export function getToken(): string | null {
+// Token helpers to isolate auth tokens per browser tab and keep Android tokens
+// out of WebView storage. Native builds use Android Keystore-backed storage via
+// capacitor-secure-storage-plugin; web builds keep the existing session-first behaviour.
+
+const TOKEN_KEY = 'mymoolah_token';
+
+let nativeTokenCache: string | null = null;
+let nativeStorageInitialized = false;
+
+const isDemoToken = (token: string | null): boolean => Boolean(token?.startsWith('demo-token-'));
+
+const shouldUseNativeSecureStorage = (): boolean => (
+  typeof window !== 'undefined' && Capacitor.isNativePlatform()
+);
+
+const readWebToken = (): string | null => {
   if (typeof window === 'undefined') return null;
-  
-  // First check sessionStorage (primary)
-  const sessionToken = sessionStorage.getItem('mymoolah_token');
+
+  const sessionToken = sessionStorage.getItem(TOKEN_KEY);
   if (sessionToken) {
-    // Filter out demo tokens even from sessionStorage
-    if (sessionToken.startsWith('demo-token-')) {
+    if (isDemoToken(sessionToken)) {
       return null;
     }
     return sessionToken;
   }
-  
-  // Fallback to localStorage for transition (but filter demo tokens)
-  const localToken = localStorage.getItem('mymoolah_token');
+
+  const localToken = localStorage.getItem(TOKEN_KEY);
   if (localToken) {
-    // Filter out demo tokens - they should never be used
-    if (localToken.startsWith('demo-token-')) {
+    if (isDemoToken(localToken)) {
       return null;
     }
-    // Migrate to sessionStorage for future use
+
     try {
-      sessionStorage.setItem('mymoolah_token', localToken);
+      sessionStorage.setItem(TOKEN_KEY, localToken);
+      localStorage.removeItem(TOKEN_KEY);
     } catch {}
+
     return localToken;
   }
-  
+
   return null;
+};
+
+export async function initializeTokenStorage(): Promise<void> {
+  if (!shouldUseNativeSecureStorage()) {
+    nativeStorageInitialized = true;
+    return;
+  }
+
+  try {
+    const result = await SecureStoragePlugin.get({ key: TOKEN_KEY });
+    nativeTokenCache = isDemoToken(result.value) ? null : result.value;
+  } catch {
+    nativeTokenCache = null;
+  } finally {
+    nativeStorageInitialized = true;
+  }
 }
 
-export function setToken(token: string) {
-  if (typeof window === 'undefined') return;
-  try {
-    sessionStorage.setItem('mymoolah_token', token);
-    // Clear any legacy shared token to avoid cross-tab bleed
-    localStorage.removeItem('mymoolah_token');
-  } catch {}
+export function getToken(): string | null {
+  if (shouldUseNativeSecureStorage()) {
+    return nativeStorageInitialized ? nativeTokenCache : null;
+  }
+
+  return readWebToken();
 }
 
-export function removeToken() {
+export async function getTokenAsync(): Promise<string | null> {
+  if (shouldUseNativeSecureStorage() && !nativeStorageInitialized) {
+    await initializeTokenStorage();
+  }
+
+  return getToken();
+}
+
+export async function setToken(token: string): Promise<void> {
   if (typeof window === 'undefined') return;
-  try {
-    sessionStorage.removeItem('mymoolah_token');
-    localStorage.removeItem('mymoolah_token');
-  } catch {}
+
+  if (shouldUseNativeSecureStorage()) {
+    nativeTokenCache = isDemoToken(token) ? null : token;
+    nativeStorageInitialized = true;
+    await SecureStoragePlugin.set({ key: TOKEN_KEY, value: token });
+    return;
+  }
+
+  sessionStorage.setItem(TOKEN_KEY, token);
+  // Clear any legacy shared token to avoid cross-tab bleed
+  localStorage.removeItem(TOKEN_KEY);
+}
+
+export async function removeToken(): Promise<void> {
+  if (typeof window === 'undefined') return;
+
+  if (shouldUseNativeSecureStorage()) {
+    nativeTokenCache = null;
+    nativeStorageInitialized = true;
+    try {
+      await SecureStoragePlugin.remove({ key: TOKEN_KEY });
+    } catch {}
+    return;
+  }
+
+  sessionStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(TOKEN_KEY);
 }

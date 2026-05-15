@@ -1,5 +1,38 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-05-15 - Android banking-grade foundation started
+
+### Summary
+Started implementing the banking-grade Google Play deployment path for the MyMoolah wallet.
+
+### Changes
+- Added Capacitor Android foundation under `mymoolah-wallet-frontend/android/` using package ID `africa.mymoolah.wallet`.
+- Added Android build/sync scripts for staging and production so mobile builds do not fall back to localhost API URLs.
+- Added native secure-token storage integration using `capacitor-secure-storage-plugin` and updated wallet auth flows to use the canonical token helper instead of direct token `localStorage` writes.
+- Hardened the Android manifest by disabling backup/data extraction and cleartext traffic, disabling release WebView debugging in Capacitor config, and adding Android network security config with current production/staging API SPKI pins.
+- Turned off demo-credential display in production wallet builds.
+- Documented the current Android implementation status, validation results, and remaining release blockers in `docs/MOBILE_STORE_DEPLOYMENT_PLAN.md`.
+
+### Validation
+- `npx tsc --noEmit` in `mymoolah-wallet-frontend` passed.
+- `npm run build` in `mymoolah-wallet-frontend` passed with the existing large chunk warning.
+- `npm run build:android:production` passed and synced Capacitor Android assets.
+- `npx cap add android` and `npx cap sync android` passed.
+- `./gradlew assembleDebug` is currently blocked locally by Java 24 incompatibility with generated Gradle/AGP; Android build environment needs JDK 17.
+
+## 2026-05-15 - Banking-grade Android deployment plan
+
+### Summary
+Expanded the canonical mobile store deployment plan into an Android-first banking-grade design and implementation blueprint for Google Play.
+
+### Changes
+- `docs/MOBILE_STORE_DEPLOYMENT_PLAN.md` now defines the recommended Capacitor Android architecture, explicitly rejects a simple TWA/WebView wrapper for production banking release, and documents non-negotiable release principles around secure storage, POPIA-safe caching, native hardening, and performance tiering.
+- Added Android work packages for architecture approval, Capacitor foundation, secure storage/auth migration, network/WebView hardening, static asset caching, native features, and Play Store readiness.
+- Added release gates for JWT/auth policy reconciliation, secure token storage, TLS/pinning, WebView hardening, low-end Android performance, Play Data Safety, financial UX, and operational rollback readiness.
+
+### Validation
+- Documentation-only planning change. No application code, database, production data, migrations, or runtime configuration changed.
+
 ## 2026-05-14 - UAT-only wallet availability unfogging
 
 ### Summary

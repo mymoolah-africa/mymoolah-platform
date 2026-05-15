@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Shield, ShieldCheck, ShieldX, Clock } from 'lucide-react';
+import { getToken } from '../utils/authToken';
 
 interface KYCStatusProps {
   userId: string;
@@ -24,9 +25,10 @@ const KYCStatus: React.FC<KYCStatusProps> = ({ userId }) => {
   const fetchKYCStatus = async () => {
     try {
       setLoading(true);
+      const token = getToken();
       const response = await fetch(`/api/v1/kyc/status/${userId}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          ...(token && { Authorization: `Bearer ${token}` })
         }
       });
 

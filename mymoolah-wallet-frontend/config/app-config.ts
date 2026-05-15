@@ -8,12 +8,18 @@ const API_BASE_URL = (typeof import.meta !== 'undefined' && (import.meta as any)
   ? (import.meta as any).env.VITE_API_BASE_URL
   : 'http://localhost:3001';
 
+const BUILD_ENVIRONMENT = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_NODE_ENV)
+  ? (import.meta as any).env.VITE_NODE_ENV
+  : ((typeof import.meta !== 'undefined' && (import.meta as any).env?.MODE) || 'development');
+
+const IS_PRODUCTION_BUILD = BUILD_ENVIRONMENT === 'production';
+
 export const APP_CONFIG = {
   // Demo vs Production Mode - FIXED FOR REAL BACKEND TESTING
   DEMO_MODE: false, // Set to false for production backend testing
   
   // Environment Settings
-  ENVIRONMENT: 'development' as 'development' | 'production',
+  ENVIRONMENT: (IS_PRODUCTION_BUILD ? 'production' : 'development') as 'development' | 'production',
   
   // Demo Credentials (only used in demo mode) - UPDATED FOR COMPLEX PASSWORD SYSTEM
   DEMO_CREDENTIALS: {
@@ -71,7 +77,7 @@ export const APP_CONFIG = {
   
   // Feature Flags
   FEATURES: {
-    showDemoCredentials: true,
+    showDemoCredentials: !IS_PRODUCTION_BUILD,
     enableBiometrics: false,
     enableNotifications: true,
     enableAnalytics: false // Set to true for production

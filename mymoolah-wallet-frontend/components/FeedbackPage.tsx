@@ -6,6 +6,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Badge } from '../components/ui/badge';
+import { getToken } from '../utils/authToken';
 
 
 
@@ -35,11 +36,12 @@ const FeedbackPage: React.FC = () => {
 
     setIsSubmitting(true);
     try {
+      const token = getToken();
       const response = await fetch('/api/v1/feedback/submit', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          ...(token && { Authorization: `Bearer ${token}` })
         },
         body: JSON.stringify({
           title: title.trim(),

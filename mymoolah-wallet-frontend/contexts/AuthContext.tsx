@@ -1,7 +1,12 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { validateDemoCredentials, isDemoMode, getDemoCredentials } from '../config/app-config';
 import { APP_CONFIG } from '../config/app-config';
-import { getToken as getSessionToken, setToken as setSessionToken, removeToken as removeSessionToken } from '../utils/authToken';
+import {
+  getToken as getSessionToken,
+  initializeTokenStorage,
+  removeToken as removeSessionToken,
+  setToken as setSessionToken
+} from '../utils/authToken';
 
 // Updated KYC status type with complete flow
 type KYCStatus = 'not_started' | 'documents_uploaded' | 'under_review' | 'verified' | 'rejected' | 'ussd_basic';
@@ -164,12 +169,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkAuthStatus = async () => {
     try {
+      await initializeTokenStorage();
       const token = getSessionToken();
       
       // If no token found, clear user state (user needs to log in)
       if (!token) {
         setUser(null);
-        removeSessionToken();
+        await removeSessionToken();
         setIsLoading(false);
         return;
       }
@@ -206,18 +212,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUser(mapBackendUserToContextUser(responseData.user));
           } else {
             setUser(null);
-            removeSessionToken();
+            await removeSessionToken();
           }
         } else {
           // Token is invalid or expired - clear user state
           setUser(null);
-          removeSessionToken();
+          await removeSessionToken();
         }
       }
     } catch (error) {
       console.error('Auth check failed:', error);
       setUser(null);
-      removeSessionToken();
+      await removeSessionToken();
     } finally {
       setIsLoading(false);
     }
@@ -258,7 +264,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           };
           
           const mockToken = 'demo-token-' + Date.now();
-          setSessionToken(mockToken);
+          await setSessionToken(mockToken);
           setUser(mockUser);
         } else {
           throw new Error('Invalid mobile number or password. Please check your credentials.');
@@ -281,7 +287,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (response.ok) {
           const responseData = await safeJsonParse(response);
           if (responseData && responseData.user && responseData.token) {
-            setSessionToken(responseData.token);
+            await setSessionToken(responseData.token);
             setUser(mapBackendUserToContextUser(responseData.user));
           } else {
             throw new Error('Invalid response from server. Please try again.');
@@ -299,7 +305,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
-    removeSessionToken();
+    void removeSessionToken();
     localStorage.removeItem('mymoolah_kyc_status');
     setUser(null);
   };
@@ -312,7 +318,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (token.startsWith('demo-token-')) {
         // Demo mode - just refresh the timestamp
         const newToken = 'demo-token-' + Date.now();
-        setSessionToken(newToken);
+        await setSessionToken(newToken);
         return;
       }
 
@@ -325,7 +331,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (response.ok) {
         const responseData = await safeJsonParse(response);
         if (responseData && responseData.token) {
-          setSessionToken(responseData.token);
+          await setSessionToken(responseData.token);
         } else {
           logout();
         }
@@ -523,7 +529,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         };
         
         const mockToken = 'demo-token-' + Date.now();
-        localStorage.setItem('mymoolah_token', mockToken);
+        await setSessionToken(mockToken);
         setUser(mockUser);
       } else {
         // FIXED: Production registration with correct backend field mapping
@@ -569,7 +575,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (response.ok) {
             const responseData = await safeJsonParse(response);
             if (responseData && responseData.user && responseData.token) {
-              localStorage.setItem('mymoolah_token', responseData.token);
+              await setSessionToken(responseData.token);
               setUser(mapBackendUserToContextUser(responseData.user));
             } else {
               throw new Error('Invalid response from server. Please try again.');

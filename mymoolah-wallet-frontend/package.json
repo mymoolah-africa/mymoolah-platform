@@ -7,10 +7,18 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "build:staging": "vite build",
+    "build:android": "npm run build && cap sync android",
+    "build:android:staging": "VITE_API_BASE_URL=https://staging.mymoolah.africa VITE_NODE_ENV=staging npm run build && cap sync android",
+    "build:android:production": "VITE_API_BASE_URL=https://api-mm.mymoolah.africa VITE_NODE_ENV=production npm run build && cap sync android",
+    "cap:sync": "cap sync",
+    "cap:sync:android": "cap sync android",
+    "cap:open:android": "cap open android",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@capacitor/android": "^6.2.1",
+    "@capacitor/core": "^6.2.1",
     "@hookform/resolvers": "^3.1.1",
     "@radix-ui/react-accordion": "^1.1.2",
     "@radix-ui/react-alert-dialog": "^1.0.5",
@@ -38,6 +46,7 @@
     "@radix-ui/react-toggle": "^1.0.3",
     "@radix-ui/react-toggle-group": "^1.0.4",
     "@radix-ui/react-tooltip": "^1.0.7",
+    "capacitor-secure-storage-plugin": "^0.10.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^0.2.0",
@@ -62,6 +71,7 @@
     "zod": "^3.21.4"
   },
   "devDependencies": {
+    "@capacitor/cli": "^6.2.1",
     "@types/node": "^20.19.25",
     "@types/react": "^18.2.15",
     "@types/react-dom": "^18.2.7",
