@@ -26,6 +26,7 @@ Started implementing the banking-grade Google Play deployment path for the MyMoo
 - Local Mac `./gradlew assembleDebug` still needs a JDK 17 shell instead of Java 24.
 - Follow-up validation on 2026-05-16: wallet `npm run build` and root `npm run check:kb:fresh` passed; local `npm run build:android:release-aab` is blocked by Java 24 / Gradle `Unsupported class file major version 68`, so AAB verification must be retried in Codespaces or a JDK 17 shell.
 - Follow-up documentation cleanup on 2026-05-16: `mymoolah-wallet-frontend/docs/ANDROID_BUILD.md` now points Play submission checklist ownership back to `docs/MOBILE_STORE_DEPLOYMENT_PLAN.md` and explicitly warns not to place Android signing secrets, keystores, Google service account JSON, or Play API credentials in local `.env` files.
+- Follow-up Play Console onboarding on 2026-05-16: Google Play Developer organisation registration is blocked until MyMoolah (Pty) Ltd's South African D-U-N-S number and matching D&B legal profile can be confirmed. Do not create a personal Play Console account unless André explicitly approves that compliance trade-off.
 
 ## 2026-05-15 - Banking-grade Android deployment plan
 

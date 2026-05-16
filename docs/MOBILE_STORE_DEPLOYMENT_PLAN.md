@@ -1,7 +1,7 @@
 # MyMoolah Mobile Store Deployment Plan
 
 **Last Updated**: 2026-05-16
-**Status**: Android foundation implemented; Play release preparation in progress
+**Status**: Android foundation implemented; Play release preparation in progress; Google Play organisation registration pending D-U-N-S confirmation
 **Purpose**: Deploy the MyMoolah wallet to Google Play as a banking-grade Android application with uncompromised security, high-tier performance, POPIA-safe caching, and Play compliance. Apple App Store work remains a later parallel track.
 
 ---
@@ -56,6 +56,7 @@ The current repo now has the first Android foundation, but it is not yet Google 
 - No `assetlinks.json` exists for Android App Links.
 - `FEATURES.enableBiometrics` is currently false.
 - Play Data Safety answers, content rating, final screenshots/feature graphic, signed AAB production workflow, and Play Console submission are still pending.
+- Google Play Developer organisation account registration is pending an active D-U-N-S number and matching D&B legal profile for MyMoolah (Pty) Ltd.
 - JWT signing policy must be reconciled before Android release: project rules require HS512 with short expiry, while mobile release planning must verify the actual auth code path enforces that standard.
 
 ### 0.5 Target Android Architecture
@@ -235,6 +236,7 @@ Before submission, create a Play Console workbook mapping app behaviour to store
 
 Required fields/workbooks:
 
+- Organisation publisher profile: active D-U-N-S number, Google payments profile legal name/address matching Dun & Bradstreet, organisation phone, organisation website, private Google contact email/phone, and public developer email/phone.
 - App name, short description, full description.
 - 512x512 app icon.
 - 1024x500 feature graphic.
@@ -370,6 +372,7 @@ Exit criteria:
 
 Tasks:
 
+- Complete Google Play Developer organisation registration for MyMoolah (Pty) Ltd using the verified D-U-N-S profile.
 - Create Play listing assets.
 - Complete Play Data Safety workbook.
 - Complete financial/content declarations.
