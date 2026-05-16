@@ -1,5 +1,19 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-05-16 - FAQ audience split and self-service expansion
+
+### Summary
+Expanded the canonical customer FAQ so it can be used for static website FAQ imports, authenticated wallet help, and the AI support knowledge base without mixing public and wallet-specific guidance.
+
+### Changes
+- Added audience guidance to `docs/FAQ_MASTER.md` for Website, Wallet, Both, and Support KB usage.
+- Expanded self-service "How do I" coverage for registration, KYC, add-money, EasyPay V5 cash-in, EFT/PayShap payments, beneficiaries, VAS, vouchers, gift cards, cash withdrawals, transaction history, notifications, fees, OTP/password help, fraud/lost-phone handling, API documentation requests, and restricted policy access.
+- Preserved the EasyPay V5 cash-in-only correction, channel exclusions, OTT/Nedbank/ABSA withdrawal wording, and own-funds ring-fencing support guidance.
+
+### Validation
+- Documentation-only update. No runtime code, database, migrations, production data, or environment KB embeddings changed.
+- Run `npm run check:kb:fresh` after the FAQ edit; run `generate:kb:faq:update` / `embed:kb` only for approved target environments.
+
 ## 2026-05-15 - Android banking-grade foundation started
 
 ### Summary
