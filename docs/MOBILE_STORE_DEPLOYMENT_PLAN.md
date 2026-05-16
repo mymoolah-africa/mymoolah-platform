@@ -445,8 +445,14 @@ Completed first slice:
 - Added Android build scripts:
   - `npm run build:android:staging`
   - `npm run build:android:production`
+  - `npm run build:android:debug-apk`
+  - `npm run build:android:release-aab`
+  - `npm run android:apk:path`
+  - `npm run android:aab:path`
   - `npm run cap:sync:android`
   - `npm run cap:open:android`
+- Added `mymoolah-wallet-frontend/docs/ANDROID_BUILD.md` with Codespaces setup, debug APK build, download/install, and smoke-test instructions.
+- Added release AAB build path and environment-based signing hook. Signing keys are not committed; release builds read `MYMOOLAH_ANDROID_KEYSTORE_PATH`, `MYMOOLAH_ANDROID_KEYSTORE_PASSWORD`, `MYMOOLAH_ANDROID_KEY_ALIAS`, and `MYMOOLAH_ANDROID_KEY_PASSWORD` when supplied by CI/Secret Manager.
 - Added Capacitor dependencies aligned to the current Node 18 local/Codespaces runtime:
   - `@capacitor/core@6.2.1`
   - `@capacitor/android@6.2.1`
@@ -471,16 +477,19 @@ Validation status:
 - `npm run build` passed.
 - `npm run build:android:production` passed and synced Android assets.
 - `npx cap add android` and `npx cap sync android` passed.
-- `./gradlew assembleDebug` is blocked on the local machine because Java 24 is active while generated Gradle/AGP requires a supported Android JDK, typically JDK 17. Do not change system Java blindly; install/select JDK 17 or use an Android build environment with the correct JDK.
+- Codespaces `./gradlew assembleDebug` passed after installing JDK 17 and Android SDK packages (`platform-tools`, `platforms;android-34`, `build-tools;34.0.0`).
+- Local Mac `./gradlew assembleDebug` remains blocked until the local shell uses a supported Android JDK, typically JDK 17, instead of Java 24.
+- Release AAB script is available via `npm run build:android:release-aab`; it produces a Play Console artifact only when release signing env vars are supplied.
+- 2026-05-16 local release AAB verification: wallet build and KB freshness guard passed, but `npm run build:android:release-aab` failed at Gradle with Java 24 (`Unsupported class file major version 68`). Retry in Codespaces or a JDK 17 shell before confirming the AAB artifact path.
 
 Remaining release blockers:
 
 - Add backup pins and a documented pin-rotation process before Play release. The first slice uses live current SPKI pins and must not be treated as final release pin governance.
-- Add CI/Secret Manager signing workflow for Android App Bundle generation.
+- Wire CI/Secret Manager signing workflow to the Android release signing env vars.
 - Add Play Integrity/root-risk implementation.
 - Decide whether biometrics and FCM are v1 or v1.1.
 - Replace generated launcher/splash assets with final MyMoolah store assets.
-- Run real-device Android QA after JDK/Android build environment is ready.
+- Download and install the Codespaces debug APK on a physical Android device for smoke testing.
 
 ---
 

@@ -7,18 +7,22 @@ Started implementing the banking-grade Google Play deployment path for the MyMoo
 
 ### Changes
 - Added Capacitor Android foundation under `mymoolah-wallet-frontend/android/` using package ID `africa.mymoolah.wallet`.
-- Added Android build/sync scripts for staging and production so mobile builds do not fall back to localhost API URLs.
+- Added Android build/sync scripts for staging, production, and repeatable debug APK creation so mobile builds do not fall back to localhost API URLs.
+- Added release AAB build script and environment-based Gradle signing hook for CI/Secret Manager upload-key workflows without committing secrets.
 - Added native secure-token storage integration using `capacitor-secure-storage-plugin` and updated wallet auth flows to use the canonical token helper instead of direct token `localStorage` writes.
 - Hardened the Android manifest by disabling backup/data extraction and cleartext traffic, disabling release WebView debugging in Capacitor config, and adding Android network security config with current production/staging API SPKI pins.
 - Turned off demo-credential display in production wallet builds.
-- Documented the current Android implementation status, validation results, and remaining release blockers in `docs/MOBILE_STORE_DEPLOYMENT_PLAN.md`.
+- Documented the current Android implementation status, Codespaces Android SDK/JDK setup, validation results, and remaining release blockers in `docs/MOBILE_STORE_DEPLOYMENT_PLAN.md` and `mymoolah-wallet-frontend/docs/ANDROID_BUILD.md`.
 
 ### Validation
 - `npx tsc --noEmit` in `mymoolah-wallet-frontend` passed.
 - `npm run build` in `mymoolah-wallet-frontend` passed with the existing large chunk warning.
 - `npm run build:android:production` passed and synced Capacitor Android assets.
 - `npx cap add android` and `npx cap sync android` passed.
-- `./gradlew assembleDebug` is currently blocked locally by Java 24 incompatibility with generated Gradle/AGP; Android build environment needs JDK 17.
+- Codespaces `./gradlew assembleDebug` passed after installing JDK 17 and Android SDK packages.
+- Release AAB command path is available via `npm run build:android:release-aab`; signed Play upload requires protected signing env vars.
+- Local Mac `./gradlew assembleDebug` still needs a JDK 17 shell instead of Java 24.
+- Follow-up validation on 2026-05-16: wallet `npm run build` and root `npm run check:kb:fresh` passed; local `npm run build:android:release-aab` is blocked by Java 24 / Gradle `Unsupported class file major version 68`, so AAB verification must be retried in Codespaces or a JDK 17 shell.
 
 ## 2026-05-15 - Banking-grade Android deployment plan
 
