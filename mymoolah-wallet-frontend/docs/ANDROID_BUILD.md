@@ -5,6 +5,9 @@ This guide covers the current Codespaces/debug APK path for the banking-grade My
 ## Current Status
 
 - Package ID: `africa.mymoolah.wallet`
+- Google Play app name: `mymoolah`
+- Approved logo source: `assets/logo3.svg`
+- Generated Play icon: `assets/google-play/mymoolah-play-icon-512.png`
 - Frontend bundle: React/Vite via Capacitor Android
 - Debug APK output: `android/app/build/outputs/apk/debug/app-debug.apk`
 - Production API build target: `https://api-mm.mymoolah.africa`
@@ -82,7 +85,7 @@ If release signing environment variables are not set, Gradle produces an unsigne
 
 No signing keys or passwords may be committed to the repo. Do not place Android keystore paths, aliases, passwords, `.jks` / `.keystore` files, Google service account JSON, or Play API credentials in local `.env` files; use CI/Secret Manager injection only.
 
-The Android release build reads these environment variables when present:
+The Android release build reads these environment variables when present in the CI job environment:
 
 ```bash
 export MYMOOLAH_ANDROID_KEYSTORE_PATH="/secure/path/mymoolah-upload-key.jks"
@@ -129,7 +132,7 @@ Before Google Play release, MyMoolah still needs:
 - CI/Secret Manager signing workflow wired to the release variables above.
 - Backup certificate pins and pin rotation.
 - Play Integrity/root-risk controls for sensitive flows.
-- Final MyMoolah launcher/splash/store assets.
+- Final screenshots and feature graphic.
 - Data Safety, privacy, financial feature, and account deletion declarations.
 
 ## Google Play Release Checklist

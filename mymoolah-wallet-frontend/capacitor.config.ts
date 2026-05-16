@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'africa.mymoolah.wallet',
-  appName: 'MyMoolah',
+  appName: 'mymoolah',
   webDir: 'dist',
   server: {
     androidScheme: 'https',

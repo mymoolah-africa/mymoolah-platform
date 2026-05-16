@@ -9,6 +9,8 @@ Started implementing the banking-grade Google Play deployment path for the MyMoo
 - Added Capacitor Android foundation under `mymoolah-wallet-frontend/android/` using package ID `africa.mymoolah.wallet`.
 - Added Android build/sync scripts for staging, production, and repeatable debug APK creation so mobile builds do not fall back to localhost API URLs.
 - Added release AAB build script and environment-based Gradle signing hook for CI/Secret Manager upload-key workflows without committing secrets.
+- Aligned Android/store-facing app name to `mymoolah` and replaced generated Capacitor launcher/splash assets with resources generated from `mymoolah-wallet-frontend/assets/logo3.svg`.
+- Added generated 512x512 Play listing icon at `mymoolah-wallet-frontend/assets/google-play/mymoolah-play-icon-512.png`.
 - Added native secure-token storage integration using `capacitor-secure-storage-plugin` and updated wallet auth flows to use the canonical token helper instead of direct token `localStorage` writes.
 - Hardened the Android manifest by disabling backup/data extraction and cleartext traffic, disabling release WebView debugging in Capacitor config, and adding Android network security config with current production/staging API SPKI pins.
 - Turned off demo-credential display in production wallet builds.

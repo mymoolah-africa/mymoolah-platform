@@ -1,7 +1,7 @@
 {
-  "name": "MyMoolah Digital Wallet",
-  "short_name": "MyMoolah",
-  "description": "Your digital wallet for seamless financial transactions",
+  "name": "mymoolah",
+  "short_name": "mymoolah",
+  "description": "mymoolah digital wallet for secure mobile payments",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

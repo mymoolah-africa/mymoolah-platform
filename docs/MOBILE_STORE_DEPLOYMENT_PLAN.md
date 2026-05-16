@@ -1,7 +1,7 @@
 # MyMoolah Mobile Store Deployment Plan
 
-**Last Updated**: 2026-05-15  
-**Status**: Banking-grade Android deployment design approved for planning; implementation not started  
+**Last Updated**: 2026-05-16
+**Status**: Android foundation implemented; Play release preparation in progress
 **Purpose**: Deploy the MyMoolah wallet to Google Play as a banking-grade Android application with uncompromised security, high-tier performance, POPIA-safe caching, and Play compliance. Apple App Store work remains a later parallel track.
 
 ---
@@ -33,6 +33,8 @@ The production Google Play release must be treated as a **mobile banking release
 | API config | `mymoolah-wallet-frontend/config/app-config.ts` with `VITE_API_BASE_URL` |
 | Web manifest | `mymoolah-wallet-frontend/public/manifest.json` |
 | Manifest injection | `mymoolah-wallet-frontend/main.tsx` |
+| Approved Android / Play logo source | `mymoolah-wallet-frontend/assets/logo3.svg` |
+| Generated Play icon | `mymoolah-wallet-frontend/assets/google-play/mymoolah-play-icon-512.png` |
 | Auth helper needing migration | `mymoolah-wallet-frontend/utils/authToken.ts` |
 | Production wallet domain | `https://wallet.mymoolah.africa/login` |
 | Production API domain | `https://api-mm.mymoolah.africa` |
@@ -41,19 +43,19 @@ The production Google Play release must be treated as a **mobile banking release
 | Compliance corpus | `docs/policies/`, `docs/TERMS_AND_CONDITIONS.md`, `docs/SECURITY.md` |
 | Existing mobile roadmap | This document |
 
-### 0.4 Current Gaps Confirmed Before Implementation
+### 0.4 Current Android Store Readiness
 
-The current repo is compatible with a mobile release, but it is not yet Android-store ready:
+The current repo now has the first Android foundation, but it is not yet Google Play production ready:
 
-- No `android/` project exists.
-- No `capacitor.config.*` exists.
-- No Capacitor packages are installed.
+- `mymoolah-wallet-frontend/android/` exists with package ID `africa.mymoolah.wallet`.
+- `capacitor.config.ts` exists and sets app name `mymoolah`, HTTPS scheme, cleartext disabled, mixed content disabled, and release WebView debugging disabled.
+- Capacitor packages are installed and aligned to the current Node 18 build environment.
+- Android native secure-token storage is wired through the canonical token helper.
+- Android launcher/splash resources and the generated 512x512 Play icon now use the approved `mymoolah-wallet-frontend/assets/logo3.svg` source.
 - No `vite-plugin-pwa`, Workbox, service worker, or offline app-shell cache exists.
-- No `assetlinks.json` exists for a TWA or Android App Links path.
-- The web manifest has only one SVG icon and needs Android/Play raster assets.
-- `utils/authToken.ts` uses `sessionStorage` first and a `localStorage` fallback; this must be replaced for Android.
+- No `assetlinks.json` exists for Android App Links.
 - `FEATURES.enableBiometrics` is currently false.
-- Store listing assets, Play Data Safety answers, content rating, release signing, and Android package metadata are not present.
+- Play Data Safety answers, content rating, final screenshots/feature graphic, signed AAB production workflow, and Play Console submission are still pending.
 - JWT signing policy must be reconciled before Android release: project rules require HS512 with short expiry, while mobile release planning must verify the actual auth code path enforces that standard.
 
 ### 0.5 Target Android Architecture
@@ -71,7 +73,9 @@ Google Play App Bundle
 
 The Android app must run the same wallet product surface but with mobile-specific hardening:
 
-- Android package ID: final value to be confirmed before implementation, e.g. `africa.mymoolah.wallet`.
+- Android package ID: `africa.mymoolah.wallet`.
+- Google Play app name: `mymoolah`.
+- Approved logo source: `mymoolah-wallet-frontend/assets/logo3.svg`.
 - Distribution: Android App Bundle (`.aab`) via Google Play App Signing.
 - Build flavours: `staging` and `production`.
 - Configuration injection: build-time variables from CI and Google Cloud Secret Manager. No secrets committed to repo.
