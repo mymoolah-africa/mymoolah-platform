@@ -80,7 +80,7 @@ If release signing environment variables are not set, Gradle produces an unsigne
 
 ## Release Signing Inputs
 
-No signing keys or passwords may be committed to the repo.
+No signing keys or passwords may be committed to the repo. Do not place Android keystore paths, aliases, passwords, `.jks` / `.keystore` files, Google service account JSON, or Play API credentials in local `.env` files; use CI/Secret Manager injection only.
 
 The Android release build reads these environment variables when present:
 
@@ -132,17 +132,11 @@ Before Google Play release, MyMoolah still needs:
 - Final MyMoolah launcher/splash/store assets.
 - Data Safety, privacy, financial feature, and account deletion declarations.
 
-## Google Play Visibility Checklist
+## Google Play Release Checklist
 
-To make the app visible for users to download:
+The canonical Play submission checklist lives in `docs/MOBILE_STORE_DEPLOYMENT_PLAN.md` under `Google Play Compliance Design` and `Work Package 7: Store Readiness`. Use this build guide only for APK/AAB generation and artifact handling so store declarations stay aligned to one source of truth.
 
-1. Create the app in Google Play Console with package ID `africa.mymoolah.wallet`.
-2. Enrol in Google Play App Signing.
-3. Upload the signed release AAB.
-4. Complete store listing: app name, short description, full description, screenshots, 512x512 icon, and 1024x500 feature graphic.
-5. Add public privacy policy, terms, support, and account deletion URLs.
-6. Complete Data Safety, financial features, permissions, and content rating declarations.
-7. Run internal testing.
-8. Run closed testing if required by the Play account.
-9. Submit production release for Google review.
-10. After approval, roll out production gradually.
+Operational reminder:
+
+- Upload only a signed release AAB.
+- Keep Play signing, Data Safety, financial declarations, privacy/terms/support URLs, screenshots, feature graphic, and staged rollout decisions in the canonical mobile deployment plan.
