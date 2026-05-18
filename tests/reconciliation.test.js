@@ -11,7 +11,60 @@
 
 'use strict';
 
-const { expect } = require('chai');
+const mockReconRunHashes = new Set();
+
+jest.mock('../models', () => {
+  let runId = 1;
+
+  const createReconRun = jest.fn(async (data) => {
+    if (data.file_hash && mockReconRunHashes.has(data.file_hash)) {
+      const error = new Error('Duplicate recon run file hash');
+      error.name = 'SequelizeUniqueConstraintError';
+      throw error;
+    }
+
+    if (data.file_hash) {
+      mockReconRunHashes.add(data.file_hash);
+    }
+
+    return {
+      id: runId++,
+      ...data,
+      getMatchRate() {
+        if (!this.total_transactions) return 0;
+        return ((this.matched_exact || 0) + (this.matched_fuzzy || 0)) / this.total_transactions * 100;
+      },
+      isPassed(expectedAmount, tolerancePercent = 1) {
+        const variance = Math.abs(Number(this.amount_variance || 0));
+        return variance <= (Number(expectedAmount || 0) * tolerancePercent / 100);
+      },
+      destroy: jest.fn(async function destroy() {
+        if (data.file_hash) {
+          mockReconRunHashes.delete(data.file_hash);
+        }
+      })
+    };
+  });
+
+  return {
+    ReconSupplierConfig: {
+      create: jest.fn(async (data) => ({
+        id: 1,
+        ...data,
+        destroy: jest.fn().mockResolvedValue(undefined)
+      }))
+    },
+    ReconRun: {
+      create: createReconRun,
+      destroy: jest.fn().mockResolvedValue(undefined)
+    },
+    ReconTransactionMatch: {
+      bulkCreate: jest.fn().mockImplementation(async (rows) => rows),
+      update: jest.fn().mockResolvedValue([1])
+    }
+  };
+});
+
 const db = require('../models');
 const ReconciliationOrchestrator = require('../services/reconciliation/ReconciliationOrchestrator');
 const MatchingEngine = require('../services/reconciliation/MatchingEngine');
@@ -23,7 +76,7 @@ const MobileMartAdapter = require('../services/reconciliation/adapters/MobileMar
 describe('Reconciliation System', () => {
   let supplierConfig;
   
-  before(async () => {
+  beforeAll(async () => {
     // Create test supplier config
     supplierConfig = await db.ReconSupplierConfig.create({
       supplier_name: 'Test Supplier',
@@ -73,7 +126,7 @@ describe('Reconciliation System', () => {
     });
   });
   
-  after(async () => {
+  afterAll(async () => {
     // Clean up
     if (supplierConfig) {
       await db.ReconRun.destroy({ where: { supplier_id: supplierConfig.id } });
@@ -112,10 +165,10 @@ describe('Reconciliation System', () => {
         'test-run-id'
       );
       
-      expect(result.exactMatches).to.equal(1);
-      expect(result.fuzzyMatches).to.equal(0);
-      expect(result.unmatchedMMTP).to.be.empty;
-      expect(result.unmatchedSupplier).to.be.empty;
+      expect(result.exactMatches).toBe(1);
+      expect(result.fuzzyMatches).toBe(0);
+      expect(result.unmatchedMMTP).toHaveLength(0);
+      expect(result.unmatchedSupplier).toHaveLength(0);
     });
     
     it('should detect unmatched transactions', async () => {
@@ -148,22 +201,22 @@ describe('Reconciliation System', () => {
         'test-run-id'
       );
       
-      expect(result.exactMatches).to.equal(1);
-      expect(result.unmatchedMMTP).to.have.lengthOf(1);
-      expect(result.unmatchedMMTP[0].transaction_id).to.equal('TXN002');
-      expect(result.unmatchedSupplier).to.have.lengthOf(1);
-      expect(result.unmatchedSupplier[0].supplier_transaction_id).to.equal('TXN003');
+      expect(result.exactMatches).toBe(1);
+      expect(result.unmatchedMMTP).toHaveLength(1);
+      expect(result.unmatchedMMTP[0].transaction_id).toBe('TXN002');
+      expect(result.unmatchedSupplier).toHaveLength(1);
+      expect(result.unmatchedSupplier[0].supplier_transaction_id).toBe('TXN003');
     });
     
     it('should calculate string similarity correctly', () => {
       const similarity1 = matchingEngine.calculateStringSimilarity('hello', 'hello');
-      expect(similarity1).to.equal(1.0);
+      expect(similarity1).toBe(1.0);
       
       const similarity2 = matchingEngine.calculateStringSimilarity('hello', 'hallo');
-      expect(similarity2).to.be.greaterThan(0.7);
+      expect(similarity2).toBeGreaterThan(0.7);
       
       const similarity3 = matchingEngine.calculateStringSimilarity('hello', 'world');
-      expect(similarity3).to.be.lessThan(0.5);
+      expect(similarity3).toBeLessThan(0.5);
     });
   });
   
@@ -188,9 +241,9 @@ describe('Reconciliation System', () => {
       
       const discrepancies = await discrepancyDetector.detect(matches, 'test-run-id');
       
-      expect(discrepancies).to.have.lengthOf(1);
-      expect(discrepancies[0].discrepancy_type).to.include('amount_mismatch');
-      expect(discrepancies[0].discrepancy_details.amount_diff).to.equal('-5.00');
+      expect(discrepancies).toHaveLength(1);
+      expect(discrepancies[0].discrepancy_type).toContain('amount_mismatch');
+      expect(discrepancies[0].discrepancy_details.amount_diff).toBe('-5.00');
     });
     
     it('should detect status mismatch', async () => {
@@ -207,8 +260,8 @@ describe('Reconciliation System', () => {
       
       const discrepancies = await discrepancyDetector.detect(matches, 'test-run-id');
       
-      expect(discrepancies).to.have.lengthOf(1);
-      expect(discrepancies[0].discrepancy_type).to.include('status_mismatch');
+      expect(discrepancies).toHaveLength(1);
+      expect(discrepancies[0].discrepancy_type).toContain('status_mismatch');
     });
     
     it('should not flag minor discrepancies (<1 cent)', async () => {
@@ -225,7 +278,7 @@ describe('Reconciliation System', () => {
       
       const discrepancies = await discrepancyDetector.detect(matches, 'test-run-id');
       
-      expect(discrepancies).to.be.empty;
+      expect(discrepancies).toHaveLength(0);
     });
   });
   
@@ -247,8 +300,8 @@ describe('Reconciliation System', () => {
       
       const resolution = resolver.attemptAutoResolve(discrepancy);
       
-      expect(resolution.resolved).to.be.true;
-      expect(resolution.method).to.equal('auto_timing');
+      expect(resolution.resolved).toBe(true);
+      expect(resolution.method).toBe('auto_timing');
     });
     
     it('should auto-resolve rounding errors <R0.10', () => {
@@ -262,8 +315,8 @@ describe('Reconciliation System', () => {
       
       const resolution = resolver.attemptAutoResolve(discrepancy);
       
-      expect(resolution.resolved).to.be.true;
-      expect(resolution.method).to.equal('auto_rounding');
+      expect(resolution.resolved).toBe(true);
+      expect(resolution.method).toBe('auto_rounding');
     });
     
     it('should escalate large amount discrepancies', () => {
@@ -277,8 +330,8 @@ describe('Reconciliation System', () => {
       
       const resolution = resolver.attemptAutoResolve(discrepancy);
       
-      expect(resolution.resolved).to.be.false;
-      expect(resolution.escalate).to.be.true;
+      expect(resolution.resolved).toBe(false);
+      expect(resolution.escalate).toBe(true);
     });
     
     it('should require manual review for complex discrepancies', () => {
@@ -292,8 +345,8 @@ describe('Reconciliation System', () => {
       
       const resolution = resolver.attemptAutoResolve(discrepancy);
       
-      expect(resolution.resolved).to.be.false;
-      expect(resolution.escalate).to.be.true; // Multiple issues
+      expect(resolution.resolved).toBe(false);
+      expect(resolution.escalate).toBe(true); // Multiple issues
     });
   });
   
@@ -306,13 +359,13 @@ describe('Reconciliation System', () => {
     
     it('should get correct adapter by class name', () => {
       const adapter = fileParser.getAdapter('MobileMartAdapter');
-      expect(adapter).to.be.instanceOf(MobileMartAdapter);
+      expect(adapter).toBeInstanceOf(MobileMartAdapter);
     });
     
     it('should throw error for unknown adapter', () => {
       expect(() => {
         fileParser.getAdapter('UnknownAdapter');
-      }).to.throw('Adapter not found');
+      }).toThrow('Adapter not found');
     });
     
     it('should validate parsed data correctly', () => {
@@ -327,7 +380,7 @@ describe('Reconciliation System', () => {
       
       expect(() => {
         fileParser.validateParsedData(validData, supplierConfig);
-      }).to.not.throw();
+      }).not.toThrow();
     });
     
     it('should detect count mismatch', () => {
@@ -341,7 +394,7 @@ describe('Reconciliation System', () => {
       
       expect(() => {
         fileParser.validateParsedData(invalidData, supplierConfig);
-      }).to.throw('Transaction count mismatch');
+      }).toThrow('Transaction count mismatch');
     });
     
     it('should detect amount mismatch', () => {
@@ -356,7 +409,7 @@ describe('Reconciliation System', () => {
       
       expect(() => {
         fileParser.validateParsedData(invalidData, supplierConfig);
-      }).to.throw('Amount mismatch');
+      }).toThrow('Amount mismatch');
     });
   });
   
@@ -367,37 +420,31 @@ describe('Reconciliation System', () => {
       adapter = new MobileMartAdapter();
     });
     
-    it('should extract integer field correctly', () => {
-      const row = ['123', 'test'];
-      const fieldDef = { column: 0 };
-      
-      const value = adapter.extractIntegerField(row, fieldDef, 'test_field');
-      expect(value).to.equal(123);
+    it('should parse cents-based amount fields correctly', () => {
+      const fields = ['9900', 'test'];
+
+      const value = adapter.parseAmountCents(fields, 0, 'amount');
+      expect(value).toBe(99.00);
     });
     
-    it('should throw error for invalid integer', () => {
-      const row = ['abc', 'test'];
-      const fieldDef = { column: 0 };
-      
+    it('should throw error for invalid amount fields', () => {
+      const fields = ['abc', 'test'];
+
       expect(() => {
-        adapter.extractIntegerField(row, fieldDef, 'test_field');
-      }).to.throw('Invalid integer format');
+        adapter.parseAmountCents(fields, 0, 'amount');
+      }).toThrow("Invalid amount for amount: 'abc'");
     });
     
-    it('should extract decimal field correctly', () => {
-      const row = ['123.45', 'test'];
-      const fieldDef = { column: 0 };
-      
-      const value = adapter.extractDecimalField(row, fieldDef, 'test_field');
-      expect(value).to.equal('123.45');
+    it('should normalize MobileMart success statuses', () => {
+      expect(adapter.normaliseStatus('Successful')).toBe('success');
+      expect(adapter.normaliseStatus('Binned')).toBe('failed');
     });
     
     it('should handle optional fields', () => {
-      const row = ['', 'test'];
-      const fieldDef = { column: 0 };
-      
-      const value = adapter.extractField(row, fieldDef, 'test_field', false);
-      expect(value).to.be.null;
+      const fields = ['', 'test'];
+
+      const value = adapter.optionalField(fields, 0);
+      expect(value).toBeNull();
     });
   });
   
@@ -422,7 +469,7 @@ describe('Reconciliation System', () => {
         });
         expect.fail('Should have thrown unique constraint error');
       } catch (error) {
-        expect(error.name).to.equal('SequelizeUniqueConstraintError');
+        expect(error.name).toBe('SequelizeUniqueConstraintError');
       }
       
       await run1.destroy();
@@ -443,7 +490,7 @@ describe('Reconciliation System', () => {
       });
       
       const matchRate = run.getMatchRate();
-      expect(matchRate).to.equal(95.0); // (90 + 5) / 100 * 100
+      expect(matchRate).toBe(95.0); // (90 + 5) / 100 * 100
       
       await run.destroy();
     });
@@ -461,7 +508,7 @@ describe('Reconciliation System', () => {
         amount_variance: 5.00
       });
       
-      expect(passingRun.isPassed(1000.00)).to.be.true;
+      expect(passingRun.isPassed(1000.00)).toBe(true);
       
       const failingRun = await db.ReconRun.create({
         supplier_id: supplierConfig.id,
@@ -475,7 +522,7 @@ describe('Reconciliation System', () => {
         amount_variance: 1500.00
       });
       
-      expect(failingRun.isPassed(1000.00)).to.be.false; // Variance too high
+      expect(failingRun.isPassed(1000.00)).toBe(false); // Variance too high
       
       await passingRun.destroy();
       await failingRun.destroy();

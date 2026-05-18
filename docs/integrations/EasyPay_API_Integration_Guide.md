@@ -1237,8 +1237,8 @@ flowchart TD
 ```
 
 **Processing Timeline**:
-1. **EasyPay File Availability**: Daily, per EasyPay hosted-SFTP upload timing
-2. **Cloud Pull**: Scheduled MMTP job pulls matching `easy%.%` files into `easypay/`
+1. **EasyPay File Availability**: Daily between 02:00 and 03:00 SAST, per EasyPay's hosted-SFTP timing confirmation. If no transactions occurred, EasyPay may still place an empty file.
+2. **Cloud Pull**: Scheduled MMTP job pulls matching `easy%.%` files into `easypay/` at 04:00 SAST after Staging proof and scheduler activation
 3. **Validation**: ~1 minute
 4. **Reconciliation**: ~5 minutes (for 10,000 transactions)
 5. **Notification**: Immediate (success or failure)
@@ -1250,7 +1250,8 @@ flowchart TD
 | **100% Match** | File moved to `/processed/` | Email: "Reconciliation successful" |
 | **Discrepancies Found** | File moved to `/discrepancies/` | Email with discrepancy report |
 | **SOF Invalid** | File moved to `/error/` | Email with validation errors |
-| **File Missing** | No file detected by 07:00 | Email: "Reconciliation file not received" |
+| **Empty file / no transactions** | File archived as a no-transaction day | No discrepancy |
+| **File Missing** | No file detected after the scheduled 04:00 pull | Email: "Reconciliation file not received" |
 
 **Discrepancy Handling**:
 

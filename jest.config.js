@@ -5,5 +5,5 @@ module.exports = {
   verbose: true,
   forceExit: true,
   detectOpenHandles: true,
-  setupFilesAfterSetup: [],
+  setupFilesAfterEnv: [],
 };

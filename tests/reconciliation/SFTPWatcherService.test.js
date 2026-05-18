@@ -192,6 +192,27 @@ describe('SFTPWatcherService.processFile — orchestrator outcomes', () => {
     expect(file.move).toHaveBeenCalledTimes(1);
     expect(file.move.mock.calls[0][0]).toBe('failed/mobilemart/recon_20260417.csv');
   });
+
+  it('archives empty EasyPay files as no-transaction days without running reconciliation', async () => {
+    const supplier = fakeSupplier({
+      supplier_code: 'EASYPAY',
+      supplier_name: 'EasyPay',
+      file_name_pattern: 'easy%.%'
+    });
+    const file = fakeGcsFile('easypay/easy5063.005', 'empty-easypay', {
+      metadata: {
+        size: 0,
+        metadata: { emptyNoTransactions: 'true' }
+      }
+    });
+
+    const watcher = new SFTPWatcherService();
+    await watcher.processFile(file, supplier);
+
+    expect(mockReconcile).not.toHaveBeenCalled();
+    expect(file.download).not.toHaveBeenCalled();
+    expect(file.move).toHaveBeenCalledWith('processed/easypay/easy5063.005');
+  });
 });
 
 describe('SFTPWatcherService EasyPay pattern support', () => {

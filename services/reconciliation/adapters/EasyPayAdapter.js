@@ -48,7 +48,7 @@ class EasyPayAdapter {
         .filter(l => l.length > 0);
 
       if (lines.length < 2) {
-        throw new Error('SOF file must contain at least header and 1 transaction');
+        throw new Error('SOF file must contain at least header and footer');
       }
 
       const sofLine = lines[0];

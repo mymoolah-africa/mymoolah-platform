@@ -159,6 +159,17 @@ class SFTPWatcherService {
     const localPath = path.join(tempDir, path.basename(file.name));
     
     try {
+      if (this.isEmptyNoTransactionFile(file, supplier)) {
+        const processedPath = `processed/${supplier.supplier_code.toLowerCase()}/${path.basename(file.name)}`;
+        await file.move(processedPath);
+
+        logger.info('[SFTPWatcher] Empty EasyPay file archived as no-transaction day', {
+          file: file.name,
+          archived_to: processedPath
+        });
+        return;
+      }
+
       // Ensure temp directory exists
       await fs.mkdir(tempDir, { recursive: true });
       
@@ -261,6 +272,15 @@ class SFTPWatcherService {
   async getFileHash(file) {
     const [metadata] = await file.getMetadata();
     return metadata.md5Hash;
+  }
+
+  isEmptyNoTransactionFile(file, supplier) {
+    if (String(supplier.supplier_code || '').toUpperCase() !== 'EASYPAY') {
+      return false;
+    }
+
+    const size = Number(file.metadata?.size ?? 0);
+    return size === 0 || file.metadata?.metadata?.emptyNoTransactions === 'true';
   }
   
   /**

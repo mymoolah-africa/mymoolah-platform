@@ -359,7 +359,22 @@ easypay-sftp-username-production
 easypay-sftp-password-production
 ```
 
-Do not commit the values. UAT/local uses Codespaces `.env` for development and does not need this hosted EasyPay SFTP integration. After Staging validation, enable the pull explicitly on the target Cloud Run service by setting `EASYPAY_SFTP_PULL_ENABLED=true`; scheduler creation is separately gated by `EASYPAY_SFTP_PULL_CREATE_SCHEDULER=true ./scripts/setup-cloud-scheduler.sh --staging` or `--production`.
+Do not commit the values. UAT/local uses Codespaces `.env` for development and does not need this hosted EasyPay SFTP integration.
+
+Activation remains Staging-first and gated:
+
+1. Store EasyPay SFTP credentials in the Staging Secret Manager names above.
+2. Deploy Staging with the pull gate explicitly open:
+   ```bash
+   EASYPAY_SFTP_PULL_ENABLED=true ./scripts/deploy-backend.sh --staging
+   ```
+3. Run one manual Staging pull against `/api/v1/reconciliation/scheduled-easypay-sftp-pull` using a valid Google OIDC identity token for the Staging scheduler service account.
+4. Confirm the SOF file lands under `gs://mymoolah-sftp-inbound/easypay/` and that `SFTPWatcherService` processes it through EasyPay reconciliation.
+5. If Staging should remain connectivity-only, do not create a Staging recurring scheduler. Only after Staging proof and André approval, deploy Production with the pull gate open and create the Production recurring scheduler. The recurring EasyPay pull is gated separately and scheduled for `04:00` SAST, after EasyPay's confirmed daily `02:00`-`03:00` file upload window:
+   ```bash
+   EASYPAY_SFTP_PULL_CREATE_SCHEDULER=true ./scripts/setup-cloud-scheduler.sh --production
+   ```
+6. Never run `--both` for EasyPay scheduler activation unless Staging and Production recurrence are both explicitly approved.
 
 #### **5. Verify Deployment**
 ```bash

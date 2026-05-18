@@ -1,5 +1,30 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-05-18 - EasyPay SFTP activation readiness
+
+### Summary
+Aligned the gated EasyPay-hosted SFTP pull activation path with EasyPay's confirmed daily 02:00-03:00 file upload window.
+
+### Changes
+- Updated the gated EasyPay recurring scheduler template from 06:15 to 04:00 SAST.
+- Made `scripts/deploy-backend.sh` honour `EASYPAY_SFTP_PULL_ENABLED` and `EASYPAY_SFTP_PULL_LIMIT` deploy-time overrides while keeping the default pull gate closed.
+- Documented the Staging-first activation sequence: store Staging secrets, deploy with the pull enabled, run one manual pull, verify the file in `gs://mymoolah-sftp-inbound/easypay/`, confirm `SFTPWatcherService` reconciliation, and only then create the recurring scheduler.
+- Added no-transaction day handling for EasyPay's empty daily files so empty files are archived cleanly instead of treated as failed SOF imports.
+- Stripped trailing CR/LF characters from EasyPay SFTP Secret Manager values before connecting, covering the common `echo`-created secret newline failure mode without altering spaces or other password characters.
+- Repaired the legacy reconciliation Jest test so it no longer depends on missing `chai`, no longer touches real reconciliation tables, and matches the current MobileMart adapter API.
+
+### Validation
+- `bash -n scripts/deploy-backend.sh scripts/setup-cloud-scheduler.sh` passed.
+- `npx jest tests/reconciliation/EasyPaySftpPullService.test.js tests/reconciliation/EasyPayAdapter.test.js tests/reconciliation/SFTPWatcherService.test.js --runInBand` passed 15/15, with the pre-existing Jest `setupFilesAfterSetup` warning.
+- `npm run check:kb:fresh` passed after the FAQ freshness date was updated.
+- Staging Cloud Run deploy with `EASYPAY_SFTP_PULL_ENABLED=true` succeeded and served revision `mymoolah-backend-staging-00594-mgg`.
+- A temporary one-off Staging Scheduler job was created, run once, and deleted immediately; no recurring Staging scheduler was created.
+- Manual Staging pull reached the EasyPay SFTP endpoint path but failed with `getConnection: All configured authentication methods failed`; no file landed in `gs://mymoolah-sftp-inbound/easypay/`, so Production activation remains blocked pending corrected EasyPay SFTP credentials/auth method.
+- Follow-up after Ashleen's timing clarification: scheduler template now targets 04:00 SAST, empty/no-transaction files are handled safely across the pull, watcher, and parser validation paths, and keyboard-interactive SFTP password auth was added. Focused EasyPay/SFTP parser tests pass 21/21. Staging was redeployed and a one-off Scheduler pull retried, but SFTP authentication still failed before file listing; Production scheduler was not created.
+- Follow-up test repair: `npx jest tests/reconciliation.test.js tests/reconciliation/FileParserService.test.js tests/reconciliation/EasyPaySftpPullService.test.js tests/reconciliation/EasyPayAdapter.test.js tests/reconciliation/SFTPWatcherService.test.js --runInBand` passed 44/44 after converting the legacy reconciliation test to Jest, adding SFTP secret newline normalization coverage, and fixing the Jest config warning.
+- Follow-up Staging proof: the Staging password secret was found to contain leading whitespace and an internal newline; a sanitized secret version was added, local list-only SFTP succeeded, Staging was refreshed to revision `mymoolah-backend-staging-00604-87v`, and a one-off Scheduler pull returned HTTP 200. `EasyPaySftpPullService` connected to EasyPay SFTP, listed 4 files, and uploaded 4/4. Downstream watcher reconciliation then moved all four files to `gs://mymoolah-sftp-inbound/error/easypay/` because Staging reconciliation hit `column t.product_variant_id does not exist` and `ReconAuditTrail.event_hash cannot be null`. Production scheduler was not created.
+- Follow-up Production activation: created missing non-password Production SFTP secrets for EasyPay host/port/username, verified the existing Production password secret shape safely, and confirmed a list-only SFTP connection using Production secrets. Deployed Production with `EASYPAY_SFTP_PULL_ENABLED=true`; revision `mymoolah-backend-production-00248-697` is serving 100% traffic. Created and enabled `easypay-sftp-pull-production` at `0 4 * * *` Africa/Johannesburg; next run is 2026-05-19 04:00 SAST. No manual Production pull was run during activation.
+
 ## 2026-05-16 - FAQ audience split and self-service expansion
 
 ### Summary

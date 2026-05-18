@@ -31,11 +31,11 @@ class EasyPaySftpPullService {
     this.sftpFactory = options.sftpFactory || (() => new SftpClient());
     this.adapter = options.adapter || new EasyPayAdapter();
 
-    this.host = options.host || process.env.EASYPAY_SFTP_HOST;
+    this.host = this.normaliseSecretValue(options.host || process.env.EASYPAY_SFTP_HOST);
     this.port = Number(options.port || process.env.EASYPAY_SFTP_PORT || 9021);
-    this.username = options.username || process.env.EASYPAY_SFTP_USERNAME;
-    this.password = options.password || process.env.EASYPAY_SFTP_PASSWORD;
-    this.remoteDir = options.remoteDir || process.env.EASYPAY_SFTP_REMOTE_DIR || '.';
+    this.username = this.normaliseSecretValue(options.username || process.env.EASYPAY_SFTP_USERNAME);
+    this.password = this.normaliseSecretValue(options.password || process.env.EASYPAY_SFTP_PASSWORD);
+    this.remoteDir = this.normaliseSecretValue(options.remoteDir || process.env.EASYPAY_SFTP_REMOTE_DIR || '.');
     this.bucketName = options.bucketName || process.env.EASYPAY_SFTP_BUCKET_NAME || process.env.SFTP_BUCKET_NAME || 'mymoolah-sftp-inbound';
     this.gcsPrefix = this.normalisePrefix(options.gcsPrefix || process.env.EASYPAY_SFTP_GCS_PREFIX || 'easypay/');
     this.filePattern = options.filePattern || process.env.EASYPAY_SFTP_FILE_PATTERN || 'easy%.%';
@@ -81,6 +81,10 @@ class EasyPaySftpPullService {
         port: this.port,
         username: this.username,
         password: this.password,
+        tryKeyboard: true,
+        onKeyboardInteractive: (_name, _instructions, _lang, prompts, finish) => {
+          finish(prompts.map(() => this.password));
+        },
         readyTimeout: Number(process.env.EASYPAY_SFTP_READY_TIMEOUT_MS || 30000)
       });
 
@@ -144,7 +148,9 @@ class EasyPaySftpPullService {
 
       await sftp.fastGet(remotePath, localPath);
 
-      if (this.validateSof) {
+      const emptyNoTransactions = await this.isEmptyFile(localPath);
+
+      if (this.validateSof && !emptyNoTransactions) {
         await this.validateSofFile(localPath, filename);
       }
 
@@ -154,13 +160,18 @@ class EasyPaySftpPullService {
           metadata: {
             source: 'easypay_sftp_pull',
             remoteName: filename,
-            pulledAt: new Date().toISOString()
+            pulledAt: new Date().toISOString(),
+            emptyNoTransactions: String(emptyNoTransactions)
           }
         }
       });
 
-      logger.info('Uploaded EasyPay SFTP file to GCS inbound prefix', { filename, destination });
-      return { filename, destination, status: 'uploaded' };
+      logger.info('Uploaded EasyPay SFTP file to GCS inbound prefix', {
+        filename,
+        destination,
+        emptyNoTransactions
+      });
+      return { filename, destination, status: 'uploaded', emptyNoTransactions };
     } catch (error) {
       logger.error('Failed to pull EasyPay SFTP file', {
         filename,
@@ -184,11 +195,20 @@ class EasyPaySftpPullService {
       timezone: 'Africa/Johannesburg'
     });
 
-    if (!parsed.body || parsed.body.length === 0) {
+    const footerCount = Number(parsed.footer?.total_count ?? 0);
+    if ((!parsed.body || parsed.body.length === 0) && footerCount !== 0) {
       throw new Error(`EasyPay SOF file ${filename} contains no transactions`);
     }
 
     return parsed;
+  }
+
+  async isEmptyFile(localPath) {
+    const stats = await fs.stat(localPath);
+    if (stats.size === 0) return true;
+
+    const content = await fs.readFile(localPath, 'utf-8');
+    return content.trim().length === 0;
   }
 
   isRegularFile(file) {
@@ -212,6 +232,13 @@ class EasyPaySftpPullService {
   normalisePrefix(prefix) {
     const trimmed = String(prefix || '').replace(/^\/+/, '');
     return trimmed.endsWith('/') ? trimmed : `${trimmed}/`;
+  }
+
+  normaliseSecretValue(value) {
+    if (value === undefined || value === null) return value;
+    // Secret Manager values are sometimes created with echo, which appends a
+    // line break that breaks SFTP authentication while looking correct in logs.
+    return String(value).replace(/[\r\n]+$/, '');
   }
 
   joinRemotePath(remoteDir, filename) {

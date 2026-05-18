@@ -10,7 +10,7 @@ set -euo pipefail
 #   3. sbsa-statement-poll-{env}   — every 2 min (MT940/MT942 bank statements)
 #   4. sbsa-pain002-poll-{env}     — every 5 min (Pain.002 disbursement responses)
 #   5. sftp-recon-sweep-{env}      — every 2 min (supplier recon file sweep)
-#   6. easypay-sftp-pull-{env}     — 06:15 SAST daily (pull EasyPay-hosted SOF into GCS)
+#   6. easypay-sftp-pull-{env}     — 04:00 SAST daily (pull EasyPay-hosted SOF into GCS)
 #   7. agent-governance-optimizer-{env} — Sunday 03:30 SAST (draft-only skills/rules review)
 #
 # Usage:
@@ -132,10 +132,10 @@ create_all_jobs_for_env() {
     create_http_job \
       "easypay-sftp-pull-${env}" \
       "${service_url}/api/v1/reconciliation/scheduled-easypay-sftp-pull" \
-      "15 6 * * *" \
+      "0 4 * * *" \
       "${sa}" \
       "${service_url}" \
-      "EasyPay SOF SFTP pull for ${env} — downloads partner-hosted daily transaction files into GCS inbound/easypay" \
+      "EasyPay SOF SFTP pull for ${env} — downloads partner-hosted daily transaction files into GCS inbound/easypay after 02:00-03:00 availability" \
       "900s"
   else
     log "Skipping easypay-sftp-pull-${env}; set EASYPAY_SFTP_PULL_CREATE_SCHEDULER=true after UAT/Staging validation"

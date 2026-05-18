@@ -79,7 +79,9 @@ describe('EasyPaySftpPullService', () => {
       host: 'sftp.example.test',
       port: 9021,
       username: 'easy-user',
-      password: 'secret'
+      password: 'secret',
+      tryKeyboard: true,
+      onKeyboardInteractive: expect.any(Function)
     }));
     expect(mockSftp.fastGet).toHaveBeenCalledWith('/out/easy2138.148', expect.stringContaining('easy2138.148'));
     expect(file).toHaveBeenCalledWith('easypay/easy2138.148');
@@ -93,6 +95,30 @@ describe('EasyPaySftpPullService', () => {
       skipped: 0,
       failed: 0
     });
+  });
+
+  it('strips trailing line breaks from SFTP secret values before connecting', async () => {
+    const mockSftp = createMockSftp({ files: [] });
+    const { storage } = createMockStorage();
+    const service = new EasyPaySftpPullService({
+      storage,
+      sftpFactory: () => mockSftp,
+      host: 'sftp.example.test\n',
+      port: 9021,
+      username: 'easy-user\r\n',
+      password: 'secret\n',
+      remoteDir: '.\n',
+      tmpDir
+    });
+
+    await service.pullNewFiles();
+
+    expect(mockSftp.connect).toHaveBeenCalledWith(expect.objectContaining({
+      host: 'sftp.example.test',
+      username: 'easy-user',
+      password: 'secret'
+    }));
+    expect(mockSftp.list).toHaveBeenCalledWith('.');
   });
 
   it('skips files already present in the inbound GCS prefix', async () => {
@@ -112,6 +138,58 @@ describe('EasyPaySftpPullService', () => {
     expect(mockSftp.fastGet).not.toHaveBeenCalled();
     expect(upload).not.toHaveBeenCalled();
     expect(summary).toMatchObject({ matched: 1, uploaded: 0, skipped: 1, failed: 0 });
+  });
+
+  it('uploads empty EasyPay files as no-transaction days without SOF validation failure', async () => {
+    const mockSftp = createMockSftp({
+      files: [{ name: 'easy2138.151', type: '-' }],
+      content: ''
+    });
+    const { storage, upload } = createMockStorage();
+    const service = new EasyPaySftpPullService({
+      storage,
+      sftpFactory: () => mockSftp,
+      host: 'sftp.example.test',
+      username: 'easy-user',
+      password: 'secret',
+      tmpDir
+    });
+
+    const summary = await service.pullNewFiles();
+
+    expect(upload).toHaveBeenCalledWith(expect.stringContaining('easy2138.151'), expect.objectContaining({
+      destination: 'easypay/easy2138.151',
+      metadata: expect.objectContaining({
+        metadata: expect.objectContaining({
+          emptyNoTransactions: 'true'
+        })
+      })
+    }));
+    expect(summary).toMatchObject({ matched: 1, uploaded: 1, failed: 0 });
+    expect(summary.files[0]).toMatchObject({ emptyNoTransactions: true });
+  });
+
+  it('accepts SOF files with a zero-count footer as no-transaction days', async () => {
+    const mockSftp = createMockSftp({
+      files: [{ name: 'easy2138.152', type: '-' }],
+      content: 'SOF,1,2138,20260211,093806,152\n0,0.00,0.00,0,0.00,0.00'
+    });
+    const { storage, upload } = createMockStorage();
+    const service = new EasyPaySftpPullService({
+      storage,
+      sftpFactory: () => mockSftp,
+      host: 'sftp.example.test',
+      username: 'easy-user',
+      password: 'secret',
+      tmpDir
+    });
+
+    const summary = await service.pullNewFiles();
+
+    expect(upload).toHaveBeenCalledWith(expect.stringContaining('easy2138.152'), expect.objectContaining({
+      destination: 'easypay/easy2138.152'
+    }));
+    expect(summary).toMatchObject({ matched: 1, uploaded: 1, failed: 0 });
   });
 
   it('fails closed when downloaded content is not a valid SOF file', async () => {

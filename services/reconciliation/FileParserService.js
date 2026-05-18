@@ -107,16 +107,16 @@ class FileParserService {
       throw new Error('Body must be an array');
     }
     
-    if (parsedData.body.length === 0) {
-      throw new Error('Empty body in parsed data');
-    }
-    
     if (!parsedData.footer) {
       throw new Error('Missing footer in parsed data');
     }
     
     const bodyCount = parsedData.body.length;
     const footerCount = parsedData.footer.total_count;
+
+    if (bodyCount === 0 && Number(footerCount) !== 0) {
+      throw new Error('Empty body in parsed data');
+    }
     
     if (footerCount !== undefined && footerCount !== null && bodyCount !== footerCount) {
       throw new Error(`Transaction count mismatch: body=${bodyCount}, footer=${footerCount}`);
